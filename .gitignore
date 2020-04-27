@@ -1,0 +1,16 @@
+.vscode
+Pipfile.lock
+test
+*egg-info*
+*checkpoint.ipynb
+docs/build
+docs/source/_build
+.DS_STORE
+.idea
+.vscode
+*pyc
+*phots
+*fits
+.idea
+.vscode
+*__pychache__*

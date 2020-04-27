@@ -1,0 +1,33 @@
+from setuptools import setup
+
+setup(
+    name="prose",
+    version="0.1",
+    py_modules=["prose"],
+    entry_points="""
+        [console_scripts]
+        specphot=main:cli
+    """,
+    install_requires=[
+        "numpy",
+        "scipy",
+        "jupyterlab",
+        "astropy==4.0",
+        "matplotlib",
+        "colorama",
+        "scikit-image",
+        "pandas",
+        "tqdm",
+        "astroalign",
+        "photutils",
+        "click",
+        "astroquery",
+        "pyyaml",
+        "sphinx",
+        "docutils",
+        "george",
+        "tabulate",
+        "sphinx_rtd_theme",
+        "imageio"
+    ],
+)

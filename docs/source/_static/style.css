@@ -1,0 +1,89 @@
+/* .wy-side-nav-search {
+    background-color: rgba(255, 255, 255, 0);
+}
+
+.wy-menu-vertical header, .wy-menu-vertical p.caption {
+    color: white
+}
+
+.wy-side-nav-search input[type="text"] {
+    border-color: transparent;
+}
+
+box-shadow: 0 1px 2px rgba(60,64,67, 0.3), 0 1px 3px 1px rgba(60,64,67, 0.15); */
+
+
+/* @import '../alabaster.css';
+
+div.admonition {
+    padding: 10px 20px;
+}
+
+div.admonition p{
+    margin-bottom: 0px;
+}
+
+div.admonition p.admonition-title {
+    font-size: 18px;
+    margin-bottom: 3px;
+}
+
+body {
+    font-size: 16px;
+}
+
+div.body p {
+    line-height: 1.6em;
+}
+
+pre {
+    padding-left: 15px;
+}
+
+div.sphinxsidebarwrapper p.logo {
+    text-align: left;
+}
+
+tt.descname, tt.descclassname, code.descname, code.descclassname {
+    text-decoration: underline;
+} */
+
+.method {
+    margin-bottom: 25px;
+}
+
+tt.xref, code.xref, code.py-meth {
+    color: darkgoldenrod;
+    text-decoration: underline;
+}
+
+div.sphinxsidebar {
+    font-size: 13px;
+}
+
+div.sphinxsidebar li {
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+div.highlight pre {
+    line-height: 1.5em;
+    font-size: 0.85em;
+}
+
+.contents.local li p:first-child{
+    margin-bottom: 0px
+}
+
+.contents.local li ul{
+    margin: 0 0 0 30px;
+}
+
+div.topic {
+    padding: 6px;
+}
+
+.contents li {
+    font-size: 0.9em;
+}
