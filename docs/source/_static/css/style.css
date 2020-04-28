@@ -48,6 +48,8 @@ tt.descname, tt.descclassname, code.descname, code.descclassname {
     text-decoration: underline;
 } */
 
+@import 'theme.css';
+
 .method {
     margin-bottom: 25px;
 }
@@ -86,4 +88,18 @@ div.topic {
 
 .contents li {
     font-size: 0.9em;
+}
+
+.rst-content .highlight-default {
+    border: none
+}
+
+.rst-content .highlight-default .highlight {
+    border: none;
+    background-color: transparent;
+}
+
+.wy-side-nav-search {
+    background-image: url("prose_bkg.png");
+    background-size: cover;
 }
