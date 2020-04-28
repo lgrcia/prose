@@ -269,7 +269,27 @@ def Broeg2005(
 
 
 class LightCurve:
+    """
+    Object holding time-series of flux and data from unique stellar observation
+    """
     def __init__(self, time, fluxes, errors=None, data=None, apertures=None):
+        """
+        Instantiate LightCurve object. If fluxes and errors have shape (apertures, times), best aperture is selected through
+        ``self._pick_best_aperture`` for more details see TODO
+
+        Parameters
+        ----------
+        time : array
+            time of the time-serie
+        fluxes : ndarray
+            a 1D or 2D array of fluxes, if 2D shape should be (apertures, times)
+        errors : ndarray, optional
+            a 1D or 2D array of fluxes errors, if 2D shape should be (apertures, times)
+        data : dict, optional
+            a dict containing simultaneous time-series, e.g. {"fwhm": ndarray}. Each data should have shape (times)
+        apertures : list or ndarray, optional
+            apertures in pixels (if used to produce light curve), by default None
+        """
         
         n = np.shape(fluxes)
         self._n_aperture = n[0] if len(n) > 1 else 1
@@ -285,10 +305,16 @@ class LightCurve:
     
     @property
     def flux(self):
+        """
+        Flux from best aperture
+        """
         return self.fluxes[self._best_aperture_id]
     
     @property
     def error(self):
+        """
+        Flux error from best aperture
+        """
         return self.errors[self._best_aperture_id]
     
     def _pick_best_aperture(self, method="stddiff"):
@@ -317,10 +343,32 @@ class LightCurve:
         return self.time, self.flux, self.error, self.data
     
     def plot(self, bins=0.005, std=False):
+        """
+        Plot light curve along time
+
+        Parameters
+        ----------
+        bins : float, optional
+            bin size in unit of ``self.times`, by default 0.005
+        std : bool, optional
+            wether to show errors using std or ``self.error``, by default False
+        """
         viz.plot_lc(self.time, self.flux, bins=bins, error=self.error, std=std)
         plt.xlim(self.time.min(), self.time.max())
         
     def binned(self, bins):
+        """
+        Return a new ``LightCurve`` binned in time
+
+        Parameters
+        ----------
+        bins : float
+            bin size in unit of ``self.times``
+
+        Returns
+        -------
+        LightCurve
+        """
         binned_data = {
             key: utils.binning(np.array(self.time), np.array(value), bins)[1]
             for key, value in self.data.items()}
@@ -337,6 +385,9 @@ class LightCurve:
         
 
 class LightCurves:
+    """
+    Object holding time-series of flux and data from multiple stellar observations. Act as a list of ``LightCurve``
+    """
     def __init__(self, *lightcurves, **kwargs):
         if len(lightcurves) == 1:
             # Probably list(Lightucurves)
@@ -348,6 +399,7 @@ class LightCurves:
                 LightCurve(time, flux, error) for flux, error in zip(fluxes, errors)
             ]
         self.apertures = None
+        self.best_aperture_id = None
         
     def __getitem__(self, key):
         return self._lightcurves[key]
@@ -359,13 +411,29 @@ class LightCurves:
         return iter(self._lightcurves)
 
     def set_best_aperture_id(self, i):
+        """
+        Set a commonly share best aperture for all LightCurves
+
+        Parameters
+        ----------
+        i : int
+            index of the best aperture
+        """
         for lc in self._lightcurves:
             lc.best_aperture_id = i
+        self.best_aperture_id = i
     
     def from_ndarray(self, fluxes, errors):
         pass
 
     def as_array(self):
+        """
+        Return an ndarray with shape (n_apertures, n_lightcurves, n_times)
+
+        Returns
+        -------
+        np.ndarray
+        """
         array = np.array([lc.fluxes for lc in self._lightcurves])
         error_array = np.array([lc.errors for lc in self._lightcurves])
         s, a, n = array.shape
