@@ -5,7 +5,7 @@ import yaml
 from yaml import Loader
 import numpy as np
 import shutil
-from prose.telescope import built_in_telescopes
+from prose.builtins import built_in_telescopes
 import glob
 
 package_name = "prose"
@@ -139,7 +139,15 @@ class ConfigManager:
         return _telescope_dict
 
     def save_telescope_file(self, file):
-        shutil.copyfile(file, path.join(self.folder_path, path.basename(file)))
+        if isinstance(file, str):
+            name = path.basename(file).lower().split(".")[0]
+            shutil.copyfile(file, path.join(self.folder_path, "{}.id".format(name)))
+        elif isinstance(file, dict):
+            name = file["name"].lower()
+            telescope_file_path = path.join(self.folder_path, "{}.id".format(name))
+            with open(telescope_file_path, "w") as f:
+                yaml.dump(file, f)
+        print("Telescope '{}' saved".format(name))
 
     def match_telescope_name(self, name):
         if not isinstance(name, str):

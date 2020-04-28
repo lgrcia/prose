@@ -22,6 +22,7 @@ from astropy.time import Time
 from prose.console_utils import TQDM_BAR_FORMAT, INFO_LABEL
 from prose import visualisation as viz
 from astropy.wcs import WCS, FITSFixedWarning
+from astropy.nddata import Cutout2D
 
 
 def return_method(name):
@@ -133,7 +134,7 @@ class Calibration:
             primary_hdu = hdu[0]
             image, header = primary_hdu.data, primary_hdu.header
             hdu.close()
-            image = self.fits_explorer.trim(image)
+            image = self.fits_explorer.trim(image, raw=True)
             if image_type == "dark":
                 _dark = (image - self.master_bias) / header[kw_exp_time]
                 _master.append(_dark)
@@ -175,7 +176,7 @@ class Calibration:
     def calibrate(self, im_path, flip=False):
         hdu = fits.open(im_path)
         primary_hdu = hdu[0]
-        image, header = self.fits_explorer.trim(primary_hdu.data), primary_hdu.header
+        image, header = self.fits_explorer.trim(primary_hdu.data, raw=True), primary_hdu.header
         hdu.close()
         exp_time = header[self.telescope.keyword_exposure_time]
         calibrated_image = self.calibration(image, exp_time, self.master_bias, self.master_dark, self.master_flat)
@@ -269,7 +270,7 @@ class Reduction:
     def describe(self):
         self.fits_explorer.describe("calib")
 
-    def print_observations(self):
+    def describe_observations(self):
         n_observations = len(self.fits_explorer.observations())
         print("{} observation{} found :\n{}".format(
                 n_observations, "s" if n_observations > 1 else "",
@@ -279,13 +280,17 @@ class Reduction:
     def run(
         self,
         destination,
-        reference_frame=0,
+        reference_frame=1/2,
         save_gif=True,
         save_stack=True,
         gif_factor=0.25,
         overwrite=False,
         n_images=None,
     ):
+
+        if not path.exists(destination):
+            os.mkdir(destination)
+
         if n_images is None:
             n_images = len(self.light_files)
 
@@ -301,17 +306,12 @@ class Reduction:
             "_stack.fits",
         )
 
+        reference_frame = int(reference_frame*len(self.light_files))
         reference_image_path = self.light_files[reference_frame]
-        reference_image = self.fits_explorer.trim(fits.getdata(reference_image_path))
+        reference_image = self.fits_explorer.trim(reference_image_path)
+        
         reference_flip = self.fits_explorer.files_df[
             self.fits_explorer.get(im_type="light", return_conditions=True)].iloc[reference_frame]["flip"]
-
-        if save_stack:
-            stacked_image = self.fits_explorer.trim(reference_image_path).astype(
-                "float64"
-            )
-        else:
-            save_stack = None
 
         if self.alignment == alignment.astroalign_optimized_find_transform:
             reference_stars = astroalign._find_sources(reference_image)[
@@ -322,7 +322,7 @@ class Reduction:
             )
         else:
             reference_stars = self.stars_detection(
-                self.fits_explorer.trim(reference_image_path),
+                reference_image.data,
                 **self.stars_detection_kwargs,
             )
 
@@ -380,7 +380,12 @@ class Reduction:
 
                 # Stack image production
                 if save_stack:
-                    stacked_image += aligned_frame
+                    if i==0:
+                        stacked_image = aligned_frame
+                    else:
+                        stacked_image += aligned_frame
+                else:
+                    save_stack = None
 
                 # Gif production
                 if save_gif:
@@ -404,7 +409,7 @@ class Reduction:
                     "FWHMY": _fwhm[1],
                     "DX": shift[0],
                     "DY": shift[1],
-                    "ORIGFWHM": new_hdu.header.get(self.telecope.keyword_fwhm, ""),
+                    "ORIGFWHM": new_hdu.header.get(self.telescope.keyword_fwhm, ""),
                     "BZERO": 0,
                     "ALIGNALG": self.alignment.__name__,
                     "FWHMALG": self.fwhm.__name__,
@@ -415,10 +420,7 @@ class Reduction:
                 new_hdu.header.update(h)
 
                 # Astrometry (wcs)
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore", FITSFixedWarning)
-                    wcs = WCS(new_hdu.header)
-                    new_hdu.header.update(wcs.to_header(relax=True))
+                new_hdu.header.update(reference_image.wcs.to_header(relax=True))
 
                 fits_new_path = os.path.join(
                     destination,
@@ -522,7 +524,18 @@ class Photometry:
         self._photometry = return_method(name)
         self.photometry_kwargs = {}
 
+    @property
+    def default_destination(self):
+        return path.join(
+            self.folder,
+            "{}.phots".format(self.fits_explorer.products_denominator
+            ))
+
     def run(self, n_images=None, save=True, overwrite=False):
+        if save and not overwrite:
+            if path.exists(self.default_destination):
+                raise FileExistsError("file already exists, use 'overwrite' kwarg")
+
         if n_images is None:
             n_images = len(self.light_files)
 
@@ -530,7 +543,7 @@ class Photometry:
 
         self.stars = self.stars_detection(stack_data, **self.stars_detection_kwargs)
 
-        print("{}: {} stars detected".format(INFO_LABEL, len(self.stars)))
+        print("{} {} stars detected".format(INFO_LABEL, len(self.stars)))
 
         if "fixed_fwhm" in self.photometry_kwargs:
             fixed_fwhm = self.photometry_kwargs["fixed_fwhm"]
@@ -571,14 +584,7 @@ class Photometry:
 
     def save(self, destination=None, overwrite=False):
         if destination is None:
-            destination = self.folder
-
-        destination = path.join(
-            destination,
-            "{}_photometry.phots".format(
-                self.fits_explorer.products_denominator
-            ),
-        )
+            destination = self.default_destination
 
         if self.stack_path is not None:
             header = fits.PrimaryHDU(header=fits.getheader(self.stack_path))

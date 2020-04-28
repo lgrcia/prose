@@ -12,6 +12,8 @@ import glob
 from prose import CONFIG
 import warnings
 from prose.lightcurves import LightCurves
+from astropy.nddata import Cutout2D
+from astropy.wcs import WCS
 
 
 def phot2dict(filename, format="fits"):
@@ -89,6 +91,8 @@ class FitsManager:
         self.light_kw = light_kw
 
         self.folder = folder
+        if not path.isdir(self.folder):
+            raise FileNotFoundError("folder does not exists")
 
         self.config = CONFIG
 
@@ -433,7 +437,7 @@ class FitsManager:
         )
 
     def _get_files_headers(self, folder):
-        self._temporary_files_paths = get_files(".f*ts", folder, deepness=self.deepness)
+        self._temporary_files_paths = get_files("f*ts", folder, deepness=self.deepness)
         self._temporary_files_headers = []
 
         if self.verbose:
@@ -509,19 +513,35 @@ class FitsManager:
         else:
             print(table_string)
 
-    def trim(self, image):
-        if isinstance(image, np.ndarray):
-            pass
-        elif isinstance(image, str):
-            if path.exists(image) and image.lower().endswith((".fts", ".fits")):
-                image = fits.getdata(image)
-        else:
-            raise ValueError("{} should be a numpy array or a fits file")
+    def trim(self, image, raw=False):
+        if raw:
+            if isinstance(image, np.ndarray):
+                pass
+            elif isinstance(image, str):
+                if path.exists(image) and image.lower().endswith((".fts", ".fits")):
+                    image = fits.getdata(image)
+            else:
+                raise ValueError("{} should be a numpy array or a fits file")
 
-        return image[
-            self.telescope.trimming[1] : -self.telescope.trimming[1],
-            self.telescope.trimming[0] : -self.telescope.trimming[0],
-        ]
+            return image[
+                self.telescope.trimming[1] : -self.telescope.trimming[1],
+                self.telescope.trimming[0] : -self.telescope.trimming[0],
+            ]
+        else:
+            if isinstance(image, np.ndarray):
+                shape = np.array(image.shape)
+                center = shape/2
+                dimension = shape - 2*np.array(self.telescope.trimming)
+                return Cutout2D(image, center, dimension)
+            elif isinstance(image, str):
+                if path.exists(image) and image.lower().endswith((".fts", ".fits")):
+                    image_data= fits.getdata(image)
+                    shape = np.array(image_data.shape)
+                    center = shape/2
+                    dimension = shape - 2*np.array(self.telescope.trimming)
+                    return Cutout2D(image_data, center, dimension, wcs=WCS(image))
+            else:
+                raise ValueError("{} should be a numpy array or a fits file")
 
     def observations(self):
         light_rows = self.files_df.loc[self.files_df["type"].str.contains(self.light_kw)]
@@ -614,155 +634,3 @@ def fits_keyword_values(fits_files, keywords, default_value=None, verbose=False)
         header_values = [hv for hvs in header_values for hv in hvs]
 
     return header_values
-
-
-def save_phot_fits(phot, destination=None):
-    """
-    Save data into a ``.phots`` file at specified destination. File name is : ``Telescope_date(YYYYmmdd)_target_filter``. For more info check :doc:`/notes/phots-structure`
-    
-    Parameters
-    ----------
-    destination : str path, optional
-        path of destination where to save file, by default None
-    """
-    if destination is None:
-        if phot.folder  is not None:
-            destination = phot.photometry_path
-        else:
-            raise ValueError("destination must be specified")
-    else:
-        destination = path.join(
-            destination, "{}.phots".format(phot.products_denominator)
-        )
-
-    phot.photometry_path = destination
-
-    header = fits.PrimaryHDU(header=fits.getheader(phot.phot_file))
-
-    header.header.update({
-        "TARGETID": phot.target["id"],
-        "TELESCOP": phot.telescope.name,
-        "OBSERVAT": phot.telescope.name,
-        "FILTER": phot.filter,
-        "NIMAGES": phot.n_images
-    })
-
-    hdu_list = [
-        header,
-        fits.ImageHDU(phot.light_curves.as_array()[0], name="photometry"),
-        fits.ImageHDU(phot.stars_coords, name="stars"),
-        fits.ImageHDU(phot.comparison_stars, name="comparison stars"),
-        fits.ImageHDU(phot.apertures, name="apertures"),
-        fits.ImageHDU(phot.artificial_lc, name="artificial lcs"),
-        fits.ImageHDU(phot._time, name="jd"),
-        fits.ImageHDU(phot.bjd_tdb, name="bjd")
-    ]
-
-    for keyword in [
-        "fwhm", "sky", "dx", "dy", "airmass",
-        (phot.telescope.keyword_exposure_time.lower(), "exptime"),
-        (phot.telescope.keyword_julian_date.lower(), "jd"),
-    ]:
-        if isinstance(keyword, str):
-            if keyword in phot.data:
-                hdu_list.append(fits.ImageHDU(phot.data[keyword], name=keyword))
-        elif isinstance(keyword, tuple):
-            if keyword[0] in phot.data:
-                hdu_list.append(
-                    fits.ImageHDU(phot.data[keyword[0]], name=keyword[1])
-                )
-
-    if phot.differential_light_curves is not None:
-        lcs, lcs_errors = phot.differential_light_curves.as_array()
-        hdu_list.append(fits.ImageHDU(lcs, name="lightcurves"))
-        hdu_list.append(fits.ImageHDU(lcs_errors, name="lightcurves errors"))
-
-    hdu = fits.HDUList(hdu_list)
-    hdu.writeto(destination, overwrite=True)
-
-
-def load_phot_fits(phot, phots_path, sort_stars=True):
-    phot_dict = phot2dict(phots_path)
-
-    header = phot_dict["header"]
-    phot.n_images = phot_dict.get("nimages", None)
-    
-    # Loading telescope, None if name doesn't match any 
-    telescope = Telescope()
-    telescope_name = header.get(telescope.keyword_observatory, None)
-    found = telescope.load(CONFIG.match_telescope_name(telescope_name))
-    phot.telescope = telescope if found else None
-    if phot.telescope is not None:
-        ra = header.get(phot.telescope.keyword_ra, None)
-        dec = header.get(phot.telescope.keyword_dec, None)
-        phot.target["radec"] = [ra, dec]
-
-    # Loading info
-    phot.filter = header.get(phot.telescope.keyword_filter, None)
-    phot.observation_date = utils.format_iso_date(
-        header.get(phot.telescope.keyword_observation_date, None))
-    phot.target["name"] = header.get(phot.telescope.keyword_object, None)
-
-    # Loading time and exposure
-    phot._time = phot_dict.get("jd", None)
-    if phot._time is not None: phot._compute_bjd()
-
-    phot.exposure = header.get(phot.telescope.keyword_exposure_time)
-    if phot.exposure is None:
-        phot.exposure = np.min(np.diff(phot.time))
-        warnings.warn("Exposure not found in headers, computed from time")
-
-    # Loading fluxes and sort by flux if specified
-    fluxes = phot_dict.get("photometry", None)
-    assert fluxes is not None
-    fluxes_error = phot_dict.get("photometry errors", None)
-    star_mean_flux = np.mean(np.mean(fluxes, axis=0), axis=1)
-    if sort_stars:
-        sorted_stars = np.argsort(star_mean_flux)[::-1]
-    else:
-        sorted_stars = np.arange(0, np.shape(fluxes)[1])
-    fluxes = fluxes[:, sorted_stars, :]
-    if fluxes_error is not None: fluxes_error = fluxes_error[:, sorted_stars, :]
-
-    # Loading stars, target, apertures
-    phot.stars_coords = phot_dict.get("stars", None)[sorted_stars]
-    phot.apertures = phot_dict.get("apertures", None)
-    target_id = header.get("targetid", None)
-    if target_id is not None:
-        phot.target["id"]= sorted_stars[target_id]
-    
-    # Loading light curves
-    lcs = phot_dict.get("lightcurves", None)
-    lcs_error = phot_dict.get("lightcurves errors", None)
-    if lcs is not None: lcs = lcs[:, sorted_stars, :]
-    if lcs_error is not None: lcs_error = lcs_error[:, sorted_stars, :]
-    comparison_stars = phot_dict.get("comparison stars", None)
-    phot.artificial_lcs = phot_dict.get("artificial lcs", None)
-    if comparison_stars is not None: phot.comparison_stars = sorted_stars[comparison_stars]
-    
-    # Loading all known systematics
-    for key in ["fwhm", "sky", "dx", "dy", "airmass", "exptime"]:
-        phot.data[key] = phot_dict.get(key, None)
-    phot._data_as_attributes()
-
-    time = phot.time
-    a, s, f = fluxes.shape # saved as (apertures, stars, fluxes) for conveniance
-
-    # Photometry into LightCurve objects
-    if fluxes_error is None:
-        fluxes_error = np.empty(np.shape(fluxes))
-        for i, ape in enumerate(phot.apertures):
-            fluxes_error[i, :] = phot.error(
-            fluxes[i, :], np.pi * ape ** 2, method="scinti"
-        )
-    phot.light_curves = LightCurves(
-        time, np.moveaxis(fluxes, 1, 0), np.moveaxis(fluxes_error, 1, 0))
-    phot.light_curves.apertures = phot.apertures
-
-    # Differential photometry into LightCurve objects
-    if lcs is not None:
-        phot.differential_light_curves = LightCurves(time, np.moveaxis(lcs, 1, 0), np.moveaxis(lcs_error, 1, 0))
-        best_aperture_id = phot.differential_light_curves[phot.target["id"]]._best_aperture_id
-        phot.differential_light_curves.set_best_aperture_id(best_aperture_id)
-
-    # self._compute_fluxes_errors()
