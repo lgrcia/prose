@@ -54,7 +54,7 @@ def aperture_photometry_annulus(
     if apertures is None:
         np.arange(0.1, 10, 0.25)
 
-    print("{}: global psf FWHM: {:.2f} (pixels)".format(INFO_LABEL, np.mean(fwhm)))
+    print("{} global psf FWHM: {:.2f} (pixels)".format(INFO_LABEL, np.mean(fwhm)))
 
     n_stars = np.shape(stars_positions)[0]
     n_images = len(fits_files)

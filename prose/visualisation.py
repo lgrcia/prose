@@ -1,3 +1,4 @@
+import matplotlib
 import matplotlib.pyplot as plt
 from prose.utils import binning
 import numpy as np
@@ -8,6 +9,7 @@ from matplotlib import patches
 from astropy.visualization import ZScaleInterval
 from astropy.io import fits
 from mpl_toolkits import axes_grid1
+from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
 
 
 def z_scale(data, c=0.05):
@@ -208,7 +210,7 @@ def plot_all_cuts(cuts, W=10, cmap="magma", stars=None, stars_in=None):
                     ax.plot(*stars_in[i][1][j], "x", c="C0")
 
 
-def plot_stars(image, stars):
+def fancy_show_stars(image, stars):
     pass
 
 class AnchoredHScaleBar(matplotlib.offsetbox.AnchoredOffsetbox):
@@ -353,7 +355,102 @@ def add_colorbar(im, aspect=20, pad_fraction=0.5, **kwargs):
     return im.axes.figure.colorbar(im, cax=cax, **kwargs)
 
 
-def plot_stars(
+class AnchoredHScaleBar(matplotlib.offsetbox.AnchoredOffsetbox):
+    """ size: length of bar in data units
+        extent : height of bar ends in axes units """
+
+    def __init__(self, size=1, extent=0.03, label="", loc=2, ax=None,
+                 pad=0.4, borderpad=0.5, ppad=0, sep=2, prop=None,
+                 frameon=True, linekw={}, **kwargs):
+
+        if not ax:
+            ax = plt.gca()
+
+        trans = ax.get_xaxis_transform()
+        size_bar = matplotlib.offsetbox.AuxTransformBox(trans)
+        line = Line2D([0, size], [0, 0], **linekw)
+        vline1 = Line2D([0, 0], [-extent / 2., extent / 2.], **linekw)
+        vline2 = Line2D([size, size], [-extent / 2., extent / 2.], **linekw)
+        size_bar.add_artist(line)
+        size_bar.add_artist(vline1)
+        size_bar.add_artist(vline2)
+        txt = matplotlib.offsetbox.TextArea(label, minimumdescent=False, textprops=dict(color=linekw.get("color", "k")))
+        self.vpac = matplotlib.offsetbox.VPacker(children=[size_bar, txt],
+                                                 align="center", pad=ppad, sep=sep)
+        matplotlib.offsetbox.AnchoredOffsetbox.__init__(self, loc, pad=pad,
+                                                        borderpad=borderpad, child=self.vpac, prop=prop,
+                                                        frameon=frameon,
+                                                        **kwargs)
+
+def show_stars(image, stars, highlight=None, size=15, options={}, flip=None, color=None, contrast=0.05):
+
+    if color is None:
+        color = np.array([131, 220, 255]) / 255
+
+    _options = {
+        "aperture_color": "seagreen",
+        "aperture_ls": "--"
+    }
+    _options.update(options)
+
+    if isinstance(image, str):
+        image = fits.getdata(image)
+
+    image_size = np.array(np.shape(image))[::-1]
+
+    fig = plt.figure(figsize=(size, size))
+
+    if flip:
+        image = utils.z_scale(image, c=contrast)[::-1, ::-1]
+        stars = np.array(image_size) - stars
+    else:
+        image = utils.z_scale(image, c=contrast)
+
+    ax = fig.add_subplot(111)
+    ax.imshow(image, cmap="Greys_r")
+    plt.title("Stack image", loc="left")
+
+    size_factor = size/7
+    fontsize = min(size_factor, 1)*15
+    label_yoffset = min(size_factor, 1)*15
+
+    if highlight is not None:
+
+        plt.plot(
+            stars[highlight, 0],
+            stars[highlight, 1],
+            "o",
+            markersize=14*size_factor,
+            markeredgecolor=color,
+            markerfacecolor="none",
+            label="target",
+        )
+        plt.annotate(
+            highlight, xy=[stars[highlight][0], stars[highlight][1] + label_yoffset], 
+            color=color, fontsize=fontsize, ha='center', va='top'
+        )
+    
+    else:
+        highlight = -1
+
+    other_stars = np.arange(len(stars))
+
+    other_stars = np.setdiff1d(other_stars, highlight)
+
+    plt.plot(
+        stars[other_stars, 0],
+        stars[other_stars, 1],
+        "o",
+        markersize=14*size_factor,
+        markeredgecolor=color,
+        markerfacecolor="none",
+        alpha=0.4 if highlight >= 0 else 1
+    )
+
+    plt.tight_layout()
+
+
+def fancy_show_stars(
     image,
     stars,
     ref_stars=None,
@@ -433,49 +530,54 @@ def plot_stars(
         ax.imshow(image, cmap="Greys_r")
         plt.title("Stack image", loc="left")
 
+        size_factor = size/15
+        fontsize = min(size_factor, 1)*15
+        label_yoffset = min(size_factor, 1)*30
+
         if view == "all":
 
             plt.plot(
                 stars[:, 0],
                 stars[:, 1],
                 "o",
-                markersize=10,
+                markersize=fontsize,
                 markeredgecolor=marker_color,
                 markerfacecolor="none",
             )
 
             for i, coord in enumerate(stars):
                 plt.annotate(str(i),
-                             xy=[coord[0], coord[1] + 45],
+                             xy=[coord[0], coord[1] + label_yoffset],
                              color=marker_color,
-                             ha='center')
+                             ha='center', fontsize=fontsize, va='top')
 
         if ref_stars is not None:
             plt.plot(
                 stars[target, 0],
                 stars[target, 1],
                 "o",
-                markersize=12,
+                markersize=12*size_factor,
                 markeredgecolor=marker_color,
                 markerfacecolor="none",
                 label="target",
             )
             plt.annotate(
-                target, xy=stars[target] + 25, color=marker_color
+                target, xy=[stars[target][0], stars[target][1] + label_yoffset], 
+                color=marker_color, fontsize=fontsize, ha='center', va='top'
             )
 
             plt.imshow(image, cmap="Greys_r")
             plt.plot(
-                stars[ref_sars, 0],
-                stars[ref_sars, 1],
+                stars[ref_stars, 0],
+                stars[ref_stars, 1],
                 "o",
-                markersize=12,
+                markersize=12*size_factor,
                 markeredgecolor="yellow",
                 markerfacecolor="none",
                 label="comparison",
             )
             for i in ref_stars:
-                plt.annotate(str(i), xy=stars[i] + 25, color="yellow")
+                plt.annotate(str(i), xy=[stars[i][0], stars[i][1] + label_yoffset], color="yellow", fontsize=fontsize, ha='center', va='top')
 
             other_stars = np.arange(len(stars))
 
@@ -486,7 +588,7 @@ def plot_stars(
                 stars[other_stars, 0],
                 stars[other_stars, 1],
                 "o",
-                markersize=11,
+                markersize=11*size_factor,
                 markeredgecolor=marker_color,
                 markerfacecolor="none",
                 alpha=0.4
@@ -495,7 +597,7 @@ def plot_stars(
         plt.tight_layout()
 
         if pixel_scale is not None:
-            ob = viz.AnchoredHScaleBar(size=60 / pixel_scale, label="1'", loc=4, frameon=False, extent=0,
+            ob = AnchoredHScaleBar(size=60 / pixel_scale, label="1'", loc=4, frameon=False, extent=0,
                                        pad=0.6, sep=4, linekw=dict(color="white", linewidth=0.8))
             ax.add_artist(ob)
 
@@ -530,7 +632,7 @@ def plot_stars(
                 axins.set_ylim([y + 80, y - 80])
 
                 if pixel_scale is not None:
-                    obin = viz.AnchoredHScaleBar(size=15 / pixel_scale, label="15\"", loc=4,
+                    obin = AnchoredHScaleBar(size=15 / pixel_scale, label="15\"", loc=4,
                                                  frameon=False, extent=0, pad=0.6, sep=4,
                                                  linekw=dict(color="white", linewidth=0.8))
                     axins.add_artist(obin)
