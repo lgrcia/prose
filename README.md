@@ -13,15 +13,15 @@ prose runs more safely in its own [virtual environment](https://docs.python.org/
 create your [virtualenv](https://docs.python.org/3/tutorial/venv.html) and activate it
 
 ```shell
-    python3.6 -m venv prose_env
-    source prose_env/bin/activate.bin
+python3.6 -m venv prose_env
+source prose_env/bin/activate.bin
 ```
 
 Then to locally install prose
 
 ```shell
-    git clone https://github.com/LionelGarcia/prose.git
+git clone https://github.com/LionelGarcia/prose.git
 
-    cd prose_env
-    python3.6 -m pip install -e ../prose
+cd prose_env
+python3.6 -m pip install -e ../prose
 ```
