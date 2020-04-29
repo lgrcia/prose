@@ -6,12 +6,11 @@ setup(
     py_modules=["prose"],
     entry_points="""
         [console_scripts]
-        specphot=main:cli
+        prose=main:cli
     """,
     install_requires=[
         "numpy",
         "scipy",
-        "jupyterlab",
         "astropy==4.0",
         "matplotlib",
         "colorama",
