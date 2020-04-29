@@ -8,7 +8,7 @@
 
 |prose| is a python package to reduce and analyse data from telescope observations. Its primary goal is the production of differential light curves from raw uncalibrated FITS images.
 
-.. image:: _static/css/prose.png
+.. image:: prose.png
    :width: 450
    :align: center
 

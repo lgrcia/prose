@@ -354,6 +354,11 @@ class LightCurve:
             wether to show errors using std or ``self.error``, by default False
         offset: float, optional
             offset of y axis, by default 0
+
+        Example
+        -------
+        .. image:: /guide/examples_images/plot_lc.png
+           :align: center
         """
         viz.plot_lc(self.time, self.flux+offset, bins=bins, error=self.error, std=std)
         plt.xlim(self.time.min(), self.time.max())

@@ -23,3 +23,10 @@ LightCurves
     :members:
 
     .. automethod:: __init__
+
+Telescope
+-----------
+.. autoclass:: prose.Telescope
+    :members:
+
+    .. automethod:: __init__

@@ -316,17 +316,9 @@ class Photometry:
             - ``reference`` : only highlight target and comparison stars
             - ``all`` : all stars are shown
 
-        Examples
-        --------
-
-        .. code:: python3
-
-            from prose import Photometry
-    
-            phot = Photometry("your_path")
-            phot.show_stars()
-
-        .. image:: /guide/gallery/plot_stars.png
+        Example
+        -------
+        .. image:: /guide/examples_images/plot_stars.png
            :align: center
         """
         if view is None:
@@ -391,7 +383,12 @@ class Photometry:
 
     def plot_comps_lcs(self):
         """
-         Plot comparison stars light curves along target star light curve
+        Plot comparison stars light curves along target star light curve
+
+        Example
+        -------
+        .. image: /examples_images/plot_comps.png
+           :align: center
         """
         self._check_lcs()
         idxs = [self.target["id"], *self.comparison_stars[0:5]]
@@ -400,6 +397,19 @@ class Photometry:
         viz.plot_comparison_lcs(lcs, idxs)
 
     def plot_data(self, key):
+        """
+        Plot a data time-serie on top of the target light curve
+
+        Parameters
+        ----------
+        key : str
+            key of data time-serie in self.data dict
+
+        Examples
+        --------
+        .. image:: /guide/examples_images/plot_systematic.png
+           :align: center
+        """
         self.lc.plot()
         amp = (np.percentile(self.lc.flux, 95) - np.percentile(self.lc.flux, 5))/2
         plt.plot(self.lc.time, amp*utils.rescale(self.data[key])+1,
@@ -409,6 +419,14 @@ class Photometry:
         plt.legend()
     
     def plot_psf_fit(self, size=21):
+        """
+         Plot a 2D gaussian fit of the global psf (extracted from stack fits)
+
+        Example
+        -------
+        .. image:: /guide/examples_images/plot_psf_fit.png
+           :align: center
+        """
         cut = psf.image_psf(self.stack_fits, self.stars_coords, size=size)
         p = psf.fit_gaussian2_nonlin(cut)
         plt.figure(figsize=(12, 4))
@@ -417,6 +435,14 @@ class Photometry:
         return {"theta": p[5], "std_x": p[3], "std_y": p[4]}
     
     def plot_rms(self):
+        """
+        Plot binned rms of lightcurves vs the CCD equation
+
+        Example
+        -------
+        .. image:: /guide/examples_images/plot_rms.png
+           :align: center
+        """
         self._check_lcs()
         viz.plot_rms(
             self.fluxes, 
