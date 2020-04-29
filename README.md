@@ -10,7 +10,7 @@ prose is a python package to reduce and analyse data from telescope observations
 
 prose runs more safely in its own [virtual environment](https://docs.python.org/3/tutorial/venv.html) and is tested on Python 3.6.
 
-### OSX
+### example on OSX
 
 create your [virtualenv](https://docs.python.org/3/tutorial/venv.html) and activate it
 
@@ -27,3 +27,5 @@ git clone https://github.com/LionelGarcia/prose.git
 cd prose_env
 python3.6 -m pip install -e ../prose
 ```
+
+Applicable to Linux-based and Windows OS

@@ -19,8 +19,7 @@
 
    guide/getting-started
    guide/photometry-object
-   guide/lightcurves-objects
-
+   guide/api
 
 .. toctree::
    :caption: Tutorials
@@ -28,6 +27,7 @@
 
    tutorials/explore
    tutorials/reduction/reduction
+   tutorials/photometry-analysis/photometry-analysis
 
 
 .. toctree::

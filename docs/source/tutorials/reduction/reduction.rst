@@ -105,4 +105,4 @@ It contains all reduced images, a nice gif of the observation and a stack fits o
 
     More information about reduction, photometry and how to select the methods used by the pipeline are provided in TODO
 
-We can now load this folder into a ``Photometry`` object and proceed with further analaysis (e.g. producing Quatar2-b transit light-curve TODO:adlink)
+We can now load this folder into a ``Photometry`` object and proceed with further analaysis (e.g. in the :ref:`next turorial <photometry-analysis>` where we produce Quatar2-b transit light-curve)

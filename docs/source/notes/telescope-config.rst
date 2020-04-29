@@ -68,6 +68,6 @@ These dictionaries are used by the ``Telescope`` object used by |prose| which ca
 
     .. code-block:: python
 
-        telescope = Telescope(`path_to/my_telescope.yaml`)
+        telescope = Telescope("path_to/my_telescope.yaml")
 
 When working with a new telescope, this operation needs to be done only **once**, after which the telescope dictionnary is saved and automatically used whenever the telescope name is encountered in a fits header. See :ref:`reduction` for a use case.

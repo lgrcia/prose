@@ -2,7 +2,8 @@
 
 Photometry
 ==========
-|prose| ``Photometry`` class holds methods to manipulate photometric products
+
+|prose| :py:class:`~prose.Photometry` class holds methods to manipulate photometric products
 
 .. currentmodule:: prose.Photometry
 
@@ -22,8 +23,3 @@ Photometry
     show_stars
     show_gaia
     show_cutout
-
-.. autoclass:: prose.Photometry
-    :members:
-
-    .. automethod:: __init__
