@@ -88,6 +88,9 @@ def return_method(name):
 
 
 class Calibration:
+    """
+    calibration task, included in :py:class:`~prose.pipeline.Reduction`
+    """
     def __init__(
         self,
         folder=None,
@@ -188,6 +191,9 @@ class Calibration:
 
 
 class Reduction:
+    """
+    calibration, alignment, stacking and other reduction tasks
+    """
     def __init__(
         self,
         folder=None,
@@ -451,6 +457,9 @@ class Reduction:
 
 
 class Photometry:
+    """
+    photometric extraction task
+    """
     def __init__(
         self,
         folder,
