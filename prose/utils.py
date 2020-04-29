@@ -78,3 +78,7 @@ def z_scale(data, c=0.05):
         data = fits.getdata(data)
     interval = ZScaleInterval(contrast=c)
     return interval(data.copy())
+
+def rescale(y):
+    ry = y - np.mean(y)
+    return ry/np.std(ry)

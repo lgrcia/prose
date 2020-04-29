@@ -13,6 +13,7 @@ from prose.telescope import Telescope
 from prose import utils, CONFIG
 from astropy.wcs import WCS
 from astropy.wcs import utils as wcsutils
+from prose.pipeline_methods import psf
 
 
 class Photometry:
@@ -20,12 +21,12 @@ class Photometry:
     Class to load and analyze photometry products
     """
     
-    def __init__(self, folder=None, sort_stars=True):
+    def __init__(self, folder_or_file=None, sort_stars=True):
         """
         Parameters
         ----------
-        folder : str path, optional
-            Path of folder containing at least a ``.phots`` file, by default None
+        folder_or_file : str path, optional
+            Path of folder or file. If folder, should contain at least a ``.phots`` file. If file, should be a ``.phots`` file. By default None
         sort_stars : bool, optional
             wether to sort stars by luminosity on loading, by default True
         """
@@ -42,7 +43,7 @@ class Photometry:
         # Files
         self.phot_file = None
         self.stack_fits = None
-        self.folder = folder
+        self.folder = None
 
         # Observation info
         self.observation_date = None
@@ -61,19 +62,17 @@ class Photometry:
         self.gaia_data = None
         self.wcs = None
 
-        if folder is not None:
-            self.load_folder(folder, sort_stars=sort_stars)
+        if folder_or_file is not None:
+            isdir = self._check_folder_or_file(folder_or_file)
+            if isdir:
+                self.folder = folder_or_file
+                self.load_folder(folder_or_file, sort_stars=sort_stars)
+            else:
+                self.phot_file = folder_or_file
+                self.load_phot(folder_or_file)
 
     # Properties
     # ----------
-    @property
-    def target_flux(self):
-        return self.lcs[self.target["i"]].flux
-
-    @property
-    def target_error(self):
-        return self.lcs[self.target["i"]].error
-        
     @property
     def time(self):
         if self.bjd_tdb is not None:
@@ -84,6 +83,7 @@ class Photometry:
     
     @property
     def lc(self):
+        self._check_lcs()
         return self.lcs[self.target["id"]]
     
     @property
@@ -93,6 +93,29 @@ class Photometry:
 
     # Loaders and savers (files and data)
     # ------------------------
+    def _check_folder_or_file(self, folder_or_file):
+        """
+        Check if provided path is a phots file or folder, else raise error
+
+        Parameters
+        ----------
+        folder_or_file : str path
+            path of file or folder
+
+        Returns
+        -------
+        bool
+            True if folder, False if path
+        """
+        if path.isfile(folder_or_file):
+            if "phot" in path.splitext(folder_or_file)[1]:
+                return False
+            else:
+                raise ValueError("File should be a .phots file")
+        elif path.isdir(folder_or_file):
+            return True
+        else:
+            raise NotADirectoryError("path doesn't exist")
     
     def load_folder(self, folder_path, sort_stars=True):
         """
@@ -184,33 +207,18 @@ class Photometry:
 
     # Methods
     # -------
+    def _check_lcs(self):
+        if self.lcs is None:
+            raise ValueError("No differential light curve")
+        else:
+            pass
+
     def _compute_bjd(self):
         assert self.telescope is not None
         assert self.skycoord is not None
         time = Time(self._time, format="jd", scale="utc", location=self.telescope.earth_location)
         light_travel_tbd = time.light_travel_time(self.skycoord, location=self.telescope.earth_location)
         self.bjd_tdb = (time + light_travel_tbd).value
-
-    def error(self, signal, npix, scinfac=0.09, method="scinti"):
-        assert self.data.get("sky", None) is not None, "sky not found to compute flux error"
-
-        _signal = signal.copy()
-        _squarred_error = _signal + npix * (
-            self.data["sky"] + self.telescope.read_noise ** 2 + (self.telescope.gain / 2) ** 2
-        )
-
-        if method == "scinti":
-            assert self.data.get("airmass", None) is not None, "airmass not found to compute flux error"
-            scintillation = (
-                scinfac
-                * np.power(self.telescope.diameter, -0.6666)
-                * np.power(self.data["airmass"], 1.75)
-                * np.exp(-self.telescope.altitude / 8000.0)
-            ) / np.sqrt(2 * self.exposure)
-
-            _squarred_error += np.power(signal * scintillation, 2)
-
-        return np.sqrt(_squarred_error)
     
     def Broeg2005(self, **kwargs):
         """
@@ -244,7 +252,7 @@ class Photometry:
 
         self.artificial_lc = np.array(art_lcs)
         self.lcs = LightCurves(self.time, np.moveaxis(lcs,0,1), np.moveaxis(lcs_errors,0,1))
-        best_aperture_id = self.lcs[self.target["id"]]._best_aperture_id
+        best_aperture_id = self.lcs[self.target["id"]].best_aperture_id
         self.lcs.set_best_aperture_id(best_aperture_id)
         self._comparison_stars = np.array(comps)
 
@@ -261,7 +269,7 @@ class Photometry:
         lcs, lcs_errors, art_lcs = differential_photometry(fluxes, fluxes_errors, comps, return_art_lc=True)
         self.artificial_lc = np.array(art_lcs)
         self.lcs = LightCurves(self.time, np.moveaxis(lcs,0,1), np.moveaxis(lcs_errors,0,1))
-        best_aperture_id = self.lcs[self.target["id"]]._best_aperture_id
+        best_aperture_id = self.lcs[self.target["id"]].best_aperture_id
         self.lcs.set_best_aperture_id(best_aperture_id)
         self._comparison_stars = np.array(comps)
 
@@ -380,7 +388,41 @@ class Photometry:
         ax = plt.gcf().axes[0]
         ax.set_xlim(np.array([-size/2, size/2]) + self.stars_coords[star][0])
         ax.set_ylim(np.array([size/2, -size/2]) + self.stars_coords[star][1])
-        
+
+    def plot_comps_lcs(self):
+        """
+         Plot comparison stars light curves along target star light curve
+        """
+        self._check_lcs()
+        idxs = [self.target["id"], *self.comparison_stars[0:5]]
+        lcs = [self.lcs[i] for i in idxs]
+        plt.figure(figsize=(5, 8))
+        viz.plot_comparison_lcs(lcs, idxs)
+
+    def plot_data(self, key):
+        self.lc.plot()
+        amp = (np.percentile(self.lc.flux, 95) - np.percentile(self.lc.flux, 5))/2
+        plt.plot(self.lc.time, amp*utils.rescale(self.data[key])+1,
+            label="normalized {}".format(key),
+            color="k"
+        )
+        plt.legend()
+    
+    def plot_psf_fit(self, size=21):
+        cut = psf.image_psf(self.stack_fits, self.stars_coords, size=size)
+        p = psf.fit_gaussian2_nonlin(cut)
+        plt.figure(figsize=(12, 4))
+        viz.plot_gaussian_model(cut, p, psf.gaussian_2d)
+
+        return {"theta": p[5], "std_x": p[3], "std_y": p[4]}
+    
+    def plot_rms(self):
+        self._check_lcs()
+        viz.plot_rms(
+            self.fluxes, 
+            self.lcs, 
+            target=self.target["id"], 
+            highlights=self.comparison_stars)
 
     # Loaders and Savers implementations
     # ----------------------------------
@@ -518,12 +560,17 @@ class Photometry:
         a, s, f = fluxes.shape # saved as (apertures, stars, fluxes) for conveniance
 
         # Photometry into LightCurve objects
+        # Here is where we compute the fluxes errors
         if fluxes_error is None:
             fluxes_error = np.empty(np.shape(fluxes))
             for i, ape in enumerate(self.apertures):
-                fluxes_error[i, :] = self.error(
-                fluxes[i, :], np.pi * ape ** 2, method="scinti"
-            )
+                fluxes_error[i, :] = self.telescope.error(
+                    fluxes[i, :],
+                    np.pi * ape ** 2,
+                    self.sky,
+                    self.exposure,
+                    airmass=self.airmass
+                )
         self.fluxes = LightCurves(
             time, np.moveaxis(fluxes, 1, 0), np.moveaxis(fluxes_error, 1, 0))
         self.fluxes.apertures = self.apertures
@@ -531,10 +578,9 @@ class Photometry:
         # Differential photometry into LightCurve objects
         if lcs is not None:
             self.lcs = LightCurves(time, np.moveaxis(lcs, 1, 0), np.moveaxis(lcs_error, 1, 0))
-            best_aperture_id = self.lcs[self.target["id"]]._best_aperture_id
+            best_aperture_id = self.lcs[self.target["id"]].best_aperture_id
             self.lcs.set_best_aperture_id(best_aperture_id)
-
-        # self._compute_fluxes_errors()
+            self.fluxes.set_best_aperture_id(best_aperture_id)
 
         
 

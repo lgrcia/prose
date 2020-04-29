@@ -26,44 +26,31 @@ def plot_lc(
     bins=0.005,
     std=True,
     options={},
+    plot_kwargs={},
+    errorbar_kwargs={}
 ):
-    _options = {
-        "raw_markersize": 5,
-        "raw_label": "raw data",
-        "raw_color": "gainsboro",
-        "binned_markersize": 6,
-        "binned_color": "C0",
-        "binned_capsize": 2,
-        "binned_elinewidth": 0.75,
-        "figsize": None
-    }
-    _options.update(options)
-
-    if isinstance(_options["figsize"], tuple):
-        plt.figure(figsize=_options["figsize"])
-
-    plt.plot(
-        time,
-        flux,
-        ".",
-        c=_options["raw_color"],
+    plot_kwargs = dict(
+        c="gainsboro",
         zorder=0,
-        markersize=_options["raw_markersize"],
-        label=_options["raw_label"],
-    )
+        ms=5,
+        label="raw_data",
+        **plot_kwargs)
+
+    errorbar_kwargs = dict(
+        fmt=".",
+        capsize=2,
+        elinewidth=0.75,
+        c="C0",
+        ecolor="C0",
+        markersize=6,
+        label="binned data ({} JD)".format(bins),
+        **errorbar_kwargs)
+
+    plt.plot(time, flux, ".", **plot_kwargs)
 
     if bins is not None:
         blc = binning(time, flux, bins=bins, error=error, std=std)
-        plt.errorbar(
-            *blc,
-            fmt=".",
-            capsize=_options["binned_capsize"],
-            elinewidth=_options["binned_elinewidth"],
-            c=_options["binned_color"],
-            ecolor=_options["binned_color"],
-            markersize=_options["binned_markersize"],
-            label="binned data ({} JD)".format(bins),
-        )
+        plt.errorbar(*blc, **errorbar_kwargs)
 
     plt.legend()
 
@@ -135,35 +122,25 @@ def plot_lc_report(
     plt.show()
 
 
-def plot_gaussian_model(cut, params, gauss_model, options={}):
-    _options = {
-        "figsize": (12, 4),
-        "color": "blueviolet",
-        "cmap": "inferno"
-    }
-    _options.update(options)
-
-    options = _options
+def plot_gaussian_model(cut, params, gauss_model, imshow_kwargs={}, plot_kwargs={}):
+    imshow_kwargs = dict(cmap = "inferno",**imshow_kwargs)
+    plot_kwargs = dict(color="blueviolet",**plot_kwargs)
 
     image, parameters = (cut, params)
 
     x, y = np.indices(cut.shape)
 
-    plt.figure(figsize=_options["figsize"])
-
     model = gauss_model(*np.indices(cut.shape), *params)
 
     plt.subplot(131)
-    plt.imshow(z_scale(image), alpha=1, cmap=options["cmap"])
+    plt.imshow(z_scale(image), alpha=1, **imshow_kwargs)
     plt.contour(model, colors="w", alpha=0.7)
-    # plt.plot(x[yo], np.ones(len(x)) * yo, "--", c="w")
-    # plt.plot(np.ones(len(y)) * xo, x[xo], "--", c="w")
     plt.xlabel("x (pixels)")
     plt.ylabel("y (pixels)")
     plt.title("PSF", loc="left")
 
     plt.subplot(132)
-    plt.plot(y[0], np.mean(image, axis=0), c=options["color"])
+    plt.plot(y[0], np.mean(image, axis=0), **plot_kwargs)
     plt.plot(y[0], np.mean(model, axis=0), "--", c="k")
     plt.xlabel("x (pixels)")
     plt.ylim(cut.min() * 0.98, np.mean(image, axis=0).max() * 1.02)
@@ -171,7 +148,7 @@ def plot_gaussian_model(cut, params, gauss_model, options={}):
     plt.grid(color="whitesmoke")
 
     plt.subplot(133)
-    plt.plot(y[0], np.mean(image, axis=1), c=options["color"])
+    plt.plot(y[0], np.mean(image, axis=1), **plot_kwargs)
     plt.plot(y[0], np.mean(model, axis=1), "--", c="k")
     plt.xlabel("y")
     plt.ylim(cut.min() * 0.98, np.mean(image, axis=1).max() * 1.02)
@@ -314,7 +291,7 @@ def plot_lcs(data, planets={}, W=4, show=None, hide=None, options={}):
                     )
                     ax.add_patch(p1)
 
-            plot_lc(jd, lc, options={"figsize": None})
+            plot_lc(jd, lc)
             plt.ylim(options["ylim"])
 
             plt.xlim(center - (max_duration/2), center + (max_duration/2))
@@ -636,3 +613,71 @@ def fancy_show_stars(
                                                  frameon=False, extent=0, pad=0.6, sep=4,
                                                  linekw=dict(color="white", linewidth=0.8))
                     axins.add_artist(obin)
+
+
+def plot_comparison_lcs(lcs, idxs, bins=0.005, offset_factor=2.5):
+    """Plot comparison stars light curves along target star light curve
+    """
+    time = lcs[0].time
+
+    ax = plt.subplot(111)
+    plt.title("Comparison diff. light curves", loc="left")
+    plt.grid(color="whitesmoke")
+    amp = np.percentile(lcs[0].flux, 95) - np.percentile(lcs[0].flux, 5)
+    for i, lc in enumerate(lcs):
+        lc.plot(offset=-offset_factor * amp * i)
+        plt.annotate(
+            "{}".format(idxs[i]), 
+            (lc.time.min() + 0.005, 1.01 - offset_factor * amp * i)
+            )
+
+    plt.xlim(min(lcs[0].time), max(lcs[0].time))
+    ax.get_legend().remove()
+    plt.tight_layout()
+
+
+def plot_rms(fluxes_lcs, diff_lcs, target=None, highlights=None, bins=0.005):
+    fluxes_lcs.set_best_aperture_id(diff_lcs.best_aperture_id)
+    lcs = diff_lcs.fluxes
+    errors = diff_lcs.errors
+    fluxes = fluxes_lcs.fluxes
+
+    time = diff_lcs[0].time.copy()
+
+    fluxes_median = np.median(fluxes, axis=1)
+    stds_median = np.array([np.median(utils.binning(time, lc, bins, error=error, std=True)[2]) for lc, error in zip(lcs, errors)])
+    stds_median /= fluxes_median
+    errors_median = np.array([np.median(utils.binning(time, lc, bins, error=error, std=False)[2]) for lc, error in zip(lcs, errors)])
+    errors_median /= fluxes_median
+
+    plt.grid(color="whitesmoke", zorder=0)
+
+    if highlights is not None:
+        for c in highlights:
+            comp_flux_median = fluxes_median[c]
+            comp_std_median = stds_median[c]
+            plt.plot(comp_flux_median, comp_std_median, ".", c="gold", zorder=5)
+        plt.plot(comp_flux_median, comp_std_median, ".", c="gold", label="comparison stars", zorder=5)
+
+    if target is not None:
+        target_flux_median = fluxes_median[target]
+        target_std_median = stds_median[target]
+        plt.plot(target_flux_median, target_std_median, ".", c="C0", label="target",zorder=6, ms=10)
+
+    idxs = np.argsort(fluxes_median)
+
+    stds_median = stds_median[idxs]
+    errors_median = errors_median[idxs]
+    fluxes_median = fluxes_median[idxs]
+
+    plt.title("Light curves binned rms", loc="left")
+    plt.plot(fluxes_median, stds_median, ".", c="darkgrey", zorder=4, label="others")
+    plt.plot(fluxes_median, errors_median, c="k", lw=1, zorder=7, label="CCD equation", alpha=0.8)
+    plt.legend()
+    plt.yscale('log')
+    plt.xscale('log')
+    plt.xlabel("ADUs")
+    plt.ylabel("diff. flux rms ({} JD bin)".format(bins))
+
+    fluxes_median = fluxes_median[fluxes_median>0]
+    plt.xlim(fluxes_median.min(), fluxes_median.max())

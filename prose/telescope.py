@@ -1,6 +1,7 @@
 from os import path
 from astropy.coordinates import EarthLocation
 import yaml
+import numpy as np
 from prose import CONFIG
 
 class Telescope:
@@ -62,3 +63,22 @@ class Telescope:
     @property
     def earth_location(self):
         return EarthLocation(*self.latlong, self.altitude)
+
+    def error(self, signal, npix, sky, exposure, airmass=None, scinfac=0.09):
+        _signal = signal.copy()
+        _squarred_error = _signal + npix * (
+            sky + self.read_noise ** 2 + (self.gain / 2) ** 2
+        )
+
+        if airmass is not None:
+            scintillation = (
+                scinfac
+                * np.power(self.diameter, -0.6666)
+                * np.power(airmass, 1.75)
+                * np.exp(-self.altitude / 8000.0)
+            ) / np.sqrt(2 * exposure)
+
+            _squarred_error += np.power(signal * scintillation, 2)
+
+        return np.sqrt(_squarred_error)
+        

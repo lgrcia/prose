@@ -300,7 +300,7 @@ class LightCurve:
         self.errors = errors if self._n_aperture > 1 else [errors]
         self.apertures = apertures
         
-        self._best_aperture_id = None
+        self.best_aperture_id = None
         self._pick_best_aperture()
     
     @property
@@ -308,14 +308,14 @@ class LightCurve:
         """
         Flux from best aperture
         """
-        return self.fluxes[self._best_aperture_id]
+        return self.fluxes[self.best_aperture_id]
     
     @property
     def error(self):
         """
         Flux error from best aperture
         """
-        return self.errors[self._best_aperture_id]
+        return self.errors[self.best_aperture_id]
     
     def _pick_best_aperture(self, method="stddiff"):
         """
@@ -335,14 +335,14 @@ class LightCurve:
             else:
                 raise ValueError("{} is not a valid method".format(method))
 
-            self._best_aperture_id = np.argmin(criterion)
+            self.best_aperture_id = np.argmin(criterion)
         else:
-            self._best_aperture_id = 0
+            self.best_aperture_id = 0
     
     def to_tuple(self):
         return self.time, self.flux, self.error, self.data
     
-    def plot(self, bins=0.005, std=False):
+    def plot(self, bins=0.005, std=False, offset=0):
         """
         Plot light curve along time
 
@@ -352,8 +352,10 @@ class LightCurve:
             bin size in unit of ``self.times`, by default 0.005
         std : bool, optional
             wether to show errors using std or ``self.error``, by default False
+        offset: float, optional
+            offset of y axis, by default 0
         """
-        viz.plot_lc(self.time, self.flux, bins=bins, error=self.error, std=std)
+        viz.plot_lc(self.time, self.flux+offset, bins=bins, error=self.error, std=std)
         plt.xlim(self.time.min(), self.time.max())
         
     def binned(self, bins):
@@ -409,6 +411,14 @@ class LightCurves:
     
     def __iter__(self):
         return iter(self._lightcurves)
+
+    @property
+    def fluxes(self):
+        return np.array([lc.flux for lc in self._lightcurves])
+
+    @property
+    def errors(self):
+        return np.array([lc.error for lc in self._lightcurves])
 
     def set_best_aperture_id(self, i):
         """
