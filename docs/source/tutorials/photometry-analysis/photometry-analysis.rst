@@ -3,7 +3,7 @@
 Photometry analysis
 ===================
 
-In this tutorial we will see how to use and analyse photometric products from |prose|. As in the :ref:`last tutorial <reduction>`  we will study an observation of Quatar2-b exoplanet transit observed from the Trappist-North telescope, but this time with a bit more consequent products, to produce a denser light curve (92 images). This products are available in TODO (10MB).
+In this tutorial we will see how to use and analyse photometric products from |prose|. As in the :ref:`last tutorial <reduction>`  we will study an observation of Quatar2-b exoplanet transit observed from the Trappist-North telescope, but this time with a bit more consequent products, to produce a denser light curve (92 images). These products are available in TODO (10MB).
 
 Let's instantiate a :py:class:`~prose.Photometry`  object containing all we need for this analysis and show the detected stars
 
@@ -41,4 +41,4 @@ We can check the comparison stars
 .. image:: output_2_0.png
    :align: center
 
-and continue with further visualisation or analysis. All available plotting methods are described in TODO.
+and continue with further visualisation or analysis. All available plotting methods are described in the :ref:`quick-ref` and in details in :py:class:`~prose.Photometry`.

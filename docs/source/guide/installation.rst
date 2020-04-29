@@ -50,7 +50,3 @@ Then to locally install |prose|
 
     cd prose_env
     python3.6 -m pip install -e ../prose
-
-
-You can now access the ``prose`` command. To quit the virtual environment run ``deactivate``.
-

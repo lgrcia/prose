@@ -15,10 +15,10 @@
 
 .. toctree::
    :caption: References
-   :maxdepth: 2
+   :maxdepth: 1
 
-   guide/getting-started
-   guide/photometry-object
+   guide/installation
+   guide/quick-ref
    guide/api
 
 .. toctree::
