@@ -1,9 +1,9 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name="prose",
     version="0.1",
     py_modules=["prose"],
-    packages=setuptools.find_packages(),
+    packages=find_packages(),
     zip_safe=True
 )
