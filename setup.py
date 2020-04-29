@@ -24,9 +24,9 @@ setup(
         "pyyaml",
         "sphinx",
         "docutils",
-        "george",
         "tabulate",
         "sphinx_rtd_theme",
         "imageio"
     ],
+    zip_safe=True
 )
