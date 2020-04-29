@@ -1,9 +1,32 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 
 setup(
     name="prose",
     version="0.1",
     py_modules=["prose"],
-    packages=find_packages(),
+    entry_points="""
+        [console_scripts]
+        prose=main:cli
+    """,
+    install_requires=[
+        "numpy",
+        "scipy",
+        "astropy==4.0",
+        "matplotlib",
+        "colorama",
+        "scikit-image",
+        "pandas",
+        "tqdm",
+        "astroalign",
+        "photutils",
+        "click",
+        "astroquery",
+        "pyyaml",
+        "sphinx",
+        "docutils",
+        "tabulate",
+        "sphinx_rtd_theme",
+        "imageio"
+    ],
     zip_safe=True
 )
