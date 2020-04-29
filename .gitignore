@@ -1,6 +1,5 @@
 .vscode
 Pipfile.lock
-test
 *egg-info*
 *checkpoint.ipynb
 docs/build
