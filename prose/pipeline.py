@@ -312,6 +312,9 @@ class Reduction:
             "_stack.fits",
         )
 
+        if path.exists(stack_path) and not overwrite:
+            raise AssertionError("stack {} already exists".format(stack_path))
+
         reference_frame = int(reference_frame*len(self.light_files))
         reference_image_path = self.light_files[reference_frame]
         reference_image = self.fits_explorer.trim(reference_image_path)
@@ -331,6 +334,9 @@ class Reduction:
                 reference_image.data,
                 **self.stars_detection_kwargs,
             )
+
+        ref_shape = np.array(reference_image.shape)
+        ref_center = ref_shape/2
 
         with imageio.get_writer(gif_path, mode="I") as writer:
             for i, image in enumerate(tqdm(
@@ -370,13 +376,14 @@ class Reduction:
                     )
 
                 # Image alignment
-                translation = AffineTransform(translation=-shift.astype("int"))
-                aligned_frame = warp(
-                    calibrated_frame,
-                    translation,
-                    mode="constant",
-                    cval=np.mean(calibrated_frame),
-                )
+                aligned_frame = Cutout2D(
+                    calibrated_frame, 
+                    ref_center-shift.astype("int"), 
+                    ref_shape, 
+                    mode="partial", 
+                    fill_value=np.mean(calibrated_frame),
+                    wcs = WCS(image)
+                    )
 
                 # Seeing estimation
                 try:
@@ -387,9 +394,9 @@ class Reduction:
                 # Stack image production
                 if save_stack:
                     if i==0:
-                        stacked_image = aligned_frame
+                        stacked_image = aligned_frame.data
                     else:
-                        stacked_image += aligned_frame
+                        stacked_image += aligned_frame.data
                 else:
                     save_stack = None
 
@@ -397,15 +404,15 @@ class Reduction:
                 if save_gif:
                     gif_im = utils.z_scale(
                         resize(
-                            aligned_frame,
-                            np.array(np.shape(aligned_frame)).astype(int) * gif_factor,
+                            aligned_frame.data,
+                            np.array(np.shape(aligned_frame.data)).astype(int) * gif_factor,
                             anti_aliasing=True,
                         )
                     )
                     writer.append_data((gif_im * 255).astype("uint8"))
 
                 # Reduced image HDU construction
-                new_hdu = fits.PrimaryHDU(aligned_frame)
+                new_hdu = fits.PrimaryHDU(aligned_frame.data)
                 new_hdu.header = fits.getheader(image)
 
                 h = {
@@ -426,7 +433,7 @@ class Reduction:
                 new_hdu.header.update(h)
 
                 # Astrometry (wcs)
-                new_hdu.header.update(reference_image.wcs.to_header(relax=True))
+                new_hdu.header.update(aligned_frame.wcs.to_header(relax=True))
 
                 fits_new_path = os.path.join(
                     destination,
