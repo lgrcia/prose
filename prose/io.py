@@ -144,8 +144,8 @@ class FitsManager:
             _type = header.get(_temporary_telescope.keyword_image_type, "").lower()
             _flip = header.get(_temporary_telescope.keyword_flip, "")
             
-            if _temporary_telescope.keyword_light_images.lower() in _type:
-                _type = "light"
+            if _temporary_telescope.keyword_flat_images.lower() in _type:
+                _type = "flat"
             elif _temporary_telescope.keyword_dark_images.lower() in _type:
                 _type = "dark"
             elif _temporary_telescope.keyword_bias_images.lower() in _type:
