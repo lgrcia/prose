@@ -40,16 +40,21 @@ saintex = speculoos_south.copy()
 saintex.update({"name": "SaintEx"})
 
 artemis = speculoos_south.copy()
-artemis.update({"name": "Artemis"})
+artemis.update({
+    "name": "Artemis",
+    "latlong": [28.4754, 16.3089]})
 
 trappist = speculoos_south.copy()
 trappist.update({
     "name": "Trappist",
     "trimming": [40, 40],
-    "pixel_scale": 0.66})
+    "pixel_scale": 0.66, 
+    "latlong": [29.2563, 70.7380]})
 
 trappistN = trappist.copy()
-trappistN.update({"name": "NTM"})
+trappistN.update({
+    "name": "NTM",  
+    "latlong": [31.2027, 7.8586]})
 
 built_in_telescopes = {
     "trappist": trappist,
