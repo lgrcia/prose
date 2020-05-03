@@ -21,7 +21,7 @@ class Photometry:
     Class to load and analyze photometry products
     """
     
-    def __init__(self, folder_or_file=None, sort_stars=True):
+    def __init__(self, folder_or_file=None, sort_stars=True, keyword=None):
         """
         Parameters
         ----------
@@ -31,7 +31,8 @@ class Photometry:
             wether to sort stars by luminosity on loading, by default True
         """
         # Photometry
-        self.apertures = None # ndarray
+        self.apertures_area = None # ndarray
+        self.annulus_area = None
         self.fluxes = None
         self._time = None
 
@@ -66,7 +67,7 @@ class Photometry:
             isdir = self._check_folder_or_file(folder_or_file)
             if isdir:
                 self.folder = folder_or_file
-                self.load_folder(folder_or_file, sort_stars=sort_stars)
+                self.load_folder(folder_or_file, sort_stars=sort_stars, keyword=keyword)
             else:
                 self.phot_file = folder_or_file
                 self.load_phot(folder_or_file)
@@ -117,7 +118,7 @@ class Photometry:
         else:
             raise NotADirectoryError("path doesn't exist")
     
-    def load_folder(self, folder_path, sort_stars=True):
+    def load_folder(self, folder_path, sort_stars=True, keyword=None):
         """
         Load data from folder containing at least a phots file
         
@@ -132,7 +133,15 @@ class Photometry:
         # Loading unique phot file
         phot_files = io.get_files(".phot*", folder_path, single_list_removal=False)
         if len(phot_files) > 1:
-            raise ValueError("Several phot files present in folder, should contain one")
+            if keyword is not None:
+                assert isinstance(keyword, str), "kwargs 'keyword' should be a string"
+                for phot_file in phot_files:
+                    if keyword in phot_file:
+                        self.phot_file = phot_file
+                if self.phot_file is None:
+                    raise ValueError("Cannot find a phot file matching keyword '{}'".format(keyword))
+            else:
+                raise ValueError("Several phot files present in folder, should contain one (or specify kwarg 'keyword')")
         elif len(phot_files) == 0:
             raise ValueError("Cannot find a phot file in this folder, should contain one")
         else:
@@ -251,7 +260,7 @@ class Photometry:
         )
 
         self.artificial_lc = np.array(art_lcs)
-        self.lcs = LightCurves(self.time, np.moveaxis(lcs,0,1), np.moveaxis(lcs_errors,0,1))
+        self.lcs = LightCurves(self.time, np.moveaxis(lcs, 0, 1), np.moveaxis(lcs_errors, 0, 1))
         best_aperture_id = self.lcs[self.target["id"]].best_aperture_id
         self.lcs.set_best_aperture_id(best_aperture_id)
         self._comparison_stars = np.array(comps)
@@ -430,11 +439,11 @@ class Photometry:
         cut = psf.image_psf(self.stack_fits, self.stars_coords, size=size)
         p = psf.fit_gaussian2_nonlin(cut)
         plt.figure(figsize=(12, 4))
-        viz.plot_gaussian_model(cut, p, psf.gaussian_2d)
+        viz.plot_marginal_model(cut, p, psf.gaussian_2d)
 
         return {"theta": p[5], "std_x": p[3], "std_y": p[4]}
     
-    def plot_rms(self):
+    def plot_rms(self, bins=0.005):
         """
         Plot binned rms of lightcurves vs the CCD equation
 
@@ -447,6 +456,7 @@ class Photometry:
         viz.plot_rms(
             self.fluxes, 
             self.lcs, 
+            bins=bins,
             target=self.target["id"], 
             highlights=self.comparison_stars)
 
@@ -489,10 +499,13 @@ class Photometry:
             fits.ImageHDU(self.fluxes.as_array()[0], name="photometry"),
             fits.ImageHDU(self.stars_coords, name="stars"),
             fits.ImageHDU(self._comparison_stars, name="comparison stars"),
-            fits.ImageHDU(self.apertures, name="apertures"),
+            fits.ImageHDU(self.apertures_area, name="apertures_area"),
             fits.ImageHDU(self.artificial_lc, name="artificial lcs"),
             fits.ImageHDU(self._time, name="jd"),
-            fits.ImageHDU(self.bjd_tdb, name="bjd")
+            fits.ImageHDU(self.bjd_tdb, name="bjd"),
+            fits.ImageHDU(self.annulus_sky, name="annulus_sky"),
+            fits.ImageHDU(self.apertures_area, name="apertures_area"),
+            fits.ImageHDU(self.annulus_area, name="annulus_area")
         ]
 
         for keyword in [
@@ -563,7 +576,9 @@ class Photometry:
 
         # Loading stars, target, apertures
         self.stars_coords = phot_dict.get("stars", None)[sorted_stars]
-        self.apertures = phot_dict.get("apertures", None)
+        self.apertures_area = phot_dict.get("apertures_area", None)
+        self.annulus_area = phot_dict.get("annulus_area", None)
+        self.annulus_sky = phot_dict.get("annulus_sky", None)
         target_id = header.get("targetid", None)
         if target_id is not None:
             self.target["id"]= sorted_stars[target_id]
@@ -576,7 +591,7 @@ class Photometry:
         comparison_stars = phot_dict.get("comparison stars", None)
         self.artificial_lcs = phot_dict.get("artificial lcs", None)
         if comparison_stars is not None: self._comparison_stars = sorted_stars[comparison_stars]
-        
+
         # Loading all known systematics
         for key in ["fwhm", "sky", "dx", "dy", "airmass", "exptime"]:
             self.data[key] = phot_dict.get(key, None)
@@ -587,19 +602,23 @@ class Photometry:
 
         # Photometry into LightCurve objects
         # Here is where we compute the fluxes errors
+
+        
         if fluxes_error is None:
-            fluxes_error = np.empty(np.shape(fluxes))
-            for i, ape in enumerate(self.apertures):
-                fluxes_error[i, :] = self.telescope.error(
+            fluxes_error = np.zeros(np.shape(fluxes))
+            sky = self.annulus_sky if self.annulus_sky is not None else self.sky
+            for i, apertures in enumerate(self.apertures_area):
+                fluxes_error[i, :, :] = self.telescope.error(
                     fluxes[i, :],
-                    np.pi * ape ** 2,
-                    self.sky,
+                    apertures,
+                    sky,
                     self.exposure,
-                    airmass=self.airmass
+                    airmass=self.airmass,
+                    bkg_area=self.annulus_area
                 )
         self.fluxes = LightCurves(
             time, np.moveaxis(fluxes, 1, 0), np.moveaxis(fluxes_error, 1, 0))
-        self.fluxes.apertures = self.apertures
+        self.fluxes.apertures = self.apertures_area
 
         # Differential photometry into LightCurve objects
         if lcs is not None:

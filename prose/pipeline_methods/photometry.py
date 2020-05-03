@@ -12,10 +12,18 @@ from photutils.psf import IntegratedGaussianPRF, DAOGroup, BasicPSFPhotometry
 from prose.console_utils import TQDM_BAR_FORMAT, INFO_LABEL
 
 
+#TODO: differential_vaphot
+#TODO: difference imaging
+
+def variable_aperture_photometry_annulus(*args, **kwargs):
+    return aperture_photometry_annulus(*args, fixed_fwhm=False, **kwargs)
+    
+
 def aperture_photometry_annulus(
         fits_files,
         stars_positions,
-        fwhm,
+        stack_fwhm,
+        fwhms,
         apertures=None,
         fixed_fwhm=True,
         annulus_inner_radius=5,
@@ -52,18 +60,20 @@ def aperture_photometry_annulus(
         }
     """
     if apertures is None:
-        np.arange(0.1, 10, 0.25)
+        apertures = np.arange(0.1, 10, 0.25)
 
-    print("{} global psf FWHM: {:.2f} (pixels)".format(INFO_LABEL, np.mean(fwhm)))
+    print("{} global psf FWHM: {:.2f} (pixels)".format(INFO_LABEL, np.mean(stack_fwhm)))
 
     n_stars = np.shape(stars_positions)[0]
     n_images = len(fits_files)
     n_apertures = len(apertures)
 
     photometry_data = np.zeros((n_apertures, n_stars, n_images))
-    sky = []
+    apertures_area = np.zeros((n_apertures, n_images))
+    annulus_area = np.zeros((n_images))
+    sky = np.zeros((n_stars, n_images))
 
-    for f, file_path in enumerate(
+    for i, file_path in enumerate(
             tqdm(
                 fits_files[0::],
                 desc="Photometry extraction",
@@ -72,27 +82,29 @@ def aperture_photometry_annulus(
                 bar_format=TQDM_BAR_FORMAT,
             )
     ):
-        phot_areas = []
-        _apertures = []
+        _apertures_area = []
 
         data = fits.getdata(file_path)
 
         if not fixed_fwhm:
-            _fwhm = fwhm[f]
+            fwhm = fwhms[i]
         else:
-            _fwhm = fwhm
+            fwhm = stack_fwhm
 
         annulus_apertures = CircularAnnulus(
             stars_positions,
-            r_in=annulus_inner_radius * _fwhm,
-            r_out=annulus_outer_radius * _fwhm,
+            r_in=annulus_inner_radius * fwhm,
+            r_out=annulus_outer_radius * fwhm,
         )
         annulus_masks = annulus_apertures.to_mask(method="center")
+        if callable(annulus_apertures.area):
+            annulus_area[i] = annulus_apertures.area()
+        else:
+            annulus_area[i] = annulus_apertures.area
 
         bkg_median = []
         for mask in annulus_masks:
             annulus_data = mask.multiply(data)
-
             annulus_data_1d = annulus_data[mask.data > 0]
             _, median_sigma_clip, _ = sigma_clipped_stats(annulus_data_1d)
             bkg_median.append(median_sigma_clip)
@@ -100,8 +112,9 @@ def aperture_photometry_annulus(
         bkg_median = np.array(bkg_median)
 
         for a, ape in enumerate(apertures):
-            _apertures.append(_fwhm * ape)  # aperture diameter in pixel
-            circular_apertures = CircularAperture(stars_positions, r=_fwhm * ape / 2)
+            # aperture diameter in pixel
+            aperture = fwhm * ape
+            circular_apertures = CircularAperture(stars_positions, r=aperture)
 
             # Unresolved buf; sometimes circular_apertures.area is a method, sometimes a float
             if callable(circular_apertures.area):
@@ -109,18 +122,17 @@ def aperture_photometry_annulus(
             else:
                 circular_apertures_area = circular_apertures.area
 
-            phot_areas.append(circular_apertures_area)
-
             im_phot = aperture_photometry(data, circular_apertures)
-            im_phot["annulus_median"] = bkg_median
-            im_phot["aper_bkg"] = bkg_median * circular_apertures_area
-            im_phot["aper_sum_bkgsub"] = im_phot["aperture_sum"] - im_phot["aper_bkg"]
+            fluxes = im_phot["aperture_sum"] - (bkg_median * circular_apertures_area)
+            photometry_data[a, :, i] = np.array(fluxes)
+            apertures_area[a, i] = circular_apertures_area
 
-            photometry_data[a, :, f] = np.array(im_phot["aper_sum_bkgsub"])
+        sky[:, i] = bkg_median
 
-        sky.append(np.mean(bkg_median))
-
-    return photometry_data, {"apertures": _apertures, "sky": sky}
+    return photometry_data, {
+        "apertures_area": apertures_area,
+        "annulus_area": annulus_area,
+        "annulus_sky": sky}
 
 
 def psf_photometry_basic(fits_files, stars_positions, fwhm):

@@ -24,6 +24,7 @@ from prose import visualisation as viz
 from astropy.wcs import WCS, FITSFixedWarning
 from astropy.nddata import Cutout2D
 
+#TODO: error seems to be wrong
 
 def return_method(name):
     """
@@ -69,6 +70,8 @@ def return_method(name):
             return phot.aperture_photometry_annulus
         elif name == "psf":
             return phot.psf_photometry_basic
+        elif name == "variable_aperture":
+            return phot.variable_aperture_photometry_annulus
         # Caolibration
         elif name == "calibration":
             return calibration.calibration
@@ -220,7 +223,7 @@ class Reduction:
 
         self.alignment_kwargs = {}
         self.stars_detection_kwargs = {"n_stars": 50}
-        self.fwhm_kwargs = {}
+        self.fwhm_kwargs = {"size": 15}
 
         self.calibration.calibration = calibration
 
@@ -287,9 +290,7 @@ class Reduction:
         self,
         destination,
         reference_frame=1/2,
-        save_gif=True,
         save_stack=True,
-        gif_factor=0.25,
         overwrite=False,
         n_images=None,
     ):
@@ -299,8 +300,6 @@ class Reduction:
 
         if n_images is None:
             n_images = len(self.light_files)
-
-        self.fwhm_kwargs = {}
 
         gif_path = "{}{}".format(
             path.join(destination, self.fits_explorer.products_denominator),
@@ -338,112 +337,100 @@ class Reduction:
         ref_shape = np.array(reference_image.shape)
         ref_center = ref_shape/2
 
-        with imageio.get_writer(gif_path, mode="I") as writer:
-            for i, image in enumerate(tqdm(
-                self.light_files[0:n_images],
-                desc="Reduction",
-                unit="files",
-                ncols=80,
-                bar_format=TQDM_BAR_FORMAT,
-            )):
+        for i, image in enumerate(tqdm(
+            self.light_files[0:n_images],
+            desc="Reduction",
+            unit="files",
+            ncols=80,
+            bar_format=TQDM_BAR_FORMAT,
+        )):
 
-                _flip = self.fits_explorer.files_df[
-                        self.fits_explorer.get(im_type="light", return_conditions=True)].iloc[i]["flip"]
-                flip = not reference_flip == _flip
+            _flip = self.fits_explorer.files_df[
+                    self.fits_explorer.get(im_type="light", return_conditions=True)].iloc[i]["flip"]
+            flip = not reference_flip == _flip
 
-                # Calibration
-                calibrated_frame = self.calibration.calibrate(image, flip=flip)
+            # Calibration
+            calibrated_frame = self.calibration.calibrate(image, flip=flip)
 
-                if self.alignment == alignment.astroalign_optimized_find_transform:
-                    # Translation estimation + stars detection
-                    transform, _detected_stars = self.alignment(
-                        calibrated_frame,
-                        reference_stars,
-                        KDTree(reference_invariants),
-                        reference_asterisms,
-                    )
-                    detected_stars = _detected_stars[0]
-                    shift = transform.translation
+            if self.alignment == alignment.astroalign_optimized_find_transform:
+                # Translation estimation + stars detection
+                transform, _detected_stars = self.alignment(
+                    calibrated_frame,
+                    reference_stars,
+                    KDTree(reference_invariants),
+                    reference_asterisms,
+                )
+                detected_stars = _detected_stars[0]
+                shift = transform.translation
 
-                else:
-                    # Stars detection
-                    detected_stars = self.stars_detection(
-                        calibrated_frame, **self.stars_detection_kwargs
-                    )
-                    # Image translation estimation
-                    shift = self.alignment(
-                        detected_stars, reference_stars, **self.alignment_kwargs
-                    )
-
-                # Image alignment
-                aligned_frame = Cutout2D(
-                    calibrated_frame, 
-                    ref_center-shift.astype("int"), 
-                    ref_shape, 
-                    mode="partial", 
-                    fill_value=np.mean(calibrated_frame),
-                    wcs = WCS(image)
-                    )
-
-                # Seeing estimation
-                try:
-                    _fwhm = self.fwhm(calibrated_frame, detected_stars)
-                except RuntimeError:
-                    _fwhm = -1, -1, -1
-
-                # Stack image production
-                if save_stack:
-                    if i==0:
-                        stacked_image = aligned_frame.data
-                    else:
-                        stacked_image += aligned_frame.data
-                else:
-                    save_stack = None
-
-                # Gif production
-                if save_gif:
-                    gif_im = utils.z_scale(
-                        resize(
-                            aligned_frame.data,
-                            np.array(np.shape(aligned_frame.data)).astype(int) * gif_factor,
-                            anti_aliasing=True,
-                        )
-                    )
-                    writer.append_data((gif_im * 255).astype("uint8"))
-
-                # Reduced image HDU construction
-                new_hdu = fits.PrimaryHDU(aligned_frame.data)
-                new_hdu.header = fits.getheader(image)
-
-                h = {
-                    "TRIMMING": self.calibration.telescope.trimming[0],
-                    "FWHM": np.mean(_fwhm),
-                    "FWHMX": _fwhm[0],
-                    "FWHMY": _fwhm[1],
-                    "DX": shift[0],
-                    "DY": shift[1],
-                    "ORIGFWHM": new_hdu.header.get(self.telescope.keyword_fwhm, ""),
-                    "BZERO": 0,
-                    "ALIGNALG": self.alignment.__name__,
-                    "FWHMALG": self.fwhm.__name__,
-                    "REDDATE": Time.now().to_value("fits"),
-                    self.telescope.keyword_image_type: "reduced"
-                }
-
-                new_hdu.header.update(h)
-
-                # Astrometry (wcs)
-                new_hdu.header.update(aligned_frame.wcs.to_header(relax=True))
-
-                fits_new_path = os.path.join(
-                    destination,
-                    path.splitext(path.basename(image))[0] + "_reduced.fits",
+            else:
+                # Stars detection
+                detected_stars = self.stars_detection(
+                    calibrated_frame, **self.stars_detection_kwargs
+                )
+                # Image translation estimation
+                shift = self.alignment(
+                    detected_stars, reference_stars, **self.alignment_kwargs
                 )
 
-                new_hdu.writeto(fits_new_path, overwrite=overwrite)
+            # Image alignment
+            aligned_frame = Cutout2D(
+                calibrated_frame, 
+                ref_center-shift.astype("int"), 
+                ref_shape, 
+                mode="partial", 
+                fill_value=np.mean(calibrated_frame),
+                wcs = WCS(image)
+                )
 
-                if save_stack and image == reference_image_path:
-                    stacked_image_header = new_hdu.header
+            # Seeing/psf estimation
+            try:
+                _fwhm = self.fwhm(calibrated_frame, detected_stars, **self.fwhm_kwargs)
+            except RuntimeError:
+                _fwhm = -1, -1, -1
+
+            # Stack image production
+            if save_stack:
+                if i==0:
+                    stacked_image = aligned_frame.data
+                else:
+                    stacked_image += aligned_frame.data
+            else:
+                save_stack = None
+
+            # Reduced image HDU construction
+            new_hdu = fits.PrimaryHDU(aligned_frame.data)
+            new_hdu.header = fits.getheader(image)
+
+            h = {
+                "TRIMMING": self.calibration.telescope.trimming[0],
+                "FWHM": np.mean(_fwhm),
+                "FWHMX": _fwhm[0],
+                "FWHMY": _fwhm[1],
+                "DX": shift[0],
+                "DY": shift[1],
+                "ORIGFWHM": new_hdu.header.get(self.telescope.keyword_fwhm, ""),
+                "BZERO": 0,
+                "ALIGNALG": self.alignment.__name__,
+                "FWHMALG": self.fwhm.__name__,
+                "REDDATE": Time.now().to_value("fits"),
+                self.telescope.keyword_image_type: "reduced"
+            }
+
+            new_hdu.header.update(h)
+
+            # Astrometry (wcs)
+            new_hdu.header.update(aligned_frame.wcs.to_header(relax=True))
+
+            fits_new_path = os.path.join(
+                destination,
+                path.splitext(path.basename(image))[0] + "_reduced.fits",
+            )
+
+            new_hdu.writeto(fits_new_path, overwrite=overwrite)
+
+            if save_stack and image == reference_image_path:
+                stacked_image_header = new_hdu.header
 
         if save_stack:
             stacked_image /= len(self.light_files[0:n_images])
@@ -487,18 +474,18 @@ class Photometry:
         self.photometry = photometry
         self.fwhm = fwhm
 
+        self.photometry_method_name = photometry
+
         self.stars_detection_kwargs = {
             "sigma_clip": 2.5,
             "lower_snr": 50,
             "n_stars": 500,
         }
+
+        self.photometry_kwargs = {}
         self.fwhm_kwargs = {}
         if self.photometry == phot.aperture_photometry_annulus:
-            self.apertures = np.arange(0.1, 10, 0.25)
-            self.photometry_kwargs = {"apertures": self.apertures}
-        else:
-            self.apertures = None
-            self.photometry_kwargs = {}
+            self.photometry_kwargs = {"apertures": np.arange(0.1, 10, 0.25)}
 
         self.stack_path = io.get_files("stack.fits", folder)
 
@@ -538,13 +525,16 @@ class Photometry:
     @photometry.setter
     def photometry(self, name):
         self._photometry = return_method(name)
+        self.photometry_method_name = name
         self.photometry_kwargs = {}
 
     @property
     def default_destination(self):
         return path.join(
             self.folder,
-            "{}.phots".format(self.fits_explorer.products_denominator
+            "{}_{}.phots".format(
+                self.fits_explorer.products_denominator,
+                self.photometry_method_name
             ))
 
     def run(self, n_images=None, save=True, overwrite=False):
@@ -561,28 +551,23 @@ class Photometry:
 
         print("{} {} stars detected".format(INFO_LABEL, len(self.stars)))
 
-        if "fixed_fwhm" in self.photometry_kwargs:
-            fixed_fwhm = self.photometry_kwargs["fixed_fwhm"]
-        else:
-            fixed_fwhm = True
-
-        if not fixed_fwhm:
-            fwhm = self.fwhm[0:n_images]
-        else:
-            fwhm = np.mean(self.fwhm(stack_data, self.stars, **self.fwhm_kwargs)[0:2])
+        stack_fwhm = np.mean(self.fwhm(stack_data, self.stars, **self.fwhm_kwargs)[0:2])
+        fwhms = io.fits_keyword_values(self.light_files[0:n_images], "FWHM")
 
         self.photometric_data, data = self.photometry(
             self.light_files[0:n_images],
             self.stars,
-            fwhm,
+            stack_fwhm,
+            fwhms,
             **self.photometry_kwargs,
         )
 
-        for keyword in ["sky"]:
-            if keyword in data:
-                self.load_data(keyword, data=data[keyword], n_images=n_images)
+        self.apertures_area = data.get("apertures_area", None)
+        self.annulus_area = data.get("annulus_area", None)
+        self.annulus_sky = data.get("annulus_sky", None)
 
         for keyword in [
+            "sky",
             "fwhm",
             "dx",
             "dy",
@@ -618,10 +603,10 @@ class Photometry:
 
         for keyword in [
             "fwhm",
-            "sky",
             "dx",
             "dy",
             "airmass",
+            "sky",
             (self.telescope.keyword_exposure_time.lower(), "exptime",),
             (self.telescope.keyword_julian_date.lower(), "jd",),
         ]:
@@ -634,17 +619,19 @@ class Photometry:
                         fits.ImageHDU(self.data[keyword[0]], name=keyword[1])
                     )
 
-        if self.photometry == phot.aperture_photometry_annulus:
-            hdu_list.append(fits.ImageHDU(self.apertures, name="apertures"))
-        else:
-            hdu_list.append(fits.ImageHDU([0], name="apertures"))
+        if self.annulus_sky is not None:
+            hdu_list.append(fits.ImageHDU(self.annulus_sky, name="annulus_sky"))
+        if self.apertures_area is not None:
+            hdu_list.append(fits.ImageHDU(self.apertures_area, name="apertures_area"))
+        if self.annulus_area is not None:
+            hdu_list.append(fits.ImageHDU(self.annulus_area, name="annulus_area"))
 
         self.hdu = fits.HDUList(hdu_list)
         self.hdu.writeto(destination, overwrite=overwrite)
 
     def load_data(self, keyword, data=None, n_images=None):
         """
-        Load data to the self.data pandas DataFrame. If data is not provided (usually the case) data wiil be loaded from
+        Load data to the self.data pandas DataFrame. If data is not provided (usually the case) data will be loaded from
         self.light_files fits headers using keyword (always lowercase). Data is loaded in the DataFrame with keyword as
         header
 
@@ -670,3 +657,28 @@ class Photometry:
             ).flatten()
 
         self.data[keyword.lower()] = data
+
+
+def produce_gif(reduced_folder, destination=None, light_kw="reduced"):
+    if destination is None:
+        destination = reduced_folder
+    
+    fits_explorer = io.FitsManager(reduced_folder, verbose=False, light_kw=light_kw)
+    fits_explorer.set_observation(0, check_calib_telescope=False)
+    stack_path = io.get_files("stack.fits", reduced_folder)
+    stars = detection.daofindstars(fits.getdata(stack_path))
+
+    gif_path = "{}{}".format(
+        path.join(reduced_folder, fits_explorer.products_denominator),
+        "_movie.gif",
+    )
+
+    with imageio.get_writer(gif_path, mode="I") as writer:
+        for image in tqdm(
+            fits_explorer.get("reduced"),
+            desc="Gif",
+            unit="files",
+            ncols=80,
+            bar_format=TQDM_BAR_FORMAT,
+        ):
+            writer.append_data(viz.gif_image_array(fits.getdata(image)))
