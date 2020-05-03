@@ -8,7 +8,7 @@ from astropy.nddata import NDData
 from photutils.psf import extract_stars
 
 
-def image_psf(image, stars, size=15):
+def image_psf(image, stars, size=15, normalize=False):
     """
     Get global psf from image using photutils routines
 
@@ -25,6 +25,12 @@ def image_psf(image, stars, size=15):
     np.ndarray of shape (size, size)
 
     """
+    cuts = cutouts(image, stars, size=size).data
+    if normalize:
+        cuts = [c/np.sum(c) for c in cuts]
+    return np.median(cuts, axis=0)
+
+def cutouts(image, stars, size=15):
     if isinstance(image, str):
         image = fits.getdata(image)
 
@@ -35,9 +41,8 @@ def image_psf(image, stars, size=15):
         warnings.simplefilter("ignore")
         stars_tbl = Table([stars[:, 0], stars[:, 1]], names=["x", "y"])
         stars = extract_stars(NDData(data=image), stars_tbl, size=size)
-
-        return np.median(stars.data, axis=0)
-
+    
+    return stars
 
 def gaussian_2d(x, y, height, xo, yo, sx, sy, theta, m):
     dx = x - xo
@@ -45,7 +50,7 @@ def gaussian_2d(x, y, height, xo, yo, sx, sy, theta, m):
     a = (np.cos(theta)**2)/(2*sx**2) + (np.sin(theta)**2)/(2*sy**2)
     b = -(np.sin(2*theta))/(4*sx**2) + (np.sin(2*theta))/(4*sy**2)
     c = (np.sin(theta)**2)/(2*sx**2) + (np.cos(theta)**2)/(2*sy**2)
-    psf = height * np.exp(-(a * dx ** 2 + b * dx * dy + c * dy ** 2))
+    psf = height * np.exp(-(a * dx ** 2 + 2 * b * dx * dy + c * dy ** 2))
     return psf + m
 
 
@@ -55,21 +60,14 @@ def nll_gaussian_2d(p, _im, x, y):
 
 
 def fit_gaussian2_nonlin(image, return_p0_bounds=False):
-    x, y = np.meshgrid(np.arange(0, image.shape[0]), np.arange(0, image.shape[1]))
-
-    n_pixels = image.shape[0]
-    center = int(n_pixels / 2)
-
-    x0, y0 = np.argwhere(image == np.max(image))[0]
-
+    x, y = np.indices(image.shape)
     p0 = moments(image)
-
+    x0, y0 = p0[1], p0[2]
     min_sigma = 0.5
-
     bounds = [
         (0, np.infty),
-        (center - 3, center + 3),
-        (center - 3, center + 3),
+        (x0 - 3, x0 + 3),
+        (y0 - 3, y0 + 3),
         (min_sigma, np.infty),
         (min_sigma, np.infty),
         (0, 4),
@@ -114,6 +112,9 @@ def moments(data):
     """Returns (height, x, y, width_x, width_y)
     the gaussian parameters of a 2D distribution by calculating its
     moments """
+    height = data.max()
+    background = data.min()
+    data = data-np.min(data)
     total = data.sum()
     X, Y = np.indices(data.shape)
     x = (X * data).sum() / total
@@ -122,10 +123,9 @@ def moments(data):
     width_x = np.sqrt(abs((np.arange(col.size) - y) ** 2 * col).sum() / col.sum())
     row = data[int(x), :]
     width_y = np.sqrt(abs((np.arange(row.size) - x) ** 2 * row).sum() / row.sum())
-    height = data.max()
     width_x /= (2 * np.sqrt(2 * np.log(2)))
     width_y /= (2 * np.sqrt(2 * np.log(2)))
-    return height, x, y, width_x, width_y, 0.0, data.min()
+    return height, x, y, width_x, width_y, 0.0, background
 
 
 def fitgaussian(data):
