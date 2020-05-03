@@ -64,11 +64,14 @@ class Telescope:
     def earth_location(self):
         return EarthLocation(*self.latlong, self.altitude)
 
-    def error(self, signal, npix, sky, exposure, airmass=None, scinfac=0.09):
-        _signal = signal.copy()
-        _squarred_error = _signal + npix * (
-            sky + self.read_noise ** 2 + (self.gain / 2) ** 2
-        )
+    def error(self, signal, ap_area, sky, exposure, airmass=None, scinfac=0.09, bkg_area=None):
+        _signal = signal.copy() 
+        _squarred_error = _signal + ap_area * (self.read_noise ** 2 + (self.gain / 2) ** 2)
+
+        if bkg_area is not None:
+            _squarred_error += ap_area**2/bkg_area * sky
+        else:
+            _squarred_error += ap_area*sky
 
         if airmass is not None:
             scintillation = (
@@ -79,6 +82,7 @@ class Telescope:
             ) / np.sqrt(2 * exposure)
 
             _squarred_error += np.power(signal * scintillation, 2)
+    
 
         return np.sqrt(_squarred_error)
         
