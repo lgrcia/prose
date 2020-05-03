@@ -437,7 +437,7 @@ class FitsManager:
         )
 
     def _get_files_headers(self, folder):
-        self._temporary_files_paths = get_files("f*ts", folder, deepness=self.deepness)
+        self._temporary_files_paths = get_files(".f*ts", folder, deepness=self.deepness)
         self._temporary_files_headers = []
 
         if self.verbose:
@@ -620,17 +620,22 @@ def fits_keyword_values(fits_files, keywords, default_value=None, verbose=False)
     else:
         _tqdm = tqdm
 
+    if isinstance(keywords, str):
+        _keywords = [keywords]
+    else:
+        _keywords = keywords
+
     header_values = []
 
     for f in _tqdm(fits_files):
         fits_header = fits.getheader(f)
         if default_value is None:
-            header_values.append([fits_header[keyword] for keyword in keywords])
+            header_values.append([fits_header[keyword] for keyword in _keywords])
         else:
-            header_values.append([fits_header[keyword] for keyword in keywords])
+            header_values.append([fits_header[keyword] for keyword in _keywords])
 
     # If only one keyword the list is flattened
-    if type(keywords) == str:
+    if isinstance(keywords, str):
         header_values = [hv for hvs in header_values for hv in hvs]
 
     return header_values
