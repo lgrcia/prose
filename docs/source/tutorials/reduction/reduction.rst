@@ -86,13 +86,15 @@ Here is the content of the ``minimal_quatar2b_dataset_reduced`` folder
       │ 
       ├── NTM_20200229_Qatar2b_I+z.phots
       ├── NTM_20200229_Qatar2b_I+z_stack.fits
-      ├── NTM_20200229_Qatar2b_I+z_movie.gif
       ├── Qatar2b-S001-R001-C001-I+z_cut_reduced.fits
       ├── Qatar2b-S001-R001-C028-I+z_cut_reduced.fits
       ├── Qatar2b-S001-R001-C055-I+z_cut_reduced.fits
       └── ...
 
-It contains all reduced images, a nice gif of the observation and a stack fits of the night. The ``phots`` file is produced by the ``photometry.run`` task and contains all extracted fluxes.
+It contains all reduced images and a stack fits of the night. The ``phots`` file is produced by the ``photometry.run`` task and contains all extracted fluxes. We can include in this folder a small gif of the night with
+
+.. code:: python3
+    pipeline.produce_gif(destination)
 
 .. figure:: minimal_Qatar2b_I+z_movie.gif
    :align: center
