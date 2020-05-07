@@ -9,14 +9,11 @@ from matplotlib import patches
 from astropy.visualization import ZScaleInterval
 from astropy.io import fits
 from mpl_toolkits import axes_grid1
-from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
-
-
-def z_scale(data, c=0.05):
-    if type(data) == str:
-        data = fits.getdata(data)
-    interval = ZScaleInterval(contrast=c)
-    return interval(data.copy())
+from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes,  inset_axes
+import matplotlib.pyplot as plt
+from skimage.transform import resize
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from matplotlib.ticker import AutoMinorLocator
 
 
 def plot_lc(
@@ -46,13 +43,10 @@ def plot_lc(
         label="binned data ({} JD)".format(bins),
         **errorbar_kwargs)
 
-    plt.plot(time, flux, ".", **plot_kwargs)
-
     if bins is not None:
         blc = binning(time, flux, bins=bins, error=error, std=std)
+        plt.plot(time, flux, ".", **plot_kwargs)
         plt.errorbar(*blc, **errorbar_kwargs)
-
-    plt.legend()
 
 
 def plot_lc_report(
@@ -122,40 +116,62 @@ def plot_lc_report(
     plt.show()
 
 
-def plot_gaussian_model(cut, params, gauss_model, imshow_kwargs={}, plot_kwargs={}):
+def show_residuals(cut, model, imshow_kwargs={}, plot_kwargs={}):
     imshow_kwargs = dict(cmap = "inferno",**imshow_kwargs)
     plot_kwargs = dict(color="blueviolet",**plot_kwargs)
 
-    image, parameters = (cut, params)
-
     x, y = np.indices(cut.shape)
+    
+    plt.subplot(131)
+    plt.imshow(utils.z_scale(cut), alpha=1, **imshow_kwargs)
+    plt.xlabel("x (pixels)")
+    plt.ylabel("y (pixels)")
+    plt.title("PSF", loc="left")
 
-    model = gauss_model(*np.indices(cut.shape), *params)
+    plt.subplot(132)
+    plt.imshow(utils.z_scale(model), alpha=1, **imshow_kwargs)
+    plt.xlabel("x (pixels)")
+    plt.ylabel("y (pixels)")
+    plt.title("PSF model", loc="left")
+    
+    residuals = cut-model
+    plt.subplot(133)
+    im =plt.imshow(residuals, alpha=1, **imshow_kwargs)
+    plt.xlabel("x (pixels)")
+    plt.ylabel("y (pixels)")
+    plt.title("Residuals", loc="left")
+    viz.add_colorbar(im)
+
+
+def plot_marginal_model(data, model, imshow_kwargs={}, plot_kwargs={}):
+    imshow_kwargs = dict(cmap = "inferno",**imshow_kwargs)
+    plot_kwargs = dict(color="blueviolet",**plot_kwargs)
+    
+    x, y = np.indices(data.shape)
 
     plt.subplot(131)
-    plt.imshow(z_scale(image), alpha=1, **imshow_kwargs)
+    plt.imshow(utils.z_scale(data), alpha=1, **imshow_kwargs)
     plt.contour(model, colors="w", alpha=0.7)
     plt.xlabel("x (pixels)")
     plt.ylabel("y (pixels)")
     plt.title("PSF", loc="left")
 
     plt.subplot(132)
-    plt.plot(y[0], np.mean(image, axis=0), **plot_kwargs)
+    plt.plot(y[0], np.mean(data, axis=0), **plot_kwargs)
     plt.plot(y[0], np.mean(model, axis=0), "--", c="k")
     plt.xlabel("x (pixels)")
-    plt.ylim(cut.min() * 0.98, np.mean(image, axis=0).max() * 1.02)
+    plt.ylim(data.min() * 0.98, np.mean(data, axis=0).max() * 1.02)
     plt.title("PSF x-axis projected", loc="left")
     plt.grid(color="whitesmoke")
 
     plt.subplot(133)
-    plt.plot(y[0], np.mean(image, axis=1), **plot_kwargs)
+    plt.plot(y[0], np.mean(data, axis=1), **plot_kwargs)
     plt.plot(y[0], np.mean(model, axis=1), "--", c="k")
     plt.xlabel("y")
-    plt.ylim(cut.min() * 0.98, np.mean(image, axis=1).max() * 1.02)
+    plt.ylim(data.min() * 0.98, np.mean(data, axis=1).max() * 1.02)
     plt.title("PSF y-axis projected", loc="left")
     plt.grid(color="whitesmoke")
     plt.tight_layout()
-
 
 def plot_all_cuts(cuts, W=10, cmap="magma", stars=None, stars_in=None):
     H = np.ceil(len(cuts) / W).astype(int)
@@ -169,7 +185,7 @@ def plot_all_cuts(cuts, W=10, cmap="magma", stars=None, stars_in=None):
     )
     for i, ax in enumerate(axes.flat):
         if i < len(cuts):
-            ax.imshow(z_scale(cuts[i]), cmap=cmap)
+            ax.imshow(utils.z_scale(cuts[i]), cmap=cmap)
             ax.annotate(
                 str(i),
                 (0, 0),
@@ -185,6 +201,8 @@ def plot_all_cuts(cuts, W=10, cmap="magma", stars=None, stars_in=None):
             if stars is not None:
                 for j, s in enumerate(stars_in[i][0]):
                     ax.plot(*stars_in[i][1][j], "x", c="C0")
+        else:
+            ax.axis('off')
 
 
 def fancy_show_stars(image, stars):
@@ -217,8 +235,7 @@ class AnchoredHScaleBar(matplotlib.offsetbox.AnchoredOffsetbox):
                                                         frameon=frameon,
                                                         **kwargs)
 
-
-def plot_lcs(data, planets={}, W=4, show=None, hide=None, options={}):
+def plot_lcs(data, planets={}, W=4, show=None, hide=None, ylim=None, size=[4,3]):
     """
     A global plot for multiple lightcurves
     
@@ -243,13 +260,6 @@ def plot_lcs(data, planets={}, W=4, show=None, hide=None, options={}):
     if isinstance(data[0], dict):
         data = [[d["time"], d["lc"]] for d in data]
     
-    _options = {
-        "ylim": [0.98, 1.02]
-    }
-    
-    _options.update(options)
-    options = _options
-    
     if show is None:
         show = np.arange(0, len(data))
     if hide is None:
@@ -258,13 +268,7 @@ def plot_lcs(data, planets={}, W=4, show=None, hide=None, options={}):
     idxs = np.setdiff1d(show, hide)
 
     H = np.ceil(len(idxs) / W).astype(int)
-
-    fig, axes = plt.subplots(
-        H,
-        W,
-        figsize=(W * 5, H * 4),
-        gridspec_kw=dict(hspace=0.6, wspace=0.08),
-    )
+    fig, axes = plt.subplots(H,W,figsize=(W * size[0], H * size[1]))
     
     max_duration = np.max([jd.max() - jd.min() for jd, lc in [data[i] for i in idxs]])
 
@@ -292,25 +296,20 @@ def plot_lcs(data, planets={}, W=4, show=None, hide=None, options={}):
                     ax.add_patch(p1)
 
             plot_lc(jd, lc)
-            plt.ylim(options["ylim"])
+            if ylim is not None:
+                plt.ylim(ylim)
 
             plt.xlim(center - (max_duration/2), center + (max_duration/2))
-            ax.spines['top'].set_visible(False)
-            ax.spines['left'].set_visible(False)
-            ax.spines['right'].set_visible(False)
- 
-            ax.get_legend().remove()
-            if i%W != 0:
-                plt.yticks([])
-                plt.ylabel(None)
+            # ax.get_legend().remove()
+            if i%W != 0 and ylim is not None:
+                ax.tick_params(labelleft=False)
             ax.set_title(None)
             ax.annotate(
-                    "observation {}".format(i),
-                    (1, 0),
+                    str(i),
+                    xy=(0.05, 0.05),
                     xycoords="axes fraction",
-                    xytext=(7, 7),
-                    textcoords="offset points",
-                    ha="right",
+                    textcoords="axes fraction",
+                    ha="left",
                     va="bottom",
                     fontsize=10,
                     color="k",
@@ -319,6 +318,36 @@ def plot_lcs(data, planets={}, W=4, show=None, hide=None, options={}):
             ax.axis('off')
 
     plt.tight_layout()
+
+def bokeh_style():
+    
+    axes = plt.gcf().axes
+    
+    for axe in axes:
+        axe.set_titleweight = 500
+        axe.tick_params(gridOn=True, grid_color="whitesmoke")
+        axe.xaxis.set_minor_locator(AutoMinorLocator())
+        axe.yaxis.set_minor_locator(AutoMinorLocator())
+        axe.tick_params(direction="inout", which="both")
+        if hasattr(axe, 'spines'):
+            axe.spines['bottom'].set_color('#545454')
+            axe.spines['left'].set_color('#545454')
+            axe.spines['top'].set_color('#DBDBDB')
+            axe.spines['right'].set_color('#DBDBDB')
+            axe.spines['top'].set_linewidth(1)
+            axe.spines['right'].set_linewidth(1)
+
+def paper_style():
+    axes = plt.gcf().axes
+    
+    for axe in axes:
+        axe.set_titleweight = 500
+        axe.tick_params(gridOn=True, grid_color="whitesmoke")
+        axe.xaxis.set_minor_locator(AutoMinorLocator())
+        axe.yaxis.set_minor_locator(AutoMinorLocator())
+        axe.xaxis.set_ticks_position("both")
+        axe.yaxis.set_ticks_position("both")
+        axe.tick_params(which="both", direction="in")
 
 
 def add_colorbar(im, aspect=20, pad_fraction=0.5, **kwargs):
@@ -681,3 +710,31 @@ def plot_rms(fluxes_lcs, diff_lcs, target=None, highlights=None, bins=0.005):
 
     fluxes_median = fluxes_median[fluxes_median>0]
     plt.xlim(fluxes_median.min(), fluxes_median.max())
+
+def gif_image_array(image, factor=0.25):
+    return (utils.z_scale(
+        resize(
+            image,
+            np.array(np.shape(image)).astype(int) * factor,
+            anti_aliasing=True,
+        ))* 255).astype("uint8")
+
+def fancy_gif_image_array(image, median_psf, factor=0.25):
+
+    fig = plt.figure(frameon=False)
+    canvas = FigureCanvas(fig)
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.axis('off')
+    gif_im = utils.z_scale(
+        resize(
+            image,
+            np.array(np.shape(image)).astype(int) * factor,
+            anti_aliasing=True,
+        ))
+    ax.imshow(gif_im, cmap="Greys_r")
+    axins = inset_axes(ax, width=1, height=1, loc=3)
+    axins.axis('off')
+    axins.imshow(median_psf)
+    canvas.draw()
+    width, height = (fig.get_size_inches() * fig.get_dpi()).astype(int)
+    return np.fromstring(canvas.tostring_rgb(), dtype='uint8').reshape(height, width, 3)
