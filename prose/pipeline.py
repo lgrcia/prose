@@ -67,7 +67,7 @@ def return_method(name):
             return detection.segmented_peaks
         # Photometry
         elif name == "aperture":
-            return phot.aperture_photometry_annulus
+            return phot.AperturePhotometry
         elif name == "psf":
             return phot.psf_photometry_basic
         elif name == "variable_aperture":
@@ -483,17 +483,13 @@ class Photometry:
         }
 
         self.photometry_kwargs = {}
-        self.fwhm_kwargs = {}
-        if self.photometry == phot.aperture_photometry_annulus:
-            self.photometry_kwargs = {"apertures": np.arange(0.1, 10, 0.25)}
-
         self.stack_path = io.get_files("stack.fits", folder)
 
-        self.photometric_data = None
+        self.fluxes = None
+        self.other_data = {}
         self.data = pd.DataFrame()
 
         self.hdu = None
-
         self.stars = None
 
     @property
@@ -546,27 +542,11 @@ class Photometry:
             n_images = len(self.light_files)
 
         stack_data = fits.getdata(self.stack_path)
-
         self.stars = self.stars_detection(stack_data, **self.stars_detection_kwargs)
 
         print("{} {} stars detected".format(INFO_LABEL, len(self.stars)))
 
-        stack_fwhm = np.mean(self.fwhm(stack_data, self.stars, **self.fwhm_kwargs)[0:2])
-        fwhms = io.fits_keyword_values(self.light_files[0:n_images], "FWHM")
-
-        self.photometric_data, data = self.photometry(
-            self.light_files[0:n_images],
-            self.stars,
-            stack_fwhm,
-            fwhms,
-            **self.photometry_kwargs,
-        )
-
-        self.apertures_area = data.get("apertures_area", None)
-        self.annulus_area = data.get("annulus_area", None)
-        self.annulus_sky = data.get("annulus_sky", None)
-
-        for keyword in [
+        for keyword in [ 
             "sky",
             "fwhm",
             "dx",
@@ -579,6 +559,12 @@ class Photometry:
                 self.load_data(keyword, n_images=n_images)
             except KeyError:
                 pass
+
+        self.exposure = fits.getheader(self.stack_path).get(self.telescope.keyword_exposure_time, None)
+        self.fluxes, self.fluxes_errors, self.other_data = self.photometry(
+            self.stars,
+            self.fits_explorer,
+            **self.photometry_kwargs).run()
         
         if save:
             self.save(overwrite=overwrite)
@@ -597,7 +583,8 @@ class Photometry:
 
         hdu_list = [
             header,
-            fits.ImageHDU(self.photometric_data, name="photometry"),
+            fits.ImageHDU(self.fluxes, name="photometry"),
+            fits.ImageHDU(self.fluxes_errors, name="photometry errors"),
             fits.ImageHDU(self.stars, name="stars"),
         ]
 
@@ -619,12 +606,10 @@ class Photometry:
                         fits.ImageHDU(self.data[keyword[0]], name=keyword[1])
                     )
 
-        if self.annulus_sky is not None:
-            hdu_list.append(fits.ImageHDU(self.annulus_sky, name="annulus_sky"))
-        if self.apertures_area is not None:
-            hdu_list.append(fits.ImageHDU(self.apertures_area, name="apertures_area"))
-        if self.annulus_area is not None:
-            hdu_list.append(fits.ImageHDU(self.annulus_area, name="annulus_area"))
+        # These are other data produce by the photometry task wished to be saved in the .phot
+        for other_data_key in self.other_data:
+            data = self.other_data[other_data_key]
+            hdu_list.append(fits.ImageHDU(data, name=other_data_key))
 
         self.hdu = fits.HDUList(hdu_list)
         self.hdu.writeto(destination, overwrite=overwrite)

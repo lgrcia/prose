@@ -8,6 +8,8 @@ from photutils.background import MMMBackground
 from astropy.stats import gaussian_sigma_to_fwhm
 from astropy.modeling.fitting import LevMarLSQFitter
 from photutils import CircularAperture, CircularAnnulus
+from prose import io
+from prose.pipeline_methods import psf
 from photutils.psf import IntegratedGaussianPRF, DAOGroup, BasicPSFPhotometry
 from prose.console_utils import TQDM_BAR_FORMAT, INFO_LABEL
 
@@ -22,10 +24,8 @@ def variable_aperture_photometry_annulus(*args, **kwargs):
 def aperture_photometry_annulus(
         fits_files,
         stars_positions,
-        stack_fwhm,
-        fwhms,
+        fwhm,
         apertures=None,
-        fixed_fwhm=True,
         annulus_inner_radius=5,
         annulus_outer_radius=8,
 ):
@@ -62,7 +62,7 @@ def aperture_photometry_annulus(
     if apertures is None:
         apertures = np.arange(0.1, 10, 0.25)
 
-    print("{} global psf FWHM: {:.2f} (pixels)".format(INFO_LABEL, np.mean(stack_fwhm)))
+    print("{} global psf FWHM: {:.2f} (pixels)".format(INFO_LABEL, np.mean(fwhm)))
 
     n_stars = np.shape(stars_positions)[0]
     n_images = len(fits_files)
@@ -86,15 +86,15 @@ def aperture_photometry_annulus(
 
         data = fits.getdata(file_path)
 
-        if not fixed_fwhm:
-            fwhm = fwhms[i]
+        if isinstance(fwhm, (np.ndarray, list)):
+            _fwhm = fwhm[i]
         else:
-            fwhm = stack_fwhm
+            _fwhm = fwhm
 
         annulus_apertures = CircularAnnulus(
             stars_positions,
-            r_in=annulus_inner_radius * fwhm,
-            r_out=annulus_outer_radius * fwhm,
+            r_in=annulus_inner_radius * _fwhm,
+            r_out=annulus_outer_radius * _fwhm,
         )
         annulus_masks = annulus_apertures.to_mask(method="center")
         if callable(annulus_apertures.area):
@@ -113,7 +113,7 @@ def aperture_photometry_annulus(
 
         for a, ape in enumerate(apertures):
             # aperture diameter in pixel
-            aperture = fwhm * ape
+            aperture = _fwhm * ape
             circular_apertures = CircularAperture(stars_positions, r=aperture)
 
             # Unresolved buf; sometimes circular_apertures.area is a method, sometimes a float
@@ -204,3 +204,69 @@ def psf_photometry_basic(fits_files, stars_positions, fwhm):
         sky.append(1)
 
     return photometry_data, {"sky": sky}
+
+
+class AperturePhotometry:
+    def __init__(
+        self,
+        stars_coords,
+        fits_explorer: io.FitsManager,       
+        apertures=None,
+        fixed_fwhm=True,
+        annulus_inner_radius=5,
+        annulus_outer_radius=8,):
+
+        self.fits_explorer = fits_explorer
+        self.stars_coords = stars_coords
+
+        if apertures is None:
+            self.apertures = np.arange(0.1, 10, 0.25)
+        else:
+            self.apertures = apertures
+
+        self.files = self.fits_explorer.get("reduced")
+        n_apertures = len(self.apertures)
+        n_stars = len(self.stars_coords)
+        n_images = len(self.files)
+
+        self.exposure = np.min(io.fits_keyword_values(self.files, self.fits_explorer.telescope.keyword_exposure_time))
+        self.airmass = io.fits_keyword_values(self.files, self.fits_explorer.telescope.keyword_airmass)
+
+        self.photometry_data = np.zeros((n_apertures, n_stars, n_images))
+        self.apertures_area = np.zeros((n_apertures,n_images))
+        self.annulus_area = np.zeros((n_images))
+        self.sky = np.zeros((n_stars, n_images))
+
+        self.annulus_inner_radius = annulus_inner_radius
+        self.annulus_outer_radius = annulus_outer_radius
+        
+        stack_path = fits_explorer.get("stack")[0]
+        self.stack_fwhm = np.mean(psf.fit_gaussian2d(fits.getdata(stack_path), self.stars_coords)[0:2])
+        # fwhms = io.fits_keyword_values(self.light_files[0:n_images], "FWHM")
+
+    def run(self):
+        fluxes, other_data = aperture_photometry_annulus(
+            self.files,
+            self.stars_coords,
+            self.stack_fwhm,
+            apertures=self.apertures,
+            annulus_inner_radius=self.annulus_inner_radius,
+            annulus_outer_radius=self.annulus_outer_radius,
+        )
+
+        fluxes_errors = np.zeros(np.shape(fluxes))
+        apertures_area = other_data["apertures_area"]
+        annulus_area = other_data["annulus_area"]
+        sky = other_data["annulus_sky"]
+
+        for i, aperture_area in enumerate(apertures_area):
+            area = aperture_area * (1 + aperture_area/annulus_area)
+            fluxes_errors[i, :, :] = self.fits_explorer.telescope.error(
+                fluxes[i, :],
+                area,
+                sky,
+                self.exposure,
+                airmass=self.airmass,
+            )
+        
+        return fluxes, fluxes_errors, other_data
