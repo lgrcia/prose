@@ -514,6 +514,7 @@ class FitsManager:
             print(table_string)
 
     def trim(self, image, raw=False):
+        # TODO: investigate a flip option, cf calibrate
         if raw:
             if isinstance(image, np.ndarray):
                 pass
@@ -530,14 +531,14 @@ class FitsManager:
         else:
             if isinstance(image, np.ndarray):
                 shape = np.array(image.shape)
-                center = shape/2
+                center = shape[::-1]/2
                 dimension = shape - 2*np.array(self.telescope.trimming)
                 return Cutout2D(image, center, dimension)
             elif isinstance(image, str):
                 if path.exists(image) and image.lower().endswith((".fts", ".fits")):
                     image_data= fits.getdata(image)
                     shape = np.array(image_data.shape)
-                    center = shape/2
+                    center = shape[::-1]/2
                     dimension = shape - 2*np.array(self.telescope.trimming)
                     return Cutout2D(image_data, center, dimension, wcs=WCS(image))
             else:

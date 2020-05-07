@@ -179,18 +179,22 @@ class Calibration:
         im = plt.imshow(utils.z_scale(self.master_flat), cmap="Greys_r")
         viz.add_colorbar(im)
 
-    def calibrate(self, im_path, flip=False):
+    def calibrate(self, im_path, flip=False, return_wcs=False):
+        # TODO: Investigate flip
         hdu = fits.open(im_path)
         primary_hdu = hdu[0]
-        image, header = self.fits_explorer.trim(primary_hdu.data, raw=True), primary_hdu.header
+        image, header = self.fits_explorer.trim(im_path), primary_hdu.header
         hdu.close()
         exp_time = header[self.telescope.keyword_exposure_time]
-        calibrated_image = self.calibration(image, exp_time, self.master_bias, self.master_dark, self.master_flat)
+        calibrated_image = self.calibration(image.data, exp_time, self.master_bias, self.master_dark, self.master_flat)
 
         if flip:
             calibrated_image = calibrated_image[::-1, ::-1]
 
-        return calibrated_image
+        if return_wcs:
+            return calibrated_image, image.wcs
+        else:
+            return calibrated_image
 
 
 class Reduction:
@@ -335,7 +339,7 @@ class Reduction:
             )
 
         ref_shape = np.array(reference_image.shape)
-        ref_center = ref_shape/2
+        ref_center = ref_shape[::-1]/2
 
         for i, image in enumerate(tqdm(
             self.light_files[0:n_images],
@@ -350,7 +354,7 @@ class Reduction:
             flip = not reference_flip == _flip
 
             # Calibration
-            calibrated_frame = self.calibration.calibrate(image, flip=flip)
+            calibrated_frame, calibrated_wcs = self.calibration.calibrate(image, flip=flip, return_wcs=True)
 
             if self.alignment == alignment.astroalign_optimized_find_transform:
                 # Translation estimation + stars detection
@@ -380,7 +384,7 @@ class Reduction:
                 ref_shape, 
                 mode="partial", 
                 fill_value=np.mean(calibrated_frame),
-                wcs = WCS(image)
+                wcs=calibrated_wcs
                 )
 
             # Seeing/psf estimation
