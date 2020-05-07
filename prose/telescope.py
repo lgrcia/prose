@@ -18,6 +18,7 @@ class Telescope:
         self.keyword_exposure_time = "EXPTIME"
         self.keyword_filter = "FILTER"
         self.keyword_observatory = "TELESCOP"
+        self.keyword_airmass = "AIRMASS"
         self.keyword_fwhm = "FWHM"
         self.keyword_ra = "RA"
         self.keyword_dec = "DEC"
@@ -64,14 +65,9 @@ class Telescope:
     def earth_location(self):
         return EarthLocation(*self.latlong, self.altitude)
 
-    def error(self, signal, ap_area, sky, exposure, airmass=None, scinfac=0.09, bkg_area=None):
+    def error(self, signal, area, sky, exposure, airmass=None, scinfac=0.09):
         _signal = signal.copy() 
-        _squarred_error = _signal + ap_area * (self.read_noise ** 2 + (self.gain / 2) ** 2)
-
-        if bkg_area is not None:
-            _squarred_error += ap_area**2/bkg_area * sky
-        else:
-            _squarred_error += ap_area*sky
+        _squarred_error = _signal + area * (self.read_noise ** 2 + (self.gain / 2) ** 2 + sky)
 
         if airmass is not None:
             scintillation = (

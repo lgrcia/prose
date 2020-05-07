@@ -639,3 +639,10 @@ def fits_keyword_values(fits_files, keywords, default_value=None, verbose=False)
         header_values = [hv for hvs in header_values for hv in hvs]
 
     return header_values
+
+def set_hdu(hdu_list, value):
+    key = value.name 
+    if key in hdu_list:
+        hdu_list[key] = value
+    else:
+        hdu_list.append(value)

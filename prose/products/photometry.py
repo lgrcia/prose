@@ -31,14 +31,12 @@ class Photometry:
             wether to sort stars by luminosity on loading, by default True
         """
         # Photometry
-        self.apertures_area = None # ndarray
-        self.annulus_area = None
         self.fluxes = None
         self._time = None
 
         # Differential photometry
         self.lcs = None
-        self.artificial_lc = None
+        self.artificial_lcs = None
         self._comparison_stars = None  # ndarray
 
         # Files
@@ -52,8 +50,9 @@ class Photometry:
         self.filter = None
         self.exposure = None
         self.data = {}  # dict
+        self.all_data = {}
         self.telescope = None  # Telescope object
-        self.stars_coords = None  # in pixels
+        self.stars = None  # in pixels
         self.target = {"id": None,
                        "name": None,
                        "radec": [None, None]}
@@ -62,6 +61,7 @@ class Photometry:
         self.bjd_tdb = None
         self.gaia_data = None
         self.wcs = None
+        self.hdu = None
 
         if folder_or_file is not None:
             isdir = self._check_folder_or_file(folder_or_file)
@@ -259,7 +259,7 @@ class Photometry:
             fluxes, fluxes_errors, self.target["id"], return_art_lc=True, return_comps=True, **kwargs
         )
 
-        self.artificial_lc = np.array(art_lcs)
+        self.artificial_lcs = np.array(art_lcs)
         self.lcs = LightCurves(self.time, np.moveaxis(lcs, 0, 1), np.moveaxis(lcs_errors, 0, 1))
         best_aperture_id = self.lcs[self.target["id"]].best_aperture_id
         self.lcs.set_best_aperture_id(best_aperture_id)
@@ -276,7 +276,7 @@ class Photometry:
         """
         fluxes, fluxes_errors = self.fluxes.as_array()
         lcs, lcs_errors, art_lcs = differential_photometry(fluxes, fluxes_errors, comps, return_art_lc=True)
-        self.artificial_lc = np.array(art_lcs)
+        self.artificial_lcs = np.array(art_lcs)
         self.lcs = LightCurves(self.time, np.moveaxis(lcs,0,1), np.moveaxis(lcs_errors,0,1))
         best_aperture_id = self.lcs[self.target["id"]].best_aperture_id
         self.lcs.set_best_aperture_id(best_aperture_id)
@@ -334,12 +334,12 @@ class Photometry:
             view = "reference" if self.comparison_stars is not None else "all"
         if view == "all":
             viz.fancy_show_stars(
-                self.stack_fits, self.stars_coords, 
+                self.stack_fits, self.stars, 
                 flip=flip, size=size, target=self.target["id"],
                 pixel_scale=self.telescope.pixel_scale)
         elif view == "reference":
             viz.fancy_show_stars(
-                self.stack_fits, self.stars_coords,
+                self.stack_fits, self.stars,
                 ref_stars=self.comparison_stars, target=self.target["id"],
                 flip=flip, size=size, view="reference", pixel_scale=self.telescope.pixel_scale)
     
@@ -385,10 +385,10 @@ class Photometry:
         """
         if star == None:
             star = self.target["id"]
-        viz.show_stars(self.stack_fits, self.stars_coords, highlight=star, size=6)
+        viz.show_stars(self.stack_fits, self.stars, highlight=star, size=6)
         ax = plt.gcf().axes[0]
-        ax.set_xlim(np.array([-size/2, size/2]) + self.stars_coords[star][0])
-        ax.set_ylim(np.array([size/2, -size/2]) + self.stars_coords[star][1])
+        ax.set_xlim(np.array([-size/2, size/2]) + self.stars[star][0])
+        ax.set_ylim(np.array([size/2, -size/2]) + self.stars[star][1])
 
     def plot_comps_lcs(self):
         """
@@ -436,7 +436,7 @@ class Photometry:
         .. image:: /guide/examples_images/plot_psf_fit.png
            :align: center
         """
-        cut = psf.image_psf(self.stack_fits, self.stars_coords, size=size)
+        cut = psf.image_psf(self.stack_fits, self.stars, size=size)
         p = psf.fit_gaussian2_nonlin(cut)
         plt.figure(figsize=(12, 4))
         viz.plot_marginal_model(cut, p, psf.gaussian_2d)
@@ -494,44 +494,25 @@ class Photometry:
             "NIMAGES": self.n_images
         })
 
-        hdu_list = [
-            header,
-            fits.ImageHDU(self.fluxes.as_array()[0], name="photometry"),
-            fits.ImageHDU(self.stars_coords, name="stars"),
-            fits.ImageHDU(self._comparison_stars, name="comparison stars"),
-            fits.ImageHDU(self.apertures_area, name="apertures_area"),
-            fits.ImageHDU(self.artificial_lc, name="artificial lcs"),
-            fits.ImageHDU(self._time, name="jd"),
-            fits.ImageHDU(self.bjd_tdb, name="bjd"),
-            fits.ImageHDU(self.annulus_sky, name="annulus_sky"),
-            fits.ImageHDU(self.apertures_area, name="apertures_area"),
-            fits.ImageHDU(self.annulus_area, name="annulus_area")
-        ]
-
-        for keyword in [
-            "fwhm", "sky", "dx", "dy", "airmass",
-            (self.telescope.keyword_exposure_time.lower(), "exptime"),
-            (self.telescope.keyword_julian_date.lower(), "jd"),
-        ]:
-            if isinstance(keyword, str):
-                if keyword in self.data:
-                    hdu_list.append(fits.ImageHDU(self.data[keyword], name=keyword))
-            elif isinstance(keyword, tuple):
-                if keyword[0] in self.data:
-                    hdu_list.append(
-                        fits.ImageHDU(self.data[keyword[0]], name=keyword[1])
-                    )
+        io.set_hdu(self.hdu, header)
+        io.set_hdu(self.hdu, fits.ImageHDU(self.fluxes.as_array()[0], name="photometry"))
+        io.set_hdu(self.hdu, fits.ImageHDU(self.fluxes.as_array()[0], name="photometry errors"))
+        io.set_hdu(self.hdu, fits.ImageHDU(self.stars, name="stars"))
+        io.set_hdu(self.hdu, fits.ImageHDU(self._time, name="jd"))
+        io.set_hdu(self.hdu, fits.ImageHDU(self.bjd_tdb, name="bjd"))
 
         if self.lcs is not None:
             lcs, lcs_errors = self.lcs.as_array()
-            hdu_list.append(fits.ImageHDU(lcs, name="lightcurves"))
-            hdu_list.append(fits.ImageHDU(lcs_errors, name="lightcurves errors"))
+            io.set_hdu(self.hdu, fits.ImageHDU(lcs, name="lightcurves"))
+            io.set_hdu(self.hdu, fits.ImageHDU(lcs_errors, name="lightcurves errors"))
+            io.set_hdu(self.hdu, fits.ImageHDU(self._comparison_stars, name="comparison stars"))
+            io.set_hdu(self.hdu, fits.ImageHDU(self.artificial_lcs, name="artificial lcs"))
 
-        hdu = fits.HDUList(hdu_list)
-        hdu.writeto(destination, overwrite=True)
+        self.hdu.writeto(destination, overwrite=True)
 
 
     def load_phot_fits(self, phots_path, sort_stars=True):
+        self.hdu = fits.open(phots_path)
         phot_dict = io.phot2dict(phots_path)
 
         header = phot_dict["header"]
@@ -575,7 +556,7 @@ class Photometry:
         if fluxes_error is not None: fluxes_error = fluxes_error[:, sorted_stars, :]
 
         # Loading stars, target, apertures
-        self.stars_coords = phot_dict.get("stars", None)[sorted_stars]
+        self.stars = phot_dict.get("stars", None)[sorted_stars]
         self.apertures_area = phot_dict.get("apertures_area", None)
         self.annulus_area = phot_dict.get("annulus_area", None)
         self.annulus_sky = phot_dict.get("annulus_sky", None)
@@ -602,20 +583,8 @@ class Photometry:
 
         # Photometry into LightCurve objects
         # Here is where we compute the fluxes errors
-
-        
         if fluxes_error is None:
-            fluxes_error = np.zeros(np.shape(fluxes))
-            sky = self.annulus_sky if self.annulus_sky is not None else self.sky
-            for i, apertures in enumerate(self.apertures_area):
-                fluxes_error[i, :, :] = self.telescope.error(
-                    fluxes[i, :],
-                    apertures,
-                    sky,
-                    self.exposure,
-                    airmass=self.airmass,
-                    bkg_area=self.annulus_area
-                )
+            raise ValueError("Photometry error not present. TODO")
         self.fluxes = LightCurves(
             time, np.moveaxis(fluxes, 1, 0), np.moveaxis(fluxes_error, 1, 0))
         self.fluxes.apertures = self.apertures_area
