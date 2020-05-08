@@ -37,7 +37,7 @@ class Telescope:
 
         if telescope_file is not None:
             success = self.load(telescope_file)
-            if success and self.is_new():
+            if success:
                 CONFIG.save_telescope_file(telescope_file)
 
     def load(self, file):
