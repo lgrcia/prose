@@ -437,7 +437,7 @@ class FitsManager:
         )
 
     def _get_files_headers(self, folder):
-        self._temporary_files_paths = get_files(".f*ts", folder, deepness=self.deepness)
+        self._temporary_files_paths = get_files(".f*ts", folder, deepness=self.deepness, single_list_removal=False)
         self._temporary_files_headers = []
 
         if self.verbose:
@@ -532,14 +532,14 @@ class FitsManager:
             if isinstance(image, np.ndarray):
                 shape = np.array(image.shape)
                 center = shape[::-1]/2
-                dimension = shape - 2*np.array(self.telescope.trimming)
+                dimension = shape - 2*np.array(self.telescope.trimming[::-1])
                 return Cutout2D(image, center, dimension)
             elif isinstance(image, str):
                 if path.exists(image) and image.lower().endswith((".fts", ".fits")):
                     image_data= fits.getdata(image)
                     shape = np.array(image_data.shape)
                     center = shape[::-1]/2
-                    dimension = shape - 2*np.array(self.telescope.trimming)
+                    dimension = shape - 2*np.array(self.telescope.trimming[::-1])
                     return Cutout2D(image_data, center, dimension, wcs=WCS(image))
             else:
                 raise ValueError("{} should be a numpy array or a fits file")
