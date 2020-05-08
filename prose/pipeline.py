@@ -299,7 +299,7 @@ class Reduction:
 
         if destination is None:
             destination = path.join(
-                path.dirname(self.fits_explorer.fodler), 
+                path.dirname(self.fits_explorer.folder), 
                 self.fits_explorer.products_denominator
             )
                 
@@ -456,6 +456,8 @@ class Reduction:
 
             stack_hdu.header = stacked_image_header
             stack_hdu.writeto(stack_path, overwrite=overwrite)
+
+        return destination
 
 
 class Photometry:
