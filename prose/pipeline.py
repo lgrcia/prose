@@ -24,8 +24,6 @@ from prose import visualisation as viz
 from astropy.wcs import WCS, FITSFixedWarning
 from astropy.nddata import Cutout2D
 
-#TODO: error seems to be wrong
-
 def return_method(name):
     """
     Return the method identified byt the given name
@@ -292,13 +290,19 @@ class Reduction:
 
     def run(
         self,
-        destination,
+        destination=None,
         reference_frame=1/2,
         save_stack=True,
         overwrite=False,
         n_images=None,
-    ):
+    ):  
 
+        if destination is None:
+            destination = path.join(
+                path.dirname(self.fits_explorer.fodler), 
+                self.fits_explorer.products_denominator
+            )
+                
         if not path.exists(destination):
             os.mkdir(destination)
 
