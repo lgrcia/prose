@@ -1,9 +1,12 @@
 .. _reduction:
 
+.. TODO: qatar sa mere -> qatar
+.. Elsa problem document describe(files)
+
 Reduction
 =========
 
-In this tutorial you will learn how to process a complete night of raw data from any telescope. A demo dataset can be downloaded (5Mb) here_ and consists in a very minimal observation of Quatar2-b exoplanet transit observed from the Trappist-North telescope.
+In this tutorial you will learn how to process a complete night of raw data from any telescope. A demo dataset can be downloaded (5Mb) here_ and consists in a very minimal observation of qatar2-b exoplanet transit observed from the Trappist-North telescope.
 
 Telescope setting
 ^^^^^^^^^^^^^^^^^
@@ -34,7 +37,7 @@ We then create a ``Reduction`` object and have a look at the folder content
 
 .. code:: python3
 
-    photometry_folder = "minimal_quatar2b_dataset"
+    photometry_folder = "minimal_qatar2b_dataset"
     
     reduction = pipeline.Reduction(photometry_folder, deepness=2)
     reduction.describe_observations()
@@ -54,7 +57,7 @@ We set which observation to reduce and proceeed with reduction
 
 .. code:: python3
 
-    destination = "minimal_quatar2b_dataset_reduced"
+    destination = "minimal_qatar2b_dataset_reduced"
     
     reduction.set_observation(0)
     reduction.run(destination)
@@ -78,11 +81,11 @@ and photometric extraction
     INFO:global psf FWHM: 4.17 (pixels)
     RUN: hotometry extraction: 100%|████████████████████████| 11/11 [00:00<00:00, 11.48files/s]
 
-Here is the content of the ``minimal_quatar2b_dataset_reduced`` folder
+Here is the content of the ``minimal_qatar2b_dataset_reduced`` folder
 
 ::
 
-    minimal_quatar2b_dataset_reduced/
+    minimal_qatar2b_dataset_reduced/
       │ 
       ├── NTM_20200229_Qatar2b_I+z.phots
       ├── NTM_20200229_Qatar2b_I+z_stack.fits
@@ -94,6 +97,7 @@ Here is the content of the ``minimal_quatar2b_dataset_reduced`` folder
 It contains all reduced images and a stack fits of the night. The ``phots`` file is produced by the ``photometry.run`` task and contains all extracted fluxes. We can include in this folder a small gif of the night with
 
 .. code:: python3
+
     pipeline.produce_gif(destination)
 
 .. figure:: minimal_Qatar2b_I+z_movie.gif
@@ -107,4 +111,4 @@ It contains all reduced images and a stack fits of the night. The ``phots`` file
 
     More information about reduction, photometry and how to select the methods used by the pipeline are provided in TODO
 
-We can now load this folder into a ``Photometry`` object and proceed with further analaysis (e.g. in the :ref:`next turorial <photometry-analysis>` where we produce Quatar2-b transit light-curve)
+We can now load this folder into a ``Photometry`` object and proceed with further analaysis (e.g. in the :ref:`next turorial <photometry-analysis>` where we produce qatar2-b transit light-curve)
