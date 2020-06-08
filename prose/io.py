@@ -99,6 +99,7 @@ class FitsManager:
 
         self.check_telescope_file()
         self.telescope = Telescope()
+        self.index_file = None
 
         has_index = self.load_index()
         if update or not has_index:
@@ -119,7 +120,8 @@ class FitsManager:
                 raise ValueError("Too many *index.csv found, should be unique")
             return False
         else:
-            self.files_df = pd.read_csv(index_files[0])
+            self.index_file = index_files[0]
+            self.files_df = pd.read_csv(self.index_file)
             self.files_df["complete_date"] = pd.to_datetime(self.files_df["complete_date"])
             self.files_df["date"] = pd.to_datetime(self.files_df["date"]).apply(lambda x: x.date())
             return True
@@ -157,49 +159,52 @@ class FitsManager:
         for i, file_path in enumerate(_tqdm(self._temporary_files_paths)):
             if file_path not in existing_paths:
                 header = fitsio.read_header(file_path)
-                telescope_name = header[self.telescope_kw].lower()
-                if telescope_name != last_telescope_name:
-                    _temporary_telescope.load(
-                        CONFIG.match_telescope_name(telescope_name)
+                try:
+                    telescope_name = header[self.telescope_kw].lower()
+                    if telescope_name != last_telescope_name:
+                        _temporary_telescope.load(
+                            CONFIG.match_telescope_name(telescope_name)
+                        )
+
+                    _path = self._temporary_files_paths[i]
+                    _complete_date = utils.format_iso_date(header.get(_temporary_telescope.keyword_observation_date), night_date=False)
+                    _date = utils.format_iso_date(header.get(_temporary_telescope.keyword_observation_date), night_date=True)
+                    _telescope = _temporary_telescope.name
+                    _target = header.get(_temporary_telescope.keyword_object, "")
+                    _type = header.get(_temporary_telescope.keyword_image_type, "").lower()
+                    _flip = header.get(_temporary_telescope.keyword_flip, "")
+                    
+                    if _temporary_telescope.keyword_flat_images.lower() in _type:
+                        _type = "flat"
+                    elif _temporary_telescope.keyword_dark_images.lower() in _type:
+                        _type = "dark"
+                    elif _temporary_telescope.keyword_bias_images.lower() in _type:
+                        _type = "bias"
+                    elif "stack" in _type:
+                        _type = "stack"
+                    elif _type == self.light_kw:
+                        _type = self.light_kw
+
+                    _filter = header.get(_temporary_telescope.keyword_filter, "")
+                    _combined = "{}_{}_{}_{}_{}".format(
+                        _date.strftime("%Y%m%d"), _type, _telescope, _target, _filter,
                     )
+                    _dimensions = "{}x{}".format(header["NAXIS1"], header["NAXIS2"])
+                    _jd = header.get(_temporary_telescope.keyword_julian_date, "")
 
-                _path = self._temporary_files_paths[i]
-                _complete_date = utils.format_iso_date(header.get(_temporary_telescope.keyword_observation_date), night_date=False)
-                _date = utils.format_iso_date(header.get(_temporary_telescope.keyword_observation_date), night_date=True)
-                _telescope = _temporary_telescope.name
-                _target = header.get(_temporary_telescope.keyword_object, "")
-                _type = header.get(_temporary_telescope.keyword_image_type, "").lower()
-                _flip = header.get(_temporary_telescope.keyword_flip, "")
-                
-                if _temporary_telescope.keyword_flat_images.lower() in _type:
-                    _type = "flat"
-                elif _temporary_telescope.keyword_dark_images.lower() in _type:
-                    _type = "dark"
-                elif _temporary_telescope.keyword_bias_images.lower() in _type:
-                    _type = "bias"
-                elif "stack" in _type:
-                    _type = "stack"
-                elif _type == self.light_kw:
-                    _type = self.light_kw
-
-                _filter = header.get(_temporary_telescope.keyword_filter, "")
-                _combined = "{}_{}_{}_{}_{}".format(
-                    _date.strftime("%Y%m%d"), _type, _telescope, _target, _filter,
-                )
-                _dimensions = "{}x{}".format(header["NAXIS1"], header["NAXIS2"])
-                _jd = header.get(_temporary_telescope.keyword_julian_date, "")
-
-                paths.append(_path)
-                dates.append(_date)
-                telescope.append(_telescope)
-                types.append(_type)
-                targets.append(_target)
-                filters.append(_filter)
-                combined.append(_combined)
-                complete_date.append(_complete_date)
-                dimensions.append(_dimensions)
-                flip.append(_flip)
-                jd.append(_jd)
+                    paths.append(_path)
+                    dates.append(_date)
+                    telescope.append(_telescope)
+                    types.append(_type)
+                    targets.append(_target)
+                    filters.append(_filter)
+                    combined.append(_combined)
+                    complete_date.append(_complete_date)
+                    dimensions.append(_dimensions)
+                    flip.append(_flip)
+                    jd.append(_jd)
+                except:
+                    print("cannot read {}, ignored...".format(file_path))
 
         files_df = pd.DataFrame(
             {
@@ -220,7 +225,7 @@ class FitsManager:
         if self.files_df is None:
             self.files_df = files_df
         else:
-            pd.concat([self.files_df, files_df], ignore_index=True)
+            self.files_df = pd.concat([self.files_df, files_df], ignore_index=True)
 
         self.sort_by_date()
         self.save_index()
