@@ -100,8 +100,8 @@ class FitsManager:
         self.check_telescope_file()
         self.telescope = Telescope()
 
-        self.load_index()
-        if update:
+        has_index = self.load_index()
+        if update or not has_index:
             self.build_files_df()
 
         self._original_files_df = self.files_df.copy()
@@ -113,14 +113,16 @@ class FitsManager:
         if len(index_files) == 0:
             if force_single:
                 raise ValueError("No *index.csv found")
+            return False
         elif len(index_files) > 1: 
             if force_single:
                 raise ValueError("Too many *index.csv found, should be unique")
+            return False
         else:
             self.files_df = pd.read_csv(index_files[0])
-
-        self.files_df["complete_date"] = pd.to_datetime(self.files_df["complete_date"])
-        self.files_df["date"] = pd.to_datetime(self.files_df["date"])
+            self.files_df["complete_date"] = pd.to_datetime(self.files_df["complete_date"])
+            self.files_df["date"] = pd.to_datetime(self.files_df["date"]).apply(lambda x: x.date())
+            return True
 
     def build_files_df(self):
 
