@@ -14,6 +14,7 @@ import warnings
 from prose.lightcurves import LightCurves
 from astropy.nddata import Cutout2D
 from astropy.wcs import WCS
+import fitsio
 
 
 def phot2dict(filename, format="fits"):
@@ -105,7 +106,7 @@ class FitsManager:
 
     def build_files_df(self, folder):
 
-        self._get_files_headers(folder)
+        self._temporary_files_paths = get_files(".f*ts", folder, deepness=self.deepness, single_list_removal=False)
         paths = []
         dates = []
         telescope = []
@@ -128,8 +129,8 @@ class FitsManager:
         else:
             _tqdm = lambda x: x
 
-        for i, header in enumerate(_tqdm(self._temporary_files_headers)):
-
+        for i, file_path in enumerate(_tqdm(self._temporary_files_paths)):
+            header = fitsio.read_header(file_path)
             telescope_name = header[self.telescope_kw].lower()
             if telescope_name != last_telescope_name:
                 _temporary_telescope.load(
@@ -228,7 +229,7 @@ class FitsManager:
         if not telescope:
             telescope = None
 
-        conditions = pd.Series(np.ones(len(self.files_df)).astype(bool))
+        conditions = pd.Series(np.ones(len(self.files_df)).astype(bool), index=self.files_df.index)
         if im_type is not None:
             conditions = conditions & self.files_df["type"].str.contains(im_type)
         if date is not None:
@@ -435,18 +436,6 @@ class FitsManager:
             and len(self.get("flat")) > 0
             and len(self.get("bias")) > 0
         )
-
-    def _get_files_headers(self, folder):
-        self._temporary_files_paths = get_files(".f*ts", folder, deepness=self.deepness, single_list_removal=False)
-        self._temporary_files_headers = []
-
-        if self.verbose:
-            _tqdm = tqdm
-        else:
-            _tqdm = lambda x: x
-
-        for f in _tqdm(self._temporary_files_paths):
-            self._temporary_files_headers.append(fits.getheader(f))
 
     def describe(self, table_format="obs", return_string=False, original=False):
 
