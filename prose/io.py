@@ -82,7 +82,7 @@ def get_files(
 
 
 class FitsManager:
-    def __init__(self, folder=None, verbose=True, telescope_kw="TELESCOP", deepness=1, light_kw="light"):
+    def __init__(self, folder=None, verbose=True, telescope_kw="TELESCOP", deepness=1, light_kw="light", force_index=False):
         self.deepness = deepness
         self._temporary_files_headers = None
         self._temporary_files_paths = None
@@ -99,7 +99,19 @@ class FitsManager:
 
         self.check_telescope_file()
         self.telescope = Telescope()
+
+        index_files = get_files("*index.csv", folder, single_list_removal=False, none_for_empty=False)
+        if len(index_files) == 0:
+            if force_index:
+                raise ValueError("No *index.csv found")
+        elif len(index_files) > 1: 
+            if force_index:
+                raise ValueError("Too many *index.csv found, should be unique")
+        else:
+            self.files_df = pd.read_csv(index_files[0])
+
         self.build_files_df(self.folder)
+
         self._original_files_df = self.files_df.copy()
 
         assert len(self._original_files_df) != 0, "No data found"
@@ -129,53 +141,59 @@ class FitsManager:
         else:
             _tqdm = lambda x: x
 
+        if self.files_df is not None:
+            existing_paths = self.files_df["path"].values
+        else:
+            existing_paths = []
+
         for i, file_path in enumerate(_tqdm(self._temporary_files_paths)):
-            header = fitsio.read_header(file_path)
-            telescope_name = header[self.telescope_kw].lower()
-            if telescope_name != last_telescope_name:
-                _temporary_telescope.load(
-                    CONFIG.match_telescope_name(telescope_name)
+            if file_path not in existing_paths:
+                header = fitsio.read_header(file_path)
+                telescope_name = header[self.telescope_kw].lower()
+                if telescope_name != last_telescope_name:
+                    _temporary_telescope.load(
+                        CONFIG.match_telescope_name(telescope_name)
+                    )
+
+                _path = self._temporary_files_paths[i]
+                _complete_date = utils.format_iso_date(header.get(_temporary_telescope.keyword_observation_date), night_date=False)
+                _date = utils.format_iso_date(header.get(_temporary_telescope.keyword_observation_date), night_date=True)
+                _telescope = _temporary_telescope.name
+                _target = header.get(_temporary_telescope.keyword_object, "")
+                _type = header.get(_temporary_telescope.keyword_image_type, "").lower()
+                _flip = header.get(_temporary_telescope.keyword_flip, "")
+                
+                if _temporary_telescope.keyword_flat_images.lower() in _type:
+                    _type = "flat"
+                elif _temporary_telescope.keyword_dark_images.lower() in _type:
+                    _type = "dark"
+                elif _temporary_telescope.keyword_bias_images.lower() in _type:
+                    _type = "bias"
+                elif "stack" in _type:
+                    _type = "stack"
+                elif _type == self.light_kw:
+                    _type = self.light_kw
+
+                _filter = header.get(_temporary_telescope.keyword_filter, "")
+                _combined = "{}_{}_{}_{}_{}".format(
+                    _date.strftime("%Y%m%d"), _type, _telescope, _target, _filter,
                 )
+                _dimensions = "{}x{}".format(header["NAXIS1"], header["NAXIS2"])
+                _jd = header.get(_temporary_telescope.keyword_julian_date, "")
 
-            _path = self._temporary_files_paths[i]
-            _complete_date = utils.format_iso_date(header.get(_temporary_telescope.keyword_observation_date), night_date=False)
-            _date = utils.format_iso_date(header.get(_temporary_telescope.keyword_observation_date), night_date=True)
-            _telescope = _temporary_telescope.name
-            _target = header.get(_temporary_telescope.keyword_object, "")
-            _type = header.get(_temporary_telescope.keyword_image_type, "").lower()
-            _flip = header.get(_temporary_telescope.keyword_flip, "")
-            
-            if _temporary_telescope.keyword_flat_images.lower() in _type:
-                _type = "flat"
-            elif _temporary_telescope.keyword_dark_images.lower() in _type:
-                _type = "dark"
-            elif _temporary_telescope.keyword_bias_images.lower() in _type:
-                _type = "bias"
-            elif "stack" in _type:
-                _type = "stack"
-            elif _type == self.light_kw:
-                _type = self.light_kw
+                paths.append(_path)
+                dates.append(_date)
+                telescope.append(_telescope)
+                types.append(_type)
+                targets.append(_target)
+                filters.append(_filter)
+                combined.append(_combined)
+                complete_date.append(_complete_date)
+                dimensions.append(_dimensions)
+                flip.append(_flip)
+                jd.append(_jd)
 
-            _filter = header.get(_temporary_telescope.keyword_filter, "")
-            _combined = "{}_{}_{}_{}_{}".format(
-                _date.strftime("%Y%m%d"), _type, _telescope, _target, _filter,
-            )
-            _dimensions = "{}x{}".format(header["NAXIS1"], header["NAXIS2"])
-            _jd = header.get(_temporary_telescope.keyword_julian_date, "")
-
-            paths.append(_path)
-            dates.append(_date)
-            telescope.append(_telescope)
-            types.append(_type)
-            targets.append(_target)
-            filters.append(_filter)
-            combined.append(_combined)
-            complete_date.append(_complete_date)
-            dimensions.append(_dimensions)
-            flip.append(_flip)
-            jd.append(_jd)
-
-        self.files_df = pd.DataFrame(
+        files_df = pd.DataFrame(
             {
                 "date": dates,
                 "complete_date": complete_date,
@@ -191,7 +209,19 @@ class FitsManager:
             }
         )
 
+        if self.files_df is None:
+            self.files_df = files_df
+        else:
+            pd.concat([self.files_df, files_df], ignore_index=True)
+
         self.sort_by_date()
+        self.save_index()
+    
+    def save_index(self):
+        # current file name, not implemented but TODO later
+        #datetime.datetime.now().strftime("pwd_%Y%m%d_%H%M_index.csv")
+
+        self.files_df.to_csv(path.join(self.folder, "prose_index.csv"), index=False)
 
     def check_telescope_file(self):
         """
