@@ -26,7 +26,9 @@ setup(
         "docutils",
         "tabulate",
         "sphinx_rtd_theme",
-        "imageio"
+        "imageio",
+        "george",
+        "fitsio"
     ],
     zip_safe=True
 )
