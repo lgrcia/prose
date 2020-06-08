@@ -82,7 +82,7 @@ def get_files(
 
 
 class FitsManager:
-    def __init__(self, folder=None, verbose=True, telescope_kw="TELESCOP", deepness=1, light_kw="light", force_index=False):
+    def __init__(self, folder=None, verbose=True, telescope_kw="TELESCOP", deepness=1, light_kw="light", update=False):
         self.deepness = deepness
         self._temporary_files_headers = None
         self._temporary_files_paths = None
@@ -100,25 +100,31 @@ class FitsManager:
         self.check_telescope_file()
         self.telescope = Telescope()
 
-        index_files = get_files("*index.csv", folder, single_list_removal=False, none_for_empty=False)
-        if len(index_files) == 0:
-            if force_index:
-                raise ValueError("No *index.csv found")
-        elif len(index_files) > 1: 
-            if force_index:
-                raise ValueError("Too many *index.csv found, should be unique")
-        else:
-            self.files_df = pd.read_csv(index_files[0])
-
-        self.build_files_df(self.folder)
+        self.load_index()
+        if update:
+            self.build_files_df()
 
         self._original_files_df = self.files_df.copy()
 
         assert len(self._original_files_df) != 0, "No data found"
 
-    def build_files_df(self, folder):
+    def load_index(self, force_single=False):
+        index_files = get_files("*index.csv", self.folder, single_list_removal=False, none_for_empty=False)
+        if len(index_files) == 0:
+            if force_single:
+                raise ValueError("No *index.csv found")
+        elif len(index_files) > 1: 
+            if force_single:
+                raise ValueError("Too many *index.csv found, should be unique")
+        else:
+            self.files_df = pd.read_csv(index_files[0])
 
-        self._temporary_files_paths = get_files(".f*ts", folder, deepness=self.deepness, single_list_removal=False)
+        self.files_df["complete_date"] = pd.to_datetime(self.files_df["complete_date"])
+        self.files_df["date"] = pd.to_datetime(self.files_df["date"])
+
+    def build_files_df(self):
+
+        self._temporary_files_paths = get_files(".f*ts", self.folder, deepness=self.deepness, single_list_removal=False)
         paths = []
         dates = []
         telescope = []
