@@ -121,7 +121,7 @@ class FitsManager:
             return False
         else:
             self.index_file = index_files[0]
-            self.files_df = pd.read_csv(self.index_file)
+            self.files_df = pd.read_csv(self.index_file, na_values=False)
             self.files_df["complete_date"] = pd.to_datetime(self.files_df["complete_date"])
             self.files_df["date"] = pd.to_datetime(self.files_df["date"]).apply(lambda x: x.date())
             return True
