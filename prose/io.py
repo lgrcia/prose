@@ -1,3 +1,4 @@
+import os
 from os import path
 import datetime
 import pandas as pd
@@ -82,6 +83,10 @@ def get_files(
 
 
 class FitsManager:
+    """
+    A class to manage data folder containing FITS files organized in arbitrary ways. This class explore all sub-folders and
+    retrieve header information to trace single FITS files.
+    """
     def __init__(self, folder=None, verbose=True, telescope_kw="TELESCOP", deepness=1, light_kw="light", update=False):
         self.deepness = deepness
         self._temporary_files_headers = None
@@ -110,6 +115,26 @@ class FitsManager:
         assert len(self._original_files_df) != 0, "No data found"
 
     def load_index(self, force_single=False):
+        """ Load index files (default is prose_index.csv within self.folder)
+
+        Parameters
+        ----------
+        force_single : bool, optional
+            If True errors will be raised if index file is missing or if multiple present, by default False
+
+        Returns
+        -------
+        bool
+            Wheater proper index file has been loaded to the files DataFrame self.files_df
+
+        Raises
+        ------
+        ValueError
+            raised if force_single is True and index file is missing or if multiple present
+        ValueError
+            raised if force_single is True and multiple index files are present
+        """
+
         index_files = get_files("*index.csv", self.folder, single_list_removal=False, none_for_empty=False)
         if len(index_files) == 0:
             if force_single:
@@ -127,7 +152,11 @@ class FitsManager:
             return True
 
     def build_files_df(self):
-
+        """
+        Build the main files Dataframe including paths, dates, telescope, types, targets, filters, combined, 
+        complete_date, dimensions, flip and jd
+        """
+        # TODO: Add file size evaluation in files_df
         self._temporary_files_paths = get_files(".f*ts", self.folder, deepness=self.deepness, single_list_removal=False)
         paths = []
         dates = []
@@ -231,6 +260,9 @@ class FitsManager:
         self.save_index()
     
     def save_index(self):
+        """
+        Save current files Dataframe (self.files_df) into an index files (default is prose_index.csv)
+        """
         # current file name, not implemented but TODO later
         #datetime.datetime.now().strftime("pwd_%Y%m%d_%H%M_index.csv")
 
@@ -239,10 +271,6 @@ class FitsManager:
     def check_telescope_file(self):
         """
         Check for telescope.id file in folder and copy it to specphot config folder
-
-        Returns
-        -------
-
         """
         id_files = get_files(".id", self.folder, single_list_removal=False)
 
@@ -253,6 +281,9 @@ class FitsManager:
             self.config.save_telescope_file(id_files[0])
 
     def reset(self):
+        """
+        Reset the orginial files DataFrame
+        """
         self.files_df = self._original_files_df.copy()
 
     def get(
@@ -264,7 +295,27 @@ class FitsManager:
         target=None,
         return_conditions=False,
     ):
+        """ Filter files based on header info and get their paths (or a filter on the files Dataframe self.files_df)
 
+        Parameters
+        ----------
+        im_type : str, optional
+            type of image (e.g. "light", "dark", "bias", "flat"), by default None for all
+        telescope : str, optional
+            telescope name, by default None for all
+        date : str, optional
+            date as %Ym%%d, by default None for all
+        filter : str, optional
+            filter name, by default None for all
+        target : str, optional
+            target name, by default None for all
+        return_conditions : bool, optional
+            weather to return bool Serie matching filters or paths, by default False i.e. returning path of files martching filters
+
+        Returns
+        -------
+        list or pandas.Series
+        """
         if not filter:
             filter = None
         if not target:
@@ -325,6 +376,35 @@ class FitsManager:
         check_telescope=True,
         calibration_date_limit=0,
     ):
+        """
+        Keep in the files DataFrame only files matching the filters. The kept files should all be from the same (and unknown if check_telescope=False) telescope.
+
+        Parameters
+        ----------
+        telescope : str, optional
+            telescope name, by default None for all
+        date : str, optional
+            date as %Ym%%d, by default None for all
+        im_filter : str, optional
+            filter name, by default None for all
+        target : str, optional
+            target name, by default None for all
+        keep_closest_calibration : bool, optional
+            Weather to keep closest calibration images (in time), by default True
+        check_telescope : bool, optional
+            Weather to check if calibration images are from the same telescope, by default True. Calibration images witout telescope specified in FITS header are treated from unknown telescope.
+        calibration_date_limit : int, optional
+            number of days in the past (in the future negative) up to which to consider calibration images, by default 0
+
+        Raises
+        ------
+        AssertionError
+            No files match the filters
+        AssertionError
+            Multiple telescopes found in matched files
+        """
+
+    # TODO: allow date range
         self.files_df = self.files_df.loc[
             self.get(
                 return_conditions=True,
@@ -336,10 +416,10 @@ class FitsManager:
         ]
 
         obs_telescopes = np.unique(self.files_df["telescope"])
-        assert len(obs_telescopes) != 0, "No observation found"
+        assert len(obs_telescopes) != 0, "No files match the filters"
         assert (
             len(obs_telescopes) == 1
-        ), "Multiple observations found, please add constraints"
+        ), "Multiple telescopes found in matched files, please add constraints"
 
         obs_telescope = np.unique(self.files_df["telescope"])[0]
         obs_dimensions = np.unique(self.files_df["dimensions"])[0]
@@ -385,17 +465,14 @@ class FitsManager:
 
         Parameters
         ----------
-        observation_date : "YYYYmmdd"
-            date of the observation from which closest calibration data need to be found
-
-        im_type : "bias", "dark" or "flat"
-            calibration type
-
-        obs_dimensions: pixels x pixels
-            dimensions of the images from observation, example: 2000x2000
-
-        telescope : str (default: None)
-            telescope from which closest calibration data need to be found
+        observation_date : str
+            date as %Y%m%d of the observation from which closest calibration data need to be found
+        im_type : str
+            calibration type "bias", "dark" or "flat"
+        obs_dimensions: str
+            {pixels}x{pixels} dimension of the images from observation, example: 2000x2000
+        telescope : str, optional
+            telescope from which closest calibration data need to be found, default is None for all
 
         Returns
         -------
@@ -469,11 +546,22 @@ class FitsManager:
         return calibration
 
     def sort_by_date(self):
+        """
+        Sort files Dataframe by dates
+        """
         self.files_df = self.files_df.sort_values(["complete_date"]).reset_index(
             drop=True
         )
 
     def has_calibration(self):
+        """
+        Return weather calibration files are present in current files DataFrame
+
+        Returns
+        -------
+        bool
+            weather calibration files are present
+        """
         return (
             len(self.get("dark")) > 0
             and len(self.get("flat")) > 0
@@ -481,6 +569,31 @@ class FitsManager:
         )
 
     def describe(self, table_format="obs", return_string=False, original=False):
+        """
+        Print (or return str) a table synthetizing files DataFrame content
+
+        Parameters
+        ----------
+        table_format : str, optional
+            "obs": show all observations (defined by unique telescope + date + target + filter)
+            "calib": show all observations and calibration files
+            "files": show all files
+            default is "obs"
+        return_string : bool, optional
+            weather return the string of the table or print it, by default False, i.e. printing
+        original : bool, optional
+            weather to show the current files DataFrame or the original one before filtering, by default False, i.e. show the current one
+
+        Returns
+        -------
+        str if return_string is True else None
+            string of table
+
+        Raises
+        ------
+        ValueError
+            table_format should be 'obs', 'calib' or 'files'
+        """
 
         if original:
             files_df = self._original_files_df.copy()
@@ -612,7 +725,8 @@ class FitsManager:
             observation_id,
             check_calib_telescope=True,
             keep_closest_calibration=False,
-            calibration_date_limit=0):
+            calibration_date_limit=0
+        ):
 
         observations = self.observations()
 
@@ -629,6 +743,65 @@ class FitsManager:
             keep_closest_calibration=keep_closest_calibration,
             calibration_date_limit=calibration_date_limit
         )
+
+    def copy_files(
+            self, 
+            destination, 
+            keep_closest_calibration=True, 
+            check_calib_telescope=False, 
+            overwrite=False, 
+            **kwargs
+        ):
+        """
+        Locally copy files from the files DataFrame into the following structure:
+        
+        - Target
+            - date0
+            - date1
+            - ...
+
+
+        Parameters
+        ----------
+        destination : [type]
+            [description]
+        keep_closest_calibration : bool, optional
+            [description], by default True
+        check_calib_telescope : bool, optional
+            [description], by default False
+        overwrite : bool, optional
+            [description], by default False
+        """
+        # TODO: check available space if size is in files_df, else suggest to use kwargs force
+        self.reset()
+        self.keep(keep_closest_calibration=False, **kwargs)
+        n_obs = len(self.observations())
+
+        for i, observation in self.observations().iterrows():
+            target = observation["target"]
+            date_str = observation["date"].strftime("%Y%m%d")
+
+            target_folder = path.join(destination, target)
+            if not path.exists(target_folder):
+                os.mkdir(target_folder)
+
+            date_folder = path.join(destination, target, date_str)
+            if not path.exists(date_folder):
+                os.mkdir(date_folder)
+
+            self.reset()
+            self.keep(target=target)
+            self.set_observation(
+                i,
+                check_calib_telescope=check_calib_telescope, 
+                keep_closest_calibration=keep_closest_calibration)
+            files = self.get()
+
+            print("{}/{} : copying {} - {} in {}".format(i+1, n_obs, target, date_str, date_folder))
+            for file in tqdm(files):
+                new_file = path.join(date_folder, path.split(file)[-1])
+                if not path.exists(new_file) or overwrite:
+                    shutil.copyfile(file, new_file)
 
 
 def fits_keyword_values(fits_files, keywords, default_value=None, verbose=False):
