@@ -8,7 +8,32 @@ from prose import io
 from prose import utils
 import matplotlib.pyplot as plt
 from prose import visualisation as viz
+from scipy.optimize import curve_fit
 
+def nu(n, sw, sr):
+    return (sw**2)/n + sr**2
+
+
+# TODO: check if working properly with a single aperture/lc
+# TODO: a rms reject method and a sigma clip method in LightCurves
+
+def Pont2006(x, y, n=30, plot=True, return_error=False):
+    dt = np.min(np.diff(x))
+    ns = np.arange(1, n)
+    binned = [utils.binning(x, y, dt*_n)[1] for _n in ns]
+    _nu = [np.var(b) for b in binned]
+    (sw, sr), pcov = curve_fit(nu, ns, _nu)
+    if plot:
+        plt.plot(ns, np.std(y)/np.sqrt(ns), ":k", label="$\sigma / \sqrt{n}$")
+        plt.plot(ns, np.sqrt(nu(ns, sw, sr)), "k", label="fit")
+        plt.plot(ns, np.sqrt(_nu), "d", markerfacecolor="w", markeredgecolor="k")
+        plt.xlabel("n points")
+        plt.ylabel("$\\nu^{1/2}(n)$")
+        plt.legend()
+    if return_error:
+        return sw, sr, np.sqrt(np.diag(pcov))
+    else:
+        return sw, sr
 
 def differential_photometry(fluxes, errors, comps, return_art_lc=False):
 
@@ -389,6 +414,9 @@ class LightCurve:
             binned_errors.append(binned_error)
             
         return LightCurve(binned_time, binned_fluxes, binned_errors)
+    
+    def Pont2006(self, plot=True, n=35):
+        Pont2006(self.time, self.flux, n=n, plot=plot)
         
 
 class LightCurves:
