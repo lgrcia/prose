@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 from skimage.transform import resize
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.ticker import AutoMinorLocator
+from IPython.display import display, Math
 
 
 def plot_lc(
@@ -319,15 +320,20 @@ def plot_lcs(data, planets={}, W=4, show=None, hide=None, ylim=None, size=[4,3])
 
     plt.tight_layout()
 
-def bokeh_style():
+def bokeh_style(xminor=True, yminor=True, axes=None):
     
-    axes = plt.gcf().axes
+    if axes is None:
+        axes = plt.gcf().axes
+    elif not isinstance(axis, list):
+        axes = [axes]
     
     for axe in axes:
         axe.set_titleweight = 500
         axe.tick_params(gridOn=True, grid_color="whitesmoke")
-        axe.xaxis.set_minor_locator(AutoMinorLocator())
-        axe.yaxis.set_minor_locator(AutoMinorLocator())
+        if xminor:
+            axe.xaxis.set_minor_locator(AutoMinorLocator())
+        if yminor:
+            axe.yaxis.set_minor_locator(AutoMinorLocator())
         axe.tick_params(direction="inout", which="both")
         if hasattr(axe, 'spines'):
             axe.spines['bottom'].set_color('#545454')
@@ -738,3 +744,28 @@ def fancy_gif_image_array(image, median_psf, factor=0.25):
     canvas.draw()
     width, height = (fig.get_size_inches() * fig.get_dpi()).astype(int)
     return np.fromstring(canvas.tostring_rgb(), dtype='uint8').reshape(height, width, 3)
+
+def TeX(a, fmt='{: 0.3f}', dim=True):
+    if isinstance(a, tuple):
+        a = np.array(a)
+        
+    shape = a.shape
+    if len(shape) > 2:
+        raise ValueError('bmatrix can at most display two dimensions')
+        
+    with np.printoptions(formatter={'float': fmt.format}):
+        lines = str(a).replace('[', '').replace(']', '').splitlines()
+        rv = [r'\begin{bmatrix}']
+        rv += ['  ' + ' & '.join(l.split()) + r'\\' for l in lines]
+        rv +=  [r'\end{bmatrix}']
+    if dim:
+        if len(shape) == 2:
+            teX_math = "M_{" + str(shape[0]) + " \\times "+ str(shape[1]) + "}="
+        elif len(shape) == 1:
+            teX_math = "a_{" + str(shape[0]) + "}="
+    else:
+        teX_math = ""
+        
+    teX_math += '\n'.join(rv)
+    
+    display(Math(r"{}".format(teX_math)))
