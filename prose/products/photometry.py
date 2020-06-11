@@ -11,10 +11,12 @@ from prose import visualisation as viz
 from astropy.io import fits
 from prose.telescope import Telescope
 from prose import utils, CONFIG
-from astropy.wcs import WCS
-from astropy.wcs import utils as wcsutils
+from astropy.table import Table
+from astropy.wcs import WCS, utils as wcsutils
 from prose.pipeline_methods import psf
+import pandas as pd
 
+# TODO: add n_stars to show_stars
 
 class Photometry:
     """
@@ -166,7 +168,12 @@ class Photometry:
         """
         Load the self.data dict as self attributes
         """
-        self.__dict__.update(self.data)
+        if isinstance(self.data, pd.DataFrame):
+            data = self.data.to_dict(orient="list")
+        else:
+            data = self.data
+
+        self.__dict__.update(data)
 
     def save(self, destination=None):
         """
@@ -179,6 +186,30 @@ class Photometry:
         """
         self.save_phot_fits(destination=destination)
 
+    def save_mcmc_file(self, destination):
+
+        assert self.lcs is not None, "Lightcurve is missing"
+
+        df = pd.DataFrame(
+            {
+                "BJD-TDB": self.time,
+                "DIFF_FLUX": self.lc.flux,
+                "ERROR": self.lc.error,
+                "dx_MOVE": self.dx,
+                "dy_MOVE": self.dy,
+                "FWHM": self.fwhm,
+                "FWHMx": self.fwhm,
+                "FWHMy": self.fwhm,
+                "SKYLEVEL": self.sky,
+                "AIRMASS": self.airmass,
+                "EXPOSURE": self.exptime,
+            }
+        )
+
+        df.to_csv(
+            "{}/MCMC_{}.txt".format(destination, self.products_denominator), sep=" ", index=False
+        )
+    
     # Convenience
     # -----------
     @property
@@ -228,6 +259,7 @@ class Photometry:
         time = Time(self._time, format="jd", scale="utc", location=self.telescope.earth_location)
         light_travel_tbd = time.light_travel_time(self.skycoord, location=self.telescope.earth_location)
         self.bjd_tdb = (time + light_travel_tbd).value
+        self.data["bjd tdb"] = self.bjd_tdb
     
     def Broeg2005(self, **kwargs):
         """
@@ -462,7 +494,6 @@ class Photometry:
 
     # Loaders and Savers implementations
     # ----------------------------------
-
     def save_phot_fits(self, destination=None):
         """
         Save data into a ``.phots`` file at specified destination. File name is : ``Telescope_date(YYYYmmdd)_target_filter``. For more info check :doc:`/notes/phots-structure`
@@ -498,8 +529,7 @@ class Photometry:
         io.set_hdu(self.hdu, fits.ImageHDU(self.fluxes.as_array()[0], name="photometry"))
         io.set_hdu(self.hdu, fits.ImageHDU(self.fluxes.as_array()[0], name="photometry errors"))
         io.set_hdu(self.hdu, fits.ImageHDU(self.stars, name="stars"))
-        io.set_hdu(self.hdu, fits.ImageHDU(self._time, name="jd"))
-        io.set_hdu(self.hdu, fits.ImageHDU(self.bjd_tdb, name="bjd"))
+        io.set_hdu(self.hdu, fits.BinTableHDU(Table.from_pandas(self.data), name="time series"))
 
         if self.lcs is not None:
             lcs, lcs_errors = self.lcs.as_array()
@@ -512,6 +542,7 @@ class Photometry:
 
 
     def load_phot_fits(self, phots_path, sort_stars=True):
+        # DOING: check how time is laoded when loading and see if tdb tdb appears in data
         self.hdu = fits.open(phots_path)
         phot_dict = io.phot2dict(phots_path)
 
@@ -534,9 +565,14 @@ class Photometry:
             header.get(self.telescope.keyword_observation_date, None))
         self.target["name"] = header.get(self.telescope.keyword_object, None)
 
-        # Loading time and exposure
-        self._time = phot_dict.get("jd", None)
+        # Loading data
+        self.data = Table(phot_dict.get("time series")).to_pandas()
+        self._data_as_attributes()
+
+        # Loading time and exposure (load data first to create self.data)
+        self._time = Table(phot_dict.get("time series", None))["jd"]
         if self._time is not None: self._compute_bjd()
+        else: raise ValueError("Could not find time JD within phot time series")
 
         self.exposure = header.get(self.telescope.keyword_exposure_time)
         if self.exposure is None:
@@ -557,12 +593,12 @@ class Photometry:
 
         # Loading stars, target, apertures
         self.stars = phot_dict.get("stars", None)[sorted_stars]
-        self.apertures_area = phot_dict.get("apertures_area", None)
-        self.annulus_area = phot_dict.get("annulus_area", None)
-        self.annulus_sky = phot_dict.get("annulus_sky", None)
+        self.apertures_area = phot_dict.get("apertures area", None)
+        self.annulus_area = phot_dict.get("annulus area", None)
+        self.annulus_sky = phot_dict.get("annulus sky", None)
         target_id = header.get("targetid", None)
         if target_id is not None:
-            self.target["id"]= sorted_stars[target_id]
+            self.target["id"] = sorted_stars[target_id]
         
         # Loading light curves
         lcs = phot_dict.get("lightcurves", None)
@@ -573,18 +609,14 @@ class Photometry:
         self.artificial_lcs = phot_dict.get("artificial lcs", None)
         if comparison_stars is not None: self._comparison_stars = sorted_stars[comparison_stars]
 
-        # Loading all known systematics
-        for key in ["fwhm", "sky", "dx", "dy", "airmass", "exptime"]:
-            self.data[key] = phot_dict.get(key, None)
-        self._data_as_attributes()
-
         time = self.time
         a, s, f = fluxes.shape # saved as (apertures, stars, fluxes) for conveniance
 
         # Photometry into LightCurve objects
         # Here is where we compute the fluxes errors
         if fluxes_error is None:
-            raise ValueError("Photometry error not present. TODO")
+            print("Photometry error not present. TODO")
+            fluxes_error = np.zeros_like(fluxes)
         self.fluxes = LightCurves(
             time, np.moveaxis(fluxes, 1, 0), np.moveaxis(fluxes_error, 1, 0))
         self.fluxes.apertures = self.apertures_area

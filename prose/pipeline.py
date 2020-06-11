@@ -23,6 +23,7 @@ from prose.console_utils import TQDM_BAR_FORMAT, INFO_LABEL
 from prose import visualisation as viz
 from astropy.wcs import WCS, FITSFixedWarning
 from astropy.nddata import Cutout2D
+from astropy.table import Table
 
 def return_method(name):
     """
@@ -574,7 +575,8 @@ class Photometry:
         self.fluxes, self.fluxes_errors, self.other_data = self.photometry(
             self.stars,
             self.fits_explorer,
-            **self.photometry_kwargs).run()
+            **self.photometry_kwargs
+            ).run()
         
         if save:
             self.save(overwrite=overwrite)
@@ -597,30 +599,20 @@ class Photometry:
             fits.ImageHDU(self.fluxes_errors, name="photometry errors"),
             fits.ImageHDU(self.stars, name="stars"),
         ]
+        
+        # temporary, TO DELETE, TO DO
+        if self.photometry_method_name == "aperture":
+            sky = np.mean(self.other_data["annulus_sky"], axis=0)
+            self.data["sky"] = sky
 
-        for keyword in [
-            "fwhm",
-            "dx",
-            "dy",
-            "airmass",
-            "sky",
-            (self.telescope.keyword_exposure_time.lower(), "exptime",),
-            (self.telescope.keyword_julian_date.lower(), "jd",),
-        ]:
-            if isinstance(keyword, str):
-                if keyword in self.data:
-                    hdu_list.append(fits.ImageHDU(self.data[keyword], name=keyword))
-            elif isinstance(keyword, tuple):
-                if keyword[0] in self.data:
-                    hdu_list.append(
-                        fits.ImageHDU(self.data[keyword[0]], name=keyword[1])
-                    )
-
-        # These are other data produce by the photometry task wished to be saved in the .phot
+        data_table = Table.from_pandas(self.data)
+        hdu_list.append(fits.BinTableHDU(data_table,name="time series"))
+        
+        # These are other data produced by the photometry task wished to be saved in the .phot
         for other_data_key in self.other_data:
             data = self.other_data[other_data_key]
-            hdu_list.append(fits.ImageHDU(data, name=other_data_key))
-
+            hdu_list.append(fits.ImageHDU(data, name=other_data_key.replace("_", " ")))
+        
         self.hdu = fits.HDUList(hdu_list)
         self.hdu.writeto(destination, overwrite=overwrite)
 
