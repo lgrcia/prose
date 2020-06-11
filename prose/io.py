@@ -34,7 +34,7 @@ def trapphot_phot2dict():
 def get_files(
     ext,
     folder,
-    deepness=0,
+    depth=0,
     return_folders=False,
     single_list_removal=True,
     none_for_empty=False,
@@ -47,7 +47,7 @@ def get_files(
     ----------
     folder : str
         Folder to be analyzed
-    deepness : int
+    depth : int
         Number how sub-folder layer to look into.
         0 (default) will look into current folder
         1 will look into current folder and its sub-folders
@@ -60,9 +60,9 @@ def get_files(
 
     """
     files = []
-    for deepness in range(deepness + 1):
+    for depth in range(depth + 1):
         files += glob.iglob(
-            path.join(folder, "*/" * deepness + "*{}".format(ext)), recursive=False
+            path.join(folder, "*/" * depth + "*{}".format(ext)), recursive=False
         )
 
     files = [path.abspath(f) for f in files]
@@ -87,8 +87,8 @@ class FitsManager:
     A class to manage data folder containing FITS files organized in arbitrary ways. This class explore all sub-folders and
     retrieve header information to trace single FITS files.
     """
-    def __init__(self, folder=None, verbose=True, telescope_kw="TELESCOP", deepness=1, light_kw="light", update=False):
-        self.deepness = deepness
+    def __init__(self, folder=None, verbose=True, telescope_kw="TELESCOP", depth=1, light_kw="light", update=False):
+        self.depth = depth
         self._temporary_files_headers = None
         self._temporary_files_paths = None
         self.files_df = None
@@ -157,7 +157,7 @@ class FitsManager:
         complete_date, dimensions, flip and jd
         """
         # TODO: Add file size evaluation in files_df
-        self._temporary_files_paths = get_files(".f*ts", self.folder, deepness=self.deepness, single_list_removal=False)
+        self._temporary_files_paths = get_files(".f*ts", self.folder, depth=self.depth, single_list_removal=False)
         paths = []
         dates = []
         telescope = []

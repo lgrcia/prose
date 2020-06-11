@@ -15,7 +15,7 @@ package_name = "prose"
 def get_files(
     ext,
     folder,
-    deepness=0,
+    depth=0,
     return_folders=False,
     single_list_removal=True,
     none_for_empty=False,
@@ -28,7 +28,7 @@ def get_files(
     ----------
     folder : str
         Folder to be analyzed
-    deepness : int
+    depth : int
         Number how sub-folder layer to look into.
         0 (default) will look into current folder
         1 will look into current folder and its sub-folders
@@ -41,9 +41,9 @@ def get_files(
 
     """
     files = []
-    for deepness in range(deepness + 1):
+    for depth in range(depth + 1):
         files += glob.iglob(
-            path.join(folder, "*/" * deepness + "*{}".format(ext)), recursive=False
+            path.join(folder, "*/" * depth + "*{}".format(ext)), recursive=False
         )
 
     files = [path.abspath(f) for f in files]

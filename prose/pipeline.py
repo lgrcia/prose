@@ -100,7 +100,7 @@ class Calibration:
         telescope_kw="TELESCOP",
         fits_manager=None,
         _calibration="calibration",
-        deepness=1
+        depth=1
     ):
         if fits_manager is not None:
             assert isinstance(
@@ -109,7 +109,7 @@ class Calibration:
             self.fits_explorer = fits_manager
         else:
             self.fits_explorer = io.FitsManager(
-                folder, verbose=verbose, telescope_kw=telescope_kw, deepness=deepness
+                folder, verbose=verbose, telescope_kw=telescope_kw, depth=depth
             )
 
         self.telescope = self.fits_explorer.telescope
@@ -209,10 +209,10 @@ class Reduction:
         stars_detection="segmentation",
         calibration="calibration",
         fits_manager=None,
-        deepness=1
+        depth=1
     ):
         self.calibration = Calibration(
-            folder, verbose=verbose, fits_manager=fits_manager, deepness=deepness
+            folder, verbose=verbose, fits_manager=fits_manager, depth=depth
         )
         self.fits_explorer = self.calibration.fits_explorer
 
