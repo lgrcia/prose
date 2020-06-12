@@ -24,7 +24,7 @@ class Photometry:
     Class to load and analyze photometry products
     """
     
-    def __init__(self, folder_or_file=None, sort_stars=True, keyword=None):
+    def __init__(self, folder_or_file=None, sort_stars=False, keyword=None):
         """
         Parameters
         ----------
@@ -121,7 +121,7 @@ class Photometry:
         else:
             raise NotADirectoryError("path doesn't exist")
     
-    def load_folder(self, folder_path, sort_stars=True, keyword=None):
+    def load_folder(self, folder_path, sort_stars=False, keyword=None):
         """
         Load data from folder containing at least a phots file
         
@@ -162,8 +162,8 @@ class Photometry:
         if self.stack_fits is not None:
             self.wcs = WCS(self.stack_fits)
 
-    def load_phot(self, phots_path, sort_stars=True):
-        self.load_phot_fits(phots_path, sort_stars=True)
+    def load_phot(self, phots_path, sort_stars=False):
+        self.load_phot_fits(phots_path, sort_stars=sort_stars)
 
     def _data_as_attributes(self):
         """
@@ -357,7 +357,7 @@ class Photometry:
         if self.comparison_stars is not None:
             self._comparison_stars = [match[cs] for cs in self._comparison_stars]
             
-        self.stars = match
+        self.stars = self.stars[match]
         self.target["id"] = reference_phot.target["id"]
 
     # Plot
@@ -564,7 +564,7 @@ class Photometry:
         self.hdu.writeto(destination, overwrite=True)
 
 
-    def load_phot_fits(self, phots_path, sort_stars=True):
+    def load_phot_fits(self, phots_path, sort_stars=False):
         # DOING: check how time is laoded when loading and see if tdb tdb appears in data
         self.hdu = fits.open(phots_path)
         phot_dict = io.phot2dict(phots_path)
