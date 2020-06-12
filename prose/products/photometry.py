@@ -357,7 +357,7 @@ class Photometry:
         if self.comparison_stars is not None:
             self._comparison_stars = [match[cs] for cs in self._comparison_stars]
             
-        self.stars = self.stars[match]
+        self.stars = match
         self.target["id"] = reference_phot.target["id"]
 
     # Plot
