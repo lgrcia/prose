@@ -9,7 +9,7 @@ def distance(p1, p2):
 
 def distances(coords, coord):
     return [
-        np.sqrt(((coord[0] - x)**2 + (coord[1] - y)  2))
+        np.sqrt(((coord[0] - x)**2 + (coord[1] - y)**2))
         for x, y in zip(coords[0].flatten(), coords[1].flatten())
     ]
 

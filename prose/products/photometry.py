@@ -347,7 +347,7 @@ class Photometry:
 
         match = np.zeros(len(refrence_stars), dtype="int")
         for i, ref_star in enumerate(refrence_stars):
-            match[i] = np.argmin(utils.distances(self_stars, ref_star))
+            match[i] = np.argmin(alignment.distances(self_stars, ref_star))
 
         self.fluxes._lightcurves = [self.fluxes._lightcurves[m] for m in match]
 
