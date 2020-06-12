@@ -545,7 +545,7 @@ class Photometry:
             "OBSERVAT": self.telescope.name,
             "FILTER": self.filter,
             "NIMAGES": self.n_images,
-            "EXTEND": "T"
+            "EXTEND": True
         })
 
         io.set_hdu(self.hdu, header)
