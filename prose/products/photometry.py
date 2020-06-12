@@ -6,6 +6,7 @@ from astropy.time import Time
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from prose.lightcurves import LightCurves, Broeg2005, differential_photometry
+from prose.pipeline_methods import alignment
 import warnings
 from prose import visualisation as viz
 from astropy.io import fits
@@ -338,6 +339,27 @@ class Photometry:
         gaia_query = Gaia.cone_search_async(coord, radius, verbose=False)
         self.gaia_data = gaia_query.get_results()
 
+    def reindex(self, reference_phot):
+        refrence_stars = reference_phot.stars
+
+        shift = alignment.xyshift(refrence_stars[0:50], self.stars[0:50], tolerance=0.5)
+        self_stars = (self.stars - shift).transpose()
+
+        match = np.zeros(len(refrence_stars), dtype="int")
+        for i, ref_star in enumerate(refrence_stars):
+            match[i] = np.argmin(utils.distances(self_stars, ref_star))
+
+        self.fluxes._lightcurves = [self.fluxes._lightcurves[m] for m in match]
+
+        if self.lcs is not None:
+            self.lcs._lightcurves = [self.lcs._lightcurves[m] for m in match]
+        
+        if self.comparison_stars is not None:
+            self._comparison_stars = [match[cs] for cs in self._comparison_stars]
+            
+        self.stars = self.stars[match]
+        self.target["id"] = reference_phot.target["id"]
+
     # Plot
     # ----
 
@@ -522,7 +544,8 @@ class Photometry:
             "TELESCOP": self.telescope.name,
             "OBSERVAT": self.telescope.name,
             "FILTER": self.filter,
-            "NIMAGES": self.n_images
+            "NIMAGES": self.n_images,
+            "EXTEND": "T"
         })
 
         io.set_hdu(self.hdu, header)

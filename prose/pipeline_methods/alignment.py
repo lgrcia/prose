@@ -7,6 +7,12 @@ def distance(p1, p2):
     return np.sqrt(np.power(p1[0] - p2[0], 2) + np.power(p1[1] - p2[1], 2))
 
 
+def distances(coords, coord):
+    return [
+        np.sqrt(((coord[0] - x)**2 + (coord[1] - y)  2))
+        for x, y in zip(coords[0].flatten(), coords[1].flatten())
+    ]
+
 def clean_stars_positions(positions, tolerance=50, output_id=False):
     keep = []
 
