@@ -300,7 +300,7 @@ class Reduction:
         save_stack=True,
         overwrite=False,
         n_images=None,
-        raise_exists= True
+        raise_exists=True
     ):
         """Run reduction task
 
@@ -359,7 +359,10 @@ class Reduction:
         )
 
         if path.exists(stack_path) and not overwrite:
-            raise AssertionError("stack {} already exists".format(stack_path))
+            if raise_exists:
+                raise AssertionError("stack {} already exists".format(stack_path))
+            else:
+                return destination
 
         reference_frame = int(reference_frame*len(self.light_files))
         reference_image_path = self.light_files[reference_frame]
