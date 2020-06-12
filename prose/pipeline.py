@@ -585,10 +585,13 @@ class Photometry:
                 self.photometry_method_name
             ))
 
-    def run(self, n_images=None, save=True, overwrite=False, remove_reduced=False):
+    def run(self, n_images=None, save=True, overwrite=False, remove_reduced=False, raise_exists=True):
         if save and not overwrite:
             if path.exists(self.default_destination):
-                raise FileExistsError("file already exists, use 'overwrite' kwarg")
+                if raise_exists:
+                    raise FileExistsError("file already exists, use 'overwrite' kwarg")
+                else:
+                    return None
 
         if n_images is None:
             n_images = len(self.light_files)
