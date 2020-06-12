@@ -87,7 +87,7 @@ class FitsManager:
     A class to manage data folder containing FITS files organized in arbitrary ways. This class explore all sub-folders and
     retrieve header information to trace single FITS files.
     """
-    def __init__(self, folder=None, verbose=True, telescope_kw="TELESCOP", depth=1, light_kw="light", update=False):
+    def __init__(self, folder=None, verbose=True, telescope_kw="TELESCOP", depth=1, light_kw="light", update=False, index=True):
         self.depth = depth
         self._temporary_files_headers = None
         self._temporary_files_paths = None
@@ -105,9 +105,12 @@ class FitsManager:
         self.check_telescope_file()
         self.telescope = Telescope()
         self.index_file = None
-
-        has_index = self.load_index()
-        if update or not has_index:
+        
+        if index:
+            has_index = self.load_index()
+            if update or not has_index:
+                self.build_files_df()
+        else:
             self.build_files_df()
 
         self._original_files_df = self.files_df.copy()
@@ -605,7 +608,7 @@ class FitsManager:
         if "obs" in table_format:
             headers = ["index", "date", "telescope", "target", "filter", "quantity"]
 
-            observations = self.observations()
+            observations = self.observations
             rows = OrderedDict(observations[headers].to_dict(orient="list"))
 
             table_string = tabulate(rows, headers, tablefmt="fancy_grid")
@@ -690,7 +693,8 @@ class FitsManager:
                     return Cutout2D(image_data, center, dimension, wcs=WCS(image))
             else:
                 raise ValueError("{} should be a numpy array or a fits file")
-
+    
+    @property
     def observations(self):
         light_rows = self.files_df.loc[self.files_df["type"].str.contains(self.light_kw)]
         observations = (
@@ -707,7 +711,7 @@ class FitsManager:
 
     @property
     def products_denominator(self):
-        single_obs = self.observations()
+        single_obs = self.observations
 
         assert len(single_obs) == 1, "Multiple observations found"
 
@@ -728,7 +732,7 @@ class FitsManager:
             calibration_date_limit=0
         ):
 
-        observations = self.observations()
+        observations = self.observations
 
         assert observation_id in observations["index"], "index {} do not match any observation".format(observation_id)
 
@@ -775,9 +779,9 @@ class FitsManager:
         # TODO: check available space if size is in files_df, else suggest to use kwargs force
         self.reset()
         self.keep(keep_closest_calibration=False, **kwargs)
-        n_obs = len(self.observations())
+        n_obs = len(self.observations)
 
-        for i, observation in self.observations().iterrows():
+        for i, observation in self.observations.iterrows():
             target = observation["target"]
             date_str = observation["date"].strftime("%Y%m%d")
 
