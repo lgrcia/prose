@@ -214,12 +214,16 @@ class Reduction:
         self.calibration = Calibration(
             folder, verbose=verbose, fits_manager=fits_manager, depth=depth
         )
+
+        if fits_manager is not None:
+            self.light_files = fits_manager.get("light")
+        else:
+            # should be set later in set_observation
+            self.light_files = None
+
         self.fits_explorer = self.calibration.fits_explorer
 
         self.telescope = self.fits_explorer.telescope
-
-        self.light_files = None
-
         self.alignment = alignment
         self.stars_detection = stars_detection
         self.fwhm = fwhm
@@ -283,7 +287,7 @@ class Reduction:
         self.fits_explorer.describe("calib")
 
     def describe_observations(self):
-        n_observations = len(self.fits_explorer.observations())
+        n_observations = len(self.fits_explorer.observations)
         print("{} observation{} found :\n{}".format(
                 n_observations, "s" if n_observations > 1 else "",
                 self.fits_explorer.describe(return_string=True),
@@ -296,7 +300,41 @@ class Reduction:
         save_stack=True,
         overwrite=False,
         n_images=None,
-    ):  
+        raise_exists= True
+    ):
+        """Run reduction task
+
+        Parameters
+        ----------
+        destination : str, optional
+            Destination of the created reduced folder, by default None, i.e. {self.folder}/{self.products_denominator}
+        reference_frame : float, optional
+            TODO: allow int
+            reference frame as a float between 0 (first image) and 1 (last image), by default 1/2
+        save_stack : bool, optional
+            weather to save stack image, by default True
+        overwrite : bool, optional
+            weather to overwrite existing files, by default False
+        n_images : int, optional
+            number of images to process starting from first image, by default None
+        raise_exists : bool, optional
+            raise exists error if folder already exists, by default True
+
+        Returns
+        -------
+        str
+            destination of created folder (usefull if destination kwargs is None)
+
+        Raises
+        ------
+        ValueError
+            fits explorer should contain a single observation
+        AssertionError
+            Folder already exists and stack is present, meaning reduction has been done for current folder
+        """
+
+        if len(self.fits_explorer.observations) != 1:
+            raise ValueError("multiple observations founb, please set an observation")
 
         if destination is None:
             destination = path.join(
@@ -306,7 +344,7 @@ class Reduction:
                 
         if not path.exists(destination):
             os.mkdir(destination)
-
+        
         if n_images is None:
             n_images = len(self.light_files)
 
@@ -544,7 +582,7 @@ class Photometry:
                 self.photometry_method_name
             ))
 
-    def run(self, n_images=None, save=True, overwrite=False):
+    def run(self, n_images=None, save=True, overwrite=False, remove_reduced=False):
         if save and not overwrite:
             if path.exists(self.default_destination):
                 raise FileExistsError("file already exists, use 'overwrite' kwarg")
@@ -580,6 +618,10 @@ class Photometry:
         
         if save:
             self.save(overwrite=overwrite)
+        
+        if remove_reduced:
+            for file_path in self.fits_explorer.get("reduced"):
+                os.remove(file_path)
 
     def save(self, destination=None, overwrite=False):
         if destination is None:
