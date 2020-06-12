@@ -454,12 +454,13 @@ class Reduction:
 
             h = {
                 "TRIMMING": self.calibration.telescope.trimming[0],
-                "FWHM": np.mean(_fwhm),
+                "FWHM": np.mean([_fwhm[0], _fwhm[1]]),
                 "FWHMX": _fwhm[0],
                 "FWHMY": _fwhm[1],
                 "DX": shift[0],
                 "DY": shift[1],
-                "ORIGFWHM": new_hdu.header.get(self.telescope.keyword_fwhm, ""),
+                "PSFANGLE": _fwhm[2],
+                "SEEING": new_hdu.header.get(self.telescope.keyword_seeing, ""),
                 "BZERO": 0,
                 "ALIGNALG": self.alignment.__name__,
                 "FWHMALG": self.fwhm.__name__,
@@ -604,14 +605,20 @@ class Photometry:
         for keyword in [ 
             "sky",
             "fwhm",
+            "fwhmx",
+            "fwhmy",
+            "psf_angle",
             "dx",
             "dy",
             "airmass",
             self.telescope.keyword_exposure_time,
             self.telescope.keyword_julian_date,
+            self.telescope.keyword_seeing,
+            self.telescope.keyword_ra,
+            self.telescope.keyword_dec,
         ]:
             try:
-                self.load_data(keyword, n_images=n_images)
+                self.load_data(keyword.replace("_", ""), n_images=n_images)
             except KeyError:
                 pass
 
@@ -687,7 +694,7 @@ class Photometry:
         if data is None:
             data = np.array(
                 io.fits_keyword_values(
-                    self.light_files[0:n_images], [keyword]
+                    self.light_files[0:n_images], [keyword.replace("_", "").upper()]
                 )
             ).flatten()
 

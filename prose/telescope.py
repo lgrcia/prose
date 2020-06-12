@@ -20,6 +20,7 @@ class Telescope:
         self.keyword_observatory = "TELESCOP"
         self.keyword_airmass = "AIRMASS"
         self.keyword_fwhm = "FWHM"
+        self.keyword_seeing = "SEEING"
         self.keyword_ra = "RA"
         self.keyword_dec = "DEC"
         self.keyword_julian_date = "JD"

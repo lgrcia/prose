@@ -651,5 +651,7 @@ class Photometry:
             self.lcs.set_best_aperture_id(best_aperture_id)
             self.fluxes.set_best_aperture_id(best_aperture_id)
 
+    # Reporting
+    # ---------
         
 
