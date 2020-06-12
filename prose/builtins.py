@@ -14,6 +14,7 @@ speculoos_south = {
     "keyword_dec": "DEC", # keyword holding DEC
     "keyword_flip": "PIERSIDE", # keyword holding meridan flip (WEST or EAST) 
     "keyword_fwhm": "FWHM",
+    "keyword_seeing": "SEEING",
     "keyword_airmass": "AIRMASS",
     "name": "SSO",
     "trimming": [8, 22], # in piwel along y/x
