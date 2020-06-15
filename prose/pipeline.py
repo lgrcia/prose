@@ -134,7 +134,7 @@ class Calibration:
         kw_exp_time = self.telescope.keyword_exposure_time
         images = self.fits_explorer.get(image_type)
         assert len(images) > 0, "No {} images found".format(image_type)
-        for fits_path in images:
+        for i, fits_path in enumerate(images):
             hdu = fits.open(fits_path)
             primary_hdu = hdu[0]
             image, header = primary_hdu.data, primary_hdu.header
@@ -142,18 +142,27 @@ class Calibration:
             image = self.fits_explorer.trim(image, raw=True)
             if image_type == "dark":
                 _dark = (image - self.master_bias) / header[kw_exp_time]
-                _master.append(_dark)
+                if i == 0:
+                    _master = _dark
+                else:
+                    _master += _dark
+                del image
             elif image_type == "bias":
-                _master.append(image)
+                if i == 0:
+                    _master = image
+                else:
+                    _master += image
+                del image
             elif image_type == "flat":
                 _flat = image - (self.master_bias + self.master_dark)*header[kw_exp_time]
                 _flat /= np.mean(_flat)
                 _master.append(_flat)
+                del image
         
         if image_type == "dark":
-            self.master_dark = np.mean(_master, axis=0)
+            self.master_dark = _master/len(images)
         elif image_type == "bias":
-            self.master_bias = np.mean(_master, axis=0)
+            self.master_bias = _master/len(images)
         elif image_type == "flat":
             self.master_flat = np.median(_master, axis=0)
 
