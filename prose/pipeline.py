@@ -1,14 +1,14 @@
 from prose import io
 from prose import utils
-from prose.pipeline_methods import alignment, \
-    calibration, psf, detection
 
 from prose.pipeline_methods import photometry as phot
+from prose.pipeline_methods.detection import StarsDetection, DAOFindStars, SegmentedPeaks
+from prose.pipeline_methods.psf import GlobalPSFFit, NonLinearGaussian2D
+from prose.pipeline_methods.alignment import Shift, XYShift
+from prose.pipeline_methods.photometry import BasePhotometry, AperturePhotometry
 
 import os
 import imageio
-import warnings
-import astroalign
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -16,77 +16,11 @@ import matplotlib.pyplot as plt
 from os import path
 from tqdm import tqdm
 from astropy.io import fits
-from scipy.spatial import KDTree
-from skimage.transform import resize, AffineTransform, warp
 from astropy.time import Time
 from prose.console_utils import TQDM_BAR_FORMAT, INFO_LABEL
 from prose import visualisation as viz
-from astropy.wcs import WCS, FITSFixedWarning
 from astropy.nddata import Cutout2D
 from astropy.table import Table
-
-def return_method(name):
-    """
-    Return the method identified byt the given name
-    
-    Parameters
-    ----------
-    name : str or callable
-        If str, identifier (name) of the method. See code for details. If callable will return this callable
-    
-    Returns
-    -------
-    function
-        callable method
-    
-    Raises
-    ------
-    ValueError
-        If name is not in methods
-    ValueError
-        If name is not str or callable
-    """
-    if isinstance(name, str):
-        # Alignment
-        if name == "xyshift":
-            return alignment.xyshift
-        elif name == "astroalign":
-            return alignment.astroalign_optimized_find_transform
-        # PSF fitting
-        elif name == "gaussian2d_linear":
-            return psf.fit_gaussian2d_linear
-        elif name == "gaussian2d":
-             return psf.fit_gaussian2d
-        elif name == "projected_psf_fit":
-            return psf.photutil_epsf
-        # Stars finder
-        elif name == "daofind":
-            return detection.daofindstars
-        elif name == "segmentation":
-            return detection.segmented_peaks
-        # Photometry
-        elif name == "aperture":
-            return phot.AperturePhotometry
-        elif name == "psf":
-            return phot.psf_photometry_basic
-        elif name == "variable_aperture":
-            return phot.variable_aperture_photometry_annulus
-        # Caolibration
-        elif name == "calibration":
-            return calibration.calibration
-        elif name == "no_calibration":
-            return calibration.no_calibration
-        # Exception
-        else:
-            raise ValueError(
-                "{} does not correspond to any built in method".format(name)
-            )
-    elif callable(name):
-        return name
-    else:
-        raise ValueError(
-            "{} must be the name of a built-in function or a function".format(name)
-        )
 
 
 class Calibration:
@@ -99,7 +33,6 @@ class Calibration:
         verbose=True,
         telescope_kw="TELESCOP",
         fits_manager=None,
-        _calibration="calibration",
         depth=1
     ):
         if fits_manager is not None:
@@ -114,20 +47,12 @@ class Calibration:
 
         self.telescope = self.fits_explorer.telescope
 
-        self.calibration = _calibration
-
         self.master_dark = None
         self.master_flat = None
         self.master_bias = None
 
-    @property
-    def calibration(self):
-        return self._calibration
-
-    @calibration.setter
-    def calibration(self, name):
-        self._calibration = return_method(name)
-        self.calibration_kwargs = {}
+    def calibration(self, image, exp_time):
+        return (image - (self.master_dark * exp_time + self.master_bias)) / self.master_flat
 
     def _produce_master(self, image_type):
         _master = []
@@ -166,7 +91,6 @@ class Calibration:
         elif image_type == "flat":
             self.master_flat = np.median(_master, axis=0)
 
-
     def produce_masters(self):
         self._produce_master("bias")
         self._produce_master("dark")
@@ -187,14 +111,17 @@ class Calibration:
         im = plt.imshow(utils.z_scale(self.master_flat), cmap="Greys_r")
         viz.add_colorbar(im)
 
-    def calibrate(self, im_path, flip=False, return_wcs=False):
+    def calibrate(self, im_path, flip=False, return_wcs=False, only_trim=False):
         # TODO: Investigate flip
         hdu = fits.open(im_path)
         primary_hdu = hdu[0]
         image, header = self.fits_explorer.trim(im_path), primary_hdu.header
         hdu.close()
         exp_time = header[self.telescope.keyword_exposure_time]
-        calibrated_image = self.calibration(image.data, exp_time, self.master_bias, self.master_dark, self.master_flat)
+        if not only_trim:
+            calibrated_image = self.calibration(image.data, exp_time)
+        else:
+            calibrated_image = image
 
         if flip:
             calibrated_image = calibrated_image[::-1, ::-1]
@@ -213,10 +140,9 @@ class Reduction:
         self,
         folder=None,
         verbose=False,
-        alignment="xyshift",
-        fwhm="gaussian2d",
-        stars_detection="segmentation",
-        calibration="calibration",
+        alignment=None,
+        fwhm=None,
+        stars_detection=None,
         fits_manager=None,
         depth=1
     ):
@@ -231,46 +157,12 @@ class Reduction:
             self.light_files = None
 
         self.fits_explorer = self.calibration.fits_explorer
-
         self.telescope = self.fits_explorer.telescope
-        self.alignment = alignment
-        self.stars_detection = stars_detection
-        self.fwhm = fwhm
-
-        self.alignment_kwargs = {}
-        self.stars_detection_kwargs = {"n_stars": 50}
-        self.fwhm_kwargs = {"size": 15}
-
-        self.calibration.calibration = calibration
-
         self.data = pd.DataFrame()
 
-    @property
-    def alignment(self):
-        return self._alignment
-
-    @alignment.setter
-    def alignment(self, name):
-        self._alignment = return_method(name)
-        self.alignment_kwargs = {}
-
-    @property
-    def fwhm(self):
-        return self._fwhm
-
-    @fwhm.setter
-    def fwhm(self, name):
-        self._fwhm = return_method(name)
-        self.fwhm_kwargs = {}
-
-    @property
-    def stars_detection(self):
-        return self._stars_detection
-
-    @stars_detection.setter
-    def stars_detection(self, name):
-        self._stars_detection = return_method(name)
-        self.stars_detection_kwargs = {}
+        self.fwhm = utils.check_class(fwhm, GlobalPSFFit, NonLinearGaussian2D(cutout_size=15))
+        self.stars_detection = utils.check_class(stars_detection, StarsDetection, SegmentedPeaks(n_stars=50))
+        self.alignment = utils.check_class(alignment, Shift, XYShift(detection=self.stars_detection))
 
     def set_observation(
         self,
@@ -309,7 +201,8 @@ class Reduction:
         save_stack=True,
         overwrite=False,
         n_images=None,
-        raise_exists=True
+        raise_exists=True,
+        only_trim=False
     ):
         """Run reduction task
 
@@ -328,6 +221,10 @@ class Reduction:
             number of images to process starting from first image, by default None
         raise_exists : bool, optional
             raise exists error if folder already exists, by default True
+        calibrate : bool, optional
+            weather to calibrate images, by default True
+        only_trim: bool, optional,
+            weather to skip calibration and only do trimming on images, default False
 
         Returns
         -------
@@ -357,11 +254,6 @@ class Reduction:
         if n_images is None:
             n_images = len(self.light_files)
 
-        gif_path = "{}{}".format(
-            path.join(destination, self.fits_explorer.products_denominator),
-            "_movie.gif",
-        )
-
         stack_path = "{}{}".format(
             path.join(destination, self.fits_explorer.products_denominator),
             "_stack.fits",
@@ -380,18 +272,7 @@ class Reduction:
         reference_flip = self.fits_explorer.files_df[
             self.fits_explorer.get(im_type="light", return_conditions=True)].iloc[reference_frame]["flip"]
 
-        if self.alignment == alignment.astroalign_optimized_find_transform:
-            reference_stars = astroalign._find_sources(reference_image)[
-                : astroalign.MAX_CONTROL_POINTS
-            ]
-            reference_invariants, reference_asterisms = astroalign._generate_invariants(
-                reference_stars
-            )
-        else:
-            reference_stars = self.stars_detection(
-                reference_image.data,
-                **self.stars_detection_kwargs,
-            )
+        self.alignment.set_reference(reference_image.data)
 
         ref_shape = np.array(reference_image.shape)
         ref_center = ref_shape[::-1]/2
@@ -409,28 +290,14 @@ class Reduction:
             flip = not reference_flip == _flip
 
             # Calibration
-            calibrated_frame, calibrated_wcs = self.calibration.calibrate(image, flip=flip, return_wcs=True)
+            calibrated_frame, calibrated_wcs = self.calibration.calibrate(
+                image, flip=flip,
+                return_wcs=True,
+                only_trim=only_trim
+            )
 
-            if self.alignment == alignment.astroalign_optimized_find_transform:
-                # Translation estimation + stars detection
-                transform, _detected_stars = self.alignment(
-                    calibrated_frame,
-                    reference_stars,
-                    KDTree(reference_invariants),
-                    reference_asterisms,
-                )
-                detected_stars = _detected_stars[0]
-                shift = transform.translation
-
-            else:
-                # Stars detection
-                detected_stars = self.stars_detection(
-                    calibrated_frame, **self.stars_detection_kwargs
-                )
-                # Image translation estimation
-                shift = self.alignment(
-                    detected_stars, reference_stars, **self.alignment_kwargs
-                )
+            # Stars detection and shift computation
+            detected_stars, shift = self.alignment.run(calibrated_frame)
 
             # Image alignment
             aligned_frame = Cutout2D(
@@ -444,13 +311,13 @@ class Reduction:
 
             # Seeing/psf estimation
             try:
-                _fwhm = self.fwhm(calibrated_frame, detected_stars, **self.fwhm_kwargs)
+                _fwhm = self.fwhm.run(calibrated_frame, detected_stars)
             except RuntimeError:
                 _fwhm = -1, -1, -1
 
             # Stack image production
             if save_stack:
-                if i==0:
+                if i == 0:
                     stacked_image = aligned_frame.data
                 else:
                     stacked_image += aligned_frame.data
@@ -471,8 +338,8 @@ class Reduction:
                 "PSFANGLE": _fwhm[2],
                 "SEEING": new_hdu.header.get(self.telescope.keyword_seeing, ""),
                 "BZERO": 0,
-                "ALIGNALG": self.alignment.__name__,
-                "FWHMALG": self.fwhm.__name__,
+                "ALIGNALG": self.alignment.__class__.__name__,
+                "FWHMALG": self.fwhm.__class__.__name__,
                 "REDDATE": Time.now().to_value("fits"),
                 self.telescope.keyword_image_type: "reduced"
             }
@@ -520,9 +387,8 @@ class Photometry:
         self,
         folder,
         verbose=False,
-        photometry="aperture",
-        fwhm="gaussian2d",
-        stars_detection="daofind",
+        photometry=None,
+        stars_detection=None,
     ):
 
         self.folder = folder
@@ -532,22 +398,21 @@ class Photometry:
         self.fits_explorer.set_observation(0, check_calib_telescope=False)
         self.telescope = self.fits_explorer.telescope
 
-        self.stars_detection = stars_detection
-        self.photometry = photometry
-        self.fwhm = fwhm
+        self.stars_detection = utils.check_class(
+            stars_detection,
+            StarsDetection,
+            DAOFindStars(sigma_clip=2.5, lower_snr=20, n_stars=500)
+        )
+        self.photometry = utils.check_class(
+            photometry,
+            BasePhotometry,
+            AperturePhotometry(fits_explorer=self.fits_explorer)
+        )
 
-        self.photometry_method_name = photometry
-
-        self.stars_detection_kwargs = {
-            "sigma_clip": 2.5,
-            "lower_snr": 50,
-            "n_stars": 500,
-        }
-
-        self.photometry_kwargs = {}
         self.stack_path = io.get_files("stack.fits", folder)
 
         self.fluxes = None
+        self.fluxes_errors = None
         self.other_data = {}
         self.data = pd.DataFrame()
 
@@ -559,40 +424,12 @@ class Photometry:
         return self.fits_explorer.get("reduced")
 
     @property
-    def fwhm(self):
-        return self._fwhm
-
-    @fwhm.setter
-    def fwhm(self, name):
-        self._fwhm = return_method(name)
-        self.fwhm_kwargs = {}
-
-    @property
-    def stars_detection(self):
-        return self._stars_detection
-
-    @stars_detection.setter
-    def stars_detection(self, name):
-        self._stars_detection = return_method(name)
-        self.stars_detection_kwargs = {}
-
-    @property
-    def photometry(self):
-        return self._photometry
-
-    @photometry.setter
-    def photometry(self, name):
-        self._photometry = return_method(name)
-        self.photometry_method_name = name
-        self.photometry_kwargs = {}
-
-    @property
     def default_destination(self):
         return path.join(
             self.folder,
             "{}_{}.phots".format(
                 self.fits_explorer.products_denominator,
-                self.photometry_method_name
+                self.photometry.__class__.__name__.lower()
             ))
 
     def run(self, n_images=None, save=True, overwrite=False, remove_reduced=False, raise_exists=True):
@@ -607,7 +444,7 @@ class Photometry:
             n_images = len(self.light_files)
 
         stack_data = fits.getdata(self.stack_path)
-        self.stars = self.stars_detection(stack_data, **self.stars_detection_kwargs)
+        self.stars = self.stars_detection.run(stack_data)
 
         print("{} {} stars detected".format(INFO_LABEL, len(self.stars)))
 
@@ -631,12 +468,7 @@ class Photometry:
             except KeyError:
                 pass
 
-        self.exposure = fits.getheader(self.stack_path).get(self.telescope.keyword_exposure_time, None)
-        self.fluxes, self.fluxes_errors, self.other_data = self.photometry(
-            self.stars,
-            self.fits_explorer,
-            **self.photometry_kwargs
-            ).run()
+        self.fluxes, self.fluxes_errors, self.other_data = self.photometry.run(self.stars)
         
         if save:
             self.save(overwrite=overwrite)
@@ -665,12 +497,12 @@ class Photometry:
         ]
         
         # temporary, TO DELETE, TO DO
-        if self.photometry_method_name == "aperture":
+        if isinstance(self.photometry, AperturePhotometry):
             sky = np.mean(self.other_data["annulus_sky"], axis=0)
             self.data["sky"] = sky
 
         data_table = Table.from_pandas(self.data)
-        hdu_list.append(fits.BinTableHDU(data_table,name="time series"))
+        hdu_list.append(fits.BinTableHDU(data_table, name="time series"))
         
         # These are other data produced by the photometry task wished to be saved in the .phot
         for other_data_key in self.other_data:
@@ -688,6 +520,8 @@ class Photometry:
 
         Parameters
         ----------
+        n_images : int, optional
+            number of images to include, default is None
         keyword : string
             name of the data to load (always lowercase, even if targeting an uppercase fits keyword)
         data : (np.array, list) (optional)
@@ -710,14 +544,10 @@ class Photometry:
         self.data[keyword.lower()] = data
 
 
-def produce_gif(reduced_folder, destination=None, light_kw="reduced"):
-    if destination is None:
-        destination = reduced_folder
+def produce_gif(reduced_folder, light_kw="reduced"):
     
     fits_explorer = io.FitsManager(reduced_folder, verbose=False, light_kw=light_kw)
     fits_explorer.set_observation(0, check_calib_telescope=False)
-    stack_path = io.get_files("stack.fits", reduced_folder)
-    stars = detection.daofindstars(fits.getdata(stack_path))
 
     gif_path = "{}{}".format(
         path.join(reduced_folder, fits_explorer.products_denominator),

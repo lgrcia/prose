@@ -19,6 +19,8 @@ def image_psf(image, stars, size=15, normalize=False):
         stars positions with shape (n,2)
     size: int
         size of the cuts around stars (in pixels)
+    normalize: bool, optional
+        weather to normalize the cutout, default is False
 
     Returns
     -------
@@ -29,6 +31,7 @@ def image_psf(image, stars, size=15, normalize=False):
     if normalize:
         cuts = [c/np.sum(c) for c in cuts]
     return np.median(cuts, axis=0)
+
 
 def cutouts(image, stars, size=15):
     if isinstance(image, str):
@@ -43,6 +46,7 @@ def cutouts(image, stars, size=15):
         stars = extract_stars(NDData(data=image), stars_tbl, size=size)
     
     return stars
+
 
 def gaussian_2d(x, y, height, xo, yo, sx, sy, theta, m):
     dx = x - xo
@@ -116,9 +120,9 @@ def moments(data):
     background = data.min()
     data = data-np.min(data)
     total = data.sum()
-    X, Y = np.indices(data.shape)
-    x = (X * data).sum() / total
-    y = (Y * data).sum() / total
+    x, y = np.indices(data.shape)
+    x = (x * data).sum() / total
+    y = (y * data).sum() / total
     col = data[:, int(y)]
     width_x = np.sqrt(abs((np.arange(col.size) - y) ** 2 * col).sum() / col.sum())
     row = data[int(x), :]
@@ -176,3 +180,79 @@ def fit_gaussian2d(image, stars, size=21):
     cut = image_psf(image, stars, size)
     p = fit_gaussian2_nonlin(cut)
     return (2*np.sqrt(2*np.log(2)))*p[3], (2*np.sqrt(2*np.log(2)))*p[4], p[-2]
+
+
+class GlobalPSFFit:
+
+    def __init__(self):
+        self.epsf = None
+
+    def build_epsf(self, image, stars):
+        """ Return an effective psf from image, class to overide
+
+        Parameters
+        ----------
+        im : ndarray
+            image from which to build effective psf
+        """
+        raise NotImplementedError("method needs to be overidden")
+
+    def optimize(self):
+        """ Fit the effective psf, class to overide
+        """
+        raise NotImplementedError("method needs to be overidden")
+
+    def model(self):
+        """ PSF model
+        """
+        raise NotImplementedError("method needs to be overidden")
+
+    def run(self, image, stars):
+        self.epsf = self.build_epsf(image, stars)
+        return self.optimize()
+
+class NonLinearGaussian2D(GlobalPSFFit):
+
+    def __init__(self, cutout_size=21):
+        self.cutout_size = cutout_size
+        self.x, self.y = None, None
+
+    def build_epsf(self, image, stars):
+        self.x, self.y = np.indices((self.cutout_size, self.cutout_size))
+        return image_psf(image, stars, size=self.cutout_size)
+
+    def model(self, height, xo, yo, sx, sy, theta, m):
+        dx = self.x - xo
+        dy = self.y - yo
+        a = (np.cos(theta)**2)/(2*sx**2) + (np.sin(theta)**2)/(2*sy**2)
+        b = -(np.sin(2*theta))/(4*sx**2) + (np.sin(2*theta))/(4*sy**2)
+        c = (np.sin(theta)**2)/(2*sx**2) + (np.cos(theta)**2)/(2*sy**2)
+        psf = height * np.exp(-(a * dx ** 2 + 2 * b * dx * dy + c * dy ** 2))
+        return psf + m
+
+    def nll(self, p):
+        ll = np.sum(np.power((self.model(*p) - self.epsf), 2) * self.epsf)
+        return ll if np.isfinite(ll) else 1e25
+    
+    def optimize(self):
+        p0 = moments(self.epsf)
+        x0, y0 = p0[1], p0[2]
+        min_sigma = 0.5
+        bounds = [
+            (0, np.infty),
+            (x0 - 3, x0 + 3),
+            (y0 - 3, y0 + 3),
+            (min_sigma, np.infty),
+            (min_sigma, np.infty),
+            (0, 4),
+            (0, np.mean(self.epsf)),
+        ]
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            params = minimize(
+                    nll_gaussian_2d, p0, args=(self.epsf, self.x, self.y), bounds=bounds
+                ).x
+            return params[1], params[2], params[-2]
+
+

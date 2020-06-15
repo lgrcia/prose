@@ -11,11 +11,12 @@ from photutils import CircularAperture, CircularAnnulus
 from prose import io
 from prose.pipeline_methods import psf
 from photutils.psf import IntegratedGaussianPRF, DAOGroup, BasicPSFPhotometry
+from prose.pipeline_methods.psf import NonLinearGaussian2D
 from prose.console_utils import TQDM_BAR_FORMAT, INFO_LABEL
 
 
-#TODO: differential_vaphot
-#TODO: difference imaging
+# TODO: differential_vaphot
+# TODO: difference imaging
 
 def variable_aperture_photometry_annulus(*args, **kwargs):
     return aperture_photometry_annulus(*args, fixed_fwhm=False, **kwargs)
@@ -70,7 +71,7 @@ def aperture_photometry_annulus(
 
     photometry_data = np.zeros((n_apertures, n_stars, n_images))
     apertures_area = np.zeros((n_apertures, n_images))
-    annulus_area = np.zeros((n_images))
+    annulus_area = np.zeros(n_images)
     sky = np.zeros((n_stars, n_images))
 
     for i, file_path in enumerate(
@@ -206,18 +207,23 @@ def psf_photometry_basic(fits_files, stars_positions, fwhm):
     return photometry_data, {"sky": sky}
 
 
-class AperturePhotometry:
+class BasePhotometry:
+
+    def __init__(self):
+        pass
+
+
+class AperturePhotometry(BasePhotometry):
+
     def __init__(
         self,
-        stars_coords,
         fits_explorer: io.FitsManager,       
         apertures=None,
-        fixed_fwhm=True,
         annulus_inner_radius=5,
-        annulus_outer_radius=8,):
+        annulus_outer_radius=8
+    ):
 
         self.fits_explorer = fits_explorer
-        self.stars_coords = stars_coords
 
         if apertures is None:
             self.apertures = np.arange(0.1, 10, 0.25)
@@ -225,30 +231,20 @@ class AperturePhotometry:
             self.apertures = apertures
 
         self.files = self.fits_explorer.get("reduced")
-        n_apertures = len(self.apertures)
-        n_stars = len(self.stars_coords)
-        n_images = len(self.files)
-
         self.exposure = np.min(io.fits_keyword_values(self.files, self.fits_explorer.telescope.keyword_exposure_time))
         self.airmass = io.fits_keyword_values(self.files, self.fits_explorer.telescope.keyword_airmass)
-
-        self.photometry_data = np.zeros((n_apertures, n_stars, n_images))
-        self.apertures_area = np.zeros((n_apertures,n_images))
-        self.annulus_area = np.zeros((n_images))
-        self.sky = np.zeros((n_stars, n_images))
 
         self.annulus_inner_radius = annulus_inner_radius
         self.annulus_outer_radius = annulus_outer_radius
         
-        stack_path = fits_explorer.get("stack")[0]
-        self.stack_fwhm = np.mean(psf.fit_gaussian2d(fits.getdata(stack_path), self.stars_coords)[0:2])
-        # fwhms = io.fits_keyword_values(self.light_files[0:n_images], "FWHM")
+    def run(self, stars_coords):
+        stack_path = self.fits_explorer.get("stack")[0]
+        stack_fwhm = np.mean(NonLinearGaussian2D().run(fits.getdata(stack_path), stars_coords)[0:2])
 
-    def run(self):
         fluxes, other_data = aperture_photometry_annulus(
             self.files,
-            self.stars_coords,
-            self.stack_fwhm,
+            stars_coords,
+            stack_fwhm,
             apertures=self.apertures,
             annulus_inner_radius=self.annulus_inner_radius,
             annulus_outer_radius=self.annulus_outer_radius,

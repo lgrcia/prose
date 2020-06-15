@@ -1,4 +1,5 @@
 from prose import pipeline, Photometry, Telescope, FitsManager
+from prose.pipeline_methods.alignment import AstroAlignShift
 import matplotlib.pyplot as plt
 import os
 import shutil
@@ -8,6 +9,7 @@ import unittest
 RAW = "test/minimal_quatar2b_dataset"
 _REDUCED = "test/_minimal_quatar2b_dataset_reduced"
 REDUCED = "test/minimal_quatar2b_dataset_reduced"
+
 
 class TestReduction(unittest.TestCase):
 
@@ -30,6 +32,7 @@ class TestReduction(unittest.TestCase):
         photometry.run(overwrite=True)
 
         shutil.rmtree(_REDUCED)
+
 
 class TestPhotometry(unittest.TestCase):
 

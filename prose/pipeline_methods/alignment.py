@@ -13,15 +13,16 @@ def distances(coords, coord):
         for x, y in zip(coords[0].flatten(), coords[1].flatten())
     ]
 
+
 def clean_stars_positions(positions, tolerance=50, output_id=False):
     keep = []
 
     distance_to_others = np.array(
         [[distance(v, w) for w in positions] for v in positions]
     )
-    for i, distances in enumerate(distance_to_others):
-        distances[i] = np.inf
-        close_stars = np.argwhere(distances < tolerance)
+    for i, _distances in enumerate(distance_to_others):
+        _distances[i] = np.inf
+        close_stars = np.argwhere(_distances < tolerance)
         if len(close_stars) > 0:
             keep.append(np.min([close_stars[0][0], i]))
         else:
@@ -143,3 +144,55 @@ def astroalign_optimized_find_transform(
     so, d = inl_arr_unique.T
 
     return best_t, (source_controlp[so], target_controlp[d])
+
+
+class Shift:
+
+    def __init__(self, detection=None):
+        self.reference_stars = None
+        self.detection = detection
+
+    def set_reference(self, reference_image):
+        raise NotImplementedError("method needs to be overidden")
+
+    def run(self, image):
+        raise NotImplementedError("method needs to be overidden")
+
+
+class XYShift(Shift):
+
+    def __init__(self, tolerance=1.5, clean=False, detection=None):
+        super().__init__(detection=detection)
+        self.tolerance = tolerance
+        self.clean = clean
+
+    def set_reference(self, reference_image):
+        self.reference_stars = self.detection.run(reference_image)
+
+    def run(self, image):
+        stars = self.detection.run(image)
+        return stars, xyshift(stars, self.reference_stars, tolerance=self.tolerance, clean=self.clean)
+
+
+class AstroAlignShift(Shift):
+
+    def __init__(self):
+        self.reference_invariants = None
+        self.reference_asterisms = None
+
+    def set_reference(self, reference_image):
+        print("AstroAlignShift overide detection method")
+        self.reference_stars = astroalign._find_sources(
+            reference_image)[:astroalign.MAX_CONTROL_POINTS]
+        self.reference_invariants, self.reference_asterisms = astroalign._generate_invariants(
+            self.reference_stars)
+    
+    def run(self, image):
+        transform, _detected_stars = astroalign_optimized_find_transform (
+                    image,
+                    self.reference_stars,
+                    KDTree(self.reference_invariants),
+                    self.reference_asterisms,
+                )
+
+        return _detected_stars[0], transform.translation

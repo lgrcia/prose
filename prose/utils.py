@@ -82,3 +82,12 @@ def z_scale(data, c=0.05):
 def rescale(y):
     ry = y - np.mean(y)
     return ry/np.std(ry)
+
+
+def check_class(_class, base, default):
+    if _class is None:
+        return default
+    elif isinstance(_class, base):
+        return _class
+    else:
+        raise TypeError("ubclass of {} expected".format(base.__name__))

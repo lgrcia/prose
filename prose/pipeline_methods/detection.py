@@ -7,7 +7,7 @@ from astropy.stats import sigma_clipped_stats
 from prose.pipeline_methods.alignment import clean_stars_positions
 
 
-def segmented_peaks(data, threshold=2, min_separation=10, n_stars=None, **kwargs):
+def segmented_peaks(data, threshold=2, min_separation=10, n_stars=None):
     if isinstance(data, np.ndarray):
         pass
     elif isinstance(data, str):
@@ -58,3 +58,58 @@ def daofindstars(
         return clean_stars_positions(positions, tolerance=min_separation)
     else:
         return positions
+
+
+class StarsDetection:
+    """Base class for stars detection
+    """
+    def __init__(self):
+        pass
+
+    def run(self):
+        raise NotImplementedError("method needs to be overidden")
+
+
+class DAOFindStars(StarsDetection):
+    
+    def __init__(
+        self,
+        sigma_clip=2.5,
+        lower_snr=5,
+        fwhm=5,
+        n_stars=None,
+        min_separation=10,
+        sort=True
+    ):
+
+        self.sigma_clip = sigma_clip
+        self.lower_snr = lower_snr
+        self.fwhm = fwhm
+        self.n_stars = n_stars
+        self.min_separation = min_separation
+        self.sort = sort
+
+    def run(self, data):
+        return daofindstars(
+            data,
+            sigma_clip=self.sigma_clip,
+            lower_snr=self.lower_snr,
+            fwhm=self.fwhm,
+            n_stars=self.n_stars,
+            min_separation=self.min_separation,
+            sort=self.sort)
+
+
+class SegmentedPeaks(StarsDetection):
+
+    def __init__(self, threshold=2, min_separation=10, n_stars=None):
+        self.threshold = threshold
+        self.min_separation = min_separation
+        self.n_stars = n_stars
+
+    def run(self, data):
+        return segmented_peaks(
+            data, 
+            threshold=self.threshold, 
+            min_separation=self.min_separation, 
+            n_stars=self.n_stars)
