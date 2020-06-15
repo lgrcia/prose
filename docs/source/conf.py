@@ -44,5 +44,5 @@ napoleon_use_param = False
 autodoc_member_order = 'bysource'
 
 rst_prolog = """
-.. |prose| replace:: *prose*
+.. prose replace:: *prose*
 """

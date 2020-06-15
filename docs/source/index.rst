@@ -3,10 +3,10 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-|prose|
+prose
 =======
 
-|prose| is a python package to reduce and analyse data from telescope observations. Its primary goal is the production of differential light curves from raw uncalibrated FITS images.
+prose is a python package to reduce and analyse data from telescope observations. Its primary goal is the production of differential light curves from raw uncalibrated FITS images. prose features additional tools suited to exoplanet transit observations.
 
 .. image:: prose.png
    :width: 450
@@ -27,7 +27,9 @@
 
    tutorials/explore
    tutorials/reduction/reduction
+   tutorials/modular-reduction/modular-reduction
    tutorials/photometry-analysis/photometry-analysis
+   tutorials/modeling-nuance/modeling-nuance
 
 
 .. toctree::
