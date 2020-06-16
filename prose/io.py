@@ -15,7 +15,7 @@ import warnings
 from prose.lightcurves import LightCurves
 from astropy.nddata import Cutout2D
 from astropy.wcs import WCS
-import fitsio
+# import fitsio
 
 
 def phot2dict(filename, format="fits"):
@@ -190,7 +190,9 @@ class FitsManager:
 
         for i, file_path in enumerate(_tqdm(self._temporary_files_paths)):
             if file_path not in existing_paths:
-                header = fitsio.read_header(file_path)
+                # header = fitsio.read_header(file_path)
+                header = fits.getheader(file_path)
+
                 try:
                     telescope_name = header[self.telescope_kw].lower()
                     if telescope_name != last_telescope_name:

@@ -27,8 +27,7 @@ setup(
         "tabulate",
         "sphinx_rtd_theme",
         "imageio",
-        "george",
-        "fitsio"
+        "george"
     ],
     zip_safe=True
 )
