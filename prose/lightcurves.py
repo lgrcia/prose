@@ -367,7 +367,7 @@ class LightCurve:
     def to_tuple(self):
         return self.time, self.flux, self.error, self.data
     
-    def plot(self, bins=0.005, std=False, offset=0):
+    def plot(self, aperture=None, bins=0.005, std=False, offset=0):
         """
         Plot light curve along time
 
@@ -385,7 +385,11 @@ class LightCurve:
         .. image:: /guide/examples_images/plot_lc.png
            :align: center
         """
-        viz.plot_lc(self.time, self.flux+offset, bins=bins, error=self.error, std=std)
+        if aperture is None:
+            aperture = self.best_aperture_id
+        flux = self.fluxes[aperture]
+        error = self.errors[aperture]
+        viz.plot_lc(self.time, flux+offset, bins=bins, error=error, std=std)
         plt.xlim(self.time.min(), self.time.max())
         
     def binned(self, bins):
