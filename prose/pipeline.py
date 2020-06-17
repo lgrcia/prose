@@ -67,17 +67,9 @@ class Calibration:
             image = self.fits_explorer.trim(image, raw=True)
             if image_type == "dark":
                 _dark = (image - self.master_bias) / header[kw_exp_time]
-                if i == 0:
-                    _master = _dark
-                else:
-                    _master += _dark
-                del image
+                _master.append(_dark)
             elif image_type == "bias":
-                if i == 0:
-                    _master = image
-                else:
-                    _master += image
-                del image
+                _master.append(image)
             elif image_type == "flat":
                 _flat = image - (self.master_bias + self.master_dark)*header[kw_exp_time]
                 _flat /= np.mean(_flat)
@@ -85,9 +77,9 @@ class Calibration:
                 del image
         
         if image_type == "dark":
-            self.master_dark = _master/len(images)
+            self.master_dark = np.mean(_master, axis=0)
         elif image_type == "bias":
-            self.master_bias = _master/len(images)
+            self.master_bias = np.mean(_master, axis=0)
         elif image_type == "flat":
             self.master_flat = np.median(_master, axis=0)
 
@@ -163,6 +155,9 @@ class Reduction:
         self.fwhm = utils.check_class(fwhm, GlobalPSFFit, NonLinearGaussian2D(cutout_size=15))
         self.stars_detection = utils.check_class(stars_detection, StarsDetection, SegmentedPeaks(n_stars=50))
         self.alignment = utils.check_class(alignment, Shift, XYShift(detection=self.stars_detection))
+
+        if len(self.fits_explorer.observations) == 1:
+            self.set_observation(0)
 
     def set_observation(
         self,
@@ -463,6 +458,7 @@ class Photometry:
             self.telescope.keyword_ra,
             self.telescope.keyword_dec,
         ]:
+            # TODO: is jd shifted with exposure/2?
             try:
                 self.load_data(keyword.replace("_", ""), n_images=n_images)
             except KeyError:
@@ -496,7 +492,7 @@ class Photometry:
             fits.ImageHDU(self.stars, name="stars"),
         ]
         
-        # temporary, TO DELETE, TO DO
+        # temporary, TO DELETE, TODO
         if isinstance(self.photometry, AperturePhotometry):
             sky = np.mean(self.other_data["annulus_sky"], axis=0)
             self.data["sky"] = sky

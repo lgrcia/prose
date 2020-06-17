@@ -548,9 +548,10 @@ class Photometry:
             "EXTEND": True
         })
 
+        fluxes, fluxes_errors = self.fluxes.as_array()
         io.set_hdu(self.hdu, header)
-        io.set_hdu(self.hdu, fits.ImageHDU(self.fluxes.as_array()[0], name="photometry"))
-        io.set_hdu(self.hdu, fits.ImageHDU(self.fluxes.as_array()[0], name="photometry errors"))
+        io.set_hdu(self.hdu, fits.ImageHDU(fluxes, name="photometry"))
+        io.set_hdu(self.hdu, fits.ImageHDU(fluxes_errors, name="photometry errors"))
         io.set_hdu(self.hdu, fits.ImageHDU(self.stars, name="stars"))
         io.set_hdu(self.hdu, fits.BinTableHDU(Table.from_pandas(self.data), name="time series"))
 

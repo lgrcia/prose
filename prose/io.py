@@ -87,7 +87,7 @@ class FitsManager:
     A class to manage data folder containing FITS files organized in arbitrary ways. This class explore all sub-folders and
     retrieve header information to trace single FITS files.
     """
-    def __init__(self, folder=None, verbose=True, telescope_kw="TELESCOP", depth=1, light_kw="light", update=False, index=True):
+    def __init__(self, folder=None, verbose=True, telescope_kw="TELESCOP", depth=1, light_kw="light", update=False, index=False):
         self.depth = depth
         self._temporary_files_headers = None
         self._temporary_files_paths = None

@@ -66,9 +66,21 @@ class StarsDetection:
     def __init__(self):
         pass
 
-    def run(self):
+    def single_detection(self, image):
+        """
+        Running detection on single or multiple images
+        """
         raise NotImplementedError("method needs to be overidden")
 
+    def run(self, images):
+        positions = []
+        if isinstance(images, list):
+            for image in images:
+                positions.append(self.single_detection(image))
+        else:
+            positions = self.single_detection(images)
+
+        return positions
 
 class DAOFindStars(StarsDetection):
     
@@ -89,9 +101,9 @@ class DAOFindStars(StarsDetection):
         self.min_separation = min_separation
         self.sort = sort
 
-    def run(self, data):
+    def single_detection(self, image):
         return daofindstars(
-            data,
+            image,
             sigma_clip=self.sigma_clip,
             lower_snr=self.lower_snr,
             fwhm=self.fwhm,
@@ -107,9 +119,9 @@ class SegmentedPeaks(StarsDetection):
         self.min_separation = min_separation
         self.n_stars = n_stars
 
-    def run(self, data):
+    def single_detection(self, image):
         return segmented_peaks(
-            data, 
+            image, 
             threshold=self.threshold, 
             min_separation=self.min_separation, 
             n_stars=self.n_stars)

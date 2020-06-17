@@ -253,6 +253,6 @@ class NonLinearGaussian2D(GlobalPSFFit):
             params = minimize(
                     nll_gaussian_2d, p0, args=(self.epsf, self.x, self.y), bounds=bounds
                 ).x
-            return params[1], params[2], params[-2]
+            return params[3]*(2*np.sqrt(2*np.log(2))), params[4]*(2*np.sqrt(2*np.log(2))), params[-2]
 
 
