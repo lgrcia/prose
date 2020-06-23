@@ -68,9 +68,9 @@ class Calibration:
             if image_type == "dark":
                 _dark = (image - self.master_bias) / header[kw_exp_time]
                 if i == 0:
-                    _master = dark
+                    _master = _dark
                 else:
-                    _master += dark
+                    _master += _dark
             elif image_type == "bias":
                 if i == 0:
                     _master = image
