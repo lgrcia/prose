@@ -87,7 +87,12 @@ class Calibration:
         elif image_type == "bias":
             self.master_bias = _master/len(images)
         elif image_type == "flat":
-            self.master_flat = np.median(_master, axis=0)
+            # To avoid memory errors, we split the median computation in 50
+            _master = np.array(_master)
+            shape_divisors = utils.divisors(_master.shape[1])
+            n = shape_divisors[np.argmin(np.abs(50 - shape_divisors))]
+            self.master_flat = np.concatenate([np.median(im, axis=0) for im in np.split(_master, n, axis=1)])
+            del _master
 
     def produce_masters(self):
         self._produce_master("bias")

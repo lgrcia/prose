@@ -91,3 +91,12 @@ def check_class(_class, base, default):
         return _class
     else:
         raise TypeError("ubclass of {} expected".format(base.__name__))
+
+def divisors(n) : 
+    divisors = []
+    i = 1
+    while i <= n : 
+        if (n % i==0) : 
+            divisors.append(i) 
+        i = i + 1
+    return np.array(divisors)
