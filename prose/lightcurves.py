@@ -225,7 +225,7 @@ def Broeg2005(
                 for s in range(np.shape(fluxes)[1]):
                     _lcs[a, s, :] = fluxes[a, s] / best_art_lc[a, :]
 
-            metric.append(np.std(np.mean(_lcs[:, target, :], axis=0)))
+            metric.append(np.std([utils.std_diff_metric(f) for f in _lcs[:, target, :]]))
 
         if keep == "float":
             keep = float(k_range[np.argmin(metric)])
@@ -420,7 +420,7 @@ class LightCurve:
         return LightCurve(binned_time, binned_fluxes, binned_errors)
     
     def Pont2006(self, plot=True, n=35):
-        Pont2006(self.time, self.flux, n=n, plot=plot)
+        return Pont2006(self.time, self.flux, n=n, plot=plot)
         
 
 class LightCurves:
