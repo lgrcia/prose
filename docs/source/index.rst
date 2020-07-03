@@ -38,3 +38,4 @@ prose is a python package to reduce and analyse data from telescope observations
 
    notes/phots-structure
    notes/telescope-config
+   notes/note-pipeline-methods

@@ -13,7 +13,7 @@ A FitsManager object can be created with
 
     from prose.io import FitsManager
     
-    fm = FitsManager("/Users/lionelgarcia/Data/test/test_deepness", deepness=5)
+    fm = FitsManager("test_folder", deepness=5)
 
 
 .. parsed-literal::
@@ -21,8 +21,8 @@ A FitsManager object can be created with
     100%|██████████| 1528/1528 [00:17<00:00, 87.24it/s]
 
 
-The ``deepness`` parameters specify how deep you want to explore in term
-of subfolders. Then the ``describe`` provide table visualisation of what
+The ``depth`` parameter specify how deep you want to explore in term
+of sub-folders. Then ``describe`` provides table visualisation of what
 is contained within your folder
 
 .. code:: ipython3
@@ -110,12 +110,12 @@ for your analysis
     ╘════════════╧══════════════╧════════╧═════════════╧══════════════╧══════════╧════════════╛
 
 
-Specific paths can then be retrieved
+Specific paths can then be retrieved with
 
 .. code:: ipython3
     
-    science_im_paths fm.get("light")
-    dark_im_paths = fm.get("dark")
-    flat_im_paths fm.get("flat")
+    im_science = fm.get("light")
+    im_dark = fm.get("dark")
+    im_flat = fm.get("flat")
 
 

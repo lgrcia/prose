@@ -3,8 +3,8 @@
 .. TODO: qatar sa mere -> qatar
 .. Elsa problem document describe(files)
 
-Reduction
-=========
+Basic reduction
+===============
 
 In this tutorial you will learn how to process a complete night of raw data from any telescope. A demo dataset can be downloaded (5Mb) here_ and consists in a very minimal observation of qatar2-b exoplanet transit observed from the Trappist-North telescope.
 
@@ -16,19 +16,20 @@ We start by setting up the telescope information we need for the reduction, for 
 .. code:: python3
 
     from prose import Telescope, pipeline
-    
+
     Telescope({
         "name": "NTM",
         "trimming": [40, 40],
         "pixel_scale": 0.66,
-        "latlong": [31.2027, 7.8586]
+        "latlong": [31.2027, 7.8586],
+        "keyword_light_images": "light"
     })
 
 .. parsed-literal::
 
     Telescope 'ntm' saved
 
-This has to be done only once and saves this telescope settings for any future use (whenever its name appears in fits headers)
+This has to be done only once and saves this telescope settings for any future use (whenever its name appears in fits headers). More details are given in the :ref:`telescope settings <telescope-config>` note.
 
 Reduction
 ^^^^^^^^^
@@ -36,10 +37,8 @@ Reduction
 We then create a ``Reduction`` object and have a look at the folder content
 
 .. code:: python3
-
-    photometry_folder = "minimal_qatar2b_dataset"
     
-    reduction = pipeline.Reduction(photometry_folder, deepness=2)
+    reduction = pipeline.Reduction("fits_folder", depth=2)
     reduction.describe_observations()
 
 
@@ -57,17 +56,15 @@ We set which observation to reduce and proceeed with reduction
 
 .. code:: python3
 
-    destination = "minimal_qatar2b_dataset_reduced"
-    
     reduction.set_observation(0)
-    reduction.run(destination)
+    destination = reduction.run()
 
 
 .. parsed-literal::
 
     RUN: Reduction: 100%|████████████████████████| 11/11 [00:01<00:00, 10.39files/s]
 
-and photometric extraction
+a ``minimal_qatar2b_dataset_reduced`` folder has been created in which we run photometric extraction
 
 .. code:: python3
 
@@ -81,7 +78,7 @@ and photometric extraction
     INFO:global psf FWHM: 4.17 (pixels)
     RUN: hotometry extraction: 100%|████████████████████████| 11/11 [00:00<00:00, 11.48files/s]
 
-Here is the content of the ``minimal_qatar2b_dataset_reduced`` folder
+Here is the content of the reduced folder:
 
 ::
 
@@ -109,6 +106,6 @@ It contains all reduced images and a stack fits of the night. The ``phots`` file
 
 .. note::
 
-    More information about reduction, photometry and how to select the methods used by the pipeline are provided in TODO
+    More information about reduction, photometry and how to select the methods used by the pipeline are provided in :ref:`modular-reduction`
 
 We can now load this folder into a ``Photometry`` object and proceed with further analaysis (e.g. in the :ref:`next turorial <photometry-analysis>` where we produce qatar2-b transit light-curve)
