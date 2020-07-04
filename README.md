@@ -10,8 +10,8 @@ prose is a python package to reduce and analyse data from telescope observations
 
 from prose import FitsManager
 
-fm = FitsManager("folder")
-fm.describe()
+fits_folder = FitsManager("folder")
+fits_folder.describe()
 ```
 ```
 
@@ -32,7 +32,7 @@ fm.describe()
 
 from prose import pipeline
 
-reduction = pipeline.Reduction("folder")
+reduction = pipeline.Reduction(fits_folder)
 destination = reduction.run()
 
 photometry = pipeline.Photometry(destination)
