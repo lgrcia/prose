@@ -13,7 +13,7 @@ A FitsManager object can be created with
 
     from prose.io import FitsManager
     
-    fm = FitsManager("test_folder", deepness=5)
+    fm = FitsManager("test_folder", depth=5)
 
 
 .. parsed-literal::
@@ -119,3 +119,11 @@ Specific paths can then be retrieved with
     im_flat = fm.get("flat")
 
 
+Index file
+==========
+
+Every time a folder is explored with FitsManager, an index file is created. When dealing with large folders, the keyword :code:`index=True` can be used to load this index and avoid re-analyzing the all folder and save time. Using the example above we would do:
+
+.. code:: ipython3
+
+    fm = FitsManager("test_folder", index=True)

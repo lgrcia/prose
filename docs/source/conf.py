@@ -17,7 +17,9 @@ project = 'prose'
 copyright = '2020, Lionel Garcia'
 author = 'Lionel Garcia'
 
-extensions = ["sphinx.ext.autodoc", "sphinx.ext.napoleon", 'sphinx.ext.autosummary']
+extensions = ["sphinx.ext.autodoc", 
+"sphinx.ext.napoleon", 
+'sphinx.ext.autosummary']
 
 
 exclude_patterns = []
@@ -44,5 +46,7 @@ napoleon_use_param = False
 autodoc_member_order = 'bysource'
 
 rst_prolog = """
-.. prose replace:: *prose*
+.. |prose| replace:: *prose*
+.. _photutils: https://photutils.readthedocs.io/en/stable/
+.. _scikit-image: https://scikit-image.org/
 """
