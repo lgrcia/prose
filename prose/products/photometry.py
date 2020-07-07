@@ -444,7 +444,7 @@ class Photometry:
         ax.set_xlim(np.array([-size/2, size/2]) + self.stars[star][0])
         ax.set_ylim(np.array([size/2, -size/2]) + self.stars[star][1])
 
-    def plot_comps_lcs(self):
+    def plot_comps_lcs(self, n=5):
         """
         Plot comparison stars light curves along target star light curve
 
@@ -454,9 +454,10 @@ class Photometry:
            :align: center
         """
         self._check_lcs()
-        idxs = [self.target["id"], *self.comparison_stars[0:5]]
+        idxs = [self.target["id"], *self.comparison_stars[0:n]]
         lcs = [self.lcs[i] for i in idxs]
-        plt.figure(figsize=(5, 8))
+        if len(plt.gcf().get_axes()) == 0:
+            plt.figure(figsize=(5, 8))
         viz.plot_comparison_lcs(lcs, idxs)
 
     def plot_data(self, key):
@@ -492,8 +493,9 @@ class Photometry:
         """
         cut = psf.image_psf(self.stack_fits, self.stars, size=size)
         p = psf.fit_gaussian2_nonlin(cut)
-        plt.figure(figsize=(12, 4))
-        viz.plot_marginal_model(cut, p, psf.gaussian_2d)
+        if len(plt.gcf().get_axes()) == 0:
+            plt.figure(figsize=(12, 4))
+        viz.plot_marginal_model(cut, psf.gaussian_2d(*np.indices(cut.shape), *p))
 
         return {"theta": p[5], "std_x": p[3], "std_y": p[4]}
     
@@ -513,6 +515,19 @@ class Photometry:
             bins=bins,
             target=self.target["id"], 
             highlights=self.comparison_stars)
+
+
+    def plot_systematics(self):
+        viz.plot_systematics(self.time, self.lc.flux, self.data)
+
+    def plot_raw_diff(self):
+        viz.plot_lc_raw_diff(self)
+
+    def save_report(self, destination=None):
+        if destination is None:
+            destination = self.folder
+
+        viz.save_report(self, destination)
 
     # Loaders and Savers implementations
     # ----------------------------------

@@ -15,6 +15,11 @@ from skimage.transform import resize
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.ticker import AutoMinorLocator
 from IPython.display import display, Math
+import os 
+from os import path
+from fpdf import FPDF
+import shutil
+from astropy.time import Time
 
 
 def plot_lc(
@@ -145,8 +150,8 @@ def show_residuals(cut, model, imshow_kwargs={}, plot_kwargs={}):
 
 
 def plot_marginal_model(data, model, imshow_kwargs={}, plot_kwargs={}):
-    imshow_kwargs = dict(cmap = "inferno",**imshow_kwargs)
-    plot_kwargs = dict(color="blueviolet",**plot_kwargs)
+    imshow_kwargs = dict(cmap = "inferno", **imshow_kwargs)
+    plot_kwargs = dict(color="blueviolet", **plot_kwargs)
     
     x, y = np.indices(data.shape)
 
@@ -667,7 +672,9 @@ def plot_comparison_lcs(lcs, idxs, bins=0.005, offset_factor=2.5):
             )
 
     plt.xlim(min(lcs[0].time), max(lcs[0].time))
-    ax.get_legend().remove()
+    legends = ax.get_legend()
+    if legends:
+        legends.remove()
     plt.tight_layout()
 
 
@@ -769,3 +776,244 @@ def TeX(a, fmt='{: 0.3f}', dim=True):
     teX_math += '\n'.join(rv)
     
     display(Math(r"{}".format(teX_math)))
+
+def plot_systematics(time, lc, data, fields=None, bins=0.005, offset_factor=1):
+    amp = np.percentile(lc, 95) - np.percentile(lc, 5)
+    rescale_data = []
+    fields = ["dx", "dy", "fwhm", "airmass", "sky"]
+
+    for field in fields:
+
+        _data = amp*utils.rescale(data[field])
+        w_std = np.mean(utils.binning(time, _data, 0.005, std=True)[2])
+        _data /= w_std*10
+        rescale_data.append(_data)
+
+    max_amp = np.max([np.percentile(d, 95) - np.percentile(d, 5) for d in rescale_data])
+
+    plot_lc(time, lc)
+    for i, rd in enumerate(rescale_data):
+        plot_data = (rd/max_amp)*amp + 1 - offset_factor * amp * (i+1)
+        blc = utils.binning(time, plot_data, bins=bins, std=True)
+
+        plt.plot(
+                time, plot_data, ".",
+                zorder=0,
+                c="gainsboro",
+                markersize=5,
+            )
+        plt.errorbar(
+                *blc,
+                c="gray",
+                fmt=".",
+                capsize=2,
+                elinewidth=0.75,
+                markersize=6,
+            )
+        plt.annotate(
+            "{}".format(fields[i]), 
+            (time.min() + 0.005, np.median(plot_data)), fontsize=13)
+        
+    plt.title("Systematics", loc="left")
+    plt.grid(color="whitesmoke")
+    plt.tight_layout()
+
+
+def plot_lc_raw_diff(self, binning=0.005, detrended=False, options={}):
+
+    _options = {
+        "raw_markersize": 5,
+        "raw_label": "raw data",
+        "raw_color": "gainsboro",
+        "binned_markersize": 6,
+        "binned_color": "C0",
+        "binned_capsize": 2,
+        "binned_elinewidth": 0.75,
+        "offset": 2,
+        "flux_color": "C0",
+        "artificial_flux_color": "k",
+        "flux_ms": 3,
+        "flux_style": "."
+    }
+
+    _options.update(options)
+    options = _options
+
+    kernel_size = 2*int(binning/np.median(np.diff(self.jd)))
+    kernel_size = kernel_size - kernel_size%2 + 1
+    
+    amp = np.percentile(self.lc.flux, 95) - np.percentile(self.lc.flux, 5)
+    
+    plt.subplot(211)
+    plt.title("Differential lightcurve", loc="left")
+    self.lc.plot(
+        bins=binning,
+    )
+    plt.grid(color="whitesmoke")
+
+    plt.subplot(212)
+    plt.title("Normalized flux", loc="left")
+    flux = self.fluxes[self.target["id"]].flux
+    flux /= np.median(flux)
+    plt.plot(self.time, flux, options["flux_style"], ms=options["flux_ms"], label="target", c=options["flux_color"])
+    if self.artificial_lcs is not None:
+        plt.plot(self.time, self.artificial_lcs[self.fluxes[0].best_aperture_id], options["flux_style"], ms=options["flux_ms"], c=options["artificial_flux_color"], label="artifical star")
+    plt.legend()
+    plt.grid(color="whitesmoke")
+    plt.xlim([np.min(self.time), np.max(self.time)])
+    plt.tight_layout()
+
+
+def save_report(self, destination, remove_temp=True):
+
+    def draw_table(table, table_start, marg=5, table_cell=(20,4)):
+
+        pdf.set_draw_color(200,200,200)
+
+        for i, datum in enumerate(table):
+            pdf.set_font("helvetica", size=6)
+            pdf.set_fill_color(249,249,249)
+
+            pdf.rect(table_start[0] + 5, table_start[1] + 1.2 + i*table_cell[1],
+                    table_cell[0]*3, table_cell[1], "FD" if i%2 == 0 else "D")
+
+            pdf.set_text_color(100,100,100)
+
+            value = datum[1]
+            if value is None:
+                value = "--"
+            else:
+                value = str(value)
+
+            pdf.text(
+                table_start[0] + marg + 2,
+                table_start[1] + marg + i*table_cell[1] - 1.2, datum[0])
+
+            pdf.set_text_color(50,50,50)
+            pdf.text(
+                table_start[0] + marg + 2 + table_cell[0],
+                table_start[1] + marg + i*table_cell[1] - 1.2, value)
+
+    if path.isdir(destination):
+        file_name = "{}_report.pdf".format(self.products_denominator)
+    else:
+        file_name = path.basename(destination.strip(".html").strip(".pdf"))
+
+    temp_folder = path.join(path.dirname(destination), "temp")
+
+    if path.isdir("temp"):
+        shutil.rmtree(temp_folder)
+
+    os.mkdir(temp_folder)
+
+    self.show_stars(10, view="reference")
+    star_plot = path.join(temp_folder, "starplot.png")
+    fig = plt.gcf()
+    fig.patch.set_alpha(0)
+    plt.savefig(star_plot)
+    plt.close()
+    
+    plt.figure(figsize=(6,10))
+    self.plot_raw_diff()
+    lc_report_plot = path.join(temp_folder, "lcreport.png")
+    fig = plt.gcf()
+    fig.patch.set_alpha(0)
+    plt.savefig(lc_report_plot)
+    plt.close()
+    
+    plt.figure(figsize=(6,10))
+    self.plot_systematics()
+    syst_plot = path.join(temp_folder, "systplot.png")
+    fig = plt.gcf()
+    fig.patch.set_alpha(0)
+    plt.savefig(syst_plot)
+    plt.close()
+
+    if self.comparison_stars is not None:
+        plt.figure(figsize=(6,10))
+        self.plot_comps_lcs()
+        lc_comps_plot = path.join(temp_folder, "lccompreport.png")
+        fig = plt.gcf()
+        fig.patch.set_alpha(0)
+        plt.savefig(lc_comps_plot)
+        plt.close()
+        
+    plt.figure(figsize=(10,3.5))
+    psf_p = self.plot_psf_fit()
+    
+    psf_fit = path.join(temp_folder, "psf_fit.png")
+    plt.savefig(psf_fit, dpi=60)
+    plt.close()
+    theta = psf_p["theta"]
+    std_x = psf_p["std_x"]
+    std_y = psf_p["std_y"]
+
+    marg_x = 10
+    marg_y = 8
+
+    pdf = FPDF(orientation='L', unit='mm', format='A4')
+    pdf.add_page()
+
+    pdf.set_draw_color(200,200,200)
+
+    pdf.set_font("helvetica", size=12)
+    pdf.set_text_color(50,50,50)
+    pdf.text(marg_x, 10, txt="{}".format(self.target["name"]))
+
+    pdf.set_font("helvetica", size=6)
+    pdf.set_text_color(74,144,255)
+    pdf.text(marg_x, 17, txt="simbad")
+    pdf.link(marg_x, 15, 8, 3, self.simbad)
+
+    pdf.set_text_color(150,150,150)
+    pdf.set_font("Helvetica", size=7)
+    pdf.text(marg_x, 14, txt="{} · {} · {}".format(
+        self.observation_date, self.telescope.name, self.filter))
+
+    pdf.image(star_plot, x=78, y=17, h=93.5)
+    pdf.image(lc_report_plot, x=172, y=17, h=95)
+    pdf.image(syst_plot, x=227, y=17, h=95)
+
+    if self.comparison_stars is not None:
+        pdf.image(lc_comps_plot, x=227, y=110, h=95)
+        
+    datetimes = Time(self.jd, format='jd', scale='utc').to_datetime()
+    min_datetime = datetimes.min()
+    max_datetime = datetimes.max()
+
+    obs_duration = "{} - {} [{}h{}]".format(
+    min_datetime.strftime("%H:%M"), 
+    max_datetime.strftime("%H:%M"), 
+    (max_datetime-min_datetime).seconds//3600,
+    ((max_datetime-min_datetime).seconds//60)%60)
+    
+    max_psf = np.max([std_x, std_y])
+    min_psf = np.min([std_x, std_y])
+    ellipticity = (max_psf**2 - min_psf**2)/max_psf**2
+
+    draw_table([
+        ["Time", obs_duration],
+        ["RA - DEC", "{} - {}".format(*self.target["radec"])],
+        ["images", len(self.time)],
+        ["GAIA id", None],
+        ["mean std · fwhm", "{:.2f} · {:.2f} pixels".format(np.mean(self.fwhm)/(2*np.sqrt(2*np.log(2))), np.mean(self.fwhm))],
+        ["Telescope", self.telescope.name],
+        ["Filter", self.filter],
+        ["exposure", "{} s".format(np.mean(self.data.exptime))],
+    ], (5, 20))
+
+    draw_table([
+        ["PSF std · fwhm (x)", "{:.2f} · {:.2f} pixels".format(std_x, 2*np.sqrt(2*np.log(2))*std_x)],
+        ["PSF std · fwhm (y)", "{:.2f} · {:.2f} pixels".format(std_y, 2*np.sqrt(2*np.log(2))*std_y)],
+        ["PSF ellipicity", "{:.2f}".format(ellipticity)],
+    ], (5, 78))
+
+    pdf.image(psf_fit, x=5.5, y=55, w=65)
+
+    pdf_path = path.join(destination, "{}.pdf".format(file_name.strip(".html").strip(".pdf")))
+    pdf.output(pdf_path)
+
+    if path.isdir("temp") and remove_temp:
+        shutil.rmtree(temp_folder)
+
+    print("report saved at {}".format(pdf_path))
