@@ -491,13 +491,15 @@ class Photometry:
         .. image:: /guide/examples_images/plot_psf_fit.png
            :align: center
         """
-        cut = psf.image_psf(self.stack_fits, self.stars, size=size)
-        p = psf.fit_gaussian2_nonlin(cut)
         if len(plt.gcf().get_axes()) == 0:
             plt.figure(figsize=(12, 4))
-        viz.plot_marginal_model(cut, psf.gaussian_2d(*np.indices(cut.shape), *p))
+        psf_fit = psf.NonLinearGaussian2D()
+        psf_fit.run(self.stack_fits, self.stars)
+        plt.figure(figsize=(12, 4))
+        viz.plot_marginal_model(psf_fit.epsf, psf_fit.model(*psf_fit.optimized_params))
+        params = psf_fit.optimized_params
 
-        return {"theta": p[5], "std_x": p[3], "std_y": p[4]}
+        return {"theta": params[5], "std_x": params[3], "std_y": params[4]}
     
     def plot_rms(self, bins=0.005):
         """
@@ -623,6 +625,7 @@ class Photometry:
         assert fluxes is not None
         fluxes_error = phot_dict.get("photometry errors", None)
         star_mean_flux = np.mean(np.mean(fluxes, axis=0), axis=1)
+
         if sort_stars:
             sorted_stars = np.argsort(star_mean_flux)[::-1]
         else:
