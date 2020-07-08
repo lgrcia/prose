@@ -9,11 +9,9 @@ from astropy.stats import gaussian_sigma_to_fwhm
 from astropy.modeling.fitting import LevMarLSQFitter
 from photutils import CircularAperture, CircularAnnulus
 from prose import io, FitsManager
-from prose.pipeline_methods import psf
 from photutils.psf import IntegratedGaussianPRF, DAOGroup, BasicPSFPhotometry
-from prose.pipeline_methods.psf import NonLinearGaussian2D
 from prose.console_utils import TQDM_BAR_FORMAT, INFO_LABEL
-from prose.pipeline_methods.psf import NonLinearGaussian2D
+from prose.pipeline.psf import NonLinearGaussian2D
 
 
 # TODO: differential_vaphot
@@ -21,77 +19,6 @@ from prose.pipeline_methods.psf import NonLinearGaussian2D
 
 def variable_aperture_photometry_annulus(*args, **kwargs):
     return aperture_photometry_annulus(*args, fixed_fwhm=False, **kwargs)
-
-def psf_photometry_basic(fits_files, stars_positions, fwhm):
-    """
-    A simple and still experimental PSF photometry method
-    For more details check:
-    https://photutils.readthedocs.io/en/stable/psf.html
-
-    Parameters
-    ----------
-    fits_files : list
-        list of fits files
-    stars_positions : ndarray
-        (x,y) stars coordinate in the aligned fits
-    fwhm : float
-        global fwhm in pixel
-
-    Returns
-    -------
-    tuple as (ndarray, dict)
-        - ndarray: fluxes with shape (apertures, stars, images)
-        - dict: {"sky": for now just ones}
-    """
-    print("{} global psf FWHM: {:.2f} (pixels)".format(INFO_LABEL, np.mean(fwhm)))
-
-    n_stars = np.shape(stars_positions)[0]
-    n_images = len(fits_files)
-
-    photometry_data = np.zeros((1, n_stars, n_images))
-
-    pos = Table(
-        names=["x_0", "y_0"], data=[stars_positions[:, 0], stars_positions[:, 1]]
-    )
-
-    daogroup = DAOGroup(2.0 * fwhm * gaussian_sigma_to_fwhm)
-
-    mmm_bkg = MMMBackground()
-
-    psf_model = IntegratedGaussianPRF(sigma=fwhm)
-    psf_model.sigma.fixed = False
-
-    sky = []
-
-    psf_model.x_0.fixed = True
-    psf_model.y_0.fixed = True
-
-    photometry = BasicPSFPhotometry(
-        group_maker=daogroup,
-        bkg_estimator=mmm_bkg,
-        psf_model=psf_model,
-        fitter=LevMarLSQFitter(),
-        fitshape=(17, 17)
-    )
-
-    for i, image in enumerate(
-            tqdm(
-                fits_files[0::],
-                desc="Photometry extraction",
-                unit="files",
-                ncols=80,
-                bar_format=TQDM_BAR_FORMAT,
-            )
-    ):
-        image = fits.getdata(image)
-
-        result_tab = photometry(image=image, init_guesses=pos)
-
-        photometry_data[0, :, i] = result_tab["flux_fit"]
-        sky.append(1)
-
-    return photometry_data, {"sky": sky}
-
 
 class BasePhotometry:
 

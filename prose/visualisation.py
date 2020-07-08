@@ -325,6 +325,7 @@ def plot_lcs(data, planets={}, W=4, show=None, hide=None, ylim=None, size=[4,3])
 
     plt.tight_layout()
 
+
 def bokeh_style(xminor=True, yminor=True, axes=None):
     
     if axes is None:
@@ -347,6 +348,7 @@ def bokeh_style(xminor=True, yminor=True, axes=None):
             axe.spines['right'].set_color('#DBDBDB')
             axe.spines['top'].set_linewidth(1)
             axe.spines['right'].set_linewidth(1)
+
 
 def paper_style():
     axes = plt.gcf().axes
@@ -399,7 +401,8 @@ class AnchoredHScaleBar(matplotlib.offsetbox.AnchoredOffsetbox):
                                                         frameon=frameon,
                                                         **kwargs)
 
-def show_stars(image, stars, highlight=None, size=15, options={}, flip=None, color=None, contrast=0.05):
+
+def show_stars(image, stars=None, highlight=None, size=15, options={}, flip=None, color=None, contrast=0.05):
 
     if color is None:
         color = np.array([131, 220, 255]) / 255
@@ -419,7 +422,8 @@ def show_stars(image, stars, highlight=None, size=15, options={}, flip=None, col
 
     if flip:
         image = utils.z_scale(image, c=contrast)[::-1, ::-1]
-        stars = np.array(image_size) - stars
+        if stars is not None:
+            stars = np.array(image_size) - stars
     else:
         image = utils.z_scale(image, c=contrast)
 
@@ -431,40 +435,41 @@ def show_stars(image, stars, highlight=None, size=15, options={}, flip=None, col
     fontsize = min(size_factor, 1)*15
     label_yoffset = min(size_factor, 1)*15
 
-    if highlight is not None:
+    if stars is not None:
+        if highlight is not None:
+
+            plt.plot(
+                stars[highlight, 0],
+                stars[highlight, 1],
+                "o",
+                markersize=14*size_factor,
+                markeredgecolor=color,
+                markerfacecolor="none",
+                label="target",
+            )
+            plt.annotate(
+                highlight, xy=[stars[highlight][0], stars[highlight][1] + label_yoffset],
+                color=color, fontsize=fontsize, ha='center', va='top'
+            )
+
+        else:
+            highlight = -1
+
+        other_stars = np.arange(len(stars))
+
+        other_stars = np.setdiff1d(other_stars, highlight)
 
         plt.plot(
-            stars[highlight, 0],
-            stars[highlight, 1],
+            stars[other_stars, 0],
+            stars[other_stars, 1],
             "o",
             markersize=14*size_factor,
             markeredgecolor=color,
             markerfacecolor="none",
-            label="target",
+            alpha=0.4 if highlight >= 0 else 1
         )
-        plt.annotate(
-            highlight, xy=[stars[highlight][0], stars[highlight][1] + label_yoffset], 
-            color=color, fontsize=fontsize, ha='center', va='top'
-        )
-    
-    else:
-        highlight = -1
 
-    other_stars = np.arange(len(stars))
-
-    other_stars = np.setdiff1d(other_stars, highlight)
-
-    plt.plot(
-        stars[other_stars, 0],
-        stars[other_stars, 1],
-        "o",
-        markersize=14*size_factor,
-        markeredgecolor=color,
-        markerfacecolor="none",
-        alpha=0.4 if highlight >= 0 else 1
-    )
-
-    plt.tight_layout()
+        plt.tight_layout()
 
 
 def fancy_show_stars(
@@ -724,13 +729,15 @@ def plot_rms(fluxes_lcs, diff_lcs, target=None, highlights=None, bins=0.005):
     fluxes_median = fluxes_median[fluxes_median>0]
     plt.xlim(fluxes_median.min(), fluxes_median.max())
 
+
 def gif_image_array(image, factor=0.25):
     return (utils.z_scale(
         resize(
             image,
             np.array(np.shape(image)).astype(int) * factor,
             anti_aliasing=True,
-        ))* 255).astype("uint8")
+        )) * 255).astype("uint8")
+
 
 def fancy_gif_image_array(image, median_psf, factor=0.25):
 

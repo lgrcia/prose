@@ -562,6 +562,8 @@ def produce_gif(reduced_folder, light_kw="reduced"):
         "_movie.gif",
     )
 
+
+
     with imageio.get_writer(gif_path, mode="I") as writer:
         for image in tqdm(
             fits_explorer.get("reduced"),

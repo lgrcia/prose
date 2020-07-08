@@ -6,7 +6,7 @@ from astropy.time import Time
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from prose.lightcurves import LightCurves, Broeg2005, differential_photometry
-from prose.pipeline_methods import alignment
+from prose.pipeline import alignment
 import warnings
 from prose import visualisation as viz
 from astropy.io import fits
@@ -14,7 +14,7 @@ from prose.telescope import Telescope
 from prose import utils, CONFIG
 from astropy.table import Table
 from astropy.wcs import WCS, utils as wcsutils
-from prose.pipeline_methods import psf
+from prose.pipeline import psf
 import pandas as pd
 
 # TODO: add n_stars to show_stars

@@ -1,13 +1,12 @@
-from scipy.optimize import minimize, leastsq
-from scipy.optimize import curve_fit
+from scipy.optimize import minimize
 import warnings
 import numpy as np
 from astropy.io import fits
 from astropy.table import Table
 from astropy.nddata import NDData
 from photutils.psf import extract_stars
-from prose.characterization import Characterize
 from astropy.stats import gaussian_sigma_to_fwhm
+from prose.pipeline.base import Block
 
 
 def image_psf(image, stars, size=15, normalize=False):
@@ -86,9 +85,10 @@ def moments(data):
     return height, x, y, width_x, width_y, 0.0, background
 
 
-class NonLinearGaussian2D(Characterize):
+class NonLinearGaussian2D(Block):
 
     def __init__(self, cutout_size=21):
+        super().__init__()
         self.cutout_size = cutout_size
         self.x, self.y = None, None
 
@@ -133,6 +133,11 @@ class NonLinearGaussian2D(Characterize):
             self.optimized_params = params
             return params[3]*gaussian_sigma_to_fwhm, params[4]*gaussian_sigma_to_fwhm, params[-2]
 
-    def run(self, image, stars):
-        self.epsf = self.build_epsf(image, stars)
-        return self.optimize()
+    def run(self, image, *args):
+        self.epsf = self.build_epsf(image.data, image.stars_coords)
+        args = self.optimize()
+        image.header["FWHM"] = np.mean([args[0], args[1]]),
+        image.header["FWHMX"] = args[0],
+        image.header["FWHMY"] = args[1],
+        image.header["PSFANGLE"] = args[2],
+        image.header["FWHMALG"] = self.__class__.__name__,

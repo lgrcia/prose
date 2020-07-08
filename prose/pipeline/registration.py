@@ -1,6 +1,7 @@
 import astroalign
 import numpy as np
 from scipy.spatial import KDTree
+from prose.pipeline.base import Block
 
 
 def distance(p1, p2):
@@ -146,37 +147,41 @@ def astroalign_optimized_find_transform(
     return best_t, (source_controlp[so], target_controlp[d])
 
 
-class Alignment:
+class Alignment(Block):
 
     def __init__(self, detection=None):
+        super().__init__()
         self.reference_stars = None
         self.detection = detection
-
-    def set_reference(self, reference_image):
-        raise NotImplementedError("method needs to be overidden")
-
-    def run(self, image):
-        raise NotImplementedError("method needs to be overidden")
 
 
 class XYShift(Alignment):
 
-    def __init__(self, tolerance=1.5, clean=False, detection=None):
+    def __init__(self, tolerance=1.5, clean=False, detection=None, reference=1/2):
         super().__init__(detection=detection)
         self.tolerance = tolerance
         self.clean = clean
+        self.reference = reference
 
-    def set_reference(self, reference_image):
-        self.reference_stars = self.detection.run(reference_image)
+    def initialize(self, fits_manager):
+        reference_frame = int(self.reference*len(fits_manager.files))
+        reference_image_path = fits_manager.files[reference_frame]
+        reference_image = fits_manager.trim(reference_image_path)
+        
+        self.reference_stars = self.detection.run(reference_image, {}, return_coords=True)
 
-    def run(self, image):
-        stars = self.detection.run(image)
-        return stars, xyshift(stars, self.reference_stars, tolerance=self.tolerance, clean=self.clean)
+    def run(self, image, *args, **kwargs):
+        shift = xyshift(image.stars_coords, self.reference_stars, tolerance=self.tolerance, clean=self.clean)
+        image.shift = shift
+        image.header["DX"] = shift[0]
+        image.header["DY"] = shift[1],
+        image.header["ALIGNALG"] = self.__class__.__name__
 
 
 class AstroAlignShift(Alignment):
 
     def __init__(self):
+        super().__init__()
         self.reference_invariants = None
         self.reference_asterisms = None
 
@@ -187,12 +192,15 @@ class AstroAlignShift(Alignment):
         self.reference_invariants, self.reference_asterisms = astroalign._generate_invariants(
             self.reference_stars)
     
-    def run(self, image):
+    def run(self, image, *args, **kwargs):
         transform, _detected_stars = astroalign_optimized_find_transform (
-                    image,
+                    image.stars_coords,
                     self.reference_stars,
                     KDTree(self.reference_invariants),
                     self.reference_asterisms,
                 )
-
-        return _detected_stars[0], transform.translation
+        shift = transform.translation
+        image.shift = shift
+        image.header["DX"] = shift[0]
+        image.header["DY"] = shift[1],
+        image.header["ALIGNALG"] = self.__class__.__name__

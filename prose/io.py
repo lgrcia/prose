@@ -87,7 +87,7 @@ class FitsManager:
     A class to manage data folder containing FITS files organized in arbitrary ways. This class explore all sub-folders and
     retrieve header information to trace single FITS files.
     """
-    def __init__(self, folder=None, verbose=True, telescope_kw="TELESCOP", depth=1, light_kw="light", update=False, index=False):
+    def __init__(self, folder=None, verbose=True, telescope_kw="TELESCOP", depth=1, light_kw="light", update=False, index=False, n_images=None):
         self.depth = depth
         self._temporary_files_headers = None
         self._temporary_files_paths = None
@@ -116,6 +116,9 @@ class FitsManager:
         self._original_files_df = self.files_df.copy()
 
         assert len(self._original_files_df) != 0, "No data found"
+
+        # To embed useful files
+        self.files = None
 
     def load_index(self, force_single=False):
         """ Load index files (default is prose_index.csv within self.folder)
@@ -299,6 +302,7 @@ class FitsManager:
         filter=None,
         target=None,
         return_conditions=False,
+        n_images=None
     ):
         """ Filter files based on header info and get their paths (or a filter on the files Dataframe self.files_df)
 
@@ -355,10 +359,13 @@ class FitsManager:
                 .str.contains(target.replace("+", "\+").lower() + "*")
             )
 
+        if n_images is None and im_type not in ["dark", "bias", "flat"]:
+            n_images = len(self.files_df.loc[conditions]["path"].values)
+
         if return_conditions:
             return conditions
         else:
-            return self.files_df.loc[conditions]["path"].values
+            return self.files_df.loc[conditions]["path"].values[0:n_images]
 
     def set_telescope(self, name=None):
         """
@@ -573,6 +580,17 @@ class FitsManager:
             and len(self.get("bias")) > 0
         )
 
+    def has_stack(self):
+        """
+        Return weather stack is present and unique in current files DataFrame
+
+        Returns
+        -------
+        bool
+            weather calibration files are present
+        """
+        return len(self.get("stack")) == 1
+
     def describe(self, table_format="obs", return_string=False, original=False):
         """
         Print (or return str) a table synthetizing files DataFrame content
@@ -676,9 +694,16 @@ class FitsManager:
             else:
                 raise ValueError("{} should be a numpy array or a fits file")
 
+            trim_0, trim_1 = image.shape
+
+            if self.telescope.trimming[1] != 0:
+                trim_0 = -self.telescope.trimming[1]
+            if self.telescope.trimming[0] != 0:
+                trim_1 = -self.telescope.trimming[0]
+
             return image[
-                self.telescope.trimming[1] : -self.telescope.trimming[1],
-                self.telescope.trimming[0] : -self.telescope.trimming[0],
+                self.telescope.trimming[1] : trim_0,
+                self.telescope.trimming[0] : trim_1,
             ]
         else:
             if isinstance(image, np.ndarray):
