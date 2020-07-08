@@ -231,6 +231,9 @@ def Broeg2005(
             keep = float(k_range[np.argmin(metric)])
         elif keep == "int":
             keep = int(k_range[np.argmin(metric)])
+            
+    elif keep is None:
+        keep = float(np.min([np.shape(fluxes)[1], n_comps]))
 
     # Compute the final lightcurves
     # -----------------------------
@@ -321,8 +324,8 @@ class LightCurve:
         self._n_time = n[1] if len(n) > 1 else n[0]
         
         self.time, self.data = time, data
-        self.fluxes = fluxes if self._n_aperture > 1 else [fluxes]
-        self.errors = errors if self._n_aperture > 1 else [errors]
+        self.fluxes = fluxes
+        self.errors = errors
         self.apertures = apertures
         
         self.best_aperture_id = None

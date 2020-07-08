@@ -3,8 +3,9 @@ from prose import utils
 
 from prose.pipeline_methods import photometry as phot
 from prose.pipeline_methods.detection import StarsDetection, DAOFindStars, SegmentedPeaks
-from prose.pipeline_methods.psf import GlobalPSFFit, NonLinearGaussian2D
-from prose.pipeline_methods.alignment import Shift, XYShift
+from prose.pipeline_methods.psf import NonLinearGaussian2D
+from prose.characterization import Characterize
+from prose.pipeline_methods.alignment import Alignment, XYShift
 from prose.pipeline_methods.photometry import BasePhotometry, AperturePhotometry
 
 import os
@@ -158,9 +159,9 @@ class Reduction:
         self.telescope = self.fits_explorer.telescope
         self.data = pd.DataFrame()
 
-        self.fwhm = utils.check_class(fwhm, GlobalPSFFit, NonLinearGaussian2D(cutout_size=15))
+        self.fwhm = utils.check_class(fwhm, Characterize, NonLinearGaussian2D(cutout_size=15))
         self.stars_detection = utils.check_class(stars_detection, StarsDetection, SegmentedPeaks(n_stars=50))
-        self.alignment = utils.check_class(alignment, Shift, XYShift(detection=self.stars_detection))
+        self.alignment = utils.check_class(alignment, Alignment, XYShift(detection=self.stars_detection))
 
         if len(self.fits_explorer.observations) == 1:
             self.set_observation(0)
@@ -334,13 +335,13 @@ class Reduction:
                 "FWHM": np.mean([_fwhm[0], _fwhm[1]]),
                 "FWHMX": _fwhm[0],
                 "FWHMY": _fwhm[1],
+                "PSFANGLE": _fwhm[2],
+                "FWHMALG": self.fwhm.__class__.__name__,
                 "DX": shift[0],
                 "DY": shift[1],
-                "PSFANGLE": _fwhm[2],
+                "ALIGNALG": self.alignment.__class__.__name__,
                 "SEEING": new_hdu.header.get(self.telescope.keyword_seeing, ""),
                 "BZERO": 0,
-                "ALIGNALG": self.alignment.__class__.__name__,
-                "FWHMALG": self.fwhm.__class__.__name__,
                 "REDDATE": Time.now().to_value("fits"),
                 self.telescope.keyword_image_type: "reduced"
             }
@@ -407,8 +408,9 @@ class Photometry:
         self.photometry = utils.check_class(
             photometry,
             BasePhotometry,
-            AperturePhotometry(fits_explorer=self.fits_explorer)
+            AperturePhotometry()
         )
+        self.photometry.set_fits_explorer(self.fits_explorer)
 
         self.stack_path = io.get_files("stack.fits", folder)
 
@@ -490,6 +492,10 @@ class Photometry:
             header = fits.PrimaryHDU()
 
         header.header["REDDATE"] = Time.now().to_value("fits")
+
+        if len(self.fluxes.shape) == 2:
+            self.fluxes = np.array([self.fluxes])
+            self.fluxes_errors = np.array([self.fluxes_errors])
 
         hdu_list = [
             header,

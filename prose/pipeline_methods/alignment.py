@@ -146,7 +146,7 @@ def astroalign_optimized_find_transform(
     return best_t, (source_controlp[so], target_controlp[d])
 
 
-class Shift:
+class Alignment:
 
     def __init__(self, detection=None):
         self.reference_stars = None
@@ -159,7 +159,7 @@ class Shift:
         raise NotImplementedError("method needs to be overidden")
 
 
-class XYShift(Shift):
+class XYShift(Alignment):
 
     def __init__(self, tolerance=1.5, clean=False, detection=None):
         super().__init__(detection=detection)
@@ -174,7 +174,7 @@ class XYShift(Shift):
         return stars, xyshift(stars, self.reference_stars, tolerance=self.tolerance, clean=self.clean)
 
 
-class AstroAlignShift(Shift):
+class AstroAlignShift(Alignment):
 
     def __init__(self):
         self.reference_invariants = None
