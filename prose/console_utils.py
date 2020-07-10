@@ -28,12 +28,13 @@ style = {
 
 SPINNER_COLOR = style["spinner_color"][CONFIG.config["color"]]
 FORE_COLOR = style["fore_color"][CONFIG.config["color"]]
-TQDM_BAR_FORMAT = "%sRUN: %s{l_bar}%s{bar}%s{r_bar}" % (
-    FORE_COLOR, Fore.RESET, FORE_COLOR, Fore.RESET
+
+RUN_LABEL = "{}RUN{}".format(FORE_COLOR, Fore.RESET)
+INFO_LABEL = "{}INFO{}".format(FORE_COLOR, Fore.RESET)
+
+TQDM_BAR_FORMAT = "%s {l_bar}%s{bar}%s{r_bar}" % (
+    RUN_LABEL, FORE_COLOR, Fore.RESET
 )
-
-INFO_LABEL = "{}INFO:{}".format(FORE_COLOR, Fore.RESET)
-
 
 def get_terminal_size():
     """ getTerminalSize()
