@@ -34,7 +34,7 @@ def create_image(peaks, stars, n):
     return image
 
 
-def generate_prose_reduction_datatset(destination, n_images=5):
+def generate_prose_reduction_datatset(destination, n_images=80):
 
     if not path.exists(destination):
         os.mkdir(destination)
