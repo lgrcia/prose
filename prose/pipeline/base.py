@@ -7,7 +7,7 @@ import prose.visualisation as viz
 
 class Unit:
 
-    def __init__(self, fits_manager, name, blocks, files="light", show_progress=False, n_images=None, **kwargs):
+    def __init__(self, blocks, name, fits_manager, files="light", show_progress=False, n_images=None, **kwargs):
         self.name = name
         self.blocks = blocks
         self.fits_manager = fits_manager
@@ -45,7 +45,6 @@ class Unit:
         elif self.files is None:
             raise ValueError("No files to process")
 
-        data = {}
         for block in self.blocks:
             block.initialize(self.fits_manager)
 
@@ -54,15 +53,15 @@ class Unit:
         has_stack_block = len(stack_blocks) > 0
 
         for block in stack_blocks:
-            block.run(self.stack_image, data)
+            block.run(self.stack_image)
+            block.stack_method(self.stack_image)
 
         for file_path in self.progress(self.files):
             image = Image(file_path)
             for block in blocks:
                 if has_stack_block:
                     image.get_other_data(self.stack_image)
-                block.run(image, data)
-                
+                block.run(image)
 
         for block in self.blocks:
             block.terminate()
@@ -90,10 +89,13 @@ class Block:
     def initialize(self, *args):
         pass
 
-    def run(self, image, data, **kwargs):
+    def run(self, image, **kwargs):
         raise NotImplementedError()
 
     def terminate(self):
+        pass
+
+    def stack_method(self, image):
         pass
 
     def show_image(self, image):

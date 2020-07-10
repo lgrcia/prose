@@ -89,7 +89,7 @@ class Calibration(Block):
         im = plt.imshow(utils.z_scale(self.master_flat), cmap="Greys_r")
         viz.add_colorbar(im)
 
-    def run(self, image, *args):
+    def run(self, image):
         # TODO: Investigate flip
         data = image.data
         header = image.header
@@ -104,4 +104,19 @@ class Calibration(Block):
         #     calibrated_image = calibrated_image[::-1, ::-1]
 
         image.data = calibrated_image
+        image.wcs = trim_image.wcs
+
+
+class Trim(Block):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def initialize(self, fits_manager):
+        if isinstance(fits_manager, io.FitsManager):
+            self.fits_explorer = fits_manager
+
+    def run(self, image, **kwargs):
+        trim_image = self.fits_explorer.trim(image.data)
+        image.data = trim_image.data
         image.wcs = trim_image.wcs
