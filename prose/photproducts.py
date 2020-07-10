@@ -622,6 +622,7 @@ class PhotProducts:
         assert fluxes is not None
         fluxes_error = phot_dict.get("photometry errors", None)
         star_mean_flux = np.mean(np.mean(fluxes, axis=0), axis=1)
+
         if sort_stars:
             sorted_stars = np.argsort(star_mean_flux)[::-1]
         else:
