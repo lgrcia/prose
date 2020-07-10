@@ -34,7 +34,7 @@ def create_image(peaks, stars, n):
     return image
 
 
-def generate_prose_reduction_datatset(destination):
+def generate_prose_reduction_datatset(destination, n_images=5):
 
     if not path.exists(destination):
         os.mkdir(destination)
@@ -50,7 +50,7 @@ def generate_prose_reduction_datatset(destination):
     # y *= 4e-3
     # y += 1
 
-    x = np.linspace(0, 1 / 24, 80)
+    x = np.linspace(0, 1 / 24, n_images)
     y = np.random.normal(1, 1.5e-3, size=len(x)) + np.sin(x * 2 * np.pi * 24 / 0.5) * 6e-3
 
     p = np.poly1d([0.3, 0.6, 0.8], r=True)
