@@ -97,7 +97,7 @@ class PSFPhotometry(BasePhotometry):
         return fluxes, np.ones_like(fluxes), {"sky": sky}
 
 
-class AperturePhotometry(Block):
+class FixedAperturePhotometry(Block):
     """
     Perform aperture photometry on a list of aligned fits.
     For more details check https://photutils.readthedocs.io/en/stable/aperture.html
@@ -125,107 +125,79 @@ class AperturePhotometry(Block):
         self.annulus_inner_radius = annulus_inner_radius
         self.annulus_outer_radius = annulus_outer_radius
         self.fits_manager = None
-        self.exposure = None
-        self.airmass = None
 
         if fwhm_fit is None:
             self.fwhm_fit = NonLinearGaussian2D()
 
+        self.n_apertures = len(self.apertures)
+        self.n_stars = None
+        self.circular_apertures = None
+        self.annulus_apertures = None
+        self.annulus_masks = None
+
+        self.circular_apertures_area = None
+        self.annulus_area = None
+
     def initialize(self, fits_manager):
         if isinstance(fits_manager, FitsManager):
             self.fits_manager = fits_manager
-            self.exposure = np.min(self.fits_manager.files["exposure"])
-            self.airmass = self.fits_manager.files["airmass"]
 
-        stack_path = self.fits_manager.get("stack")[0]
-        self.stack_fwhm = np.mean(self.fwhm_fit.run(fits.getdata(stack_path), stars_coords)[0:2])
+    def set_apertures(self, stars_coords, fwhm):
 
-    def run(self, image):
-        stars_coords = image.stars_coords
-        stack_path = self.fits_manager.get("stack")[0]
-        stack_fwhm = np.mean(self.fwhm_fit.run(fits.getdata(stack_path), stars_coords)[0:2])
+        self.annulus_apertures = CircularAnnulus(
+            stars_coords,
+            r_in=self.annulus_inner_radius * fwhm,
+            r_out=self.annulus_outer_radius * fwhm,
+        )
+        if callable(self.annulus_apertures.area):
+            self.annulus_area = self.annulus_apertures.area()
+        else:
+            self.annulus_area = self.annulus_apertures.area
 
-        print("{} global psf FWHM: {:.2f} (pixels)".format(INFO_LABEL, np.mean(stack_fwhm)))
+        self.circular_apertures = [CircularAperture(stars_coords, r=fwhm*aperture) for aperture in self.apertures]
 
-        n_stars = np.shape(stars_coords)[0]
-        n_images = len(self.files)
-        n_apertures = len(self.apertures)
+        # Unresolved buf; sometimes circular_apertures.area is a method, sometimes a float
+        if callable(self.circular_apertures[0].area):
+            self.circular_apertures_area = [ca.area() for ca in self.circular_apertures]
+        else:
+            self.circular_apertures_area = [ca.area for ca in self.circular_apertures]
 
-        fluxes = np.zeros((n_apertures, n_stars, n_images))
-        apertures_area = np.zeros((n_apertures, n_images))
-        annulus_area = np.zeros(n_images)
-        sky = np.zeros((n_stars, n_images))
+        self.annulus_masks = self.annulus_apertures.to_mask(method="center")
+        self.n_stars = len(stars_coords)
 
-        for i, file_path in enumerate(
-                tqdm(
-                    self.files[0::],
-                    desc="Photometry extraction",
-                    unit="files",
-                    ncols=80,
-                    bar_format=TQDM_BAR_FORMAT,
-                )
-        ):
-            _apertures_area = []
+    def run(self, image, **kwargs):
+        if self.circular_apertures is None:
+            self.set_apertures(image.stars_coords, image.fwhm)
 
-            data = fits.getdata(file_path)
+        bkg_median = []
+        for mask in self.annulus_masks:
+            annulus_data = mask.multiply(image.data)
+            annulus_data_1d = annulus_data[mask.data > 0]
+            _, median_sigma_clip, _ = sigma_clipped_stats(annulus_data_1d)
+            bkg_median.append(median_sigma_clip)
 
-            if isinstance(stack_fwhm, (np.ndarray, list)):
-                _fwhm = stack_fwhm[i]
-            else:
-                _fwhm = stack_fwhm
+        bkg_median = np.array(bkg_median)
 
-            annulus_apertures = CircularAnnulus(
-                stars_coords,
-                r_in=self.annulus_inner_radius * _fwhm,
-                r_out=self.annulus_outer_radius * _fwhm,
-            )
-            annulus_masks = annulus_apertures.to_mask(method="center")
-            if callable(annulus_apertures.area):
-                annulus_area[i] = annulus_apertures.area()
-            else:
-                annulus_area[i] = annulus_apertures.area
+        image.apertures_area = self.circular_apertures_area
+        image.sky = bkg_median
+        image.fluxes = np.zeros((self.n_apertures, self.n_stars))
 
-            bkg_median = []
-            for mask in annulus_masks:
-                annulus_data = mask.multiply(data)
-                annulus_data_1d = annulus_data[mask.data > 0]
-                _, median_sigma_clip, _ = sigma_clipped_stats(annulus_data_1d)
-                bkg_median.append(median_sigma_clip)
+        for a, ape in enumerate(self.apertures):
+            photometry = aperture_photometry(image.data, self.circular_apertures[a])
+            image.fluxes[a] = np.array(photometry["aperture_sum"] - (bkg_median * self.circular_apertures_area[a]))
 
-            bkg_median = np.array(bkg_median)
+        self.compute_error(image)
 
-            for a, ape in enumerate(self.apertures):
-                # aperture diameter in pixel
-                aperture = _fwhm * ape
-                circular_apertures = CircularAperture(stars_coords, r=aperture)
+    def compute_error(self, image):
 
-                # Unresolved buf; sometimes circular_apertures.area is a method, sometimes a float
-                if callable(circular_apertures.area):
-                    circular_apertures_area = circular_apertures.area()
-                else:
-                    circular_apertures_area = circular_apertures.area
+        image.fluxes_errors = np.zeros((self.n_apertures, self.n_stars))
 
-                im_phot = aperture_photometry(data, circular_apertures)
-                _fluxes = im_phot["aperture_sum"] - (bkg_median * circular_apertures_area)
-                fluxes[a, :, i] = np.array(_fluxes)
-                apertures_area[a, i] = circular_apertures_area
-
-            sky[:, i] = bkg_median
-
-        fluxes_errors = np.zeros(np.shape(fluxes))
-
-        for i, aperture_area in enumerate(apertures_area):
-            area = aperture_area * (1 + aperture_area / annulus_area)
-            fluxes_errors[i, :, :] = self.fits_manager.telescope.error(
-                fluxes[i, :],
+        for i, aperture_area in enumerate(self.circular_apertures_area):
+            area = aperture_area * (1 + aperture_area / self.annulus_area)
+            image.fluxes_errors[i, :] = self.fits_manager.telescope.error(
+                image.fluxes[i],
                 area,
-                sky,
-                self.exposure,
-                airmass=self.airmass,
+                image.sky,
+                image.header[self.fits_manager.telescope.keyword_exposure_time],
+                airmass=image.header[self.fits_manager.telescope.keyword_airmass],
             )
-
-        return fluxes, fluxes_errors, {
-            "apertures_area": apertures_area,
-            "annulus_area": annulus_area,
-            "annulus_sky": sky
-        }
