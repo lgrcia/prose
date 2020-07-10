@@ -2,7 +2,7 @@
 from prose.pipeline.registration import XYShift
 from prose.pipeline.alignment import Align
 from prose.pipeline.detection import SegmentedPeaks, DAOFindStars
-from prose.pipeline.calibration import Calibration
+from prose.pipeline.calibration import Calibration, Trim
 from prose.pipeline.psf import NonLinearGaussian2D
 from prose.pipeline.base import Unit
 from prose.pipeline.photometry import FixedAperturePhotometry
@@ -22,13 +22,14 @@ class Reduction(Unit):
             reference=1/2,
             overwrite=False,
             raise_exists=True,
-            n_images=None):
+            n_images=None,
+            calibration=True):
 
         if len(fits_manager.observations) == 1:
             fits_manager.set_observation(
                 0,
-                check_calib_telescope=True,
-                keep_closest_calibration=True,
+                check_calib_telescope=calibration,
+                keep_closest_calibration=calibration,
                 calibration_date_limit=0
             )
 
@@ -50,14 +51,14 @@ class Reduction(Unit):
                 raise AssertionError("stack {} already exists".format(self.stack_path))
 
         default_methods = [
-            Calibration(),
+            Calibration() if calibration else Trim(),
             SegmentedPeaks(n_stars=50),
             XYShift(detection=SegmentedPeaks(n_stars=50), reference=reference),
             Align(reference=reference),
             NonLinearGaussian2D(),
             Stack(self.stack_path, overwrite=overwrite),
             SaveReduced(destination, overwrite=overwrite),
-            Gif(self.gif_path)
+            Gif(self.gif_path, factor=1)
         ]
 
         super().__init__(default_methods, "Reduction", fits_manager, files="light", show_progress=True,
@@ -76,13 +77,15 @@ class Photometry(Unit):
         if isinstance(fits_manager, str):
             fits_manager = io.FitsManager(fits_manager, light_kw="reduced", verbose=False)
 
+        self.destination = fits_manager.folder
+
         if len(fits_manager.observations) == 1:
             fits_manager.set_observation(0)
         else:
             fits_manager.describe("obs")
 
         self.phot_path = path.join(
-            fits_manager.folder, "{}.phots".format(fits_manager.products_denominator))
+            self.destination, "{}.phots".format(fits_manager.products_denominator))
 
         if path.exists(self.phot_path) and not overwrite:
             raise OSError("{}already exists".format(self.phot_path))
