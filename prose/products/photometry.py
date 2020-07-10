@@ -1,4 +1,4 @@
-from prose import io
+from prose import io, Image
 import matplotlib.pyplot as plt
 import numpy as np
 from os import path
@@ -16,6 +16,7 @@ from astropy.table import Table
 from astropy.wcs import WCS, utils as wcsutils
 from prose.pipeline import psf
 import pandas as pd
+from prose.pipeline.psf import NonLinearGaussian2D
 
 # TODO: add n_stars to show_stars
 
@@ -94,6 +95,14 @@ class Photometry:
     def comparison_stars(self):
         if self._comparison_stars is not None:
             return self._comparison_stars[self.lcs.best_aperture_id]
+
+    @property
+    def target_id(self):
+        return self.target["id"]
+
+    @target_id.setter
+    def target_id(self, id):
+        self.target["id"] = id
 
     # Loaders and savers (files and data)
     # ------------------------
@@ -289,9 +298,8 @@ class Photometry:
         fluxes, fluxes_errors = self.fluxes.as_array()
 
         lcs, lcs_errors, art_lcs, comps = Broeg2005(
-            fluxes, fluxes_errors, self.target["id"], return_art_lc=True, return_comps=True, **kwargs
+            fluxes, fluxes_errors, self.target_id, return_art_lc=True, return_comps=True, **kwargs
         )
-
         self.artificial_lcs = np.array(art_lcs)
         self.lcs = LightCurves(self.time, np.moveaxis(lcs, 0, 1), np.moveaxis(lcs_errors, 0, 1))
         best_aperture_id = self.lcs[self.target["id"]].best_aperture_id
@@ -338,27 +346,6 @@ class Photometry:
         radius = u.Quantity(cone_radius, u.arcminute)
         gaia_query = Gaia.cone_search_async(coord, radius, verbose=False)
         self.gaia_data = gaia_query.get_results()
-
-    def reindex(self, reference_phot):
-        refrence_stars = reference_phot.stars
-
-        shift = alignment.xyshift(refrence_stars[0:50], self.stars[0:50], tolerance=0.5)
-        self_stars = (self.stars - shift).transpose()
-
-        match = np.zeros(len(refrence_stars), dtype="int")
-        for i, ref_star in enumerate(refrence_stars):
-            match[i] = np.argmin(alignment.distances(self_stars, ref_star))
-
-        self.fluxes._lightcurves = [self.fluxes._lightcurves[m] for m in match]
-
-        if self.lcs is not None:
-            self.lcs._lightcurves = [self.lcs._lightcurves[m] for m in match]
-        
-        if self.comparison_stars is not None:
-            self._comparison_stars = [match[cs] for cs in self._comparison_stars]
-            
-        self.stars = self.stars[match]
-        self.target["id"] = reference_phot.target["id"]
 
     # Plot
     # ----
@@ -491,13 +478,17 @@ class Photometry:
         .. image:: /guide/examples_images/plot_psf_fit.png
            :align: center
         """
-        cut = psf.image_psf(self.stack_fits, self.stars, size=size)
-        p = psf.fit_gaussian2_nonlin(cut)
+
+        psf_fit = NonLinearGaussian2D()
+        image = Image(self.stack_fits)
+        image.stars_coords = self.stars
+        psf_fit.run(image)
+
         if len(plt.gcf().get_axes()) == 0:
             plt.figure(figsize=(12, 4))
-        viz.plot_marginal_model(cut, psf.gaussian_2d(*np.indices(cut.shape), *p))
+        viz.plot_marginal_model(psf_fit.epsf, psf_fit.optimized_model)
 
-        return {"theta": p[5], "std_x": p[3], "std_y": p[4]}
+        return {"theta": image.theta, "std_x": image.fwhmx, "std_y": image.fwhmy}
     
     def plot_rms(self, bins=0.005):
         """
@@ -516,18 +507,23 @@ class Photometry:
             target=self.target["id"], 
             highlights=self.comparison_stars)
 
+    def plot_systematics(self, fields=None):
+        if fields is None:
+            fields = ["dx", "dy", "fwhm", "airmass", "sky"]
 
-    def plot_systematics(self):
-        viz.plot_systematics(self.time, self.lc.flux, self.data)
+        viz.plot_systematics(self.time, self.lc.flux, self.data, fields=fields)
 
     def plot_raw_diff(self):
         viz.plot_lc_raw_diff(self)
 
-    def save_report(self, destination=None):
+    def save_report(self, destination=None, fields=None):
         if destination is None:
             destination = self.folder
 
-        viz.save_report(self, destination)
+        if fields is None:
+            fields = ["dx", "dy", "fwhm", "airmass", "sky"]
+
+        viz.save_report(self, destination, fields=fields)
 
     # Loaders and Savers implementations
     # ----------------------------------
