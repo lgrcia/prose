@@ -4,6 +4,7 @@ from photutils import DAOStarFinder
 from astropy.stats import sigma_clipped_stats
 from prose.pipeline.registration import clean_stars_positions
 from prose.pipeline.base import Block
+from prose.console_utils import INFO_LABEL
 
 
 class StarsDetection(Block):
@@ -11,6 +12,7 @@ class StarsDetection(Block):
     """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.n_stars = None
 
     def single_detection(self, image):
         """
@@ -18,7 +20,10 @@ class StarsDetection(Block):
         """
         raise NotImplementedError("method needs to be overidden")
 
-    def run(self, image, data, return_coords=False):
+    def stack_method(self, image):
+        print("{} detected stars: {}".format(INFO_LABEL, len(image.stars_coords)))
+
+    def run(self, image, return_coords=False):
         return self.single_detection(image, return_coords=return_coords)
 
 
@@ -54,16 +59,16 @@ class DAOFindStars(StarsDetection):
         else:
             stars_coords = positions
 
+        image.stars_coords = stars_coords
+
         if return_coords:
             return stars_coords
-        else:
-            image.stars_coords = stars_coords
 
 
 class SegmentedPeaks(StarsDetection):
 
-    def __init__(self, threshold=2, min_separation=10, n_stars=None):
-        super().__init__()
+    def __init__(self, threshold=2, min_separation=10, n_stars=None, **kwargs):
+        super().__init__(**kwargs)
         self.threshold = threshold
         self.min_separation = min_separation
         self.n_stars = n_stars
@@ -78,9 +83,8 @@ class SegmentedPeaks(StarsDetection):
             coordinates = coordinates[sorted_idx][0:self.n_stars]
         
         coordinates = clean_stars_positions(coordinates, tolerance=self.min_separation)
+        image.stars_coords = coordinates
 
         if return_coords:
-            return coordinates
-        else:
-            image.stars_coords = coordinates
+            return image.stars_coords
 

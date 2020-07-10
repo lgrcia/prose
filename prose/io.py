@@ -740,7 +740,7 @@ class FitsManager:
     def products_denominator(self):
         single_obs = self.observations
 
-        assert len(single_obs) == 1, "Multiple observations found"
+        assert len(single_obs) == 1, "Multiple or no observations found"
 
         single_obs = single_obs.iloc[0]
 

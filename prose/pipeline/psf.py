@@ -7,6 +7,7 @@ from astropy.nddata import NDData
 from photutils.psf import extract_stars
 from astropy.stats import gaussian_sigma_to_fwhm
 from prose.pipeline.base import Block
+from prose.console_utils import INFO_LABEL
 
 
 def image_psf(image, stars, size=15, normalize=False):
@@ -87,10 +88,14 @@ def moments(data):
 
 class NonLinearGaussian2D(Block):
 
-    def __init__(self, cutout_size=21):
-        super().__init__()
+    def __init__(self, cutout_size=21, **kwargs):
+        super().__init__(**kwargs)
         self.cutout_size = cutout_size
         self.x, self.y = None, None
+
+    @property
+    def optimized_model(self):
+        return self.model(*self.optimized_params)
 
     def build_epsf(self, image, stars):
         self.x, self.y = np.indices((self.cutout_size, self.cutout_size))
@@ -133,11 +138,15 @@ class NonLinearGaussian2D(Block):
             self.optimized_params = params
             return params[3]*gaussian_sigma_to_fwhm, params[4]*gaussian_sigma_to_fwhm, params[-2]
 
-    def run(self, image, *args):
+    def stack_method(self, image):
+        print("{} global psf FWHM: {:.2f} (pixels)".format(INFO_LABEL, np.mean(image.fwhm)))
+
+    def run(self, image):
         self.epsf = self.build_epsf(image.data, image.stars_coords)
-        args = self.optimize()
-        image.header["FWHM"] = np.mean([args[0], args[1]]),
-        image.header["FWHMX"] = args[0],
-        image.header["FWHMY"] = args[1],
-        image.header["PSFANGLE"] = args[2],
+        image.fwhmx, image.fwhmy, image.theta = self.optimize()
+        image.fwhm = np.mean([image.fwhmx, image.fwhmy])
+        image.header["FWHM"] = image.fwhm
+        image.header["FWHMX"] = image.fwhmx
+        image.header["FWHMY"] = image.fwhmy
+        image.header["PSFANGLE"] = image.theta
         image.header["FWHMALG"] = self.__class__.__name__,

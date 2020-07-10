@@ -79,7 +79,5 @@ class Telescope:
             ) / np.sqrt(2 * exposure)
 
             _squarred_error += np.power(signal * scintillation, 2)
-    
 
         return np.sqrt(_squarred_error)
-        

@@ -787,10 +787,8 @@ def TeX(a, fmt='{: 0.3f}', dim=True):
 def plot_systematics(time, lc, data, fields=None, bins=0.005, offset_factor=1):
     amp = np.percentile(lc, 95) - np.percentile(lc, 5)
     rescale_data = []
-    fields = ["dx", "dy", "fwhm", "airmass", "sky"]
 
     for field in fields:
-
         _data = amp*utils.rescale(data[field])
         w_std = np.mean(utils.binning(time, _data, 0.005, std=True)[2])
         _data /= w_std*10
@@ -871,7 +869,7 @@ def plot_lc_raw_diff(self, binning=0.005, detrended=False, options={}):
     plt.tight_layout()
 
 
-def save_report(self, destination, remove_temp=True):
+def save_report(self, destination, fields, remove_temp=True):
 
     def draw_table(table, table_start, marg=5, table_cell=(20,4)):
 
@@ -911,6 +909,9 @@ def save_report(self, destination, remove_temp=True):
     if path.isdir("temp"):
         shutil.rmtree(temp_folder)
 
+    if os.path.exists(temp_folder):
+        shutil.rmtree(temp_folder)
+
     os.mkdir(temp_folder)
 
     self.show_stars(10, view="reference")
@@ -929,7 +930,7 @@ def save_report(self, destination, remove_temp=True):
     plt.close()
     
     plt.figure(figsize=(6,10))
-    self.plot_systematics()
+    self.plot_systematics(fields=fields)
     syst_plot = path.join(temp_folder, "systplot.png")
     fig = plt.gcf()
     fig.patch.set_alpha(0)

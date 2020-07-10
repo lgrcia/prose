@@ -26,7 +26,7 @@ class Align(Alignment):
         self.ref_shape = np.array(reference_image.shape)
         self.ref_center = self.ref_shape[::-1] / 2
 
-    def run(self, image, *args):
+    def run(self, image):
         shift = np.array([image.header["DX"], image.header["DY"]])
         aligned_image = Cutout2D(
                         image.data,
