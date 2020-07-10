@@ -1,49 +1,48 @@
-from prose import pipeline, Photometry, Telescope, FitsManager
-from prose.pipeline_methods.alignment import AstroAlignShift
+from prose import Reduction, Photometry, PhotProducts, Telescope, FitsManager
 import matplotlib.pyplot as plt
 import os
 import shutil
 from os import path
 import unittest
+from prose.datasets import generate_prose_reduction_datatset
 
-RAW = "test/minimal_quatar2b_dataset"
-_REDUCED = "test/_minimal_quatar2b_dataset_reduced"
-REDUCED = "test/minimal_quatar2b_dataset_reduced"
+RAW = "test/synthetic_dataset"
+_REDUCED = "test/_synthetic_dataset"
+REDUCED = "test/synthetic_dataset"
 
 
 class TestReduction(unittest.TestCase):
 
     def test_reduction(self):
-
-        _ = Telescope({
-            "name": "test",
-            "trimming": [40, 40],
-            "pixel_scale": 0.66,
-            "latlong": [31.2027, 7.8586]
+        
+        generate_prose_reduction_datatset(RAW, n_images=5)
+        
+        Telescope({
+            "name": "fake_telescope",
+            "trimming": (0, 0),
+            "latlong": [24.6275, 70.4044]
         })
 
-        fm = FitsManager(RAW, depth=2, )
-        reduction = pipeline.Reduction(fits_manager=fm)
-        reduction.set_observation(0, check_calib_telescope=False)
+        fm = FitsManager(RAW, depth=2)
+        reduction = Reduction(fm, overwrite=True)
+        reduction.run()
 
-        reduction.run(_REDUCED, overwrite=True)
+        photometry = Photometry(reduction.destination)
+        photometry.run()
 
-        photometry = pipeline.Photometry(_REDUCED)
-        photometry.run(overwrite=True)
-
-        shutil.rmtree(_REDUCED)
+        shutil.rmtree(reduction.destination)
 
 
 class TestPhotometry(unittest.TestCase):
 
     def test_diff_from_phots(self):
-        phot = Photometry(REDUCED)
+        phot = PhotProducts(REDUCED)
         phot.target["id"] = 0
         phot.Broeg2005()
         phot.save()
 
     def test_plot_lc(self):
-        phot = Photometry(REDUCED)
+        phot = PhotProducts(REDUCED)
         phot.lc.plot()
         plt.close()
 
