@@ -86,7 +86,7 @@ a ``fake_telescope_20200229_prose_I+z`` folder has been created in which we can 
 
 .. code:: python3
 
-    from prose import Reduction
+    from prose import Photometry
 
     photometry = Photometry(reduction.destination)
     photometry.run()
