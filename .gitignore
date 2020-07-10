@@ -14,3 +14,4 @@ docs/source/_build
 .vscode
 *__pychache__*
 test_data
+paper
