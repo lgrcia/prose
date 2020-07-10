@@ -20,6 +20,7 @@ from os import path
 from fpdf import FPDF
 import shutil
 from astropy.time import Time
+import matplotlib.patches as mpatches
 
 
 def plot_lc(
@@ -211,9 +212,6 @@ def plot_all_cuts(cuts, W=10, cmap="magma", stars=None, stars_in=None):
             ax.axis('off')
 
 
-def fancy_show_stars(image, stars):
-    pass
-
 class AnchoredHScaleBar(matplotlib.offsetbox.AnchoredOffsetbox):
     """ size: length of bar in data units
         extent : height of bar ends in axes units """
@@ -240,6 +238,7 @@ class AnchoredHScaleBar(matplotlib.offsetbox.AnchoredOffsetbox):
                                                         borderpad=borderpad, child=self.vpac, prop=prop,
                                                         frameon=frameon,
                                                         **kwargs)
+
 
 def plot_lcs(data, planets={}, W=4, show=None, hide=None, ylim=None, size=[4,3]):
     """
@@ -325,6 +324,7 @@ def plot_lcs(data, planets={}, W=4, show=None, hide=None, ylim=None, size=[4,3])
 
     plt.tight_layout()
 
+
 def bokeh_style(xminor=True, yminor=True, axes=None):
     
     if axes is None:
@@ -347,6 +347,7 @@ def bokeh_style(xminor=True, yminor=True, axes=None):
             axe.spines['right'].set_color('#DBDBDB')
             axe.spines['top'].set_linewidth(1)
             axe.spines['right'].set_linewidth(1)
+
 
 def paper_style():
     axes = plt.gcf().axes
@@ -399,7 +400,8 @@ class AnchoredHScaleBar(matplotlib.offsetbox.AnchoredOffsetbox):
                                                         frameon=frameon,
                                                         **kwargs)
 
-def show_stars(image, stars, highlight=None, size=15, options={}, flip=None, color=None, contrast=0.05):
+
+def show_stars(image, stars=None, highlight=None, size=15, options={}, flip=None, color=None, contrast=0.05):
 
     if color is None:
         color = np.array([131, 220, 255]) / 255
@@ -419,7 +421,8 @@ def show_stars(image, stars, highlight=None, size=15, options={}, flip=None, col
 
     if flip:
         image = utils.z_scale(image, c=contrast)[::-1, ::-1]
-        stars = np.array(image_size) - stars
+        if stars is not None:
+            stars = np.array(image_size) - stars
     else:
         image = utils.z_scale(image, c=contrast)
 
@@ -431,228 +434,236 @@ def show_stars(image, stars, highlight=None, size=15, options={}, flip=None, col
     fontsize = min(size_factor, 1)*15
     label_yoffset = min(size_factor, 1)*15
 
-    if highlight is not None:
-
-        plt.plot(
-            stars[highlight, 0],
-            stars[highlight, 1],
-            "o",
-            markersize=14*size_factor,
-            markeredgecolor=color,
-            markerfacecolor="none",
-            label="target",
-        )
-        plt.annotate(
-            highlight, xy=[stars[highlight][0], stars[highlight][1] + label_yoffset], 
-            color=color, fontsize=fontsize, ha='center', va='top'
-        )
-    
-    else:
-        highlight = -1
-
-    other_stars = np.arange(len(stars))
-
-    other_stars = np.setdiff1d(other_stars, highlight)
-
-    plt.plot(
-        stars[other_stars, 0],
-        stars[other_stars, 1],
-        "o",
-        markersize=14*size_factor,
-        markeredgecolor=color,
-        markerfacecolor="none",
-        alpha=0.4 if highlight >= 0 else 1
-    )
-
-    plt.tight_layout()
-
-
-def fancy_show_stars(
-    image,
-    stars,
-    ref_stars=None,
-    target=None,
-    size=15,
-    pixel_scale=None,
-    contrast=0.05,
-    aperture=None,
-    marker_color=np.array([131, 220, 255]) / 255,
-    proper_motion=False,
-    n_stars=None,
-    flip=False,
-    view="all",
-    zoom=True,
-    options={},
-    ):
-        """
-        Plot stack image and detected stars
-
-        Parameters
-        ----------
-        size: float (optional)
-            pyplot figure (size, size)
-        image: int (optional)
-            index of image to plot in light files. Default is None, which show stack image
-        contrast: float
-            contrast within [0, 1] (zscale is applied here)
-        marker_color: [r, g, b]
-        proper_motion: bool
-            whether to display proper motion on the image
-        n_stars: int
-            max number of stars to show
-        flip: bool
-            flip image
-        view: 'all', 'reference'
-            - ``reference`` : only highlight target and comparison stars
-            - ``all`` : all stars are shown
-        zoom: bool
-            whether to include a zoom view
-        options: dict
-            style options:
-                - to do
-
-        Examples
-        --------
-
-        .. code:: python3
-
-            from specphot.observations import Photometry
-    
-            phot = Photometry("your_path")
-            phot.plot_stars(view="reference")
-
-        .. image:: /user_guide/gallery/plot_stars.png
-           :align: center
-        """
-        _options = {
-            "aperture_color": "seagreen",
-            "aperture_ls": "--"
-        }
-        _options.update(options)
-
-        if isinstance(image, str):
-            image =fits.getdata(image)
-  
-        image_size = np.array(np.shape(image))[::-1]
-
-        fig = plt.figure(figsize=(size, size))
-
-        if flip:
-            image = utils.z_scale(image, c=contrast)[::-1, ::-1]
-            stars = np.array(image_size) - stars
-        else:
-            image = utils.z_scale(image, c=contrast)
-
-        ax = fig.add_subplot(111)
-        ax.imshow(image, cmap="Greys_r")
-        plt.title("Stack image", loc="left")
-
-        size_factor = size/15
-        fontsize = min(size_factor, 1)*15
-        label_yoffset = min(size_factor, 1)*30
-
-        if view == "all":
+    if stars is not None:
+        if highlight is not None:
 
             plt.plot(
-                stars[:, 0],
-                stars[:, 1],
+                stars[highlight, 0],
+                stars[highlight, 1],
                 "o",
-                markersize=fontsize,
-                markeredgecolor=marker_color,
-                markerfacecolor="none",
-            )
-
-            for i, coord in enumerate(stars):
-                plt.annotate(str(i),
-                             xy=[coord[0], coord[1] + label_yoffset],
-                             color=marker_color,
-                             ha='center', fontsize=fontsize, va='top')
-
-        if ref_stars is not None:
-            plt.plot(
-                stars[target, 0],
-                stars[target, 1],
-                "o",
-                markersize=12*size_factor,
-                markeredgecolor=marker_color,
+                markersize=14*size_factor,
+                markeredgecolor=color,
                 markerfacecolor="none",
                 label="target",
             )
             plt.annotate(
-                target, xy=[stars[target][0], stars[target][1] + label_yoffset], 
-                color=marker_color, fontsize=fontsize, ha='center', va='top'
+                highlight, xy=[stars[highlight][0], stars[highlight][1] + label_yoffset],
+                color=color, fontsize=fontsize, ha='center', va='top'
             )
 
-            plt.imshow(image, cmap="Greys_r")
-            plt.plot(
-                stars[ref_stars, 0],
-                stars[ref_stars, 1],
-                "o",
-                markersize=12*size_factor,
-                markeredgecolor="yellow",
-                markerfacecolor="none",
-                label="comparison",
-            )
-            for i in ref_stars:
-                plt.annotate(str(i), xy=[stars[i][0], stars[i][1] + label_yoffset], color="yellow", fontsize=fontsize, ha='center', va='top')
+        else:
+            highlight = -1
 
-            other_stars = np.arange(len(stars))
+        other_stars = np.arange(len(stars))
 
-            other_stars = np.setdiff1d(other_stars, target)
-            other_stars = np.setdiff1d(other_stars, ref_stars)
+        other_stars = np.setdiff1d(other_stars, highlight)
 
-            plt.plot(
-                stars[other_stars, 0],
-                stars[other_stars, 1],
-                "o",
-                markersize=11*size_factor,
-                markeredgecolor=marker_color,
-                markerfacecolor="none",
-                alpha=0.4
-            )
+        plt.plot(
+            stars[other_stars, 0],
+            stars[other_stars, 1],
+            "o",
+            markersize=14*size_factor,
+            markeredgecolor=color,
+            markerfacecolor="none",
+            alpha=0.4 if highlight >= 0 else 1
+        )
 
         plt.tight_layout()
 
-        if pixel_scale is not None:
-            ob = AnchoredHScaleBar(size=60 / pixel_scale, label="1'", loc=4, frameon=False, extent=0,
-                                       pad=0.6, sep=4, linekw=dict(color="white", linewidth=0.8))
-            ax.add_artist(ob)
 
-        if target is not None and zoom:
-            with plt.rc_context({
-                'axes.edgecolor': "white",
-                'xtick.color': "white",
-                'ytick.color': "white"
-            }):
-                x, y = stars[target]
-                rect = patches.Rectangle(
-                    (x - 80, y - 80),
-                    160, 160, linewidth=1,
-                    edgecolor='white',
+class AnchoredHScaleBar(matplotlib.offsetbox.AnchoredOffsetbox):
+    """ size: length of bar in data units
+        extent : height of bar ends in axes units """
+
+    def __init__(self, size=1, extent=0.03, label="", loc=2, ax=None,
+                 pad=0.4, borderpad=0.5, ppad=0, sep=2, prop=None,
+                 frameon=True, linekw={}, **kwargs):
+        if not ax:
+            ax = plt.gca()
+
+        trans = ax.get_xaxis_transform()
+        size_bar = matplotlib.offsetbox.AuxTransformBox(trans)
+        line = Line2D([0, size], [0, 0], **linekw)
+        vline1 = Line2D([0, 0], [-extent / 2., extent / 2.], **linekw)
+        vline2 = Line2D([size, size], [-extent / 2., extent / 2.], **linekw)
+        size_bar.add_artist(line)
+        size_bar.add_artist(vline1)
+        size_bar.add_artist(vline2)
+        txt = matplotlib.offsetbox.TextArea(label, minimumdescent=False, textprops=dict(color=linekw.get("color", "k")))
+        self.vpac = matplotlib.offsetbox.VPacker(children=[size_bar, txt],
+                                                 align="center", pad=ppad, sep=sep)
+        matplotlib.offsetbox.AnchoredOffsetbox.__init__(self, loc, pad=pad,
+                                                        borderpad=borderpad, child=self.vpac, prop=prop,
+                                                        frameon=frameon,
+                                                        **kwargs)
+
+
+def fancy_show_stars(
+        image,
+        stars,
+        ref_stars=None,
+        target=None,
+        size=15,
+        pixel_scale=None,
+        contrast=0.05,
+        aperture=None,
+        marker_color=np.array([131, 220, 255]) / 255,
+        proper_motion=False,
+        n_stars=None,
+        flip=False,
+        view="all",
+        zoom=True,
+        options={},
+):
+    """
+    Plot stack image and detected stars
+
+    Parameters
+    ----------
+    size: float (optional)
+        pyplot figure (size, size)
+    image: int (optional)
+        index of image to plot in light files. Default is None, which show stack image
+    contrast: float
+        contrast within [0, 1] (zscale is applied here)
+    marker_color: [r, g, b]
+    proper_motion: bool
+        whether to display proper motion on the image
+    n_stars: int
+        max number of stars to show
+    flip: bool
+        flip image
+    view: 'all', 'reference'
+        - ``reference`` : only highlight target and comparison stars
+        - ``all`` : all stars are shown
+    zoom: bool
+        whether to include a zoom view
+    options: dict
+        style options:
+            - to do
+
+    Examples
+    --------
+
+    .. code:: python3
+
+        from specphot.observations import Photometry
+
+        phot = Photometry("your_path")
+        phot.plot_stars(view="reference")
+
+    .. image:: /user_guide/gallery/plot_stars.png
+       :align: center
+    """
+    _options = {
+        "aperture_color": "seagreen",
+        "aperture_ls": "--"
+    }
+    _options.update(options)
+
+    marker_size = 9
+
+    if isinstance(image, str):
+        image = fits.getdata(image)
+
+    image_size = np.array(np.shape(image))[::-1]
+
+    fig = plt.figure(figsize=(size, size))
+
+    if flip:
+        image = utils.z_scale(image, c=contrast)[::-1, ::-1]
+        stars = np.array(image_size) - stars
+    else:
+        image = utils.z_scale(image, c=contrast)
+
+    ax = fig.add_subplot(111)
+    ax.imshow(image, cmap="Greys_r")
+    plt.title("Stack image", loc="left")
+
+    size_factor = size / 15
+    fontsize = min(size_factor, 1) * 15
+    label_yoffset = min(size_factor, 1) * 30
+
+    if view == "all":
+
+        for i, coord in enumerate(stars):
+            circle = mpatches.Circle(coord, marker_size, fill=None, ec=marker_color, )
+            ax = plt.gca()
+            ax.add_artist(circle)
+            plt.annotate(str(i),
+                         xy=[coord[0], coord[1] + marker_size+1],
+                         color=marker_color,
+                         ha='center', fontsize=12, va='top')
+
+    if ref_stars is not None:
+        circle = mpatches.Circle(stars[target, :], marker_size, fill=None, ec=marker_color, label="target")
+        ax = plt.gca()
+        ax.add_artist(circle)
+        plt.annotate(target, xy=[stars[target][0], stars[target][1] + marker_size+1],
+                     color=marker_color, ha='center', fontsize=12, va='top')
+
+        plt.imshow(image, cmap="Greys_r")
+
+        for i in ref_stars:
+            circle = mpatches.Circle(stars[i, :], marker_size, fill=None, ec="yellow", label="comparison")
+            ax.add_artist(circle)
+            plt.annotate(str(i), xy=[stars[i][0], stars[i][1] + marker_size+1], color="yellow",
+                         fontsize=12,
+                         ha='center',
+                         va='top')
+
+        other_stars = np.arange(len(stars))
+
+        other_stars = np.setdiff1d(other_stars, target)
+        other_stars = np.setdiff1d(other_stars, ref_stars)
+
+        for i in other_stars:
+            circle = mpatches.Circle(stars[i, :], marker_size, fill=None, ec=marker_color, label="comparison",
+                                     alpha=0.4)
+            ax.add_artist(circle)
+
+    plt.tight_layout()
+
+    if pixel_scale is not None:
+        ob = AnchoredHScaleBar(size=60 / pixel_scale, label="1'", loc=4, frameon=False, extent=0,
+                               pad=0.6, sep=4, linekw=dict(color="white", linewidth=0.8))
+        ax.add_artist(ob)
+
+    if target is not None and zoom:
+        with plt.rc_context({
+            'axes.edgecolor': "white",
+            'xtick.color': "white",
+            'ytick.color': "white"
+        }):
+            x, y = stars[target]
+            rect = patches.Rectangle(
+                (x - 80, y - 80),
+                160, 160, linewidth=1,
+                edgecolor='white',
+                facecolor='none',
+                alpha=0.3)
+
+            ax.add_patch(rect)
+            axins = zoomed_inset_axes(ax, 2.5, loc=1)
+            axins.imshow(image, cmap="Greys_r", origin="upper")
+            if aperture is not None:
+                ap = aperture / 2
+                aperture = patches.Circle(
+                    (x, y),
+                    ap, linewidth=1,
+                    ls=_options["aperture_ls"],
+                    edgecolor=_options["aperture_color"],
                     facecolor='none',
-                    alpha=0.3)
+                    alpha=1)
+                axins.add_patch(aperture)
+            axins.set_xlim([x - 80, x + 80])
+            axins.set_ylim([y + 80, y - 80])
 
-                ax.add_patch(rect)
-                axins = zoomed_inset_axes(ax, 2.5, loc=1)
-                axins.imshow(image, cmap="Greys_r", origin="upper")
-                if aperture is not None:
-                    ap = aperture / 2
-                    aperture = patches.Circle(
-                        (x, y),
-                        ap, linewidth=1,
-                        ls=_options["aperture_ls"],
-                        edgecolor=_options["aperture_color"],
-                        facecolor='none',
-                        alpha=1)
-                    axins.add_patch(aperture)
-                axins.set_xlim([x - 80, x + 80])
-                axins.set_ylim([y + 80, y - 80])
-
-                if pixel_scale is not None:
-                    obin = AnchoredHScaleBar(size=15 / pixel_scale, label="15\"", loc=4,
-                                                 frameon=False, extent=0, pad=0.6, sep=4,
-                                                 linekw=dict(color="white", linewidth=0.8))
-                    axins.add_artist(obin)
+            if pixel_scale is not None:
+                obin = AnchoredHScaleBar(size=15 / pixel_scale, label="15\"", loc=4,
+                                         frameon=False, extent=0, pad=0.6, sep=4,
+                                         linekw=dict(color="white", linewidth=0.8))
+                axins.add_artist(obin)
 
 
 def plot_comparison_lcs(lcs, idxs, bins=0.005, offset_factor=2.5):
@@ -724,13 +735,15 @@ def plot_rms(fluxes_lcs, diff_lcs, target=None, highlights=None, bins=0.005):
     fluxes_median = fluxes_median[fluxes_median>0]
     plt.xlim(fluxes_median.min(), fluxes_median.max())
 
+
 def gif_image_array(image, factor=0.25):
     return (utils.z_scale(
         resize(
             image,
             np.array(np.shape(image)).astype(int) * factor,
             anti_aliasing=True,
-        ))* 255).astype("uint8")
+        )) * 255).astype("uint8")
+
 
 def fancy_gif_image_array(image, median_psf, factor=0.25):
 
@@ -780,10 +793,8 @@ def TeX(a, fmt='{: 0.3f}', dim=True):
 def plot_systematics(time, lc, data, fields=None, bins=0.005, offset_factor=1):
     amp = np.percentile(lc, 95) - np.percentile(lc, 5)
     rescale_data = []
-    fields = ["dx", "dy", "fwhm", "airmass", "sky"]
 
     for field in fields:
-
         _data = amp*utils.rescale(data[field])
         w_std = np.mean(utils.binning(time, _data, 0.005, std=True)[2])
         _data /= w_std*10
@@ -864,7 +875,7 @@ def plot_lc_raw_diff(self, binning=0.005, detrended=False, options={}):
     plt.tight_layout()
 
 
-def save_report(self, destination, remove_temp=True):
+def save_report(self, destination, fields, remove_temp=True):
 
     def draw_table(table, table_start, marg=5, table_cell=(20,4)):
 
@@ -904,6 +915,9 @@ def save_report(self, destination, remove_temp=True):
     if path.isdir("temp"):
         shutil.rmtree(temp_folder)
 
+    if os.path.exists(temp_folder):
+        shutil.rmtree(temp_folder)
+
     os.mkdir(temp_folder)
 
     self.show_stars(10, view="reference")
@@ -922,7 +936,7 @@ def save_report(self, destination, remove_temp=True):
     plt.close()
     
     plt.figure(figsize=(6,10))
-    self.plot_systematics()
+    self.plot_systematics(fields=fields)
     syst_plot = path.join(temp_folder, "systplot.png")
     fig = plt.gcf()
     fig.patch.set_alpha(0)

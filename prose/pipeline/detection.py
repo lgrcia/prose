@@ -1,17 +1,18 @@
 from skimage.measure import label, regionprops
-import os
 import numpy as np
-from astropy.io import fits
 from photutils import DAOStarFinder
 from astropy.stats import sigma_clipped_stats
-from prose.pipeline_methods.alignment import clean_stars_positions
+from prose.pipeline.registration import clean_stars_positions
+from prose.pipeline.base import Block
+from prose.console_utils import INFO_LABEL
 
 
-class StarsDetection:
+class StarsDetection(Block):
     """Base class for stars detection
     """
-    def __init__(self):
-        pass
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.n_stars = None
 
     def single_detection(self, image):
         """
@@ -19,28 +20,18 @@ class StarsDetection:
         """
         raise NotImplementedError("method needs to be overidden")
 
-    def run(self, images):
-        positions = []
-        if isinstance(images, list):
-            for image in images:
-                positions.append(self.single_detection(image))
-        else:
-            positions = self.single_detection(images)
+    def stack_method(self, image):
+        print("{} detected stars: {}".format(INFO_LABEL, len(image.stars_coords)))
 
-        return positions
+    def run(self, image, return_coords=False):
+        return self.single_detection(image, return_coords=return_coords)
+
 
 class DAOFindStars(StarsDetection):
     
-    def __init__(
-        self,
-        sigma_clip=2.5,
-        lower_snr=5,
-        fwhm=5,
-        n_stars=None,
-        min_separation=10,
-        sort=True
-    ):
+    def __init__(self, sigma_clip=2.5, lower_snr=5, fwhm=5, n_stars=None, min_separation=10, sort=True, **kwargs):
 
+        super().__init__(**kwargs)
         self.sigma_clip = sigma_clip
         self.lower_snr = lower_snr
         self.fwhm = fwhm
@@ -48,15 +39,8 @@ class DAOFindStars(StarsDetection):
         self.min_separation = min_separation
         self.sort = sort
 
-    def single_detection(self, image):
-        if isinstance(image, np.ndarray):
-            data = image
-        elif isinstance(image, str):
-            if os.path.exists(image) and data.lower().endswith((".fts", ".fits")):
-                data = fits.getdata(image)
-        else:
-            raise ValueError("{} should be a numpy array or a fits file")
-
+    def single_detection(self, image, return_coords=False):
+        data = image.data
         mean, median, std = sigma_clipped_stats(data, sigma=self.sigma_clip)
         finder = DAOStarFinder(fwhm=self.fwhm, threshold=self.lower_snr * std)
         sources = finder(data - median)
@@ -71,31 +55,36 @@ class DAOFindStars(StarsDetection):
         )
 
         if type(self.min_separation) is int:
-            return clean_stars_positions(positions, tolerance=self.min_separation)
+            stars_coords = clean_stars_positions(positions, tolerance=self.min_separation)
         else:
-            return positions
+            stars_coords = positions
+
+        image.stars_coords = stars_coords
+
+        if return_coords:
+            return stars_coords
 
 
 class SegmentedPeaks(StarsDetection):
 
-    def __init__(self, threshold=2, min_separation=10, n_stars=None):
+    def __init__(self, threshold=2, min_separation=10, n_stars=None, **kwargs):
+        super().__init__(**kwargs)
         self.threshold = threshold
         self.min_separation = min_separation
         self.n_stars = n_stars
 
-    def single_detection(self, image):
-        if isinstance(image, np.ndarray):
-            data = image
-        elif isinstance(image, str):
-            if os.path.exists(image) and image.lower().endswith((".fts", ".fits")):
-                data = fits.getdata(image)
-        else:
-            raise ValueError("{} should be a numpy array or a fits file")
+    def single_detection(self, image, return_coords=False):
+        data = image.data
         threshold = self.threshold*np.median(data)
         regions = regionprops(label(data > threshold), data)
         coordinates = np.array([region.weighted_centroid[::-1] for region in regions])
         if self.n_stars is not None:
             sorted_idx = np.argsort([np.sum(region.intensity_image) for region in regions])[::-1]
             coordinates = coordinates[sorted_idx][0:self.n_stars]
-        return clean_stars_positions(coordinates, tolerance=self.min_separation)
+        
+        coordinates = clean_stars_positions(coordinates, tolerance=self.min_separation)
+        image.stars_coords = coordinates
+
+        if return_coords:
+            return image.stars_coords
 

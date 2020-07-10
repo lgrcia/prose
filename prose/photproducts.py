@@ -1,4 +1,4 @@
-from prose import io
+from prose import io, Image
 import matplotlib.pyplot as plt
 import numpy as np
 from os import path
@@ -6,7 +6,7 @@ from astropy.time import Time
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from prose.lightcurves import LightCurves, Broeg2005, differential_photometry
-from prose.pipeline_methods import alignment
+from prose.pipeline import alignment
 import warnings
 from prose import visualisation as viz
 from astropy.io import fits
@@ -14,16 +14,18 @@ from prose.telescope import Telescope
 from prose import utils, CONFIG
 from astropy.table import Table
 from astropy.wcs import WCS, utils as wcsutils
-from prose.pipeline_methods import psf
+from prose.pipeline import psf
 import pandas as pd
+from prose.pipeline.psf import NonLinearGaussian2D
+
 
 # TODO: add n_stars to show_stars
 
-class Photometry:
+class PhotProducts:
     """
     Class to load and analyze photometry products
     """
-    
+
     def __init__(self, folder_or_file=None, sort_stars=False, keyword=None):
         """
         Parameters
@@ -84,16 +86,24 @@ class Photometry:
         else:
             warnings.warn("Time is JD-UTC")
             return self._time
-    
+
     @property
     def lc(self):
         self._check_lcs()
         return self.lcs[self.target["id"]]
-    
+
     @property
     def comparison_stars(self):
         if self._comparison_stars is not None:
             return self._comparison_stars[self.lcs.best_aperture_id]
+
+    @property
+    def target_id(self):
+        return self.target["id"]
+
+    @target_id.setter
+    def target_id(self, id):
+        self.target["id"] = id
 
     # Loaders and savers (files and data)
     # ------------------------
@@ -120,11 +130,11 @@ class Photometry:
             return True
         else:
             raise NotADirectoryError("path doesn't exist")
-    
+
     def load_folder(self, folder_path, sort_stars=False, keyword=None):
         """
         Load data from folder containing at least a phots file
-        
+
         Parameters
         ----------
         folder : [type]
@@ -132,7 +142,7 @@ class Photometry:
         """
         if not path.isdir(folder_path):
             raise FileNotFoundError("Folder does not exist")
-        
+
         # Loading unique phot file
         phot_files = io.get_files(".phot*", folder_path, single_list_removal=False)
         if len(phot_files) > 1:
@@ -144,7 +154,8 @@ class Photometry:
                 if self.phot_file is None:
                     raise ValueError("Cannot find a phot file matching keyword '{}'".format(keyword))
             else:
-                raise ValueError("Several phot files present in folder, should contain one (or specify kwarg 'keyword')")
+                raise ValueError(
+                    "Several phot files present in folder, should contain one (or specify kwarg 'keyword')")
         elif len(phot_files) == 0:
             raise ValueError("Cannot find a phot file in this folder, should contain one")
         else:
@@ -179,7 +190,7 @@ class Photometry:
     def save(self, destination=None):
         """
         Save data into a ``.phots`` file at specified destination. File name is : ``Telescope_date(YYYYmmdd)_target_filter``. For more info check :doc:`/notes/phots-structure`
-        
+
         Parameters
         ----------
         destination : str path, optional
@@ -210,7 +221,7 @@ class Photometry:
         df.to_csv(
             "{}/MCMC_{}.txt".format(destination, self.products_denominator), sep=" ", index=False
         )
-    
+
     # Convenience
     # -----------
     @property
@@ -235,8 +246,8 @@ class Photometry:
         ra, dec = self.target["radec"]
         return "http://simbad.u-strasbg.fr/simbad/sim-coo?Coord={}+{}&CooFrame=FK5&CooEpoch=2000&CooEqui=" \
                "2000&CooDefinedFrames=none&Radius=2&Radius.unit=arcmin&submit=submit+query&CoordList=".format(
-                ra, dec)
-    
+            ra, dec)
+
     @property
     def products_denominator(self):
         return "{}_{}_{}_{}".format(
@@ -261,7 +272,7 @@ class Photometry:
         light_travel_tbd = time.light_travel_time(self.skycoord, location=self.telescope.earth_location)
         self.bjd_tdb = (time + light_travel_tbd).value
         self.data["bjd tdb"] = self.bjd_tdb
-    
+
     def Broeg2005(self, **kwargs):
         """
         Differential photometry using the `Broeg (2005) <https://ui.adsabs.harvard.edu/abs/2005AN....326..134B/abstract>`_ algorithm
@@ -282,16 +293,15 @@ class Photometry:
             limit on the number of stars to keep (see keep kwargs)
         show_comps: bool (optional, default is False)
             show stars and weights used to build the artificial comparison star
-            
+
         """
         assert self.target["id"] is not None, "target id is not defined"
 
         fluxes, fluxes_errors = self.fluxes.as_array()
 
         lcs, lcs_errors, art_lcs, comps = Broeg2005(
-            fluxes, fluxes_errors, self.target["id"], return_art_lc=True, return_comps=True, **kwargs
+            fluxes, fluxes_errors, self.target_id, return_art_lc=True, return_comps=True, **kwargs
         )
-
         self.artificial_lcs = np.array(art_lcs)
         self.lcs = LightCurves(self.time, np.moveaxis(lcs, 0, 1), np.moveaxis(lcs_errors, 0, 1))
         best_aperture_id = self.lcs[self.target["id"]].best_aperture_id
@@ -310,7 +320,7 @@ class Photometry:
         fluxes, fluxes_errors = self.fluxes.as_array()
         lcs, lcs_errors, art_lcs = differential_photometry(fluxes, fluxes_errors, comps, return_art_lc=True)
         self.artificial_lcs = np.array(art_lcs)
-        self.lcs = LightCurves(self.time, np.moveaxis(lcs,0,1), np.moveaxis(lcs_errors,0,1))
+        self.lcs = LightCurves(self.time, np.moveaxis(lcs, 0, 1), np.moveaxis(lcs_errors, 0, 1))
         best_aperture_id = self.lcs[self.target["id"]].best_aperture_id
         self.lcs.set_best_aperture_id(best_aperture_id)
         self._comparison_stars = np.array(comps)
@@ -331,7 +341,7 @@ class Photometry:
 
         header = fits.getheader(self.stack_fits)
         shape = fits.getdata(self.stack_fits).shape
-        cone_radius= np.sqrt(2)*np.max(shape)*self.telescope.pixel_scale/120
+        cone_radius = np.sqrt(2) * np.max(shape) * self.telescope.pixel_scale / 120
         wcs = WCS(header)
 
         coord = self.skycoord
@@ -339,31 +349,10 @@ class Photometry:
         gaia_query = Gaia.cone_search_async(coord, radius, verbose=False)
         self.gaia_data = gaia_query.get_results()
 
-    def reindex(self, reference_phot):
-        refrence_stars = reference_phot.stars
-
-        shift = alignment.xyshift(refrence_stars[0:50], self.stars[0:50], tolerance=0.5)
-        self_stars = (self.stars - shift).transpose()
-
-        match = np.zeros(len(refrence_stars), dtype="int")
-        for i, ref_star in enumerate(refrence_stars):
-            match[i] = np.argmin(alignment.distances(self_stars, ref_star))
-
-        self.fluxes._lightcurves = [self.fluxes._lightcurves[m] for m in match]
-
-        if self.lcs is not None:
-            self.lcs._lightcurves = [self.lcs._lightcurves[m] for m in match]
-        
-        if self.comparison_stars is not None:
-            self._comparison_stars = [match[cs] for cs in self._comparison_stars]
-            
-        self.stars = self.stars[match]
-        self.target["id"] = reference_phot.target["id"]
-
     # Plot
     # ----
 
-    def show_stars(self, size=10, flip=False, view=None):
+    def show_stars(self, size=10, flip=False, view=None, zoom=True):
         """
         Show stack image and detected stars
 
@@ -388,15 +377,15 @@ class Photometry:
             view = "reference" if self.comparison_stars is not None else "all"
         if view == "all":
             viz.fancy_show_stars(
-                self.stack_fits, self.stars, 
+                self.stack_fits, self.stars,
                 flip=flip, size=size, target=self.target["id"],
                 pixel_scale=self.telescope.pixel_scale)
         elif view == "reference":
             viz.fancy_show_stars(
                 self.stack_fits, self.stars,
                 ref_stars=self.comparison_stars, target=self.target["id"],
-                flip=flip, size=size, view="reference", pixel_scale=self.telescope.pixel_scale)
-    
+                flip=flip, size=size, view="reference", pixel_scale=self.telescope.pixel_scale, zoom=zoom)
+
     def show_gaia(self, color="lightblue", alpha=0.5, **kwargs):
         """
         Overlay Gaia objects on last axis
@@ -421,7 +410,7 @@ class Photometry:
             pm_ra_cosdec=self.gaia_data['pmra'],
             pm_dec=self.gaia_data['pmdec'],
             radial_velocity=self.gaia_data['radial_velocity'])
-        ax.plot(*np.array(wcsutils.skycoord_to_pixel(skycoords, self.wcs)), 
+        ax.plot(*np.array(wcsutils.skycoord_to_pixel(skycoords, self.wcs)),
                 "x", color=color, alpha=alpha, **kwargs)
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
@@ -441,8 +430,8 @@ class Photometry:
             star = self.target["id"]
         viz.show_stars(self.stack_fits, self.stars, highlight=star, size=6)
         ax = plt.gcf().axes[0]
-        ax.set_xlim(np.array([-size/2, size/2]) + self.stars[star][0])
-        ax.set_ylim(np.array([size/2, -size/2]) + self.stars[star][1])
+        ax.set_xlim(np.array([-size / 2, size / 2]) + self.stars[star][0])
+        ax.set_ylim(np.array([size / 2, -size / 2]) + self.stars[star][1])
 
     def plot_comps_lcs(self, n=5):
         """
@@ -475,13 +464,13 @@ class Photometry:
            :align: center
         """
         self.lc.plot()
-        amp = (np.percentile(self.lc.flux, 95) - np.percentile(self.lc.flux, 5))/2
-        plt.plot(self.lc.time, amp*utils.rescale(self.data[key])+1,
-            label="normalized {}".format(key),
-            color="k"
-        )
+        amp = (np.percentile(self.lc.flux, 95) - np.percentile(self.lc.flux, 5)) / 2
+        plt.plot(self.lc.time, amp * utils.rescale(self.data[key]) + 1,
+                 label="normalized {}".format(key),
+                 color="k"
+                 )
         plt.legend()
-    
+
     def plot_psf_fit(self, size=21):
         """
          Plot a 2D gaussian fit of the global psf (extracted from stack fits)
@@ -491,14 +480,18 @@ class Photometry:
         .. image:: /guide/examples_images/plot_psf_fit.png
            :align: center
         """
-        cut = psf.image_psf(self.stack_fits, self.stars, size=size)
-        p = psf.fit_gaussian2_nonlin(cut)
+
+        psf_fit = NonLinearGaussian2D()
+        image = Image(self.stack_fits)
+        image.stars_coords = self.stars
+        psf_fit.run(image)
+
         if len(plt.gcf().get_axes()) == 0:
             plt.figure(figsize=(12, 4))
-        viz.plot_marginal_model(cut, psf.gaussian_2d(*np.indices(cut.shape), *p))
+        viz.plot_marginal_model(psf_fit.epsf, psf_fit.optimized_model)
 
-        return {"theta": p[5], "std_x": p[3], "std_y": p[4]}
-    
+        return {"theta": image.theta, "std_x": image.fwhmx, "std_y": image.fwhmy}
+
     def plot_rms(self, bins=0.005):
         """
         Plot binned rms of lightcurves vs the CCD equation
@@ -510,38 +503,43 @@ class Photometry:
         """
         self._check_lcs()
         viz.plot_rms(
-            self.fluxes, 
-            self.lcs, 
+            self.fluxes,
+            self.lcs,
             bins=bins,
-            target=self.target["id"], 
+            target=self.target["id"],
             highlights=self.comparison_stars)
 
+    def plot_systematics(self, fields=None):
+        if fields is None:
+            fields = ["dx", "dy", "fwhm", "airmass", "sky"]
 
-    def plot_systematics(self):
-        viz.plot_systematics(self.time, self.lc.flux, self.data)
+        viz.plot_systematics(self.time, self.lc.flux, self.data, fields=fields)
 
     def plot_raw_diff(self):
         viz.plot_lc_raw_diff(self)
 
-    def save_report(self, destination=None):
+    def save_report(self, destination=None, fields=None):
         if destination is None:
             destination = self.folder
 
-        viz.save_report(self, destination)
+        if fields is None:
+            fields = ["dx", "dy", "fwhm", "airmass", "sky"]
+
+        viz.save_report(self, destination, fields=fields)
 
     # Loaders and Savers implementations
     # ----------------------------------
     def save_phot_fits(self, destination=None):
         """
         Save data into a ``.phots`` file at specified destination. File name is : ``Telescope_date(YYYYmmdd)_target_filter``. For more info check :doc:`/notes/phots-structure`
-        
+
         Parameters
         ----------
         destination : str path, optional
             path of destination where to save file, by default None
         """
         if destination is None:
-            if self.folder  is not None:
+            if self.folder is not None:
                 destination = self.phot_file
             else:
                 raise ValueError("destination must be specified")
@@ -579,7 +577,6 @@ class Photometry:
 
         self.hdu.writeto(destination, overwrite=True)
 
-
     def load_phot_fits(self, phots_path, sort_stars=False):
         # DOING: check how time is laoded when loading and see if tdb tdb appears in data
         self.hdu = fits.open(phots_path)
@@ -587,8 +584,8 @@ class Photometry:
 
         header = phot_dict["header"]
         self.n_images = phot_dict.get("nimages", None)
-        
-        # Loading telescope, None if name doesn't match any 
+
+        # Loading telescope, None if name doesn't match any
         telescope = Telescope()
         telescope_name = header.get(telescope.keyword_observatory, None)
         found = telescope.load(CONFIG.match_telescope_name(telescope_name))
@@ -610,8 +607,10 @@ class Photometry:
 
         # Loading time and exposure (load data first to create self.data)
         self._time = Table(phot_dict.get("time series", None))["jd"]
-        if self._time is not None: self._compute_bjd()
-        else: raise ValueError("Could not find time JD within phot time series")
+        if self._time is not None:
+            self._compute_bjd()
+        else:
+            raise ValueError("Could not find time JD within phot time series")
 
         self.exposure = header.get(self.telescope.keyword_exposure_time)
         if self.exposure is None:
@@ -638,7 +637,7 @@ class Photometry:
         target_id = header.get("targetid", None)
         if target_id is not None:
             self.target["id"] = sorted_stars[target_id]
-        
+
         # Loading light curves
         lcs = phot_dict.get("lightcurves", None)
         lcs_error = phot_dict.get("lightcurves errors", None)
@@ -649,7 +648,7 @@ class Photometry:
         if comparison_stars is not None: self._comparison_stars = sorted_stars[comparison_stars]
 
         time = self.time
-        a, s, f = fluxes.shape # saved as (apertures, stars, fluxes) for conveniance
+        a, s, f = fluxes.shape  # saved as (apertures, stars, fluxes) for conveniance
 
         # Photometry into LightCurve objects
         # Here is where we compute the fluxes errors
@@ -669,5 +668,5 @@ class Photometry:
 
     # Reporting
     # ---------
-        
+
 

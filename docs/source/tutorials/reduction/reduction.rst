@@ -6,7 +6,17 @@
 Basic reduction
 ===============
 
-In this tutorial you will learn how to process a complete night of raw data from any telescope. A demo dataset can be downloaded (5Mb) here_ and consists in a very minimal observation of qatar2-b exoplanet transit observed from the Trappist-North telescope.
+In this tutorial you will learn how to process a complete night of raw data from any telescope with some basic reduction tools provided by |prose|.
+
+Example data
+^^^^^^^^^^^^
+you can follow this tutorial on your own data or generate a synthetic dataset with
+
+.. code:: python3
+
+    from prose.datasets import generate_prose_reduction_datatset
+
+    fits_folder = generate_prose_reduction_datatset("./tutorial_dataset")
 
 Telescope setting
 ^^^^^^^^^^^^^^^^^
@@ -15,97 +25,104 @@ We start by setting up the telescope information we need for the reduction, for 
 
 .. code:: python3
 
-    from prose import Telescope, pipeline
+    from prose import Telescope
 
     Telescope({
-        "name": "NTM",
-        "trimming": [40, 40],
-        "pixel_scale": 0.66,
-        "latlong": [31.2027, 7.8586],
-        "keyword_light_images": "light"
+        "name": "fake_telescope",
+        "trimming": (0, 0),
+        "latlong": [24.6275, 70.4044]
     })
+
 
 .. parsed-literal::
 
-    Telescope 'ntm' saved
+    Telescope 'fake_telescope' saved
 
-This has to be done only once and saves this telescope settings for any future use (whenever its name appears in fits headers). More details are given in the :ref:`telescope settings <telescope-config>` note.
+This has to be done **only once** and saves this telescope settings for any future use (whenever its name appears in fits headers). More details are given in the :ref:`telescope settings <telescope-config>` note.
 
-Reduction
-^^^^^^^^^
+Folder exploration
+^^^^^^^^^^^^^^^^^^
 
-We then create a ``Reduction`` object and have a look at the folder content
+The first thing we want to do is to see what is contained within our folder. For that we instantiate a ``FitsManager`` object on our folder to describe its content
+
+.. code:: python3
+
+    fm = FitsManager(fits_folder, depth=2)
+    fm.describe("calib")
+
+.. parsed-literal::
+
+    ╒════════════╤════════════════╤════════╤══════════╤══════════════╤══════════╤════════════╕
+    │ date       │ telescope      │ type   │ target   │ dimensions   │ filter   │   quantity │
+    ╞════════════╪════════════════╪════════╪══════════╪══════════════╪══════════╪════════════╡
+    │ 2020-02-29 │ fake_telescope │ bias   │          │ 80x80        │          │          1 │
+    ├────────────┼────────────────┼────────┼──────────┼──────────────┼──────────┼────────────┤
+    │ 2020-02-29 │ fake_telescope │ dark   │          │ 80x80        │          │          1 │
+    ├────────────┼────────────────┼────────┼──────────┼──────────────┼──────────┼────────────┤
+    │ 2020-02-29 │ fake_telescope │ flat   │          │ 80x80        │ I+z      │          3 │
+    ├────────────┼────────────────┼────────┼──────────┼──────────────┼──────────┼────────────┤
+    │ 2020-02-29 │ fake_telescope │ light  │ prose    │ 80x80        │ I+z      │         80 │
+    ╘════════════╧════════════════╧════════╧══════════╧══════════════╧══════════╧════════════╛
+
+We have 80 images of the *prose* target together with some calibration file
+
+Reduction and Photometry
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``Reduction`` part is then simply
 
 .. code:: python3
     
-    reduction = pipeline.Reduction("fits_folder", depth=2)
-    reduction.describe_observations()
+    from prose import Reduction
 
-
-.. parsed-literal::
-
-    1 observation found :
-    ╒═════════╤════════════╤═════════════╤══════════╤══════════╤════════════╕
-    │   index │ date       │ telescope   │ target   │ filter   │   quantity │
-    ╞═════════╪════════════╪═════════════╪══════════╪══════════╪════════════╡
-    │       0 │ 2020-02-29 │ NTM         │ Qatar2b  │ I+z      │         11 │
-    ╘═════════╧════════════╧═════════════╧══════════╧══════════╧════════════╛
-
-
-We set which observation to reduce and proceeed with reduction
-
-.. code:: python3
-
-    reduction.set_observation(0)
-    destination = reduction.run()
-
+    reduction = Reduction(fm, depth=2)
+    reduction.run()
 
 .. parsed-literal::
 
-    RUN: Reduction: 100%|████████████████████████| 11/11 [00:01<00:00, 10.39files/s]
+    RUN Reduction: 100%|█████████████████████████| 80/80 [00:05<00:00, 13.98files/s]
 
-a ``minimal_qatar2b_dataset_reduced`` folder has been created in which we run photometric extraction
+a ``fake_telescope_20200229_prose_I+z`` folder has been created in which we can now run the ``Photometry``
 
 .. code:: python3
 
-    photometry = pipeline.Photometry(destination)
+    from prose import Reduction
+
+    photometry = Photometry(reduction.destination)
     photometry.run()
 
 
 .. parsed-literal::
 
-    INFO: 8 stars detected
-    INFO:global psf FWHM: 4.17 (pixels)
-    RUN: hotometry extraction: 100%|████████████████████████| 11/11 [00:00<00:00, 11.48files/s]
+    INFO detected stars: 7
+    INFO global psf FWHM: 2.10 (pixels)
+    RUN Photometric extraction: 100%|████████████| 80/80 [00:05<00:00, 15.28files/s]
 
 Here is the content of the reduced folder:
 
 ::
 
-    minimal_qatar2b_dataset_reduced/
+    fake_telescope_20200229_prose_I+z/
       │ 
-      ├── NTM_20200229_Qatar2b_I+z.phots
-      ├── NTM_20200229_Qatar2b_I+z_stack.fits
-      ├── Qatar2b-S001-R001-C001-I+z_cut_reduced.fits
-      ├── Qatar2b-S001-R001-C028-I+z_cut_reduced.fits
-      ├── Qatar2b-S001-R001-C055-I+z_cut_reduced.fits
+      ├── fake_telescope_20200229_prose_I+z.phots
+      ├── fake_telescope_20200229_prose_I+z_stack.fits
+      ├── fake_telescope_20200229_prose_I+z_movie.gif
+      ├── fake-C001-002020-03-01T00:00:00.000_reduced.fits
+      ├── fake-C001-002020-03-01T00:01:00.000_reduced.fits
+      ├── fake-C001-002020-03-01T00:02:00.000_reduced.fits
       └── ...
 
-It contains all reduced images and a stack fits of the night. The ``phots`` file is produced by the ``photometry.run`` task and contains all extracted fluxes. We can include in this folder a small gif of the night with
+It contains all reduced images and a stack fits of the night as well as a ``phots`` file containing all extracted fluxes (see :ref:`data products description <phots-structure>`). It also contains a small gif of the night 
 
-.. code:: python3
-
-    pipeline.produce_gif(destination)
-
-.. figure:: minimal_Qatar2b_I+z_movie.gif
+.. figure:: fake_telescope_20200229_prose_I+z_movie.gif
    :align: center
    :width: 200
 
-   *NTM_20200229_Qatar2b_I+z_movie.gif*
+   *fake_telescope_20200229_prose_I+z_movie.gif*
 
 
 .. note::
 
     More information about reduction, photometry and how to select the methods used by the pipeline are provided in :ref:`modular-reduction`
 
-We can now load this folder into a ``Photometry`` object and proceed with further analaysis (e.g. in the :ref:`next turorial <photometry-analysis>` where we produce qatar2-b transit light-curve)
+We can now load this folder into a ``PhotProducts`` object and proceed with further analaysis (e.g. in the :ref:`next turorial <photometry-analysis>`.

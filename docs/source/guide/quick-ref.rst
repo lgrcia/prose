@@ -6,9 +6,9 @@ Quick reference
 Photometry
 ----------
 
-|prose| :py:class:`~prose.Photometry` class holds methods to manipulate photometric products
+|prose| :py:class:`~prose.PhotProducts` class holds methods to manipulate photometric products
 
-.. currentmodule:: prose.Photometry
+.. currentmodule:: prose.PhotProducts
 
 .. rubric:: Differential photometry
 
