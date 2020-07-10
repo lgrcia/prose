@@ -33,9 +33,9 @@ fits_folder.describe()
 from prose import pipeline
 
 reduction = pipeline.Reduction(fits_folder)
-destination = reduction.run()
+reduction.run()
 
-photometry = pipeline.Photometry(destination)
+photometry = pipeline.Photometry(reduction.destination)
 photometry.run()
 
 ```
