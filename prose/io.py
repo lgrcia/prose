@@ -511,8 +511,7 @@ class FitsManager:
         if not condition_checker:
             raise ValueError(
                 "No '{}' calibration from {} could be retrieved. Common error when calibration "
-                "files do not provide telescope information (use "
-                "--no-check if using CLI)".format(im_type, telescope)
+                "files do not provide telescope information".format(im_type, telescope)
             )
 
         # Check dimensions
