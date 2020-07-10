@@ -3,9 +3,9 @@
 API
 ===
 
-Photometry
-----------
-.. autoclass:: prose.Photometry
+Photometric products
+--------------------
+.. autoclass:: prose.PhotProducts
     :members:
 
     .. automethod:: __init__
@@ -27,29 +27,6 @@ LightCurves
 Telescope
 -----------
 .. autoclass:: prose.Telescope
-    :members:
-
-    .. automethod:: __init__
-
-Pipeline
---------
-Calibration
-^^^^^^^^^
-.. autoclass:: prose.pipeline.Calibration
-    :members:
-
-    .. automethod:: __init__
-
-Reduction
-^^^^^^^^^
-.. autoclass:: prose.pipeline.Reduction
-    :members:
-
-    .. automethod:: __init__
-
-Photometry
-^^^^^^^^^
-.. autoclass:: prose.pipeline.Photometry
     :members:
 
     .. automethod:: __init__

@@ -19,16 +19,16 @@ prose is a python package to reduce and analyse data from telescope observations
 
    guide/installation
    guide/quick-ref
+   guide/explore
    guide/api
 
 .. toctree::
    :caption: Tutorials
    :maxdepth: 1
 
-   tutorials/explore
    tutorials/reduction/reduction
-   tutorials/modular-reduction/modular-reduction
    tutorials/photometry-analysis/photometry-analysis
+   tutorials/modular-reduction/modular-reduction
    tutorials/modeling-nuance/modeling-nuance
 
 
