@@ -15,6 +15,7 @@ import warnings
 from prose.lightcurves import LightCurves
 from astropy.nddata import Cutout2D
 from astropy.wcs import WCS
+import shutil
 # import fitsio
 
 
@@ -83,6 +84,10 @@ def get_files(
 
 
 class FitsManager:
+    # TODO: Put all private method as _
+    # TODO: Check if light_kw is used or useless
+    # TODO: Documentation!
+
     """
     A class to manage data folder containing FITS files organized in arbitrary ways. This class explore all sub-folders and
     retrieve header information to trace single FITS files.

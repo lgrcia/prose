@@ -12,15 +12,17 @@ Let's instantiate a :py:class:`~prose.PhotProducts`  object containing all we ne
 
 .. code:: ipython3
 
-    from prose import Photometry
+    from prose import PhotProducts
     
-    phot = Photometry("./fake_telescope_20200229_prose_I+z")
+    phot = PhotProducts("./fake_telescope_20200229_prose_I+z")
     phot.show_stars()
 
 
-.. image:: stars_before_lc.png
+.. figure:: stars_before_lc.png
    :align: center
    :width: 300
+
+   Stack with detected stars overlaid with their ids
 
 If target was not specified in the reduction process, we need to specify it before producing our differential Photometry.
 
@@ -31,9 +33,11 @@ If target was not specified in the reduction process, we need to specify it befo
     phot.lc.plot()
 
 
-.. image:: lc.png
+.. figure:: lc.png
    :align: center
    :width: 450
+
+   Light curve plot. Axis labels, ylim and figure style have been set after ``plot()``
 
 We used the Broeg 2005 algorithm and ended by plotting our light-curve. ``phot.lc`` contains a :py:class:`~prose.LightCurve` object providing convenient methods for light-curves data manipulation and plotting.
 
@@ -41,10 +45,19 @@ We can check the comparison stars
 
 .. code:: ipython3
 
-    phot.show_stars()
+    phot.show_stars(zoom=False)
 
-.. image:: stars_after_lc.png
+.. figure:: stars_after_lc.png
    :align: center
    :width: 300
 
+   Stack with detected stars overlaid. Comparison stars are highlighted in yellow
+
 and continue with further visualisation or analysis. All available plotting methods are described in the :ref:`quick-ref` and in details in :py:class:`~prose.PhotProducts`.
+
+To save your analysis
+
+.. code:: ipython3
+
+    phot.save()
+

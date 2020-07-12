@@ -1,8 +1,5 @@
 .. _reduction:
 
-.. TODO: qatar sa mere -> qatar
-.. Elsa problem document describe(files)
-
 Basic reduction
 ===============
 
@@ -43,9 +40,11 @@ This has to be done **only once** and saves this telescope settings for any futu
 Folder exploration
 ^^^^^^^^^^^^^^^^^^
 
-The first thing we want to do is to see what is contained within our folder. For that we instantiate a ``FitsManager`` object on our folder to describe its content
+The first thing we want to do is to see what is contained within our folder. For that we instantiate a :py:class:`~prose.FitsManager` object on our folder to describe its content
 
 .. code:: python3
+
+    from prose import FitsManager
 
     fm = FitsManager(fits_folder, depth=2)
     fm.describe("calib")
@@ -64,7 +63,7 @@ The first thing we want to do is to see what is contained within our folder. For
     │ 2020-02-29 │ fake_telescope │ light  │ prose    │ 80x80        │ I+z      │         80 │
     ╘════════════╧════════════════╧════════╧══════════╧══════════════╧══════════╧════════════╛
 
-We have 80 images of the *prose* target together with some calibration file
+We have 80 images of the *prose* target together with some calibration files
 
 Reduction and Photometry
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -75,7 +74,7 @@ The ``Reduction`` part is then simply
     
     from prose import Reduction
 
-    reduction = Reduction(fm, depth=2)
+    reduction = Reduction(fm)
     reduction.run()
 
 .. parsed-literal::

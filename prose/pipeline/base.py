@@ -6,6 +6,8 @@ import prose.visualisation as viz
 
 
 class Unit:
+    # TODO: add index self.i in image within unit loop
+    # TODO: add dict of blocks and name on block to retrieve easily
 
     def __init__(self, blocks, name, fits_manager, files="light", show_progress=False, n_images=None, **kwargs):
         self.name = name
@@ -69,11 +71,12 @@ class Unit:
 
 class Image:
 
-    def __init__(self, file_path):
+    def __init__(self, file_path, **kwargs):
         self.data = fits.getdata(file_path)
         self.header = fits.getheader(file_path)
         self.wcs = WCS(self.header)
         self.path = file_path
+        self.__dict__.update(kwargs)
 
     def get_other_data(self, image):
         for key, value in image.__dict__.items():

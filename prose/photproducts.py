@@ -16,7 +16,7 @@ from astropy.table import Table
 from astropy.wcs import WCS, utils as wcsutils
 from prose.pipeline import psf
 import pandas as pd
-from prose.pipeline.psf import NonLinearGaussian2D
+from prose.pipeline.psf import Gaussian2D
 
 
 # TODO: add n_stars to show_stars

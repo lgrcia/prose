@@ -3,6 +3,13 @@
 API
 ===
 
+Fits Manager
+-----------
+.. autoclass:: prose.FitsManager
+    :members:
+
+    .. automethod:: __init__
+
 Photometric products
 --------------------
 .. autoclass:: prose.PhotProducts
