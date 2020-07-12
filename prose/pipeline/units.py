@@ -3,7 +3,7 @@ from prose.pipeline.registration import XYShift
 from prose.pipeline.alignment import Align
 from prose.pipeline.detection import SegmentedPeaks, DAOFindStars
 from prose.pipeline.calibration import Calibration, Trim
-from prose.pipeline.psf import NonLinearGaussian2D
+from prose.pipeline.psf import Gaussian2D
 from prose.pipeline.base import Unit
 from prose.pipeline.photometry import FixedAperturePhotometry
 from prose.pipeline.imutils import Stack, SaveReduced, Gif, SavePhotometricProducts
@@ -55,7 +55,7 @@ class Reduction(Unit):
             SegmentedPeaks(n_stars=50),
             XYShift(detection=SegmentedPeaks(n_stars=50), reference=reference),
             Align(reference=reference),
-            NonLinearGaussian2D(),
+            Gaussian2D(),
             Stack(self.stack_path, overwrite=overwrite),
             SaveReduced(destination, overwrite=overwrite),
             Gif(self.gif_path, factor=1)
@@ -92,7 +92,7 @@ class Photometry(Unit):
 
         default_methods = [
             DAOFindStars(n_stars=n_stars, stack=True),
-            NonLinearGaussian2D(stack=True),
+            Gaussian2D(stack=True),
             FixedAperturePhotometry(),
             SavePhotometricProducts(self.phot_path, overwrite=overwrite)
         ]

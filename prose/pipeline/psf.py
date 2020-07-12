@@ -8,6 +8,7 @@ from photutils.psf import extract_stars
 from astropy.stats import gaussian_sigma_to_fwhm
 from prose.pipeline.base import Block
 from prose.console_utils import INFO_LABEL
+import matplotlib.pyplot as plt
 
 
 def image_psf(image, stars, size=15, normalize=False):
@@ -86,12 +87,13 @@ def moments(data):
     return height, x, y, width_x, width_y, 0.0, background
 
 
-class NonLinearGaussian2D(Block):
+class PSFModel(Block):
 
     def __init__(self, cutout_size=21, **kwargs):
         super().__init__(**kwargs)
         self.cutout_size = cutout_size
         self.x, self.y = None, None
+        self.epsf = None
 
     @property
     def optimized_model(self):
@@ -101,9 +103,41 @@ class NonLinearGaussian2D(Block):
         self.x, self.y = np.indices((self.cutout_size, self.cutout_size))
         return image_psf(image, stars, size=self.cutout_size)
 
-    def nll_gaussian_2d(self, p):
+    def model(self):
+        raise NotImplementedError("")
+
+    def nll(self, p):
         ll = np.sum(np.power((self.model(*p) - self.epsf), 2) * self.epsf)
         return ll if np.isfinite(ll) else 1e25
+    
+    def optimize(self):
+        raise NotImplementedError("")
+    
+    def stack_method(self, image):
+        print("{} global psf FWHM: {:.2f} (pixels)".format(INFO_LABEL, np.mean(image.fwhm)))
+
+    def run(self, image):
+        self.epsf = self.build_epsf(image.data, image.stars_coords)
+        image.fwhmx, image.fwhmy, image.theta = self.optimize()
+        image.fwhm = np.mean([image.fwhmx, image.fwhmy])
+        image.header["FWHM"] = image.fwhm
+        image.header["FWHMX"] = image.fwhmx
+        image.header["FWHMY"] = image.fwhmy
+        image.header["PSFANGLE"] = image.theta
+        image.header["FWHMALG"] = self.__class__.__name__
+
+    def show_residuals(self):
+        plt.imshow(self.epsf - self.optimized_model)
+        plt.colorbar()
+        ax = plt.gca()
+        plt.text(0.05, 0.05, "$\Delta f^2$ = {:.2f}".format(np.mean((self.epsf-self.optimized_model)**2)), 
+        fontsize=14, horizontalalignment='left', verticalalignment='bottom', transform=ax.transAxes, c="w")
+
+
+class Gaussian2D(PSFModel):
+
+    def __init__(self, cutout_size=21, **kwargs):
+        super().__init__(cutout_size=21, **kwargs)
 
     def model(self, height, xo, yo, sx, sy, theta, m):
         dx = self.x - xo
@@ -114,10 +148,6 @@ class NonLinearGaussian2D(Block):
         psf = height * np.exp(-(a * dx ** 2 + 2 * b * dx * dy + c * dy ** 2))
         return psf + m
 
-    def nll(self, p):
-        ll = np.sum(np.power((self.model(*p) - self.epsf), 2) * self.epsf)
-        return ll if np.isfinite(ll) else 1e25
-    
     def optimize(self):
         p0 = moments(self.epsf)
         x0, y0 = p0[1], p0[2]
@@ -134,19 +164,49 @@ class NonLinearGaussian2D(Block):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            params = minimize(self.nll_gaussian_2d, p0, bounds=bounds).x
+            params = minimize(self.nll, p0, bounds=bounds).x
             self.optimized_params = params
             return params[3]*gaussian_sigma_to_fwhm, params[4]*gaussian_sigma_to_fwhm, params[-2]
 
-    def stack_method(self, image):
-        print("{} global psf FWHM: {:.2f} (pixels)".format(INFO_LABEL, np.mean(image.fwhm)))
+class Moffat2D(PSFModel):
 
-    def run(self, image):
-        self.epsf = self.build_epsf(image.data, image.stars_coords)
-        image.fwhmx, image.fwhmy, image.theta = self.optimize()
-        image.fwhm = np.mean([image.fwhmx, image.fwhmy])
-        image.header["FWHM"] = image.fwhm
-        image.header["FWHMX"] = image.fwhmx
-        image.header["FWHMY"] = image.fwhmy
-        image.header["PSFANGLE"] = image.theta
-        image.header["FWHMALG"] = self.__class__.__name__,
+    def __init__(self, cutout_size=21, **kwargs):
+        super().__init__(cutout_size=21, **kwargs)
+        self.cutout_size = cutout_size
+        self.x, self.y = None, None
+
+    def model(self, a, x0, y0, sx, sy, theta, b, beta):
+    # https://pixinsight.com/doc/tools/DynamicPSF/DynamicPSF.html
+        dx_ = self.x - x0
+        dy_ = self.y - y0
+        dx = dx_*np.cos(theta) + dy_*np.sin(theta)
+        dy = -dx_*np.sin(theta) + dy_*np.cos(theta)
+        
+        return b + a / np.power(1 + (dx/sx)**2 + (dy/sy)**2, beta) 
+    
+    @staticmethod
+    def sigma_moffat_to_fwhm(beta):
+        return 2*np.sqrt(np.power(2, 1/beta) - 1)
+    
+    def optimize(self):
+        p0 = list(moments(self.epsf))
+        p0.append(1)
+        x0, y0 = p0[1], p0[2]
+        min_sigma = 0.5
+        bounds = [
+            (0, np.infty),
+            (x0 - 3, x0 + 3),
+            (y0 - 3, y0 + 3),
+            (min_sigma, np.infty),
+            (min_sigma, np.infty),
+            (0, 4),
+            (0, np.mean(self.epsf)),
+            (1, 8),
+        ]
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            params = minimize(self.nll, p0, bounds=bounds).x
+            self.optimized_params = params
+            sm = self.sigma_moffat_to_fwhm(params[-1])
+            return params[3]*sm, params[4]*sm, params[-2]

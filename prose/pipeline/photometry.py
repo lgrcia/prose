@@ -11,7 +11,7 @@ from photutils import CircularAperture, CircularAnnulus
 from prose import io, FitsManager
 from photutils.psf import IntegratedGaussianPRF, DAOGroup, BasicPSFPhotometry
 from prose.console_utils import TQDM_BAR_FORMAT, INFO_LABEL
-from prose.pipeline.psf import NonLinearGaussian2D
+from prose.pipeline.psf import Gaussian2D
 from prose.pipeline.base import Block
 
 
@@ -33,10 +33,10 @@ class PSFPhotometry(BasePhotometry):
     def __init__(
             self,
             fits_explorer=None,
-            fwhm=NonLinearGaussian2D):
+            fwhm=Gaussian2D):
 
         self.set_fits_explorer(fits_explorer)
-        self.fwhm_fit = NonLinearGaussian2D()
+        self.fwhm_fit = Gaussian2D()
 
     def set_fits_explorer(self, fits_explorer):
         if isinstance(fits_explorer, FitsManager):
@@ -127,7 +127,7 @@ class FixedAperturePhotometry(Block):
         self.fits_manager = None
 
         if fwhm_fit is None:
-            self.fwhm_fit = NonLinearGaussian2D()
+            self.fwhm_fit = Gaussian2D()
 
         self.n_apertures = len(self.apertures)
         self.n_stars = None
