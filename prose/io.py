@@ -775,14 +775,9 @@ class FitsManager:
             calibration_date_limit=calibration_date_limit
         )
 
-    def copy_files(
-            self, 
-            destination, 
-            keep_closest_calibration=True, 
-            check_calib_telescope=False, 
-            overwrite=False, 
-            **kwargs
-        ):
+    # TODO: We absolutely never use kwargs in here. The natural flow is to 
+    # instanciate, keep and then copy. This reset is a killer, to remove
+    def copy_files(self, destination):
         """
         Locally copy files from the files DataFrame into the following structure:
         
@@ -804,8 +799,6 @@ class FitsManager:
             [description], by default False
         """
         # TODO: check available space if size is in files_df, else suggest to use kwargs force
-        self.reset()
-        self.keep(keep_closest_calibration=False, **kwargs)
         n_obs = len(self.observations)
 
         for i, observation in self.observations.iterrows():
