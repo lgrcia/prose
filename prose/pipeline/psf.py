@@ -130,7 +130,7 @@ class PSFModel(Block):
         plt.imshow(self.epsf - self.optimized_model)
         plt.colorbar()
         ax = plt.gca()
-        plt.text(0.05, 0.05, "$\Delta f^2$ = {:.2f}".format(np.mean((self.epsf-self.optimized_model)**2)), 
+        plt.text(0.05, 0.05, "$\Delta f=$ {:.2f}%".format(100*np.sum(np.abs(self.epsf - self.optimized_model))/np.sum(self.epsf)), 
         fontsize=14, horizontalalignment='left', verticalalignment='bottom', transform=ax.transAxes, c="w")
 
 

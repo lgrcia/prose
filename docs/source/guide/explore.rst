@@ -1,6 +1,6 @@
 .. _explore:
 
-Fits explorer
+Fits manager
 --------------
 
 |prose| provides a FitsManager class to deal with fits folder

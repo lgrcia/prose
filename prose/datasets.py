@@ -34,7 +34,9 @@ def create_image(peaks, stars, n):
     return image
 
 
-def generate_prose_reduction_datatset(destination, n_images=80):
+def generate_prose_reduction_datatset(destination, n_images=80, moving=None):
+
+    # moving_exmaple: [5, [0,40], [75, 60]]
 
     if not path.exists(destination):
         os.mkdir(destination)
@@ -89,11 +91,21 @@ def generate_prose_reduction_datatset(destination, n_images=80):
     all_peaks *= np.array(1 + 1e-2 * sky)[:, None]
 
     all_peaks[:, 0] *= y
+    all_stars_coords = np.array([stars for i in range(n_images)])
 
     all_peaks.astype("int")
+    if moving is not None:
+        moving_star, p0, p1 = moving
 
-    for i, peaks in enumerate(all_peaks):
-        im = create_image(peaks, stars, n)
+        x_pos = np.linspace(p0[0], p1[0], n_images)
+        y_pos = p0[1] + x_pos*(p1[1]-p0[1])/np.max(x_pos)
+
+        all_stars_coords[:, moving_star, 0] = x_pos
+        all_stars_coords[:, moving_star, 1] = y_pos
+
+
+    for i, (peaks, stars_coords) in enumerate(zip(all_peaks, all_stars_coords)):
+        im = create_image(peaks, stars_coords, n)
         hdu = fits.PrimaryHDU(im)
         hdu.header["TELESCOP"] = telescope_name
         hdu.header["EXPTIME"] = 1
