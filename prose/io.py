@@ -433,9 +433,10 @@ class FitsManager:
         ]
 
         obs_telescopes = np.unique(self.files_df["telescope"])
+        obs_telescopes = obs_telescopes[obs_telescopes != "Unknown"]
         assert len(obs_telescopes) != 0, "No files match the filters"
         assert (
-            len(obs_telescopes) == 1
+            len(np.unique(obs_telescopes)) == 1
         ), "Multiple telescopes found in matched files, please add constraints"
 
         obs_telescope = np.unique(self.files_df["telescope"])[0]
@@ -545,12 +546,7 @@ class FitsManager:
 
         if len(closest_combined) == 0:
             raise AssertionError(
-                "Calibration could not be found. Here are available data:\n{}\nlooking for "
-                "calibration {} days in the {} (check --days-limit parameter)".format(
-                    self.describe("calib", original=True, return_string=True),
-                    np.abs(days_limit),
-                    "future" if days_limit >= 0 else "past",
-                )
+                "Calibration could not be found. Check days-limit or check_telescope"
             )
 
         closest_combined = closest_combined.iloc[0]
