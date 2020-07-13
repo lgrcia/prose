@@ -823,7 +823,7 @@ class FitsManager:
                 os.mkdir(date_folder)
 
             self.reset()
-            self.keep(target=target)
+            self.keep(target=target, check_telescope=check_calib_telescope)
             self.set_observation(
                 i,
                 check_calib_telescope=check_calib_telescope, 
