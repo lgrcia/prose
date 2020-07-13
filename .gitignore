@@ -15,3 +15,4 @@ docs/source/_build
 *__pychache__*
 test_data
 paper
+*.ipynb_checkpoints

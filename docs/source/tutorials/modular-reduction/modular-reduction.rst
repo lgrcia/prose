@@ -73,7 +73,7 @@ We will use difference imaging to locate the moving object. This is shown in the
 
 Creating a new :py:class:`~prose.Block`
 --------------------
-Now we can create a :py:class:`~prose.Block` that will extract and store this information. It must be a sub-class of block, i.e. 
+Now we can create a :py:class:`~prose.Block` that will extract and store this information. It must be a sub-class of :py:class:`~prose.Block`, i.e. 
 
 .. code:: ipython3
 
@@ -86,10 +86,9 @@ Now we can create a :py:class:`~prose.Block` that will extract and store this in
          self.last_image = None
          self.positions = []
 
-We have added two attributes which store the last image (needed to do difference with) and a positions array which will store the moving object position.
+We have added two attributes: one which stores the last image (needed to do difference with) and the other being the positions of the moving object.
 
-As a reminder, a block have the following strucure:
-
+As a reminder, a block has the following strucure:
 
 .. figure:: ./block_structure.jpg
    :align: center
@@ -141,4 +140,4 @@ We can now place our new block in a :py:class:`~prose.Unit` and run it:
    :align: center
    :height: 250
 
-Although this is a simple example, this pipeline could be easily be with :ref:`many other blocks <note-pipeline-methods>`, e.g. to perform image calibration and extract the photometry of the moving object.
+Although this is a simple example, this pipeline could be easily extended with :ref:`many other blocks <note-pipeline-methods>`, e.g. to perform image calibration and extract the photometry of the moving object.
