@@ -181,12 +181,14 @@ class FixedAperturePhotometry(Block):
         image.apertures_area = self.circular_apertures_area
         image.sky = bkg_median
         image.fluxes = np.zeros((self.n_apertures, self.n_stars))
+        image.annulus_area = self.annulus_area
 
         for a, ape in enumerate(self.apertures):
             photometry = aperture_photometry(image.data, self.circular_apertures[a])
             image.fluxes[a] = np.array(photometry["aperture_sum"] - (bkg_median * self.circular_apertures_area[a]))
 
         self.compute_error(image)
+        image.header["sky"] = np.mean(image.sky)
 
     def compute_error(self, image):
 

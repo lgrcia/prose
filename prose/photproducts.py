@@ -16,7 +16,7 @@ from astropy.table import Table
 from astropy.wcs import WCS, utils as wcsutils
 from prose.pipeline import psf
 import pandas as pd
-from prose.pipeline.psf import Gaussian2D
+from prose.pipeline.psf import Gaussian2D, Moffat2D
 
 
 # TODO: add n_stars to show_stars
@@ -227,7 +227,7 @@ class PhotProducts:
     @property
     def skycoord(self):
         ra, dec = self.target["radec"]
-        return SkyCoord(ra, dec, frame='icrs', unit=(u.hourangle, u.deg))
+        return SkyCoord(ra, dec, frame='icrs', unit=(u.deg, u.deg))
 
     @property
     def simbad_url(self):
@@ -346,8 +346,17 @@ class PhotProducts:
 
         coord = self.skycoord
         radius = u.Quantity(cone_radius, u.arcminute)
-        gaia_query = Gaia.cone_search_async(coord, radius, verbose=False)
+        gaia_query = Gaia.cone_search_async(coord, radius, verbose=False, )
         self.gaia_data = gaia_query.get_results()
+
+        skycoords = SkyCoord(
+            ra=self.gaia_data['ra'],
+            dec=self.gaia_data['dec'],
+            pm_ra_cosdec=self.gaia_data['pmra'],
+            pm_dec=self.gaia_data['pmdec'],
+            radial_velocity=self.gaia_data['radial_velocity'])
+
+        self.gaia_data["x"], self.gaia_data["y"] = np.array(wcsutils.skycoord_to_pixel(skycoords, self.wcs))
 
     # Plot
     # ----
@@ -471,7 +480,7 @@ class PhotProducts:
                  )
         plt.legend()
 
-    def plot_psf_fit(self, size=21):
+    def plot_psf_fit(self, size=21, cmap="inferno", c="blueviolet"):
         """
          Plot a 2D gaussian fit of the global psf (extracted from stack fits)
 
@@ -481,16 +490,19 @@ class PhotProducts:
            :align: center
         """
 
-        psf_fit = NonLinearGaussian2D()
-        image = Image(self.stack_fits)
-        image.stars_coords = self.stars
+        psf_fit = Moffat2D()
+        image = Image(self.stack_fits, stars_coords=self.stars)
         psf_fit.run(image)
 
         if len(plt.gcf().get_axes()) == 0:
             plt.figure(figsize=(12, 4))
-        viz.plot_marginal_model(psf_fit.epsf, psf_fit.optimized_model)
+        viz.plot_marginal_model(psf_fit.epsf, psf_fit.optimized_model, cmap=cmap, c=c)
 
-        return {"theta": image.theta, "std_x": image.fwhmx, "std_y": image.fwhmy}
+        return {"theta": image.theta,
+                "std_x": image.psf_sigma_x,
+                "std_y": image.psf_sigma_y,
+                "fwhm_x": image.fwhmx,
+                "fwhm_y": image.fwhmy }
 
     def plot_rms(self, bins=0.005):
         """
@@ -513,7 +525,7 @@ class PhotProducts:
         if fields is None:
             fields = ["dx", "dy", "fwhm", "airmass", "sky"]
 
-        viz.plot_systematics(self.time, self.lc.flux, self.data, fields=fields)
+        viz.plot_systematics(self.time, self.lc.flux, self.data, fields=[f for f in fields if f in self.data])
 
     def plot_raw_diff(self):
         viz.plot_lc_raw_diff(self)

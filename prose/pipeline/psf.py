@@ -112,6 +112,9 @@ class PSFModel(Block):
     
     def optimize(self):
         raise NotImplementedError("")
+
+    def sigma_to_fwhm(self, *args):
+        return gaussian_sigma_to_fwhm
     
     def stack_method(self, image):
         print("{} global psf FWHM: {:.2f} (pixels)".format(INFO_LABEL, np.mean(image.fwhm)))
@@ -120,6 +123,8 @@ class PSFModel(Block):
         self.epsf = self.build_epsf(image.data, image.stars_coords)
         image.fwhmx, image.fwhmy, image.theta = self.optimize()
         image.fwhm = np.mean([image.fwhmx, image.fwhmy])
+        image.psf_sigma_x = image.fwhmx / self.sigma_to_fwhm()
+        image.psf_sigma_y = image.fwhmy / self.sigma_to_fwhm()
         image.header["FWHM"] = image.fwhm
         image.header["FWHMX"] = image.fwhmx
         image.header["FWHMY"] = image.fwhmy
@@ -166,7 +171,7 @@ class Gaussian2D(PSFModel):
             warnings.simplefilter("ignore")
             params = minimize(self.nll, p0, bounds=bounds).x
             self.optimized_params = params
-            return params[3]*gaussian_sigma_to_fwhm, params[4]*gaussian_sigma_to_fwhm, params[-2]
+            return params[3]*self.sigma_to_fwhm(), params[4]*self.sigma_to_fwhm(), params[-2]
 
 class Moffat2D(PSFModel):
 
@@ -183,10 +188,9 @@ class Moffat2D(PSFModel):
         dy = -dx_*np.sin(theta) + dy_*np.cos(theta)
         
         return b + a / np.power(1 + (dx/sx)**2 + (dy/sy)**2, beta) 
-    
-    @staticmethod
-    def sigma_moffat_to_fwhm(beta):
-        return 2*np.sqrt(np.power(2, 1/beta) - 1)
+
+    def sigma_to_fwhm(self):
+        return 2*np.sqrt(np.power(2, 1/self.optimized_params[-1]) - 1)
     
     def optimize(self):
         p0 = list(moments(self.epsf))
@@ -208,5 +212,5 @@ class Moffat2D(PSFModel):
             warnings.simplefilter("ignore")
             params = minimize(self.nll, p0, bounds=bounds).x
             self.optimized_params = params
-            sm = self.sigma_moffat_to_fwhm(params[-1])
+            sm = self.sigma_to_fwhm()
             return params[3]*sm, params[4]*sm, params[-2]

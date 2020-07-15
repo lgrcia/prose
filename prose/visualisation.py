@@ -150,21 +150,18 @@ def show_residuals(cut, model, imshow_kwargs={}, plot_kwargs={}):
     viz.add_colorbar(im)
 
 
-def plot_marginal_model(data, model, imshow_kwargs={}, plot_kwargs={}):
-    imshow_kwargs = dict(cmap = "inferno", **imshow_kwargs)
-    plot_kwargs = dict(color="blueviolet", **plot_kwargs)
-    
+def plot_marginal_model(data, model, cmap="inferno", c="blueviolet"):
     x, y = np.indices(data.shape)
 
     plt.subplot(131)
-    plt.imshow(utils.z_scale(data), alpha=1, **imshow_kwargs)
+    plt.imshow(utils.z_scale(data), alpha=1, cmap=cmap)
     plt.contour(model, colors="w", alpha=0.7)
     plt.xlabel("x (pixels)")
     plt.ylabel("y (pixels)")
     plt.title("PSF", loc="left")
 
     plt.subplot(132)
-    plt.plot(y[0], np.mean(data, axis=0), **plot_kwargs)
+    plt.plot(y[0], np.mean(data, axis=0), c=c)
     plt.plot(y[0], np.mean(model, axis=0), "--", c="k")
     plt.xlabel("x (pixels)")
     plt.ylim(data.min() * 0.98, np.mean(data, axis=0).max() * 1.02)
@@ -172,7 +169,7 @@ def plot_marginal_model(data, model, imshow_kwargs={}, plot_kwargs={}):
     plt.grid(color="whitesmoke")
 
     plt.subplot(133)
-    plt.plot(y[0], np.mean(data, axis=1), **plot_kwargs)
+    plt.plot(y[0], np.mean(data, axis=1), c=c)
     plt.plot(y[0], np.mean(model, axis=1), "--", c="k")
     plt.xlabel("y")
     plt.ylim(data.min() * 0.98, np.mean(data, axis=1).max() * 1.02)
@@ -240,7 +237,7 @@ class AnchoredHScaleBar(matplotlib.offsetbox.AnchoredOffsetbox):
                                                         **kwargs)
 
 
-def plot_lcs(data, planets={}, W=4, show=None, hide=None, ylim=None, size=[4,3]):
+def plot_lcs(data, planets={}, W=4, show=None, hide=None, ylim=None, size=[4,3], indexes=None, colors=None):
     """
     A global plot for multiple lightcurves
     
@@ -309,15 +306,23 @@ def plot_lcs(data, planets={}, W=4, show=None, hide=None, ylim=None, size=[4,3])
             if i%W != 0 and ylim is not None:
                 ax.tick_params(labelleft=False)
             ax.set_title(None)
+            if indexes is not None:
+                text = str(indexes[i])
+            else:
+                text = str(i)
+            if colors is not None:
+                color = colors[i]
+            else:
+                color = "k"
             ax.annotate(
-                    str(i),
+                    text,
                     xy=(0.05, 0.05),
                     xycoords="axes fraction",
                     textcoords="axes fraction",
                     ha="left",
                     va="bottom",
                     fontsize=10,
-                    color="k",
+                    color=color,
                 )
         else:
             ax.axis('off')
@@ -965,7 +970,7 @@ def save_report(self, destination, fields, remove_temp=True):
     marg_x = 10
     marg_y = 8
 
-    pdf = FPDF(orientation='L', unit='mm', format='A4')
+    pdf = prose_FPDF(orientation='L', unit='mm', format='A4')
     pdf.add_page()
 
     pdf.set_draw_color(200,200,200)
@@ -1031,3 +1036,20 @@ def save_report(self, destination, fields, remove_temp=True):
         shutil.rmtree(temp_folder)
 
     print("report saved at {}".format(pdf_path))
+
+
+class prose_FPDF(FPDF):
+    def footer(self):
+
+        self.set_font("helvetica", size=6)
+        self.set_xy(-36, -15)
+        self.cell(w=0, txt="made with ", ln=1,
+                  align='L', fill=False, link='', border=0)
+        self.set_xy(-26, -15)
+        self.set_font("helvetica", size=6, style="UIB")
+        self.cell(w=0, txt="prose", ln=1,
+                  align='L', fill=False, link="https://github.com/LionelGarcia/prose", border=0)
+        self.set_xy(-20, -15)
+        self.set_font("helvetica", size=6)
+        self.cell(w=0, txt=" · page {}".format(self.page_no()), ln=1,
+                  align='L', fill=False, link='', border=0)

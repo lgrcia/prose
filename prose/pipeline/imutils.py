@@ -223,7 +223,7 @@ class SavePhotometricProducts(Block):
 
         # These are other data produced by the photometry task wished to be saved in the .phot
         for key in [
-            "apertures_area"
+            "apertures_area",
             "annulus_area"
         ]:
             if key in self.images[0].__dict__:

@@ -58,7 +58,7 @@ class Reduction(Unit):
             Gaussian2D(),
             Stack(self.stack_path, overwrite=overwrite),
             SaveReduced(destination, overwrite=overwrite),
-            Gif(self.gif_path, factor=1)
+            Gif(self.gif_path)
         ]
 
         super().__init__(default_methods, "Reduction", fits_manager, files="light", show_progress=True,
