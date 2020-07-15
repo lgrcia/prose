@@ -413,14 +413,7 @@ class PhotProducts:
 
         ax = plt.gcf().axes[0]
         xlim, ylim = ax.get_xlim(), ax.get_ylim()
-        skycoords = SkyCoord(
-            ra=self.gaia_data['ra'],
-            dec=self.gaia_data['dec'],
-            pm_ra_cosdec=self.gaia_data['pmra'],
-            pm_dec=self.gaia_data['pmdec'],
-            radial_velocity=self.gaia_data['radial_velocity'])
-        ax.plot(*np.array(wcsutils.skycoord_to_pixel(skycoords, self.wcs)),
-                "x", color=color, alpha=alpha, **kwargs)
+        ax.plot(self.gaia_data["x"], self.gaia_data["y"],  "x", color=color, alpha=alpha, **kwargs)
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
 

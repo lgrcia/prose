@@ -229,7 +229,7 @@ class SavePhotometricProducts(Block):
             if key in self.images[0].__dict__:
                 _data = []
                 for image in self.images:
-                    _data.append(image.header[keyword])
+                    _data.append(image.__dict__[key])
 
                 hdu_list.append(fits.ImageHDU(np.array(_data), name=key.replace("_", " ")))
 
