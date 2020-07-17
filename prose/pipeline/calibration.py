@@ -93,7 +93,7 @@ class Calibration(Block):
         # TODO: Investigate flip
         data = image.data
         header = image.header
-        trim_image = self.fits_explorer.trim(data)
+        trim_image = self.fits_explorer.trim(data, wcs=image.wcs)
         exp_time = header[self.telescope.keyword_exposure_time]
         if not self.only_trim:
             calibrated_image = self.calibration(trim_image.data, exp_time)

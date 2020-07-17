@@ -23,11 +23,13 @@ class Stack(Block):
         self.fits_manager = None
         self.overwrite = overwrite
 
+        self.reference_image_path = None
+
     def initialize(self, fits_manager):
         self.fits_manager = fits_manager
         reference_frame = int(self.reference * len(fits_manager.files))
-        reference_image_path = fits_manager.files[reference_frame]
-        self.stack_header = fits.getheader(reference_image_path)
+        self.reference_image_path = fits_manager.files[reference_frame]
+        self.stack_header = fits.getheader(self.reference_image_path)
 
     def run(self, image):
         if self.stack is None:
@@ -36,10 +38,12 @@ class Stack(Block):
         else:
             self.stack += image.data
 
+        if image.path == self.reference_image_path:
+            self.stack_header.update(image.wcs.to_header())
+
     def terminate(self):
 
         self.stack /= len(self.fits_manager.files)
-        stack_hdu = fits.PrimaryHDU(self.stack)
         self.stack_header[self.fits_manager.telescope.keyword_image_type] = "Stack image"
         self.stack_header["BZERO"] = 0
         self.stack_header["REDDATE"] = Time.now().to_value("fits")
@@ -52,7 +56,7 @@ class Stack(Block):
         if len(changing_flip_idxs) > 0:
             self.stack_header["FLIPTIME"] = self.fits_manager.files_df["jd"].iloc[changing_flip_idxs].values[0]
 
-        stack_hdu.header = self.stack_header
+        stack_hdu = fits.PrimaryHDU(self.stack, header=self.stack_header)
         stack_hdu.writeto(self.destination, overwrite=self.overwrite)
 
 
@@ -146,6 +150,8 @@ class Video(Block):
 
 
 class SavePhotometricProducts(Block):
+    # TODO: sometimes RA is deg (float in header) and sometimes hours (string in header). Treat this 
+    # case when saving so ra dec are always saved and retrieved in deg
     def __init__(self, destination, overwrite=False):
         super().__init__()
         self.destination = destination
