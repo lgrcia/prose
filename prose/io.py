@@ -28,10 +28,6 @@ def phot2dict(filename, format="fits"):
     return dictionary
 
 
-def trapphot_phot2dict():
-    pass
-
-
 def get_files(
     ext,
     folder,
@@ -683,7 +679,7 @@ class FitsManager:
         else:
             print(table_string)
 
-    def trim(self, image, raw=False):
+    def trim(self, image, raw=False, wcs=None):
         # TODO: investigate a flip option, cf calibrate
         if raw:
             if isinstance(image, np.ndarray):
@@ -710,7 +706,10 @@ class FitsManager:
                 shape = np.array(image.shape)
                 center = shape[::-1]/2
                 dimension = shape - 2*np.array(self.telescope.trimming[::-1])
-                return Cutout2D(image, center, dimension)
+                if wcs is not None:
+                    return Cutout2D(image, center, dimension, wcs=wcs)
+                else:
+                    return Cutout2D(image, center, dimension)
             elif isinstance(image, str):
                 if path.exists(image) and image.lower().endswith((".fts", ".fits")):
                     image_data= fits.getdata(image)
