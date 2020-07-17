@@ -55,7 +55,8 @@ trappist.update({
 
 trappistN = trappist.copy()
 trappistN.update({
-    "name": "NTM",  
+    "name": "Trappist-North",  
+    "ra_unit": "hourangle",
     "latlong": [31.2027, 7.8586]})
 
 built_in_telescopes = {

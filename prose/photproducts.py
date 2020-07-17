@@ -60,7 +60,7 @@ class PhotProducts:
         self.stars = None  # in pixels
         self.target = {"id": None,
                        "name": None,
-                       "radec": [None, None]}
+                       "radec": [None, None]} # ra dec are loaded as written in stack FITS header
 
         # Convenience
         self.bjd_tdb = None
@@ -227,7 +227,7 @@ class PhotProducts:
     @property
     def skycoord(self):
         ra, dec = self.target["radec"]
-        return SkyCoord(ra, dec, frame='icrs', unit=(u.deg, u.deg))
+        return SkyCoord(ra, dec, frame='icrs', unit=(self.telescope.ra_unit, self.telescope.dec_unit))
 
     @property
     def simbad_url(self):
@@ -413,7 +413,7 @@ class PhotProducts:
 
         ax = plt.gcf().axes[0]
         xlim, ylim = ax.get_xlim(), ax.get_ylim()
-        ax.plot(self.gaia_data["x"], self.gaia_data["y"],  "x", color=color, alpha=alpha, **kwargs)
+        ax.plot(self.gaia_data["x"], self.gaia_data["y"], "x", color=color, alpha=alpha, **kwargs)
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
 

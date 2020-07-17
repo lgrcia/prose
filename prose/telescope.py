@@ -3,6 +3,10 @@ from astropy.coordinates import EarthLocation
 import yaml
 import numpy as np
 from prose import CONFIG
+import astropy.units as u
+
+def str_to_astropy_unit(unit_string):
+    return u.__dict__[unit_string]
 
 class Telescope:
     def __init__(self, telescope_file=None):
@@ -23,6 +27,8 @@ class Telescope:
         self.keyword_seeing = "SEEING"
         self.keyword_ra = "RA"
         self.keyword_dec = "DEC"
+        self.ra_unit = "deg"
+        self.dec_unit = "deg"
         self.keyword_julian_date = "JD"
         self.keyword_flip = "PIERSIDE"
 
@@ -40,6 +46,13 @@ class Telescope:
             success = self.load(telescope_file)
             if success:
                 CONFIG.save_telescope_file(telescope_file)
+
+    def __getattribute__(self, name):
+        if name == "ra_unit":
+            return str_to_astropy_unit(self.__dict__[name])
+        elif name == "dec_unit":
+            return str_to_astropy_unit(self.__dict__[name])
+        return super(Telescope, self).__getattribute__(name)
 
     def load(self, file):
         if isinstance(file, str) and path.exists(file):

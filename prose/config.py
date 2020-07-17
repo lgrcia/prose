@@ -109,7 +109,7 @@ class ConfigManager:
         id_files = get_files(".id", self.folder_path)
 
         if len(id_files) > 0:
-            names = [file.strip(".id").lower for file in id_files]
+            names = [file.strip(".id").lower() for file in id_files]
             name_in_names = [name in n for n in names]
 
             if any(name_in_names):
