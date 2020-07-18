@@ -14,8 +14,8 @@ from photutils import Background2D, MedianBackground
 
 class Stack(Block):
 
-    def __init__(self, destination, reference=1/2, overwrite=False):
-        super(Stack, self).__init__()
+    def __init__(self, destination, reference=1/2, overwrite=False, **kwargs):
+        super(Stack, self).__init__(**kwargs)
         self.reference = reference
         self.stack = None
         self.stack_header = None
@@ -90,8 +90,8 @@ class StackStd(Block):
 
 
 class SaveReduced(Block):
-    def __init__(self, destination, overwrite=False):
-        super().__init__()
+    def __init__(self, destination, overwrite=False, **kwargs):
+        super().__init__(**kwargs)
         self.destination = destination
         self.overwrite = overwrite
         self.telescope = None
@@ -118,8 +118,8 @@ class SaveReduced(Block):
 
 
 class Gif(Block):
-    def __init__(self, destination, overwrite=True, factor=0.25):
-        super().__init__()
+    def __init__(self, destination, overwrite=True, factor=0.25, **kwargs):
+        super().__init__(**kwargs)
         self.destination = destination
         self.overwrite = overwrite
         self.images = []
@@ -150,10 +150,8 @@ class Video(Block):
 
 
 class SavePhotometricProducts(Block):
-    # TODO: sometimes RA is deg (float in header) and sometimes hours (string in header). Treat this 
-    # case when saving so ra dec are always saved and retrieved in deg
-    def __init__(self, destination, overwrite=False):
-        super().__init__()
+    def __init__(self, destination, overwrite=False, **kwargs):
+        super().__init__(**kwargs)
         self.destination = destination
         self.overwrite = overwrite
         self.telescope = None

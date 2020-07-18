@@ -5,14 +5,14 @@ import numpy as np
 
 class Alignment(Block):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
 
 class Align(Alignment):
 
-    def __init__(self, reference=1 / 2):
-        super().__init__()
+    def __init__(self, reference=1 / 2, **kwargs):
+        super().__init__(**kwargs)
         self.reference = reference
 
         self.ref_shape = None

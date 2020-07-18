@@ -30,11 +30,9 @@ class BasePhotometry:
 
 class PSFPhotometry(BasePhotometry):
 
-    def __init__(
-            self,
-            fits_explorer=None,
-            fwhm=Gaussian2D):
+    def __init__(self, fits_explorer=None, fwhm=Gaussian2D, **kwargs):
 
+        super().__init__(**kwargs)
         self.set_fits_explorer(fits_explorer)
         self.fwhm_fit = Gaussian2D()
 
@@ -114,9 +112,9 @@ class FixedAperturePhotometry(Block):
         radius of the outer annulus in fraction of fwhm, by default 8
     """
 
-    def __init__(self, apertures=None, fwhm_fit=None, annulus_inner_radius=5, annulus_outer_radius=8):
+    def __init__(self, apertures=None, fwhm_fit=None, annulus_inner_radius=5, annulus_outer_radius=8, **kwargs):
 
-        super().__init__()
+        super().__init__(**kwargs)
         if apertures is None:
             self.apertures = np.arange(0.1, 10, 0.25)
         else:

@@ -51,14 +51,14 @@ class Reduction(Unit):
                 raise AssertionError("stack {} already exists".format(self.stack_path))
 
         default_methods = [
-            Calibration() if calibration else Trim(),
-            SegmentedPeaks(n_stars=50),
-            XYShift(detection=SegmentedPeaks(n_stars=50), reference=reference),
-            Align(reference=reference),
-            Gaussian2D(),
-            Stack(self.stack_path, overwrite=overwrite),
-            SaveReduced(destination, overwrite=overwrite),
-            Gif(self.gif_path)
+            Calibration(name="calibration") if calibration else Trim(name="calibration"),
+            SegmentedPeaks(n_stars=50, name="detection"),
+            XYShift(detection=SegmentedPeaks(n_stars=50), reference=reference, name="shift"),
+            Align(reference=reference, name="alignment"),
+            Gaussian2D(name="fwhm"),
+            Stack(self.stack_path, overwrite=overwrite, name="stack"),
+            SaveReduced(destination, overwrite=overwrite, name="saving"),
+            Gif(self.gif_path, name="video")
         ]
 
         super().__init__(default_methods, "Reduction", fits_manager, files="light", show_progress=True,
@@ -91,10 +91,10 @@ class Photometry(Unit):
             raise OSError("{}already exists".format(self.phot_path))
 
         default_methods = [
-            DAOFindStars(n_stars=n_stars, stack=True),
-            Gaussian2D(stack=True),
-            FixedAperturePhotometry(),
-            SavePhotometricProducts(self.phot_path, overwrite=overwrite)
+            DAOFindStars(n_stars=n_stars, stack=True, name="detection"),
+            Gaussian2D(stack=True, name="fwhm"),
+            FixedAperturePhotometry(name="photometry"),
+            SavePhotometricProducts(self.phot_path, overwrite=overwrite, name="saving")
         ]
 
         super().__init__(default_methods, "Photometric extraction", fits_manager, files="reduced", show_progress=True)

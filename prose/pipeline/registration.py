@@ -149,16 +149,16 @@ def astroalign_optimized_find_transform(
 
 class Alignment(Block):
 
-    def __init__(self, detection=None):
-        super().__init__()
+    def __init__(self, detection=None, **kwargs):
+        super().__init__(**kwargs)
         self.reference_stars = None
         self.detection = detection
 
 
 class XYShift(Alignment):
 
-    def __init__(self, tolerance=1.5, clean=False, detection=None, reference=1/2):
-        super().__init__(detection=detection)
+    def __init__(self, tolerance=1.5, clean=False, detection=None, reference=1/2, **kwargs):
+        super().__init__(detection=detection, **kwargs)
         self.tolerance = tolerance
         self.clean = clean
         self.reference = reference
@@ -180,8 +180,8 @@ class XYShift(Alignment):
 
 class AstroAlignShift(Alignment):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.reference_invariants = None
         self.reference_asterisms = None
 

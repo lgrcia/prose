@@ -3,16 +3,19 @@ from astropy.io import fits
 from prose.console_utils import TQDM_BAR_FORMAT
 from astropy.wcs import WCS
 import prose.visualisation as viz
+from collections import OrderedDict
 
 
 class Unit:
     # TODO: add index self.i in image within unit loop
-    # TODO: add dict of blocks and name on block to retrieve easily
 
     def __init__(self, blocks, name, fits_manager, files="light", show_progress=False, n_images=None, **kwargs):
         self.name = name
-        self.blocks = blocks
         self.fits_manager = fits_manager
+        self.blocks_dict = OrderedDict({
+            block.name if block.name is not None else "block{}".format(i): block
+            for i, block in enumerate(blocks)
+        })
 
         self.retrieve_files(files, n_images=n_images)
 
@@ -32,6 +35,10 @@ class Unit:
 
         if self.fits_manager.has_stack():
             self.stack_image = Image(self.fits_manager.get("stack")[0])
+
+    @property
+    def blocks(self):
+        return self.blocks_dict.values()
 
     def retrieve_files(self, keyword, n_images=None):
         self.fits_manager.files = self.fits_manager.get(keyword, n_images=n_images)
@@ -86,8 +93,9 @@ class Image:
 
 class Block:
 
-    def __init__(self, stack=False):
+    def __init__(self, stack=False, name=None):
         self.stack = stack
+        self.name = name
 
     def initialize(self, *args):
         pass

@@ -12,7 +12,7 @@ class Calibration(Block):
     """
     def __init__(self, only_trim=False, **kwargs):
 
-        super().__init__()
+        super().__init__(**kwargs)
         self.master_dark = None
         self.master_flat = None
         self.master_bias = None
