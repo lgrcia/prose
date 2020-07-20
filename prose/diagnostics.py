@@ -9,6 +9,7 @@ import os
 from os import path
 import shutil
 from astropy.time import Time
+from astropy import units as u
 
 
 def protopapas2005(t, t0, duration, depth, c, period=1):
@@ -194,7 +195,7 @@ class NearEclipsingBinary:
 
                 pdf.set_text_color(50, 50, 50)
                 pdf.text(
-                    table_start[0] + marg + 2 + table_cell[0],
+                    table_start[0] + marg + 2 + table_cell[0]*1.2,
                     table_start[1] + marg + i * table_cell[1] - 1.2, value)
 
         if path.isdir(destination):
@@ -293,19 +294,27 @@ class NearEclipsingBinary:
 
         draw_table([
             ["Time", obs_duration],
-            ["RA Dec", "{}° {}°".format(*self.phot.target["radec"])],
+            ["RA Dec", "{:.4f} {:.4f}".format(
+                self.phot.skycoord.ra,
+                self.phot.skycoord.dec)],
             ["images", len(self.time)],
             ["GAIA id", None],
-            ["mean fwhm", "{:.2f} pixels".format(np.mean(self.phot.fwhm))],
+            ["mean fwhm", "{:.2f} pixels ({:.2f}\")".format(np.mean(self.phot.fwhm), 
+            np.mean(self.phot.fwhm)*self.phot.telescope.pixel_scale)],
             ["Telescope", self.phot.telescope.name],
             ["Filter", self.phot.filter],
             ["exposure", "{} s".format(np.mean(self.phot.data.exptime))],
         ], (5 + 12, 20 + 100))
 
         draw_table([
-            ["PSF std · fwhm (x)", "{:.2f} · {:.2f} pixels".format(psf_p["std_x"], psf_p["fwhm_x"])],
-            ["PSF std · fwhm (y)", "{:.2f} · {:.2f} pixels".format(psf_p["std_y"], psf_p["fwhm_y"])],
-            ["PSF ellipicity", "{:.2f}".format(ellipticity)],
+            ["stack PSF fwhm (x)", "{:.2f} pixels ({:.2f}\")".format(psf_p["fwhm_x"], 
+            psf_p["fwhm_x"]*self.phot.telescope.pixel_scale)],
+            ["stack PSF fwhm (y)", "{:.2f} pixels ({:.2f}\")".format(psf_p["fwhm_y"], 
+            psf_p["fwhm_y"]*self.phot.telescope.pixel_scale)],
+            ["stack PSF model", "Moffat2D"],
+            ["stack PSF ellipicity", "{:.2f}".format(ellipticity)],
+            ["diff. flux std", "{:.3f} ppt (5 min bins)".format(
+                np.mean(utils.binning(self.phot.time, self.phot.lc.flux, 5/(24*60), std=True)[2])*1e3)]
         ], (5 + 12, 78 + 100))
 
         pdf.image(psf_fit, x=5.5 + 12, y=55 + 100, w=65)

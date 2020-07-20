@@ -48,7 +48,7 @@ artemis.update({
 
 trappist = speculoos_south.copy()
 trappist.update({
-    "name": "Trappist",
+    "name": "Trappist-South",
     "trimming": [40, 40],
     "pixel_scale": 0.66, 
     "latlong": [29.2563, 70.7380]})
