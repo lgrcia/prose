@@ -6,7 +6,7 @@ from astropy.table import Table
 from astropy.nddata import NDData
 from photutils.psf import extract_stars
 from astropy.stats import gaussian_sigma_to_fwhm
-from prose.pipeline.base import Block
+from prose._blocks.base import Block
 from prose.console_utils import INFO_LABEL
 import matplotlib.pyplot as plt
 
@@ -30,7 +30,8 @@ def image_psf(image, stars, size=15, normalize=False):
     np.ndarray of shape (size, size)
 
     """
-    cuts = cutouts(image, stars, size=size).data
+    _, cuts = cutouts(image, stars, size=size)
+    cuts = cuts.data
     if normalize:
         cuts = [c/np.sum(c) for c in cuts]
     return np.median(cuts, axis=0)
@@ -57,15 +58,18 @@ def cutouts(image, stars, size=15):
     if isinstance(image, str):
         image = fits.getdata(image)
 
-    stars = stars[np.all(stars < np.array(image.shape) - size, axis=1)]
-    stars = stars[np.all(stars > np.ones(2) * size, axis=1)]
+    stars_in = np.logical_and(
+        np.all(stars < np.array(image.shape) - size, axis=1),
+        np.all(stars > np.ones(2) * size, axis=1)
+    )
+    stars = stars[stars_in]
 
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        stars_tbl = Table([stars[:, 0], stars[:, 1]], names=["x", "y"])
-        stars = extract_stars(NDData(data=image), stars_tbl, size=size)
+    # with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    stars_tbl = Table([stars[:, 0], stars[:, 1]], names=["x", "y"])
+    stars = extract_stars(NDData(data=image), stars_tbl, size=size)
     
-    return stars
+    return np.argwhere(stars_in).flatten(), stars
 
 def moments(data):
     """Returns (height, x, y, width_x, width_y)
@@ -101,7 +105,7 @@ class PSFModel(Block):
 
     def build_epsf(self, image, stars):
         self.x, self.y = np.indices((self.cutout_size, self.cutout_size))
-        return image_psf(image, stars, size=self.cutout_size)
+        return image_psf(image, stars.copy(), size=self.cutout_size)
 
     def model(self):
         raise NotImplementedError("")
@@ -140,7 +144,9 @@ class PSFModel(Block):
 
 
 class Gaussian2D(PSFModel):
-
+    """
+    Fit an elliptical 2D Gaussian model to an image effective PSF
+    """
     def __init__(self, cutout_size=21, **kwargs):
         super().__init__(cutout_size=21, **kwargs)
 
@@ -174,7 +180,9 @@ class Gaussian2D(PSFModel):
             return params[3]*self.sigma_to_fwhm(), params[4]*self.sigma_to_fwhm(), params[-2]
 
 class Moffat2D(PSFModel):
-
+    """
+    Fit an elliptical 2D Moffat model to an image effective PSF
+    """
     def __init__(self, cutout_size=21, **kwargs):
         super().__init__(cutout_size=21, **kwargs)
         self.cutout_size = cutout_size

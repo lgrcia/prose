@@ -4,6 +4,7 @@ from prose.console_utils import TQDM_BAR_FORMAT
 from astropy.wcs import WCS
 import prose.visualisation as viz
 from collections import OrderedDict
+from tabulate import tabulate
 
 
 class Unit:
@@ -67,13 +68,20 @@ class Unit:
 
         for file_path in self.progress(self.files):
             image = Image(file_path)
+            if has_stack_block:
+                image.get_other_data(self.stack_image)
             for block in blocks:
-                if has_stack_block:
-                    image.get_other_data(self.stack_image)
                 block.run(image)
 
         for block in self.blocks:
             block.terminate()
+
+    def summary(self):
+        rows = [[block.name, block.__class__.__name__] for block in self.blocks]
+        headers = ["name", "type"]
+        print("{} unit blocks summary:\n{}".format(self.__class__.__name__, tabulate(
+            rows, headers, tablefmt="fancy_grid"
+        )))
 
 
 class Image:
@@ -88,7 +96,7 @@ class Image:
     def get_other_data(self, image):
         for key, value in image.__dict__.items():
             if key not in self.__dict__:
-                self.__dict__[key] = value
+                self.__dict__[key] = value.copy()
 
 
 class Block:

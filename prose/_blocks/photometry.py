@@ -11,21 +11,18 @@ from photutils import CircularAperture, CircularAnnulus
 from prose import io, FitsManager
 from photutils.psf import IntegratedGaussianPRF, DAOGroup, BasicPSFPhotometry
 from prose.console_utils import TQDM_BAR_FORMAT, INFO_LABEL
-from prose.pipeline.psf import Gaussian2D
-from prose.pipeline.base import Block
+from prose._blocks.psf import Gaussian2D
+from prose._blocks.base import Block
 
 
 # TODO: differential_vaphot
 # TODO: difference imaging
 
-def variable_aperture_photometry_annulus(*args, **kwargs):
-    return aperture_photometry_annulus(*args, fixed_fwhm=False, **kwargs)
 
+class BasePhotometry(Block):
 
-class BasePhotometry:
-
-    def __init__(self):
-        pass
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
 
 class PSFPhotometry(BasePhotometry):
@@ -95,9 +92,9 @@ class PSFPhotometry(BasePhotometry):
         return fluxes, np.ones_like(fluxes), {"sky": sky}
 
 
-class FixedAperturePhotometry(Block):
+class ForcedAperturePhotometry(Block):
     """
-    Perform aperture photometry on a list of aligned fits.
+    Fixed positions aperture photometry.
     For more details check https://photutils.readthedocs.io/en/stable/aperture.html
 
     Parameters
@@ -201,3 +198,53 @@ class FixedAperturePhotometry(Block):
                 image.header[self.fits_manager.telescope.keyword_exposure_time],
                 airmass=image.header[self.fits_manager.telescope.keyword_airmass],
             )
+
+
+class MovingAperturePhotometry(ForcedAperturePhotometry):
+    """
+    Aperture photometry.
+    For more details check https://photutils.readthedocs.io/en/stable/aperture.html
+
+    Parameters
+    ----------
+    fits_explorer : FitsManager
+        FitsManager containing a single observation
+    apertures : ndarray or list, optional
+        apertures in fraction of fwhm, by default None, i.e. np.arange(0.1, 10, 0.25)
+    annulus_inner_radius : int, optional
+        radius of the inner annulus in fraction of fwhm, by default 5
+    annulus_outer_radius : int, optional
+        radius of the outer annulus in fraction of fwhm, by default 8
+    """
+
+    def __init__(self, apertures=None, fwhm_fit=None, annulus_inner_radius=5, annulus_outer_radius=8, **kwargs):
+        super().__init__(
+            apertures=apertures,
+            fwhm_fit=fwhm_fit,
+            annulus_inner_radius=annulus_inner_radius,
+            annulus_outer_radius=annulus_outer_radius,
+            **kwargs)
+
+    def run(self, image, **kwargs):
+        self.set_apertures(image.stars_coords.copy(), image.fwhm)
+
+        bkg_median = []
+        for mask in self.annulus_masks:
+            annulus_data = mask.multiply(image.data)
+            annulus_data_1d = annulus_data[mask.data > 0]
+            _, median_sigma_clip, _ = sigma_clipped_stats(annulus_data_1d)
+            bkg_median.append(median_sigma_clip)
+
+        bkg_median = np.array(bkg_median)
+
+        image.apertures_area = self.circular_apertures_area
+        image.sky = bkg_median
+        image.fluxes = np.zeros((self.n_apertures, self.n_stars))
+        image.annulus_area = self.annulus_area
+
+        for a, ape in enumerate(self.apertures):
+            photometry = aperture_photometry(image.data, self.circular_apertures[a])
+            image.fluxes[a] = np.array(photometry["aperture_sum"] - (bkg_median * self.circular_apertures_area[a]))
+
+        self.compute_error(image)
+        image.header["sky"] = np.mean(image.sky)

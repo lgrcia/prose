@@ -1,7 +1,7 @@
 import astroalign
 import numpy as np
 from scipy.spatial import KDTree
-from prose.pipeline.base import Block
+from prose._blocks.base import Block
 
 
 def distance(p1, p2):
@@ -147,7 +147,7 @@ def astroalign_optimized_find_transform(
     return best_t, (source_controlp[so], target_controlp[d])
 
 
-class Alignment(Block):
+class Registration(Block):
 
     def __init__(self, detection=None, **kwargs):
         super().__init__(**kwargs)
@@ -155,7 +155,18 @@ class Alignment(Block):
         self.detection = detection
 
 
-class XYShift(Alignment):
+class DistanceRegistration(Registration):
+    def __init__(self, tolerance=1.5, clean=False, detection=None, reference=1/2, **kwargs):
+        super().__init__(detection=detection, **kwargs)
+        self.tolerance = tolerance
+        self.clean = clean
+        self.reference = reference
+
+
+class XYShift(Registration):
+    """
+    Compute the linear shift between two point clouds
+    """
 
     def __init__(self, tolerance=1.5, clean=False, detection=None, reference=1/2, **kwargs):
         super().__init__(detection=detection, **kwargs)
@@ -178,7 +189,10 @@ class XYShift(Alignment):
         image.header["ALIGNALG"] = self.__class__.__name__
 
 
-class AstroAlignShift(Alignment):
+class AstroAlignShift(Registration):
+    """
+    Compute the linear shift between point clouds using :code:`astroalign`
+    """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

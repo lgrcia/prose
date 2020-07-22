@@ -2,13 +2,13 @@ from skimage.measure import label, regionprops
 import numpy as np
 from photutils import DAOStarFinder
 from astropy.stats import sigma_clipped_stats
-from prose.pipeline.registration import clean_stars_positions
-from prose.pipeline.base import Block
+from prose._blocks.registration import clean_stars_positions
+from prose._blocks.base import Block
 from prose.console_utils import INFO_LABEL
 
 
 class StarsDetection(Block):
-    """Base class for stars detection
+    """Base class for stars detection.
     """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -28,6 +28,9 @@ class StarsDetection(Block):
 
 
 class DAOFindStars(StarsDetection):
+    """
+    DAOPHOT stars detection with :code:`photutils` implementation.
+    """
     
     def __init__(self, sigma_clip=2.5, lower_snr=5, fwhm=5, n_stars=None, min_separation=10, sort=True, **kwargs):
 
@@ -66,6 +69,9 @@ class DAOFindStars(StarsDetection):
 
 
 class SegmentedPeaks(StarsDetection):
+    """
+    Stars detection based on image segmentation.
+    """
 
     def __init__(self, threshold=2, min_separation=10, n_stars=None, **kwargs):
         super().__init__(**kwargs)

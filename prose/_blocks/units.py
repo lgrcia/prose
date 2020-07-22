@@ -1,12 +1,12 @@
 
-from prose.pipeline.registration import XYShift
-from prose.pipeline.alignment import Align
-from prose.pipeline.detection import SegmentedPeaks, DAOFindStars
-from prose.pipeline.calibration import Calibration, Trim
-from prose.pipeline.psf import Gaussian2D
-from prose.pipeline.base import Unit
-from prose.pipeline.photometry import FixedAperturePhotometry
-from prose.pipeline.imutils import Stack, SaveReduced, Gif, SavePhotometricProducts
+from prose._blocks.registration import XYShift
+from prose._blocks.alignment import Align
+from prose._blocks.detection import SegmentedPeaks, DAOFindStars
+from prose._blocks.calibration import Calibration, Trim
+from prose._blocks.psf import Gaussian2D, Moffat2D
+from prose._blocks.base import Unit
+from prose._blocks.photometry import ForcedAperturePhotometry
+from prose._blocks.imutils import Stack, SaveReduced, Gif, SavePhotometricProducts
 from prose import io
 import os
 from os import path
@@ -93,9 +93,8 @@ class Photometry(Unit):
         default_methods = [
             DAOFindStars(n_stars=n_stars, stack=True, name="detection"),
             Gaussian2D(stack=True, name="fwhm"),
-            FixedAperturePhotometry(name="photometry"),
+            ForcedAperturePhotometry(name="photometry"),
             SavePhotometricProducts(self.phot_path, overwrite=overwrite, name="saving")
         ]
 
         super().__init__(default_methods, "Photometric extraction", fits_manager, files="reduced", show_progress=True)
-

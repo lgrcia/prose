@@ -1,4 +1,4 @@
-from prose.pipeline.base import Block
+from prose._blocks.base import Block
 from astropy.io import fits
 import numpy as np
 from astropy.time import Time
@@ -10,6 +10,7 @@ import pandas as pd
 from prose import utils
 from astropy.stats import SigmaClip
 from photutils import Background2D, MedianBackground
+from prose import io
 
 
 class Stack(Block):
@@ -158,8 +159,10 @@ class SavePhotometricProducts(Block):
         self.images = []
         self.stack_path = None
         self.telescope = None
+        self.fits_manager = None
 
     def initialize(self, fits_manager):
+        self.fits_manager = fits_manager
         if fits_manager.has_stack():
             self.stack_path = fits_manager.get("stack")[0]
 
@@ -170,6 +173,9 @@ class SavePhotometricProducts(Block):
 
     def terminate(self):
         if self.stack_path is not None:
+            header = fits.PrimaryHDU(header=fits.getheader(self.stack_path))
+        elif len(io.get_files("_stack.fits", path.dirname(self.destination))) > 0:
+            self.stack_path = io.get_files("_stack.fits", path.dirname(self.destination))
             header = fits.PrimaryHDU(header=fits.getheader(self.stack_path))
         else:
             header = fits.PrimaryHDU()

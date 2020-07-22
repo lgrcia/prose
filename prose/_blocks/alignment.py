@@ -1,4 +1,4 @@
-from prose.pipeline.base import Block
+from prose._blocks.base import Block
 from astropy.nddata import Cutout2D
 import numpy as np
 
@@ -10,6 +10,9 @@ class Alignment(Block):
 
 
 class Align(Alignment):
+    """
+    Align an image to a reference image using :code:`astropy.nddata.Cutout2D`
+    """
 
     def __init__(self, reference=1 / 2, **kwargs):
         super().__init__(**kwargs)

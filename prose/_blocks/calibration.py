@@ -1,5 +1,5 @@
 import numpy as np
-from prose.pipeline.base import Block
+from prose._blocks.base import Block
 from astropy.io import fits
 from prose import utils, io
 import matplotlib.pyplot as plt
@@ -8,7 +8,7 @@ import prose.visualisation as viz
 
 class Calibration(Block):
     """
-    calibration task, included in :py:class:`~prose.pipeline.Reduction`
+    calibration task, included in :py:class:`~prose._blocks.Reduction`
     """
     def __init__(self, only_trim=False, **kwargs):
 
