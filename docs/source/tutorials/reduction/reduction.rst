@@ -120,8 +120,4 @@ It contains all reduced images and a stack fits of the night as well as a ``phot
    *fake_telescope_20200229_prose_I+z_movie.gif*
 
 
-.. note::
-
-    More information about reduction, photometry and how to select the methods used by the pipeline are provided in :ref:`modular-reduction`
-
 We can now load this folder into a ``PhotProducts`` object and proceed with further analaysis (e.g. in the :ref:`next turorial <photometry-analysis>`.

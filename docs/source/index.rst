@@ -4,7 +4,7 @@
    contain the root `toctree` directive.
 
 prose
-=======
+=====
 
 prose is a python package to reduce and analyse data from telescope observations. Its primary goal is the production of differential light curves from raw uncalibrated FITS images. prose features additional tools suited to exoplanet transit observations.
 
@@ -37,4 +37,4 @@ prose is a python package to reduce and analyse data from telescope observations
 
    notes/phots-structure
    notes/telescope-config
-   notes/note-pipeline-methods
+   notes/blocks

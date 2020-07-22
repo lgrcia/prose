@@ -1,7 +1,7 @@
 .. _phots-structure:
 
 Data products: ``.phots``
-========================
+=========================
 
 |prose| stores and retrieves data products in `phots` files. `phots` files are fits files and contain at least:
 

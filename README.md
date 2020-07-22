@@ -30,12 +30,12 @@ fits_folder.describe()
 
 ```python
 
-from prose import pipeline
+from prose import Reduction, Photometry
 
-reduction = pipeline.Reduction(fits_folder)
+reduction = Reduction(fits_folder)
 reduction.run()
 
-photometry = pipeline.Photometry(reduction.destination)
+photometry = Photometry(reduction.destination)
 photometry.run()
 
 ```

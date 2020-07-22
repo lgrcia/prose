@@ -4,7 +4,7 @@ API
 ===
 
 Fits Manager
------------
+------------
 .. autoclass:: prose.FitsManager
     :members:
 

@@ -15,7 +15,7 @@ In |prose|, :py:class:`~prose.Block` objects (which are dedicated to image analy
 
    :py:class:`~prose.Unit` hooks and data flow
 
-By providing :ref:`many pre-implemented blocks <note-pipeline-methods>` one can arange a complete pipeline to achieve a specific analysis. :py:class:`~prose.Block` can also be implemented to include custom processing.
+By providing :ref:`many pre-implemented blocks <blocks>` one can arange a complete pipeline to achieve a specific analysis. :py:class:`~prose.Block` can also be implemented to include custom processing.
 
 .. title:: Objective
 
@@ -72,7 +72,7 @@ We will use difference imaging to locate the moving object. This is shown in the
 
 
 Creating a new :py:class:`~prose.Block`
---------------------
+---------------------------------------
 Now we can create a :py:class:`~prose.Block` that will extract and store this information. It must be a sub-class of :py:class:`~prose.Block`, i.e. 
 
 .. code:: ipython3
@@ -140,4 +140,4 @@ We can now place our new block in a :py:class:`~prose.Unit` and run it:
    :align: center
    :height: 250
 
-Although this is a simple example, this pipeline could be easily extended with :ref:`many other blocks <note-pipeline-methods>`, e.g. to perform image calibration and extract the photometry of the moving object.
+Although this is a simple example, this pipeline could be easily extended with :ref:`many other blocks <blocks>`, e.g. to perform image calibration and extract the photometry of the moving object.
