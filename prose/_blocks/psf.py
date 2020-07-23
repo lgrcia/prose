@@ -59,8 +59,8 @@ def cutouts(image, stars, size=15):
         image = fits.getdata(image)
 
     stars_in = np.logical_and(
-        np.all(stars < np.array(image.shape) - size, axis=1),
-        np.all(stars > np.ones(2) * size, axis=1)
+        np.all(stars < np.array(image.shape) - size - 2, axis=1),
+        np.all(stars > np.ones(2) * size + 2, axis=1)
     )
     stars = stars[stars_in]
 
