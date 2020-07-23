@@ -117,37 +117,46 @@ class SaveReduced(Block):
 
         new_hdu.writeto(fits_new_path, overwrite=self.overwrite)
 
+# TODO: make ImageIOBlock block
+
 
 class Gif(Block):
-    def __init__(self, destination, overwrite=True, factor=0.25, **kwargs):
+    def __init__(self, destination, overwrite=True, factor=0.25, from_fits=False, **kwargs):
         super().__init__(**kwargs)
         self.destination = destination
         self.overwrite = overwrite
         self.images = []
         self.factor = factor
+        self.from_fits = from_fits
 
     def run(self, image, **kwargs):
-        self.images.append(viz.gif_image_array(image.data, factor=self.factor))
+        if self.from_fits:
+            self.images.append(viz.gif_image_array(image.data, factor=self.factor))
+        else:
+            self.images.append(image.data)
 
     def terminate(self):
         imageio.mimsave(self.destination, self.images)
 
 
 class Video(Block):
-    def __init__(self, destination, overwrite=True, factor=0.25, fps=10):
-        super().__init__()
+    def __init__(self, destination, overwrite=True, factor=0.25, fps=10, from_fits=False, **kwargs):
+        super().__init__(**kwargs)
         self.destination = destination
         self.overwrite = overwrite
         self.images = []
         self.factor = factor
         self.fps = fps
+        self.from_fits = from_fits
 
     def run(self, image, **kwargs):
-        self.images.append(viz.gif_image_array(image.data, factor=self.factor))
+        if self.from_fits:
+            self.images.append(viz.gif_image_array(image.data, factor=self.factor))
+        else:
+            self.images.append(image.data.copy())
 
     def terminate(self):
         imageio.mimsave(self.destination, self.images, fps=self.fps)
-
 
 
 class SavePhotometricProducts(Block):
