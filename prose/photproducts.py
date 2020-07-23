@@ -6,7 +6,6 @@ from astropy.time import Time
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from prose.lightcurves import LightCurves, Broeg2005, differential_photometry
-from prose._blocks import alignment
 import warnings
 from prose import visualisation as viz
 from astropy.io import fits
@@ -14,8 +13,8 @@ from prose.telescope import Telescope
 from prose import utils, CONFIG
 from astropy.table import Table
 from astropy.wcs import WCS, utils as wcsutils
-from prose._blocks import psf
 import pandas as pd
+from scipy.stats import binned_statistic
 from prose._blocks.psf import Gaussian2D, Moffat2D
 
 
@@ -532,6 +531,56 @@ class PhotProducts:
 
         viz.save_report(self, destination, fields=fields)
 
+    def plot_precision(self, bins=0.005, aperture=None):
+        if aperture is None:
+            assert self.lcs is not None, "You must set 'aperture' kwargs (light-curve not present to pick best aperture id)"
+            aperture = self.lc.best_aperture_id
+
+        n_bin = int(bins / (np.mean(self.exptime) / (60 * 60 * 24)))
+
+        assert len(self.time) > n_bin, "Your 'bins' size is less than the total exposure"
+
+        fluxes, errors = self.fluxes.as_array(aperture)
+
+        mean_fluxes = np.mean(fluxes, axis=1)
+        mean_errors = np.mean(errors, axis=1)
+
+        error_estimate = [np.median(binned_statistic(self.time, f, statistic='std', bins=n_bin)[0]) for f in
+                          fluxes]
+        area = self.apertures_area[0][aperture]
+
+        # ccd_equation = phot_prose.telescope.error(
+        # prose_fluxes, tp_area, np.mean(self.sky), np.mean(self.exptime), np.mean(self.airmass))
+
+        ccd_equation = (mean_errors / mean_fluxes)
+
+        inv_snr_estimate = error_estimate / mean_fluxes
+
+        positive_est = inv_snr_estimate > 0
+        mean_fluxes = mean_fluxes[positive_est]
+        inv_snr_estimate = inv_snr_estimate[positive_est]
+        ccd_equation = ccd_equation[positive_est]
+        sorted_fluxes_idxs = np.argsort(mean_fluxes)
+
+        plt.plot(np.log(mean_fluxes), inv_snr_estimate, ".", alpha=0.5, ms=2, c="k",
+                 label="flux rms ({:.1f} min bins)".format(0.005 * (60 * 24)))
+        plt.plot(np.log(mean_fluxes)[sorted_fluxes_idxs], (np.sqrt(mean_fluxes) / mean_fluxes)[sorted_fluxes_idxs],
+                 "--", c="k", label="photon noise", alpha=0.5)
+        plt.plot(np.log(mean_fluxes)[sorted_fluxes_idxs],
+                 (np.sqrt(np.mean(self.sky) * area) / mean_fluxes)[sorted_fluxes_idxs], c="k", label="background noise",
+                 alpha=0.5)
+        # plt.plot(np.log(prose_fluxes)[s], (prose_e/prose_fluxes)[s], label="CCD equation")
+        plt.plot(np.log(mean_fluxes)[sorted_fluxes_idxs], ccd_equation[sorted_fluxes_idxs], label="CCD equation")
+        plt.legend()
+        plt.ylim(
+            0.5 * np.percentile(inv_snr_estimate, 2),
+            1.5 * np.percentile(inv_snr_estimate, 98))
+        plt.xlim(np.min(np.log(mean_fluxes)), np.max(np.log(mean_fluxes)))
+        plt.yscale("log")
+        plt.xlabel("log(ADU)")
+        plt.ylabel("$SNR^{-1}$")
+        plt.title("Photometric precision (raw fluxes)", loc="left")
+
     # Loaders and Savers implementations
     # ----------------------------------
     def save_phot_fits(self, destination=None):
@@ -553,7 +602,7 @@ class PhotProducts:
                 destination, "{}.phots".format(self.products_denominator)
             )
 
-        self.photometry_path = destination
+        self.phot_file = destination
 
         header = fits.PrimaryHDU(header=fits.getheader(self.phot_file))
 
