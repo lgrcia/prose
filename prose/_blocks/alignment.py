@@ -40,4 +40,5 @@ class Align(Alignment):
                         wcs=image.wcs
                     )
         image.data = aligned_image.data
+        image.stars_coords += shift
         image.wcs = aligned_image.wcs
