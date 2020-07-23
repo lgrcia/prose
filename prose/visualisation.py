@@ -29,7 +29,6 @@ def plot_lc(
     error=None,
     bins=0.005,
     std=True,
-    options={},
     plot_kwargs={},
     errorbar_kwargs={}
 ):
@@ -475,6 +474,8 @@ def show_stars(image, stars=None, highlight=None, size=15, options={}, flip=None
 
         plt.tight_layout()
 
+    return fig
+
 
 class AnchoredHScaleBar(matplotlib.offsetbox.AnchoredOffsetbox):
     """ size: length of bar in data units
@@ -669,6 +670,8 @@ def fancy_show_stars(
                                          frameon=False, extent=0, pad=0.6, sep=4,
                                          linekw=dict(color="white", linewidth=0.8))
                 axins.add_artist(obin)
+
+    return fig
 
 
 def plot_comparison_lcs(lcs, idxs, bins=0.005, offset_factor=2.5):

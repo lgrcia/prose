@@ -476,7 +476,7 @@ class LightCurves:
     def from_ndarray(self, fluxes, errors):
         pass
 
-    def as_array(self):
+    def as_array(self, aperture=None):
         """
         Return an ndarray with shape (n_apertures, n_lightcurves, n_times)
 
@@ -484,7 +484,12 @@ class LightCurves:
         -------
         np.ndarray
         """
-        array = np.array([lc.fluxes for lc in self._lightcurves])
-        error_array = np.array([lc.errors for lc in self._lightcurves])
-        s, a, n = array.shape
-        return np.moveaxis(array, 0, 1), np.moveaxis(error_array, 0, 1)
+        if aperture is None:
+            array = np.array([lc.fluxes for lc in self._lightcurves])
+            error_array = np.array([lc.errors for lc in self._lightcurves])
+            s, a, n = array.shape
+            return np.moveaxis(array, 0, 1), np.moveaxis(error_array, 0, 1)
+        else:
+            array = np.array([lc.fluxes[aperture] for lc in self._lightcurves])
+            error_array = np.array([lc.errors[aperture] for lc in self._lightcurves])
+            return array, error_array

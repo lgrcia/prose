@@ -104,7 +104,7 @@ class CentroidDiagnostic(Unit):
             CentroidCheck(star=star, name="centroid check")
         ]
 
-        super().__init__(default_methods, "check", fits_manager, files="reduced", show_progress=True)
+        super().__init__(default_methods, fits_manager, "check", files="reduced", show_progress=True)
 
         self.run()
 

@@ -1,16 +1,8 @@
-
-from prose._blocks.registration import XYShift
-from prose._blocks.alignment import Align
-from prose._blocks.detection import SegmentedPeaks, DAOFindStars
-from prose._blocks.calibration import Calibration, Trim
-from prose._blocks.psf import Gaussian2D, Moffat2D
-from prose._blocks.base import Unit
-from prose._blocks.photometry import ForcedAperturePhotometry
-from prose._blocks.imutils import Stack, SaveReduced, Gif, SavePhotometricProducts
+from prose import Unit
+from prose import blocks
 from prose import io
 import os
 from os import path
-import numpy as np
 
 
 class Reduction(Unit):
@@ -51,17 +43,17 @@ class Reduction(Unit):
                 raise AssertionError("stack {} already exists".format(self.stack_path))
 
         default_methods = [
-            Calibration(name="calibration") if calibration else Trim(name="calibration"),
-            SegmentedPeaks(n_stars=50, name="detection"),
-            XYShift(detection=SegmentedPeaks(n_stars=50), reference=reference, name="shift"),
-            Align(reference=reference, name="alignment"),
-            Gaussian2D(name="fwhm"),
-            Stack(self.stack_path, overwrite=overwrite, name="stack"),
-            SaveReduced(destination, overwrite=overwrite, name="saving"),
-            Gif(self.gif_path, name="video")
+            blocks.Calibration(name="calibration") if calibration else blocks.Trim(name="calibration"),
+            blocks.SegmentedPeaks(n_stars=50, name="detection"),
+            blocks.XYShift(detection=blocks.SegmentedPeaks(n_stars=50), reference=reference, name="shift"),
+            blocks.Align(reference=reference, name="alignment"),
+            blocks.Gaussian2D(name="fwhm"),
+            blocks.Stack(self.stack_path, overwrite=overwrite, name="stack"),
+            blocks.SaveReduced(destination, overwrite=overwrite, name="saving"),
+            blocks.Video(self.gif_path, name="video", from_fits=True)
         ]
 
-        super().__init__(default_methods, "Reduction", fits_manager, files="light", show_progress=True,
+        super().__init__(default_methods, fits_manager, "Reduction", files="light", show_progress=True,
                          n_images=n_images)
 
         if not path.exists(destination):
@@ -72,7 +64,7 @@ class Reduction(Unit):
 
 class Photometry(Unit):
 
-    def __init__(self, fits_manager, overwrite=False, n_stars=500, psf=False):
+    def __init__(self, fits_manager, overwrite=False, n_stars=500, psf=False, n_images=None):
 
         if isinstance(fits_manager, str):
             fits_manager = io.FitsManager(fits_manager, light_kw="reduced", verbose=False)
@@ -91,10 +83,16 @@ class Photometry(Unit):
             raise OSError("{}already exists".format(self.phot_path))
 
         default_methods = [
-            DAOFindStars(n_stars=n_stars, stack=True, name="detection"),
-            Gaussian2D(stack=True, name="fwhm"),
-            ForcedAperturePhotometry(name="photometry"),
-            SavePhotometricProducts(self.phot_path, overwrite=overwrite, name="saving")
+            blocks.DAOFindStars(n_stars=n_stars, stack=True, name="detection"),
+            blocks.Gaussian2D(stack=True, name="fwhm"),
+            blocks.ForcedAperturePhotometry(name="photometry"),
+            blocks.SavePhotometricProducts(self.phot_path, overwrite=overwrite, name="saving")
         ]
 
-        super().__init__(default_methods, "Photometric extraction", fits_manager, files="reduced", show_progress=True)
+        super().__init__(
+            default_methods,
+            fits_manager,
+            "Photometric extraction",
+            files="reduced",
+            show_progress=True,
+            n_images=n_images)
