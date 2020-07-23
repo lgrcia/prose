@@ -10,7 +10,7 @@ from tabulate import tabulate
 class Unit:
     # TODO: add index self.i in image within unit loop
 
-    def __init__(self, blocks, name, fits_manager, files="light", show_progress=False, n_images=None, **kwargs):
+    def __init__(self, blocks, fits_manager, name="default", files="light", show_progress=True, n_images=None, **kwargs):
         self.name = name
         self.fits_manager = fits_manager
         self.blocks_dict = OrderedDict({
