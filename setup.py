@@ -28,7 +28,8 @@ setup(
         "sphinx_rtd_theme",
         "imageio",
         "george",
-        "fpdf"
+        "fpdf",
+        "tensorflow"
     ],
     zip_safe=True
 )
