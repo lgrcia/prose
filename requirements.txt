@@ -19,3 +19,4 @@ imageio
 george
 fpdf
 tensorflow
+ipython
