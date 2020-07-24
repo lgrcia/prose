@@ -9,7 +9,7 @@ Modular reduction
 
 In |prose|, :py:class:`~prose.Block` objects (which are dedicated to image analysis and/or modification) can be aranged into :py:class:`~prose.Unit` which have the following workflow:
 
-.. figure:: ./unit_structure.jpg
+.. figure:: ./unit_structure.png
    :align: center
    :height: 350
 
@@ -90,7 +90,7 @@ We have added two attributes: one which stores the last image (needed to do diff
 
 As a reminder, a block has the following strucure:
 
-.. figure:: ./block_structure.jpg
+.. figure:: ./block_structure.png
    :align: center
    :height: 300
 
