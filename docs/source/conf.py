@@ -21,6 +21,7 @@ extensions = ["sphinx.ext.autodoc",
 "sphinx.ext.napoleon", 
 'sphinx.ext.autosummary']
 
+master_doc = 'index'
 
 exclude_patterns = []
 source_suffix = [".rst"]
