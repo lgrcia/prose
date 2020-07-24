@@ -6,9 +6,9 @@ from os import path
 import unittest
 from prose.datasets import generate_prose_reduction_datatset
 
-RAW = "test/synthetic_dataset"
-_REDUCED = "test/_synthetic_dataset"
-REDUCED = "test/synthetic_dataset"
+RAW = "synthetic_dataset"
+_REDUCED = "_synthetic_dataset"
+REDUCED = "synthetic_dataset"
 
 
 class TestReduction(unittest.TestCase):
@@ -27,7 +27,7 @@ class TestReduction(unittest.TestCase):
         reduction = Reduction(fm, overwrite=True)
         reduction.run()
 
-        photometry = Photometry(reduction.destination)
+        photometry = Photometry(reduction.destination, overwrite=True)
         photometry.run()
 
         shutil.rmtree(reduction.destination)
