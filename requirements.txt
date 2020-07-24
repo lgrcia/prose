@@ -18,5 +18,5 @@ sphinx_rtd_theme
 imageio
 george
 fpdf
-tensorflow
+tensorflow>2.0
 ipython
