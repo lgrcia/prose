@@ -32,7 +32,8 @@ setup(
         "imageio",
         "george",
         "fpdf",
-        "tensorflow"
+        "tensorflow",
+        "sep"
     ],
     zip_safe=True,
     classifiers=[

@@ -106,6 +106,9 @@ class Calibration(Block):
         image.data = calibrated_image
         image.wcs = trim_image.wcs
 
+    def citations(self):
+        return "astropy", "numpy"
+
 
 class Trim(Block):
 

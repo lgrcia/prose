@@ -5,8 +5,10 @@ import numpy as np
 from prose import CONFIG
 import astropy.units as u
 
+
 def str_to_astropy_unit(unit_string):
     return u.__dict__[unit_string]
+
 
 class Telescope:
     def __init__(self, telescope_file=None):

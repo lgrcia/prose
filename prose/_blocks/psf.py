@@ -179,6 +179,10 @@ class Gaussian2D(PSFModel):
             self.optimized_params = params
             return params[3]*self.sigma_to_fwhm(), params[4]*self.sigma_to_fwhm(), params[-2]
 
+    def citations(self):
+        return "scipy", "photutils"
+
+
 class Moffat2D(PSFModel):
     """
     Fit an elliptical 2D Moffat model to an image effective PSF
@@ -222,3 +226,6 @@ class Moffat2D(PSFModel):
             self.optimized_params = params
             sm = self.sigma_to_fwhm()
             return params[3]*sm, params[4]*sm, params[-2]
+
+    def citations(self):
+        return "scipy", "photutils"

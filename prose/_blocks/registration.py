@@ -179,7 +179,7 @@ class XYShift(Registration):
         reference_image_path = fits_manager.files[reference_frame]
         reference_image = fits_manager.trim(reference_image_path)
         
-        self.reference_stars = self.detection.run(reference_image, return_coords=True)
+        self.reference_stars = self.detection.single_detection(reference_image)[0]
 
     def run(self, image, **kwargs):
         shift = xyshift(image.stars_coords, self.reference_stars, tolerance=self.tolerance, clean=self.clean)
@@ -207,7 +207,7 @@ class AstroAlignShift(Registration):
             self.reference_stars)
     
     def run(self, image, **kwargs):
-        transform, _detected_stars = astroalign_optimized_find_transform (
+        transform, _detected_stars = astroalign_optimized_find_transform(
                     image.stars_coords,
                     self.reference_stars,
                     KDTree(self.reference_invariants),
@@ -218,3 +218,7 @@ class AstroAlignShift(Registration):
         image.header["DX"] = shift[0]
         image.header["DY"] = shift[1],
         image.header["ALIGNALG"] = self.__class__.__name__
+
+
+    def citations(self):
+        return "astroalign"

@@ -92,6 +92,7 @@ class PSFPhotometry(BasePhotometry):
         return fluxes, np.ones_like(fluxes), {"sky": sky}
 
 
+
 class ForcedAperturePhotometry(Block):
     """
     Fixed positions aperture photometry.
@@ -198,6 +199,9 @@ class ForcedAperturePhotometry(Block):
                 image.header[self.fits_manager.telescope.keyword_exposure_time],
                 airmass=image.header[self.fits_manager.telescope.keyword_airmass],
             )
+
+    def citations(self):
+        return "astropy", "photutils"
 
 
 class MovingAperturePhotometry(ForcedAperturePhotometry):

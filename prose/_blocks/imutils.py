@@ -138,6 +138,9 @@ class Gif(Block):
     def terminate(self):
         imageio.mimsave(self.destination, self.images)
 
+    def citations(self):
+        return "imageio"
+
 
 class Video(Block):
     def __init__(self, destination, overwrite=True, factor=0.25, fps=10, from_fits=False, **kwargs):
@@ -157,6 +160,10 @@ class Video(Block):
 
     def terminate(self):
         imageio.mimsave(self.destination, self.images, fps=self.fps)
+
+    def citations(self):
+        return "imageio"
+
 
 
 class SavePhotometricProducts(Block):

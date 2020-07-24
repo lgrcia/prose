@@ -157,3 +157,6 @@ class NNCentroid(Block):
         # from prose import visualisation as viz
         # viz.show_stars(image.data, image.stars_coords)
         # t = 4
+
+    def citations(self):
+        return "tensorflow", "numpy"
