@@ -51,3 +51,18 @@ rst_prolog = """
 .. _photutils: https://photutils.readthedocs.io/en/stable/
 .. _scikit-image: https://scikit-image.org/
 """
+
+import inspect
+from os import path
+from prose import blocks, Block
+
+for name, obj in inspect.getmembers(blocks):
+    if inspect.isclass(obj):
+        if issubclass(obj, Block):
+            block_doc = obj.doc()
+            if block_doc is not None:
+                filename = path.join("./notes/blocks", "test_{}.rst".format(name))
+                with open(filename, "w") as f:
+                    f.write("{}\n{}".format(name, "-"*len(name)))
+                    f.write(block_doc)
+                    f.write(".. autoclass:: prose.blocks.{}}\n\t:members:".format(name))
