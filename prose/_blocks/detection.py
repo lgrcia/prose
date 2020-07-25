@@ -66,6 +66,10 @@ class DAOFindStars(StarsDetection):
     def citations(self):
         return "photutils", "numpy"
 
+    @staticmethod
+    def doc():
+        return """photutils_ :code:`DAOStarFinder`."""
+
 
 class SegmentedPeaks(StarsDetection):
     """
@@ -91,7 +95,7 @@ class SegmentedPeaks(StarsDetection):
 
     @staticmethod
     def doc():
-        return """ A fast detection algorithm which:
+        return """A fast detection algorithm which:
 
 - segment the image in blobs with pixels above a certain threshold
 - compute the centroids of individual blobs as stars positions

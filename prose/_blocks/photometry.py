@@ -13,6 +13,7 @@ from photutils.psf import IntegratedGaussianPRF, DAOGroup, BasicPSFPhotometry
 from prose.console_utils import TQDM_BAR_FORMAT, INFO_LABEL
 from prose._blocks.psf import Gaussian2D
 from prose._blocks.base import Block
+import sep
 
 
 # TODO: differential_vaphot
@@ -110,7 +111,7 @@ class ForcedAperturePhotometry(Block):
         radius of the outer annulus in fraction of fwhm, by default 8
     """
 
-    def __init__(self, apertures=None, fwhm_fit=None, annulus_inner_radius=5, annulus_outer_radius=8, **kwargs):
+    def __init__(self, apertures=None, annulus_inner_radius=5, annulus_outer_radius=8, **kwargs):
 
         super().__init__(**kwargs)
         if apertures is None:
@@ -121,9 +122,6 @@ class ForcedAperturePhotometry(Block):
         self.annulus_inner_radius = annulus_inner_radius
         self.annulus_outer_radius = annulus_outer_radius
         self.fits_manager = None
-
-        if fwhm_fit is None:
-            self.fwhm_fit = Gaussian2D()
 
         self.n_apertures = len(self.apertures)
         self.n_stars = None
@@ -203,6 +201,32 @@ class ForcedAperturePhotometry(Block):
     def citations(self):
         return "astropy", "photutils"
 
+    @staticmethod
+    def doc():
+        return """Aperture photometry using the :code:`CircularAperture` and :code:`CircularAnnulus` of photutils_ with a wide range of apertures of **fixed positions** and sizes throughout the observation. By default annulus goes from 5 fwhm to 8 fwhm and apertures from 0.1 to 10 times the fwhm with 0.25 steps (leading to 40 apertures).
+
+The error (e.g. in ADU) is then computed following:
+
+.. math::
+
+   \sigma = \sqrt{S + (A_p + \frac{A_p}{A_n})(b + r^2 + \frac{gain^2}{2}) + scint }
+
+
+.. image:: images/aperture_phot.png
+   :align: center
+   :width: 110px
+
+with :math:`S` the flux (ADU) within an aperture of area :math:`A_p`, :math:`b` the background flux (ADU) within an annulus of area :math:`A_n`, :math:`r` the read-noise (ADU) and :math:`scint` is a scintillation term expressed as:
+
+
+.. math::
+
+   scint = \frac{S_fd^{2/3} airmass^{7/4} h}{16T}
+
+with :math:`S_f` a scintillation factor, :math:`d` the aperture diameter (m), :math:`h` the altitude (m) and :math:`T` the exposure time.
+
+The positions of individual stars are taken from :code:`Image.stars_coords`, since these are set once, they are usually taken from the stack image."""
+
 
 class MovingAperturePhotometry(ForcedAperturePhotometry):
     """
@@ -221,10 +245,9 @@ class MovingAperturePhotometry(ForcedAperturePhotometry):
         radius of the outer annulus in fraction of fwhm, by default 8
     """
 
-    def __init__(self, apertures=None, fwhm_fit=None, annulus_inner_radius=5, annulus_outer_radius=8, **kwargs):
+    def __init__(self, apertures=None, annulus_inner_radius=5, annulus_outer_radius=8, **kwargs):
         super().__init__(
             apertures=apertures,
-            fwhm_fit=fwhm_fit,
             annulus_inner_radius=annulus_inner_radius,
             annulus_outer_radius=annulus_outer_radius,
             **kwargs)
@@ -252,3 +275,71 @@ class MovingAperturePhotometry(ForcedAperturePhotometry):
 
         self.compute_error(image)
         image.header["sky"] = np.mean(image.sky)
+
+    @staticmethod
+    def doc():
+        return """Same as :py:class:`~prose.block.ForcedAperturePhotometry` but positions are taken within each image from :code:`Image.stars_coords`."""
+
+
+class SEAperturePhotometry(BasePhotometry):
+
+    def __init__(self, apertures=None, annulus_inner_radius=5, annulus_outer_radius=8, **kwargs):
+
+        super().__init__(**kwargs)
+        if apertures is None:
+            self.apertures = np.arange(0.1, 10, 0.25)
+        else:
+            self.apertures = apertures
+
+        self.annulus_inner_radius = annulus_inner_radius
+        self.annulus_outer_radius = annulus_outer_radius
+        self.fits_manager = None
+
+        self.n_apertures = len(self.apertures)
+        self.n_stars = None
+        self.circular_apertures = None
+        self.annulus_apertures = None
+        self.annulus_masks = None
+
+        self.circular_apertures_area = None
+        self.annulus_area = None
+
+    def initialize(self, fits_manager):
+        if isinstance(fits_manager, FitsManager):
+            self.fits_manager = fits_manager
+
+    def run(self, image):
+        r_in= self.annulus_inner_radius * image.fwhm
+        r_out= self.annulus_outer_radius * image.fwhm
+        r = self.apertures * image.fwhm
+
+        self.n_stars = len(image.stars_coords)
+        image.fluxes = np.zeros((self.n_apertures, self.n_stars))
+
+        data = image.data.copy().byteswap().newbyteorder()
+
+        for i, _r in enumerate(r):
+            image.fluxes[i, :], fluxerr, flag = sep.sum_circle(
+                data, 
+                *image.stars_coords.T, 
+                _r, bkgann=(r_in, r_out), subpix=0)
+
+        image.sky = 0
+        image.apertures_area = np.pi * r**2
+        image.annulus_area = np.pi * (r_in**2 - r_out**2)
+
+        self.compute_error(image)
+
+    def compute_error(self, image):
+
+        image.fluxes_errors = np.zeros((self.n_apertures, self.n_stars))
+
+        for i, aperture_area in enumerate(image.apertures_area):
+            area = aperture_area * (1 + aperture_area / image.annulus_area)
+            image.fluxes_errors[i, :] = self.fits_manager.telescope.error(
+                image.fluxes[i],
+                area,
+                image.sky,
+                image.header[self.fits_manager.telescope.keyword_exposure_time],
+                airmass=image.header[self.fits_manager.telescope.keyword_airmass],
+            )

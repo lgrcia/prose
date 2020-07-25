@@ -61,8 +61,8 @@ for name, obj in inspect.getmembers(blocks):
         if issubclass(obj, Block):
             block_doc = obj.doc()
             if block_doc is not None:
-                filename = path.join("./notes/blocks", "test_{}.rst".format(name))
+                filename = path.join("./notes/blocks", "{}.rst".format(name))
                 with open(filename, "w") as f:
                     f.write("{}\n{}".format(name, "-"*len(name)))
-                    f.write(block_doc)
-                    f.write(".. autoclass:: prose.blocks.{}}\n\t:members:".format(name))
+                    f.write("\n\n{}".format(block_doc))
+                    f.write("\n\n.. autoclass:: prose.blocks.{}\n\t:members:".format(name))
