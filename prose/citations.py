@@ -16,8 +16,10 @@ def get_citations(*args):
     citations = {}
     for block_or_unit in args:
         assert isinstance(block_or_unit, (Block, Unit)), "args should be units or blocks"
-        for citation in block_or_unit.citations():
-            citations[citation] = _all_citations[citation]
+        block_or_unit_citations = block_or_unit.citations()
+        if block_or_unit_citations is not None:
+            for citation in block_or_unit_citations:
+                citations[citation] = _all_citations[citation]
 
     txt = "This research made use of textsf{{prose}} citep{{prose}} and its dependencies citep{{{}}}.""".format(
         ", ".join(["prose:{}".format(citation) for citation in citations.keys()]))

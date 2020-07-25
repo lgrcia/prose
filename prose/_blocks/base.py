@@ -13,10 +13,7 @@ class Unit:
     def __init__(self, blocks, fits_manager, name="default", files="light", show_progress=True, n_images=None, **kwargs):
         self.name = name
         self.fits_manager = fits_manager
-        self.blocks_dict = OrderedDict({
-            block.name if block.name is not None else "block{}".format(i): block
-            for i, block in enumerate(blocks)
-        })
+        self.blocks = blocks
 
         self.retrieve_files(files, n_images=n_images)
 
@@ -40,6 +37,13 @@ class Unit:
     @property
     def blocks(self):
         return self.blocks_dict.values()
+
+    @blocks.setter
+    def blocks(self, blocks):
+        self.blocks_dict = OrderedDict({
+            block.name if block.name is not None else "block{}".format(i): block
+            for i, block in enumerate(blocks)
+        })
 
     def retrieve_files(self, keyword, n_images=None):
         self.fits_manager.files = self.fits_manager.get(keyword, n_images=n_images)
@@ -83,6 +87,10 @@ class Unit:
             rows, headers, tablefmt="fancy_grid"
         )))
 
+    def citations(self):
+        citations = [block.citations() for block in self.blocks if block.citations() is not None]
+        return citations if len(citations) > 0 else None
+
 
 class Image:
 
@@ -119,6 +127,13 @@ class Block:
 
     def show_image(self, image):
         viz.show_stars(image)
+
+    def citations(self, image):
+        return None
+
+    @staticmethod
+    def doc():
+        return None
 
 
 class PrintDim(Block):
