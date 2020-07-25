@@ -16,4 +16,3 @@ docs/source/_build
 test_data
 paper
 *.ipynb_checkpoints
-docs/source/notes/blocks/*.rst
