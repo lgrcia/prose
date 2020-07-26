@@ -1,7 +1,7 @@
 PhotutilsAperturePhotometry
 ---------------------------
 
-Aperture photometry using the :code:`CircularAperture` and :code:`CircularAnnulus` of photutils_ with a wide range of apertures of **fixed positions** and sizes throughout the observation. By default annulus goes from 5 fwhm to 8 fwhm and apertures from 0.1 to 10 times the fwhm with 0.25 steps (leading to 40 apertures).
+Aperture photometry using the :code:`CircularAperture` and :code:`CircularAnnulus` of photutils_ with a wide range of apertures. By default annulus goes from 5 fwhm to 8 fwhm and apertures from 0.1 to 10 times the fwhm with 0.25 steps (leading to 40 apertures).
 
 The error (e.g. in ADU) is then computed following:
 
@@ -23,7 +23,7 @@ with :math:`S` the flux (ADU) within an aperture of area :math:`A_p`, :math:`b` 
 
 with :math:`S_f` a scintillation factor, :math:`d` the aperture diameter (m), :math:`h` the altitude (m) and :math:`T` the exposure time.
 
-The positions of individual stars are taken from :code:`Image.stars_coords`, since these are set once, they are usually taken from the stack image.
+The positions of individual stars are taken from :code:`Image.stars_coords` so one of the detection block should be used, placed before this one.
 
 .. autoclass:: prose.blocks.PhotutilsAperturePhotometry
 	:members:
