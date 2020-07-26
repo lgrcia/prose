@@ -142,7 +142,9 @@ class SaveReduced(Block):
 # TODO: make ImageIOBlock block
 
 class Video(Block):
-    """Saves all :code:`Image.data` into video.
+    """Build a video of all :code:`Image.data`.
+
+    Can be either from raw image or a :code:`int8` rgb image.
 
     Parameters
     ----------

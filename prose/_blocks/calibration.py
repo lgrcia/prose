@@ -8,7 +8,7 @@ import prose.visualisation as viz
 
 class Calibration(Block):
     """
-    Calibration task
+    Flat, Bias and Dark calibration
     """
     def __init__(self, **kwargs):
 

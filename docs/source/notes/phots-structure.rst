@@ -17,7 +17,7 @@ For example, using the `astropy.io.fits` to show its content :
     hdu = fits.open("./Callisto_20190527_Sp1744-5834_I+z_photometry.phots")
     hdu.info()
 
-.. code-block::
+.. parsed-literal::
 
     Filename: Callisto_20190527_Sp1744-5834_I+z_photometry.phots
     No.    Name             Ver    Type      Cards   Dimensions   Format
