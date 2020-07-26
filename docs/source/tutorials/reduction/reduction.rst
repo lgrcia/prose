@@ -9,7 +9,7 @@ Example data
 ^^^^^^^^^^^^
 you can follow this tutorial on your own data or generate a synthetic dataset with
 
-.. code:: python3
+.. code-block:: python3
 
     from prose.datasets import generate_prose_reduction_datatset
 
@@ -20,7 +20,7 @@ Telescope setting
 
 We start by setting up the telescope information we need for the reduction, for example some fits keywords that are specific to this observatory plus few specs:
 
-.. code:: python3
+.. code-block:: python3
 
     from prose import Telescope
 
@@ -42,7 +42,7 @@ Folder exploration
 
 The first thing we want to do is to see what is contained within our folder. For that we instantiate a :py:class:`~prose.FitsManager` object on our folder to describe its content
 
-.. code:: python3
+.. code-block:: python3
 
     from prose import FitsManager
 
@@ -70,7 +70,7 @@ Reduction and Photometry
 
 The ``Reduction`` part is then simply
 
-.. code:: python3
+.. code-block:: python3
     
     from prose import Reduction
 
@@ -83,7 +83,7 @@ The ``Reduction`` part is then simply
 
 a ``fake_telescope_20200229_prose_I+z`` folder has been created in which we can now run the ``Photometry``
 
-.. code:: python3
+.. code-block:: python3
 
     from prose import Photometry
 
