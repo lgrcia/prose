@@ -8,7 +8,7 @@ In this tutorial we will see how to use and analyse photometric products from |p
 
 Let's instantiate a :py:class:`~prose.PhotProducts`  object containing all we need for this analysis and show the detected stars
 
-.. code:: ipython3
+.. code:: python
 
     from prose import PhotProducts
     
@@ -24,7 +24,7 @@ Let's instantiate a :py:class:`~prose.PhotProducts`  object containing all we ne
 
 If target was not specified in the reduction process, we need to specify it before producing our differential Photometry.
 
-.. code:: ipython3
+.. code:: python
 
     phot.target_id = 1
     phot.Broeg2005()
@@ -41,7 +41,7 @@ We used the Broeg 2005 algorithm and ended by plotting our light-curve. ``phot.l
 
 We can check the comparison stars
 
-.. code:: ipython3
+.. code:: python
 
     phot.show_stars(zoom=False)
 
@@ -55,7 +55,7 @@ and continue with further visualisation or analysis. All available plotting meth
 
 To save your analysis
 
-.. code:: ipython3
+.. code:: python
 
     phot.save()
 

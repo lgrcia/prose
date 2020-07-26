@@ -28,7 +28,7 @@ Dataset
 -------
 For this tutorial we will work on a synthetic observation which gif can be seen above. To generate this dataset:
 
-.. code:: ipython3
+.. code:: python
 
    from prose.datasets import generate_prose_reduction_datatset
 
@@ -36,7 +36,7 @@ For this tutorial we will work on a synthetic observation which gif can be seen 
 
 We directly instantiate a :py:class:`~prose.FitsManager` object to explore this folder (see :ref:`explore`)
 
-.. code:: ipython3
+.. code:: python
 
    from prose import FitsManager
 
@@ -46,7 +46,7 @@ Principle
 ---------
 We will use difference imaging to locate the moving object. This is shown in the next code where we can see that difference between consecutive images allow to locate a moving source.
 
-.. code:: ipython3
+.. code:: python
 
    import numpy as np
    from astropy.io import fits
@@ -75,7 +75,7 @@ Creating a new :py:class:`~prose.Block`
 ---------------------------------------
 Now we can create a :py:class:`~prose.Block` that will extract and store this information. It must be a sub-class of :py:class:`~prose.Block`, i.e. 
 
-.. code:: ipython3
+.. code:: python
 
    from prose import Block
 
@@ -98,7 +98,7 @@ As a reminder, a block has the following strucure:
 
 Here we don't need to instantiate ``initialise()`` because no information is needed apart from the images. However we have to implement the ``run()`` method:
 
-.. code:: ipython3
+.. code:: python
 
    # within the class
    def run(self, image):
@@ -114,7 +114,7 @@ Here we don't need to instantiate ``initialise()`` because no information is nee
 
 Finally let's instantiate the ``terminate()`` class that will simply plot the ``positions`` over the last image:
 
-.. code:: ipython3
+.. code:: python
 
    from prose.utils import z_scale
 
@@ -127,7 +127,7 @@ Finally let's instantiate the ``terminate()`` class that will simply plot the ``
 
 We can now place our new block in a :py:class:`~prose.Unit` and run it:
 
-.. code:: ipython3
+.. code:: python
 
    from prose import Unit
 

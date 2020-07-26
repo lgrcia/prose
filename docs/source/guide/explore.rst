@@ -9,7 +9,7 @@ associated with specific observations. This class is heavily used is handy to de
 
 A FitsManager object can be created with
 
-.. code:: ipython3
+.. code:: python
 
     from prose.io import FitsManager
     
@@ -25,7 +25,7 @@ The ``depth`` parameter specifies how deep you want to explore in term
 of sub-folders. Then ``describe`` provides table visualisation of what
 is contained within your folder
 
-.. code:: ipython3
+.. code:: python
 
     # To see all individual observations
     fm.describe("obs")
@@ -44,7 +44,7 @@ is contained within your folder
     ╘═════════╧════════════╧══════════════╧═════════════╧══════════╧════════════╛
 
 
-.. code:: ipython3
+.. code:: python
 
     # To see all observations together with calibration files
     
@@ -88,7 +88,7 @@ is contained within your folder
 you can then filter your observations and keep calibration files needed
 for your analysis
 
-.. code:: ipython3
+.. code:: python
 
     fm.keep(target="Sp0111-4908", calibration=True)
     
@@ -112,7 +112,7 @@ for your analysis
 
 Specific paths can then be retrieved with
 
-.. code:: ipython3
+.. code:: python
     
     im_science = fm.get("light")
     im_dark = fm.get("dark")
@@ -124,6 +124,6 @@ Index file
 
 Every time a folder is explored with :py:class:`~prose.FitsManager`, an index file is created. When dealing with large folders, the keyword :code:`index=True` can be used avoid re-analyzing folder content and save time. Using the example above we would do:
 
-.. code:: ipython3
+.. code:: python
 
     fm = FitsManager("test_folder", index=True)
