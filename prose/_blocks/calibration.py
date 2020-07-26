@@ -8,16 +8,14 @@ import prose.visualisation as viz
 
 class Calibration(Block):
     """
-    calibration task, included in :py:class:`~prose._blocks.Reduction`
+    Calibration task
     """
-    def __init__(self, only_trim=False, **kwargs):
+    def __init__(self, **kwargs):
 
         super().__init__(**kwargs)
         self.master_dark = None
         self.master_flat = None
         self.master_bias = None
-
-        self.only_trim = only_trim
 
     def calibration(self, image, exp_time):
         return (image - (self.master_dark * exp_time + self.master_bias)) / self.master_flat
@@ -32,7 +30,7 @@ class Calibration(Block):
             primary_hdu = hdu[0]
             image, header = primary_hdu.data, primary_hdu.header
             hdu.close()
-            image = self.fits_explorer.trim(image, raw=True)
+            image = self.fits_explorer._trim(image, raw=True)
             if image_type == "dark":
                 _dark = (image - self.master_bias) / header[kw_exp_time]
                 if i == 0:
@@ -93,12 +91,9 @@ class Calibration(Block):
         # TODO: Investigate flip
         data = image.data
         header = image.header
-        trim_image = self.fits_explorer.trim(data, wcs=image.wcs)
+        trim_image = self.fits_explorer._trim(data, wcs=image.wcs)
         exp_time = header[self.telescope.keyword_exposure_time]
-        if not self.only_trim:
-            calibrated_image = self.calibration(trim_image.data, exp_time)
-        else:
-            calibrated_image = data
+        calibrated_image = self.calibration(trim_image.data, exp_time)
 
         # if flip:
         #     calibrated_image = calibrated_image[::-1, ::-1]
@@ -111,6 +106,8 @@ class Calibration(Block):
 
 
 class Trim(Block):
+    """Images trimming
+    """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
