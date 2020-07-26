@@ -94,24 +94,24 @@ class PSFPhotometry(BasePhotometry):
 
 
 
-class ForcedAperturePhotometry(Block):
+class PhotutilsAperturePhotometry(Block):
     """
-    Fixed positions aperture photometry.
+    Aperture photometry using :code:`photutils`.
     For more details check https://photutils.readthedocs.io/en/stable/aperture.html
 
     Parameters
     ----------
-    fits_explorer : FitsManager
-        FitsManager containing a single observation
     apertures : ndarray or list, optional
         apertures in fraction of fwhm, by default None, i.e. np.arange(0.1, 10, 0.25)
     annulus_inner_radius : int, optional
         radius of the inner annulus in fraction of fwhm, by default 5
     annulus_outer_radius : int, optional
         radius of the outer annulus in fraction of fwhm, by default 8
+    forced: bool, optional
+        weather to keep sources positions constant (taken from first image) over the photometric extraction, by default True
     """
 
-    def __init__(self, apertures=None, annulus_inner_radius=5, annulus_outer_radius=8, **kwargs):
+    def __init__(self, apertures=None, annulus_inner_radius=5, annulus_outer_radius=8, forced=True, **kwargs):
 
         super().__init__(**kwargs)
         if apertures is None:
@@ -131,6 +131,8 @@ class ForcedAperturePhotometry(Block):
 
         self.circular_apertures_area = None
         self.annulus_area = None
+
+        self.forced=forced
 
     def initialize(self, fits_manager):
         if isinstance(fits_manager, FitsManager):
@@ -161,6 +163,8 @@ class ForcedAperturePhotometry(Block):
 
     def run(self, image, **kwargs):
         if self.circular_apertures is None:
+            self.set_apertures(image.stars_coords, image.fwhm)
+        elif not self.forced:
             self.set_apertures(image.stars_coords, image.fwhm)
 
         bkg_median = []
@@ -203,7 +207,7 @@ class ForcedAperturePhotometry(Block):
 
     @staticmethod
     def doc():
-        return """Aperture photometry using the :code:`CircularAperture` and :code:`CircularAnnulus` of photutils_ with a wide range of apertures of **fixed positions** and sizes throughout the observation. By default annulus goes from 5 fwhm to 8 fwhm and apertures from 0.1 to 10 times the fwhm with 0.25 steps (leading to 40 apertures).
+        return r"""Aperture photometry using the :code:`CircularAperture` and :code:`CircularAnnulus` of photutils_ with a wide range of apertures of **fixed positions** and sizes throughout the observation. By default annulus goes from 5 fwhm to 8 fwhm and apertures from 0.1 to 10 times the fwhm with 0.25 steps (leading to 40 apertures).
 
 The error (e.g. in ADU) is then computed following:
 
@@ -228,10 +232,12 @@ with :math:`S_f` a scintillation factor, :math:`d` the aperture diameter (m), :m
 The positions of individual stars are taken from :code:`Image.stars_coords`, since these are set once, they are usually taken from the stack image."""
 
 
-class MovingAperturePhotometry(ForcedAperturePhotometry):
+class SEAperturePhotometry(BasePhotometry):
     """
-    Aperture photometry.
-    For more details check https://photutils.readthedocs.io/en/stable/aperture.html
+    Aperture photometry using :code:`sep`.
+    For more details check https://sep.readthedocs.io
+
+    SEP is a python wrapping of the C Source Extractor code, hence being 2 times faster that Photutils version. Forced aperture photometry can be done simple by using :code:`stack=True` on the detection Block used, hence using stack sources positions along the photometric extraction.
 
     Parameters
     ----------
@@ -244,44 +250,6 @@ class MovingAperturePhotometry(ForcedAperturePhotometry):
     annulus_outer_radius : int, optional
         radius of the outer annulus in fraction of fwhm, by default 8
     """
-
-    def __init__(self, apertures=None, annulus_inner_radius=5, annulus_outer_radius=8, **kwargs):
-        super().__init__(
-            apertures=apertures,
-            annulus_inner_radius=annulus_inner_radius,
-            annulus_outer_radius=annulus_outer_radius,
-            **kwargs)
-
-    def run(self, image, **kwargs):
-        self.set_apertures(image.stars_coords.copy(), image.fwhm)
-
-        bkg_median = []
-        for mask in self.annulus_masks:
-            annulus_data = mask.multiply(image.data)
-            annulus_data_1d = annulus_data[mask.data > 0]
-            _, median_sigma_clip, _ = sigma_clipped_stats(annulus_data_1d)
-            bkg_median.append(median_sigma_clip)
-
-        bkg_median = np.array(bkg_median)
-
-        image.apertures_area = self.circular_apertures_area
-        image.sky = bkg_median
-        image.fluxes = np.zeros((self.n_apertures, self.n_stars))
-        image.annulus_area = self.annulus_area
-
-        for a, ape in enumerate(self.apertures):
-            photometry = aperture_photometry(image.data, self.circular_apertures[a])
-            image.fluxes[a] = np.array(photometry["aperture_sum"] - (bkg_median * self.circular_apertures_area[a]))
-
-        self.compute_error(image)
-        image.header["sky"] = np.mean(image.sky)
-
-    @staticmethod
-    def doc():
-        return """Same as :py:class:`~prose.block.ForcedAperturePhotometry` but positions are taken within each image from :code:`Image.stars_coords`."""
-
-
-class SEAperturePhotometry(BasePhotometry):
 
     def __init__(self, apertures=None, annulus_inner_radius=5, annulus_outer_radius=8, **kwargs):
 
@@ -326,7 +294,25 @@ class SEAperturePhotometry(BasePhotometry):
 
         image.sky = 0
         image.apertures_area = np.pi * r**2
-        image.annulus_area = np.pi * (r_in**2 - r_out**2)
+        image.annulus_area = np.pi * (r_out**2 - r_in**2)
+
+        # fluxes = np.zeros((self.n_apertures, self.n_stars))
+        # bkg = np.zeros((self.n_apertures, self.n_stars))
+
+        # for i, _r in enumerate(r):
+        #     fluxes[i, :], _, _ = sep.sum_circle(
+        #         data, 
+        #         *image.stars_coords.T, 
+        #         _r, bkgann=(r_in, r_out), subpix=0)
+            
+        #     bkg[i, :], _, _ = sep.sum_circann(data, *image.stars_coords.T, r_in, r_out, subpix=0)
+
+        #     image.fluxes = fluxes - bkg
+
+        # image.sky = np.mean(bkg)
+        # image.apertures_area = np.pi * r**2
+        # image.annulus_area = np.pi * (r_out**2 - r_in**2)
+        # image.header["sky"] = np.mean(image.sky)
 
         self.compute_error(image)
 
@@ -343,3 +329,6 @@ class SEAperturePhotometry(BasePhotometry):
                 image.header[self.fits_manager.telescope.keyword_exposure_time],
                 airmass=image.header[self.fits_manager.telescope.keyword_airmass],
             )
+
+        if not np.all(np.isfinite(image.fluxes_errors)):
+            d = 0

@@ -299,25 +299,25 @@ def Broeg2005(
 class LightCurve:
     """
     Object holding time-series of flux and data from unique stellar observation
+
+    If fluxes and errors have shape (apertures, times), best aperture is selected through
+   ``self._pick_best_aperture`` for more details see TODO
+
+    Parameters
+    ----------
+    time : array
+        time of the time-serie
+    fluxes : ndarray
+        a 1D or 2D array of fluxes, if 2D shape should be (apertures, times)
+    errors : ndarray, optional
+        a 1D or 2D array of fluxes errors, if 2D shape should be (apertures, times)
+    data : dict, optional
+        a dict containing simultaneous time-series, e.g. {"fwhm": ndarray}. Each data should have shape (times)
+    apertures : list or ndarray, optional
+        apertures in pixels (if used to produce light curve), by default None
+        
     """
     def __init__(self, time, fluxes, errors=None, data=None, apertures=None):
-        """
-        Instantiate LightCurve object. If fluxes and errors have shape (apertures, times), best aperture is selected through
-        ``self._pick_best_aperture`` for more details see TODO
-
-        Parameters
-        ----------
-        time : array
-            time of the time-serie
-        fluxes : ndarray
-            a 1D or 2D array of fluxes, if 2D shape should be (apertures, times)
-        errors : ndarray, optional
-            a 1D or 2D array of fluxes errors, if 2D shape should be (apertures, times)
-        data : dict, optional
-            a dict containing simultaneous time-series, e.g. {"fwhm": ndarray}. Each data should have shape (times)
-        apertures : list or ndarray, optional
-            apertures in pixels (if used to produce light curve), by default None
-        """
         
         n = np.shape(fluxes)
         self._n_aperture = n[0] if len(n) > 1 else 1

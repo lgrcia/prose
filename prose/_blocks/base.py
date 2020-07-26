@@ -133,7 +133,7 @@ class Block:
 
     @staticmethod
     def doc():
-        return None
+        return ""
 
 
 class PrintDim(Block):

@@ -184,7 +184,7 @@ class Gaussian2D(PSFModel):
 
     @staticmethod
     def doc():
-        return """An elliptical 2D Gaussian model expressed as
+        return r"""An elliptical 2D Gaussian model expressed as
 
 
 .. math::
@@ -251,7 +251,7 @@ class Moffat2D(PSFModel):
 
     @staticmethod
     def doc():
-        return """An elliptical 2D Moffat model expressed as
+        return r"""An elliptical 2D Moffat model expressed as
 
 .. math::   
 

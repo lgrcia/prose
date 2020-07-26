@@ -6,13 +6,13 @@ An elliptical 2D Gaussian model expressed as
 
 .. math::
 
-   f(x, y|A, x_0, y_0, \sigma_x, \sigma_y, 	heta, b) = - A \exp\left(rac{(x'-x'_0)^2}{2\sigma_x^2} rac{(y'-y'_0)^2}{2\sigma_y^2}ight) + b
+   f(x, y|A, x_0, y_0, \sigma_x, \sigma_y, \theta, b) = - A \exp\left(\frac{(x'-x'_0)^2}{2\sigma_x^2} \frac{(y'-y'_0)^2}{2\sigma_y^2}\right) + b
 
 .. math::
 
-   	ext{with}\quad egin{gather*}
-   x' = xcos(	heta) + ysin(	heta) \
-   y' = -xsin(	heta) + ycos(	heta)
+   \text{with}\quad \begin{gather*}
+   x' = xcos(\theta) + ysin(\theta) \\
+   y' = -xsin(\theta) + ycos(\theta)
    \end{gather*}
 
 

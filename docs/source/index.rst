@@ -18,7 +18,7 @@ prose is a python package to reduce and analyse data from telescope observations
    :maxdepth: 1
 
    guide/installation
-   guide/quick-ref
+   guide/citing
    guide/explore
    guide/api
 

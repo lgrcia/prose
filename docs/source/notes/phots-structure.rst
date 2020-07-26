@@ -41,7 +41,7 @@ For example, using the `astropy.io.fits` to show its content :
 Header
 -------
 
-The header (`PRIMARY` hdu) contains all necessary informatio, to identify the observation. When produced with |prose|, it contains the header of the stack image, itself being the header of the reference image used for alignment during reduction). 
+The header (`PRIMARY` hdu) contains all necessary informations, to identify the observation. When produced with |prose|, it contains the header of the stack image, itself being the header of the reference image used for alignment during reduction). 
 
 
 Data HDUs
@@ -63,6 +63,6 @@ Other HDUs often correspond to additional data recorded during reduction and pho
 
     dataframe = Table(hdus["TIME SERIES"].data)
 
-Usually the Photometry object contains attributes to access these data, for example in :code:`Photometry.data` data-frame.
+Usually the :py:class:`~prose.blocks.PhotProducts` object contains attributes to access these data, for example in :code:`PhotProducts.data` data-frame.
 
 

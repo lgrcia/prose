@@ -7,16 +7,16 @@ XYShift
 
 .. math::
 
-   oldsymbol{S^{im}} = egin{bmatrix}
-   x^{im}_0 & y^{im}_0 \
-   x^{im}_1 & y^{im}_1 \
-   . & . \
+   \boldsymbol{S^{im}} = \begin{bmatrix}
+   x^{im}_0 & y^{im}_0 \\
+   x^{im}_1 & y^{im}_1 \\
+   . & . \\
    x^{im}_N & y^{im}_N
    \end{bmatrix} \quad and \quad 
-   oldsymbol{S^{ref}} = egin{bmatrix}
-   x^{ref}_0 & y^{ref}_0 \
-   x^{ref}_1 & y^{ref}_1 \
-   . & . \
+   \boldsymbol{S^{ref}} = \begin{bmatrix}
+   x^{ref}_0 & y^{ref}_0 \\
+   x^{ref}_1 & y^{ref}_1 \\
+   . & . \\
    x^{ref}_N & y^{ref}_N
    \end{bmatrix}
 
@@ -27,7 +27,7 @@ If we want to know, let's say, the :math:`x` shift between `im` and `ref` we jus
 
 .. math::
 
-    \Delta x = rac{1}{N}\sum_{0}^{N} x^{im}_i - x^{ref}_i
+    \Delta x = \frac{1}{N}\sum_{0}^{N} x^{im}_i - x^{ref}_i
 
 
 This is possible because :math:`x^{im}_i`  and :math:`x^{ref}_i` are the position of the same identified star :math:`i` (:math:`N` of them in each image)

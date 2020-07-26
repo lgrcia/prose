@@ -190,7 +190,7 @@ class XYShift(Registration):
 
     @staticmethod
     def doc():
-        return """**xyshift** is originaly the **TRAPHOT** (M. Gillon) method to align consecutive images.
+        return r"""**xyshift** is originaly the **TRAPHOT** (M. Gillon) method to align consecutive images.
 
 *Principle*: Let's consider two images, ``im`` and ``ref``. We want to know the shift between ``im`` and ``ref`` knowing the position of the stars in these two images. We suppose that there is N stars in ``im`` and ``ref`` and that their position are given by
 
@@ -264,6 +264,4 @@ class AstroAlignShift(Registration):
 
     @staticmethod
     def doc():
-        return """`astroalign <https://astroalign.readthedocs.io/en/latest/>`_ is a python module used to align stellar astronomical images using 3-point asterisms (triangles) similarities. For speed, reference asterisms are computed once at the begining of the reduction and then matched with every images.
-
-*API*: :py:class:`~prose.pipeline_methods.alignment.AstroAlignShift`"""
+        return """`astroalign <https://astroalign.readthedocs.io/en/latest/>`_ is a python module used to align stellar astronomical images using 3-point asterisms (triangles) similarities. For speed, reference asterisms are computed once at the begining of the reduction and then matched with every images."""

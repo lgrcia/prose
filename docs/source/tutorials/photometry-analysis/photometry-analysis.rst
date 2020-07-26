@@ -1,6 +1,4 @@
 
-.. TODO: update lc image
-
 .. _photometry-analysis:
 
 Photometry analysis
