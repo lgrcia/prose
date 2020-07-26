@@ -4,8 +4,8 @@
 
    Tutorial still under review
 
-Modular reduction
-=================
+Custom pipeline
+===============
 
 In |prose|, :py:class:`~prose.Block` objects (which are dedicated to image analysis and/or modification) can be aranged into :py:class:`~prose.Unit` which have the following workflow:
 
@@ -19,7 +19,7 @@ By providing :ref:`many pre-implemented blocks <blocks>` one can arange a comple
 
 .. title:: Objective
 
-In this tutorial we will create a custom :py:class:`~prose.Block` and include it in a pipeline which goal is to detect and trace a moving object in the following observation:
+In this tutorial we will create a custom :py:class:`~prose.Block` and include it in a pipeline (:py:class:`~prose.Unit`) which goal is to detect and trace a moving object in the following observation:
 
 .. figure:: ./moving_dataset_movie.gif
    :align: center

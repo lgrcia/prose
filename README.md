@@ -1,32 +1,11 @@
 # prose
 
-prose is a python package to reduce and analyse data from telescope observations. Its primary goal is the production of differential light curves from raw uncalibrated FITS images.
+A framework for FITS processing pipelines in python. Built for Astronomy, *prose* features a pipeline to perform common tasks (such as automated calibration, reduction and photometry) while being fully customizable. Documentation at [prose.readthedocs.io](https://prose.readthedocs.io)
 
 <p align="center">
   <img width="400" src="docs/source/prose.png">
 </p>
 
-```python
-
-from prose import FitsManager
-
-fits_folder = FitsManager("folder")
-fits_folder.describe()
-```
-```
-
-    ╒════════════╤══════════════╤════════╤═════════════╤══════════════╤══════════╤════════════╕
-    │ date       │ telescope    │ type   │ target      │ dimensions   │ filter   │   quantity │
-    ╞════════════╪══════════════╪════════╪═════════════╪══════════════╪══════════╪════════════╡
-    │ 2019-09-22 │ SPECULOOS-IO │ bias   │             │ 2048x2088    │          │          9 │
-    ├────────────┼──────────────┼────────┼─────────────┼──────────────┼──────────┼────────────┤
-    │ 2019-09-22 │ SPECULOOS-IO │ dark   │             │ 2048x2088    │          │         27 │
-    ├────────────┼──────────────┼────────┼─────────────┼──────────────┼──────────┼────────────┤
-    │ 2019-09-22 │ SPECULOOS-IO │ flat   │             │ 2048x2088    │ I+z      │         14 │
-    ├────────────┼──────────────┼────────┼─────────────┼──────────────┼──────────┼────────────┤
-    │ 2019-09-22 │ SPECULOOS-IO │ light  │ Trappist-1  │ 2048x2088    │ I+z      │        263 │
-    ╘════════════╧══════════════╧════════╧═════════════╧══════════════╧══════════╧════════════╛
-```
 
 ```python
 
