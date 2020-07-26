@@ -6,7 +6,7 @@
 prose
 =====
 
-A framework for FITS processing pipelines in python. Built for Astronomy, |prose| features a pipeline to perform common tasks (such as automated calibration, reduction and photometry) while being fully customizable.
+A framework for FITS processing pipelines in python. Built for Astronomy, |prose| features pipelines to perform common tasks (such as automated calibration, reduction and photometry) and make building custom ones easy.
 
 .. image:: prose.png
    :width: 450

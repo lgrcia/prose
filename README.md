@@ -1,6 +1,6 @@
 # prose
 
-A framework for FITS processing pipelines in python. Built for Astronomy, *prose* features a pipeline to perform common tasks (such as automated calibration, reduction and photometry) while being fully customizable. Documentation at [prose.readthedocs.io](https://prose.readthedocs.io)
+A framework for FITS processing pipelines in python. Built for Astronomy, *prose* features pipelines to perform common tasks (such as automated calibration, reduction and photometry) and make building custom ones easy. Documentation at [prose.readthedocs.io](https://prose.readthedocs.io)
 
 <p align="center">
   <img width="400" src="docs/source/prose.png">
