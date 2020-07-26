@@ -14,8 +14,20 @@ from prose import io
 
 
 class Stack(Block):
+    """Build a FITS stack image of the observation
+
+    Parameters
+    ----------
+    destination : str
+        path of the stack image (must be a .fits file name)
+    reference : 1/2, optional
+        reference image to take header from. :code:`float` from 0 (first image) to 1 (last image), by default 1/2
+    overwrite : bool, optional
+        weather to overwrite file if exists, by default False
+    """
 
     def __init__(self, destination, reference=1/2, overwrite=False, **kwargs):
+
         super(Stack, self).__init__(**kwargs)
         self.reference = reference
         self.stack = None
@@ -91,7 +103,17 @@ class StackStd(Block):
 
 
 class SaveReduced(Block):
+    """Save reduced FITS images.
+
+    Parameters
+    ----------
+    destination : str
+        folder path of the images. Orignial name is used with the addition of :code:`_reduced.fits`
+    overwrite : bool, optional
+        weather to overwrite file if exists, by default False
+    """
     def __init__(self, destination, overwrite=False, **kwargs):
+
         super().__init__(**kwargs)
         self.destination = destination
         self.overwrite = overwrite
@@ -119,31 +141,25 @@ class SaveReduced(Block):
 
 # TODO: make ImageIOBlock block
 
-
-class Gif(Block):
-    def __init__(self, destination, overwrite=True, factor=0.25, from_fits=False, **kwargs):
-        super().__init__(**kwargs)
-        self.destination = destination
-        self.overwrite = overwrite
-        self.images = []
-        self.factor = factor
-        self.from_fits = from_fits
-
-    def run(self, image, **kwargs):
-        if self.from_fits:
-            self.images.append(viz.gif_image_array(image.data, factor=self.factor))
-        else:
-            self.images.append(image.data)
-
-    def terminate(self):
-        imageio.mimsave(self.destination, self.images)
-
-    def citations(self):
-        return "imageio"
-
-
 class Video(Block):
+    """Saves all :code:`Image.data` into video.
+
+    Parameters
+    ----------
+    destination : str
+        path of the video which format depends on the extension (e.g. :code:`.mp4`, or :code:`.gif)
+    overwrite : bool, optional
+        weather to overwrite file if exists, by default False
+    factor : float, optional
+        subsampling factor of the image, by default 0.25
+    fps : int, optional
+        frames per second of the video, by default 10
+    from_fits : bool, optional
+        Wether :code:`Image.data` is a raw fits image, by default False. If True, a z scaling is applied as well as casting to `uint8`
+    """
+
     def __init__(self, destination, overwrite=True, factor=0.25, fps=10, from_fits=False, **kwargs):
+
         super().__init__(**kwargs)
         self.destination = destination
         self.overwrite = overwrite
@@ -166,7 +182,16 @@ class Video(Block):
 
 
 
-class SavePhotometricProducts(Block):
+class SavePhots(Block):
+    """Save photometric products into a FITS :code:`.phots` file. See :ref:`phots-structure` for more info
+
+    Parameters
+    ----------
+    destination : str
+        path of the file (must be a .phots file name)
+    overwrite : bool, optional
+        weather to overwrite file if exists, by default False
+    """
     def __init__(self, destination, overwrite=False, **kwargs):
         super().__init__(**kwargs)
         self.destination = destination

@@ -126,7 +126,7 @@ class Photometry(Unit):
             blocks.DAOFindStars(n_stars=n_stars, stack=True, name="detection"),
             blocks.Gaussian2D(stack=True, name="fwhm"),
             blocks.ForcedAperturePhotometry(name="photometry"),
-            blocks.SavePhotometricProducts(self.phot_path, overwrite=overwrite, name="saving")
+            blocks.SavePhots(self.phot_path, overwrite=overwrite, name="saving")
         ]
 
         super().__init__(
@@ -143,7 +143,7 @@ class Photometry(Unit):
 
         self.destination = self.fits_manager.folder
 
-        if len(self.fits_manager.observations) == 1:
+        if len(self.fits_manager._observations) == 1:
             self.fits_manager.set_observation(0)
         else:
             self.fits_manager.describe("obs")
