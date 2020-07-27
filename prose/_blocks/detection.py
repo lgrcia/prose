@@ -41,10 +41,23 @@ class StarsDetection(Block):
 class DAOFindStars(StarsDetection):
     """
     DAOPHOT stars detection with :code:`photutils` implementation.
-    """
-    
-    def __init__(self, sigma_clip=2.5, lower_snr=5, fwhm=5, n_stars=None, min_separation=10, sort=True, **kwargs):
 
+    Parameters
+    ----------
+    sigma_clip : float, optional
+        sigma clipping factor used to evaluate background, by default 2.5
+    lower_snr : int, optional
+        minimum snr (as source_flux/background), by default 5
+    fwhm : int, optional
+        typical fwhm of image psf, by default 5
+    n_stars : int, optional
+        maximum number of stars to consider, by default None
+    min_separation : float, optional
+        minimum separation between sources, by default 5.0. If less than that, close sources are merged 
+    sort : bool, optional
+        wether to sort stars coordinates from the highest to the lowest intensity, by default True
+    """
+    def __init__(self, sigma_clip=2.5, lower_snr=5, fwhm=5, n_stars=None, min_separation=10, sort=True, **kwargs):
         super().__init__(n_stars=n_stars, sort=sort, **kwargs)
         self.sigma_clip = sigma_clip
         self.lower_snr = lower_snr
@@ -66,10 +79,25 @@ class DAOFindStars(StarsDetection):
     def citations(self):
         return "photutils", "numpy"
 
+    @staticmethod
+    def doc():
+        return """photutils_ :code:`DAOStarFinder`."""
+
 
 class SegmentedPeaks(StarsDetection):
     """
     Stars detection based on image segmentation.
+
+    Parameters
+    ----------
+    threshold : float, optional
+        threshold factor for which to consider pixel as potential sources, by default 1.5
+    n_stars : int, optional
+        maximum number of stars to consider, by default None
+    min_separation : float, optional
+        minimum separation between sources, by default 5.0. If less than that, close sources are merged 
+    sort : bool, optional
+        wether to sort stars coordinates from the highest to the lowest intensity, by default True
     """
 
     def __init__(self, threshold=2, min_separation=5.0, n_stars=None, sort=True, **kwargs):
@@ -91,7 +119,7 @@ class SegmentedPeaks(StarsDetection):
 
     @staticmethod
     def doc():
-        return """ A fast detection algorithm which:
+        return """A fast detection algorithm which:
 
 - segment the image in blobs with pixels above a certain threshold
 - compute the centroids of individual blobs as stars positions
@@ -107,9 +135,19 @@ class SEDetection(StarsDetection):
     """
     Source Extractor detection
 
+    Parameters
+    ----------
+    threshold : float, optional
+        threshold factor for which to consider pixel as potential sources, by default 1.5
+    n_stars : int, optional
+        maximum number of stars to consider, by default None
+    min_separation : float, optional
+        minimum separation between sources, by default 5.0. If less than that, close sources are merged 
+    sort : bool, optional
+        wether to sort stars coordinates from the highest to the lowest intensity, by default True
     """
-    def __init__(self, threshold=1.5, n_stars=None, min_separation=5.0, **kwargs):
-        super().__init__(n_stars=n_stars, **kwargs)
+    def __init__(self, threshold=1.5, n_stars=None, min_separation=5.0, sort=True, **kwargs):
+        super().__init__(n_stars=n_stars, sort=True, min_separation=min_separation, **kwargs)
         self.threshold = threshold
         self.min_separation = min_separation
 

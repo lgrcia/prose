@@ -3,13 +3,12 @@
 Fits manager
 --------------
 
-|prose| provides a FitsManager class to deal with fits folder
-exploration, mainly to identify and retrieve calibration files
-associated with specific observations. This class is heavily used is handy to deal with unorganized fits folders (e.g. where there is no separation between science and calibration images)
+|prose| provides a :py:class:`~prose.FitsManager` class to deal with fits folder exploration, mainly to identify and retrieve calibration files
+associated with specific observations. This class is heavily used and comes handy to deal with unorganized fits folders (e.g. where there is no separation between multiple observations, science and calibration images)
 
 A FitsManager object can be created with
 
-.. code:: ipython3
+.. code-block:: python
 
     from prose.io import FitsManager
     
@@ -21,11 +20,11 @@ A FitsManager object can be created with
     100%|██████████| 1528/1528 [00:17<00:00, 87.24it/s]
 
 
-The ``depth`` parameter specify how deep you want to explore in term
+The ``depth`` parameter specifies how deep you want to explore in term
 of sub-folders. Then ``describe`` provides table visualisation of what
 is contained within your folder
 
-.. code:: ipython3
+.. code-block:: python
 
     # To see all individual observations
     fm.describe("obs")
@@ -44,7 +43,7 @@ is contained within your folder
     ╘═════════╧════════════╧══════════════╧═════════════╧══════════╧════════════╛
 
 
-.. code:: ipython3
+.. code-block:: python
 
     # To see all observations together with calibration files
     
@@ -88,9 +87,9 @@ is contained within your folder
 you can then filter your observations and keep calibration files needed
 for your analysis
 
-.. code:: ipython3
+.. code-block:: python
 
-    fm.keep(target="Sp0111-4908", keep_closest_calibration=True)
+    fm.keep(target="Sp0111-4908", calibration=True)
     
     fm.describe("calib")
 
@@ -112,7 +111,7 @@ for your analysis
 
 Specific paths can then be retrieved with
 
-.. code:: ipython3
+.. code-block:: python
     
     im_science = fm.get("light")
     im_dark = fm.get("dark")
@@ -122,8 +121,8 @@ Specific paths can then be retrieved with
 Index file
 ==========
 
-Every time a folder is explored with FitsManager, an index file is created. When dealing with large folders, the keyword :code:`index=True` can be used to load this index and avoid re-analyzing the all folder and save time. Using the example above we would do:
+Every time a folder is explored with :py:class:`~prose.FitsManager`, an index file is created. When dealing with large folders, the keyword :code:`index=True` can be used avoid re-analyzing folder content and save time. Using the example above we would do:
 
-.. code:: ipython3
+.. code-block:: python
 
     fm = FitsManager("test_folder", index=True)

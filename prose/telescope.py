@@ -11,6 +11,16 @@ def str_to_astropy_unit(unit_string):
 
 
 class Telescope:
+    """Object containing telescope information.
+
+    see :ref:`telescope-config` page for more info
+
+    Parameters
+    ----------
+    telescope_file : dict or str, optional
+        telescope dict or description file, by default None which load a "default" telescope
+
+    """
     def __init__(self, telescope_file=None):
 
         # Keywords

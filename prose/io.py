@@ -87,8 +87,31 @@ class FitsManager:
     """
     A class to manage data folder containing FITS files organized in arbitrary ways. This class explore all sub-folders and
     retrieve header information to trace single FITS files.
+
+    Parameters
+    ----------
+    folder : str
+        Path of the folder to be explored
+    verbose : bool, optional
+        Wether or not to print processing info, by default True
+    telescope_kw : str, optional
+        FITS header keyword where to find telescope name, by default "TELESCOP"
+    depth : int, optional
+        Depth of exploration in terms of sub-folders, by default 1
+    light_kw : str, optional
+        Main image type you want to retrieve, by default "light"
+    update : bool, optional
+        Wether to update the index if `index=True`, by default False
+    index : bool, optional
+        Wether to use index file if available, by default False
+
+    Raises
+    ------
+    FileNotFoundError
+        If folder doesn't exists
     """
-    def __init__(self, folder=None, verbose=True, telescope_kw="TELESCOP", depth=1, light_kw="light", update=False, index=False, n_images=None):
+    def __init__(self, folder, verbose=True, telescope_kw="TELESCOP", depth=1, light_kw="light", update=False, index=False):
+
         self.depth = depth
         self._temporary_files_headers = None
         self._temporary_files_paths = None
@@ -103,16 +126,16 @@ class FitsManager:
 
         self.config = CONFIG
 
-        self.check_telescope_file()
+        self._check_telescope_file()
         self.telescope = Telescope()
         self.index_file = None
         
         if index:
-            has_index = self.load_index()
+            has_index = self._load_index()
             if update or not has_index:
-                self.build_files_df()
+                self._build_files_df()
         else:
-            self.build_files_df()
+            self._build_files_df()
 
         self._original_files_df = self.files_df.copy()
 
@@ -121,8 +144,8 @@ class FitsManager:
         # To embed useful files
         self.files = None
 
-    def load_index(self, force_single=False):
-        """ Load index files (default is prose_index.csv within self.folder)
+    def _load_index(self, force_single=False):
+        """Load index files (default is prose_index.csv within self.folder)
 
         Parameters
         ----------
@@ -158,7 +181,7 @@ class FitsManager:
             self.files_df["date"] = pd.to_datetime(self.files_df["date"]).apply(lambda x: x.date())
             return True
 
-    def build_files_df(self):
+    def _build_files_df(self):
         """
         Build the main files Dataframe including paths, dates, telescope, types, targets, filters, combined, 
         complete_date, dimensions, flip and jd
@@ -265,10 +288,10 @@ class FitsManager:
         else:
             self.files_df = pd.concat([self.files_df, files_df], ignore_index=True)
 
-        self.sort_by_date()
-        self.save_index()
+        self._sort_by_date()
+        self._save_index()
     
-    def save_index(self):
+    def _save_index(self):
         """
         Save current files Dataframe (self.files_df) into an index files (default is prose_index.csv)
         """
@@ -277,7 +300,7 @@ class FitsManager:
 
         self.files_df.to_csv(path.join(self.folder, "prose_index.csv"), index=False)
 
-    def check_telescope_file(self):
+    def _check_telescope_file(self):
         """
         Check for telescope.id file in folder and copy it to specphot config folder
         """
@@ -321,7 +344,8 @@ class FitsManager:
             target name, by default None for all
         return_conditions : bool, optional
             weather to return bool Serie matching filters or paths, by default False i.e. returning path of files martching filters
-
+        n_images: int, optional
+            number of images to keep, default is None for all images
         Returns
         -------
         list or pandas.Series
@@ -368,7 +392,7 @@ class FitsManager:
         else:
             return self.files_df.loc[conditions]["path"].values[0:n_images]
 
-    def set_telescope(self, name=None):
+    def _set_telescope(self, name=None):
         """
         Set telescope object
 
@@ -385,7 +409,7 @@ class FitsManager:
         date=None,
         im_filter=None,
         target=None,
-        keep_closest_calibration=True,
+        calibration=True,
         check_telescope=True,
         calibration_date_limit=0,
     ):
@@ -402,7 +426,7 @@ class FitsManager:
             filter name, by default None for all
         target : str, optional
             target name, by default None for all
-        keep_closest_calibration : bool, optional
+        calibration : bool, optional
             Weather to keep closest calibration images (in time), by default True
         check_telescope : bool, optional
             Weather to check if calibration images are from the same telescope, by default True. Calibration images witout telescope specified in FITS header are treated from unknown telescope.
@@ -438,30 +462,30 @@ class FitsManager:
         obs_telescope = np.unique(self.files_df["telescope"])[0]
         obs_dimensions = np.unique(self.files_df["dimensions"])[0]
 
-        self.set_telescope(obs_telescope)
+        self._set_telescope(obs_telescope)
 
-        if keep_closest_calibration:
+        if calibration:
 
             # date of the kept observation
             obs_date = np.unique(self.files_df["date"])[0]
 
             if not check_telescope:
                 obs_telescope = None
-            dark = self.find_closest_calibration(
+            dark = self._find_closest_calibration(
                 obs_date,
                 "dark",
                 obs_dimensions,
                 obs_telescope,
                 days_limit=calibration_date_limit,
             )
-            bias = self.find_closest_calibration(
+            bias = self._find_closest_calibration(
                 obs_date,
                 "bias",
                 obs_dimensions,
                 obs_telescope,
                 days_limit=calibration_date_limit,
             )
-            flat = self.find_closest_calibration(
+            flat = self._find_closest_calibration(
                 obs_date,
                 "flat",
                 obs_dimensions,
@@ -470,9 +494,9 @@ class FitsManager:
             )
 
             self.files_df = pd.concat([self.files_df, dark, bias, flat])
-            self.sort_by_date()
+            self._sort_by_date()
 
-    def find_closest_calibration(
+    def _find_closest_calibration(
         self, observation_date, im_type, obs_dimensions, telescope=None, days_limit=0
     ):
         """
@@ -553,7 +577,7 @@ class FitsManager:
 
         return calibration
 
-    def sort_by_date(self):
+    def _sort_by_date(self):
         """
         Sort files Dataframe by dates
         """
@@ -561,7 +585,7 @@ class FitsManager:
             drop=True
         )
 
-    def has_calibration(self):
+    def _has_calibration(self):
         """
         Return weather calibration files are present in current files DataFrame
 
@@ -576,7 +600,7 @@ class FitsManager:
             and len(self.get("bias")) > 0
         )
 
-    def has_stack(self):
+    def _has_stack(self):
         """
         Return weather stack is present and unique in current files DataFrame
 
@@ -624,7 +648,7 @@ class FitsManager:
         if "obs" in table_format:
             headers = ["index", "date", "telescope", "target", "filter", "quantity"]
 
-            observations = self.observations
+            observations = self._observations
             rows = OrderedDict(observations[headers].to_dict(orient="list"))
 
             table_string = tabulate(rows, headers, tablefmt="fancy_grid")
@@ -679,7 +703,7 @@ class FitsManager:
         else:
             print(table_string)
 
-    def trim(self, image, raw=False, wcs=None):
+    def _trim(self, image, raw=False, wcs=None):
         # TODO: investigate a flip option, cf calibrate
         if raw:
             if isinstance(image, np.ndarray):
@@ -721,7 +745,7 @@ class FitsManager:
                 raise ValueError("{} should be a numpy array or a fits file")
     
     @property
-    def observations(self):
+    def _observations(self):
         light_rows = self.files_df.loc[self.files_df["type"].str.contains(self.light_kw)]
         observations = (
             light_rows.pivot_table(
@@ -737,7 +761,14 @@ class FitsManager:
 
     @property
     def products_denominator(self):
-        single_obs = self.observations
+        """Return a string formatted as :code:`telescope_date_target_filter`
+
+        Returns
+        -------
+        str
+            :code:`telescope_date_target_filter`
+        """
+        single_obs = self._observations
 
         assert len(single_obs) == 1, "Multiple or no observations found"
 
@@ -754,11 +785,24 @@ class FitsManager:
             self,
             observation_id,
             check_calib_telescope=True,
-            keep_closest_calibration=False,
+            calibration=False,
             calibration_date_limit=0
         ):
+        """Set the observation to keep
 
-        observations = self.observations
+        Parameters
+        ----------
+        observation_id : int
+            index of the observations (observation indexes are listed with :code:`FitsManager.describe()`)
+        check_calib_telescope : bool, optional
+            Check weather calibration FITS files come from the same telescope as science FITS, by default True. Useful when telescope name is not specified on caliobration files heaeders.
+        calibration : bool, optional
+            wether to keep calibration files along science images, by default False
+        calibration_date_limit : int, optional
+            minimum number of days prior of the observation to look for calibration files, by default 0 (i.e. up to the same day). If negative it conrresponds to days in the future of the observation date.
+        """
+
+        observations = self._observations
 
         assert observation_id in observations["index"], "index {} do not match any observation".format(observation_id)
 
@@ -770,7 +814,7 @@ class FitsManager:
             im_filter=obs["filter"],
             target=obs["target"],
             check_telescope=check_calib_telescope,
-            keep_closest_calibration=keep_closest_calibration,
+            calibration=calibration,
             calibration_date_limit=calibration_date_limit
         )
 
@@ -779,7 +823,7 @@ class FitsManager:
     def copy_files(
             self, 
             destination, 
-            keep_closest_calibration=True, 
+            calibration=True, 
             check_calib_telescope=False, 
             overwrite=False, 
             **kwargs
@@ -795,21 +839,21 @@ class FitsManager:
 
         Parameters
         ----------
-        destination : [type]
-            [description]
-        keep_closest_calibration : bool, optional
-            [description], by default True
+        destination : str
+            path where to copy files
+        calibration : bool, optional
+            wether to keep calibration files, by default True
         check_calib_telescope : bool, optional
-            [description], by default False
+            Check weather calibration FITS files come from the same telescope as science FITS, by default True. Useful when telescope name is not specified on caliobration files heaeders.
         overwrite : bool, optional
-            [description], by default False
+            wether to obverwrite a file if exists already, by default False
         """
         # TODO: check available space if size is in files_df, else suggest to use kwargs force
         self.reset()
-        self.keep(keep_closest_calibration=False, check_telescope=False, **kwargs)
-        n_obs = len(self.observations)
+        self.keep(calibration=False, check_telescope=False, **kwargs)
+        n_obs = len(self._observations)
 
-        for i, observation in self.observations.iterrows():
+        for i, observation in self._observations.iterrows():
             target = observation["target"]
             date_str = observation["date"].strftime("%Y%m%d")
 
@@ -826,7 +870,7 @@ class FitsManager:
             self.set_observation(
                 i,
                 check_calib_telescope=check_calib_telescope, 
-                keep_closest_calibration=keep_closest_calibration)
+                calibration=calibration)
             files = self.get()
 
             print("{}/{} : copying {} - {} in {}".format(i+1, n_obs, target, date_str, date_folder))

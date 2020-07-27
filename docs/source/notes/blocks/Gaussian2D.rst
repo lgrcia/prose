@@ -19,4 +19,4 @@ An elliptical 2D Gaussian model expressed as
 is fitted from an effective psf. :code:`scipy.optimize.minimize` is used to minimize :math:`\chi ^2` from data. Initial parameters are found using the moments of the `effective psf <https://photutils.readthedocs.io/en/stable/epsf.html>`_. This method is 4 times faster than :code:`photutils.centroids.fit_2dgaussian` and lead to similar results.
 
 .. autoclass:: prose.blocks.Gaussian2D
-    :members:
+	:members:

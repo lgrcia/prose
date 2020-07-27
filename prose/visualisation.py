@@ -551,7 +551,7 @@ def fancy_show_stars(
     Examples
     --------
 
-    .. code:: python3
+    .. code-block:: python3
 
         from specphot.observations import Photometry
 

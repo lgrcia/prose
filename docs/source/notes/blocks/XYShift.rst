@@ -39,4 +39,4 @@ The goal of **xyshift** is to check all the possible shifts from one star with r
 .. image:: images/xyshift_principle.png
 
 .. autoclass:: prose.blocks.XYShift
-    :members:
+	:members:

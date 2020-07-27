@@ -1,5 +1,6 @@
 SegmentedPeaks
-----------------
+--------------
+
 A fast detection algorithm which:
 
 - segment the image in blobs with pixels above a certain threshold
@@ -12,4 +13,4 @@ A fast detection algorithm which:
 This method should be used when speed is required over accuracy. Uses scikit-image_.
 
 .. autoclass:: prose.blocks.SegmentedPeaks
-    :members:
+	:members:

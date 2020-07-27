@@ -53,6 +53,8 @@ class Reduction(Unit):
         self.overwrite = overwrite
         self.calibration = calibration
 
+        self.prepare()
+
         default_methods = [
             blocks.Calibration(name="calibration") if calibration else blocks.Trim(name="calibration"),
             blocks.SegmentedPeaks(n_stars=50, name="detection"),
@@ -60,11 +62,11 @@ class Reduction(Unit):
             blocks.Align(reference=reference, name="alignment"),
             blocks.Gaussian2D(name="fwhm"),
             blocks.Stack(self.stack_path, overwrite=overwrite, name="stack"),
-            blocks.SaveReduced(destination, overwrite=overwrite, name="saving"),
+            blocks.SaveReduced(self.destination, overwrite=overwrite, name="saving"),
             blocks.Video(self.gif_path, name="video", from_fits=True)
         ]
 
-        super().__init__(default_methods, fits_manager, "Reduction", files="light", show_progress=True,
+        super().__init__(default_methods, self.fits_manager, "Reduction", files="light", show_progress=True,
                          n_images=n_images)
 
     def prepare(self):
@@ -118,16 +120,18 @@ class Photometry(Unit):
         self.fits_manager = fits_manager
         self.overwrite = overwrite
 
+        self.prepare()
+
         default_methods = [
             blocks.DAOFindStars(n_stars=n_stars, stack=True, name="detection"),
             blocks.Gaussian2D(stack=True, name="fwhm"),
             blocks.ForcedAperturePhotometry(name="photometry"),
-            blocks.SavePhotometricProducts(self.phot_path, overwrite=overwrite, name="saving")
+            blocks.SavePhots(self.phot_path, overwrite=overwrite, name="saving")
         ]
 
         super().__init__(
             default_methods,
-            fits_manager,
+            self.fits_manager,
             "Photometric extraction",
             files="reduced",
             show_progress=True,
@@ -139,7 +143,7 @@ class Photometry(Unit):
 
         self.destination = self.fits_manager.folder
 
-        if len(self.fits_manager.observations) == 1:
+        if len(self.fits_manager._observations) == 1:
             self.fits_manager.set_observation(0)
         else:
             self.fits_manager.describe("obs")

@@ -26,7 +26,7 @@ Here is a list of all blocks available in |prose|:
 
     DAOFindStars
     SegmentedPeaks
-    FindPeaks
+    SEDetection
 
 
 .. rubric:: Alignment, registration and centroiding
@@ -51,6 +51,21 @@ Here is a list of all blocks available in |prose|:
 .. autosummary::
    :nosignatures:
 
-    ForcedAperturePhotometry
-    MovingAperturePhotometry
+   PhotutilsAperturePhotometry
+   SEAperturePhotometry
+
+
+.. rubric:: Others
+
+.. autosummary::
+   :nosignatures:
+
+   Calibration
+   Trim
+   Stack
+   SaveReduced
+   SavePhots
+   Video
+
+
 

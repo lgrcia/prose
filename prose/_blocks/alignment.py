@@ -12,6 +12,12 @@ class Alignment(Block):
 class Align(Alignment):
     """
     Align an image to a reference image using :code:`astropy.nddata.Cutout2D`
+
+    Parameters
+    ----------
+    reference : 1/2, optional
+        reference image to use for alignment from 0 (first image) to 1 (last image), by default 1/2
+
     """
 
     def __init__(self, reference=1 / 2, **kwargs):

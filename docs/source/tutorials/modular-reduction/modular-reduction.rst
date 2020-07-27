@@ -4,8 +4,8 @@
 
    Tutorial still under review
 
-Modular reduction
-=================
+Custom pipeline
+===============
 
 In |prose|, :py:class:`~prose.Block` objects (which are dedicated to image analysis and/or modification) can be aranged into :py:class:`~prose.Unit` which have the following workflow:
 
@@ -19,7 +19,7 @@ By providing :ref:`many pre-implemented blocks <blocks>` one can arange a comple
 
 .. title:: Objective
 
-In this tutorial we will create a custom :py:class:`~prose.Block` and include it in a pipeline which goal is to detect and trace a moving object in the following observation:
+In this tutorial we will create a custom :py:class:`~prose.Block` and include it in a pipeline (:py:class:`~prose.Unit`) which goal is to detect and trace a moving object in the following observation:
 
 .. figure:: ./moving_dataset_movie.gif
    :align: center
@@ -28,7 +28,7 @@ Dataset
 -------
 For this tutorial we will work on a synthetic observation which gif can be seen above. To generate this dataset:
 
-.. code:: ipython3
+.. code-block:: python
 
    from prose.datasets import generate_prose_reduction_datatset
 
@@ -36,7 +36,7 @@ For this tutorial we will work on a synthetic observation which gif can be seen 
 
 We directly instantiate a :py:class:`~prose.FitsManager` object to explore this folder (see :ref:`explore`)
 
-.. code:: ipython3
+.. code-block:: python
 
    from prose import FitsManager
 
@@ -46,7 +46,7 @@ Principle
 ---------
 We will use difference imaging to locate the moving object. This is shown in the next code where we can see that difference between consecutive images allow to locate a moving source.
 
-.. code:: ipython3
+.. code-block:: python
 
    import numpy as np
    from astropy.io import fits
@@ -75,7 +75,7 @@ Creating a new :py:class:`~prose.Block`
 ---------------------------------------
 Now we can create a :py:class:`~prose.Block` that will extract and store this information. It must be a sub-class of :py:class:`~prose.Block`, i.e. 
 
-.. code:: ipython3
+.. code-block:: python
 
    from prose import Block
 
@@ -98,7 +98,7 @@ As a reminder, a block has the following strucure:
 
 Here we don't need to instantiate ``initialise()`` because no information is needed apart from the images. However we have to implement the ``run()`` method:
 
-.. code:: ipython3
+.. code-block:: python
 
    # within the class
    def run(self, image):
@@ -114,7 +114,7 @@ Here we don't need to instantiate ``initialise()`` because no information is nee
 
 Finally let's instantiate the ``terminate()`` class that will simply plot the ``positions`` over the last image:
 
-.. code:: ipython3
+.. code-block:: python
 
    from prose.utils import z_scale
 
@@ -127,7 +127,7 @@ Finally let's instantiate the ``terminate()`` class that will simply plot the ``
 
 We can now place our new block in a :py:class:`~prose.Unit` and run it:
 
-.. code:: ipython3
+.. code-block:: python
 
    from prose import Unit
 

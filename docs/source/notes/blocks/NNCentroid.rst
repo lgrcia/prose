@@ -7,7 +7,7 @@ A Convolutional Neural Network trained to locate the center of a star from a cut
    :align: center
    :width: 380px
 
-   Comparison (distance from true center) with :code:`photutils.centroids.2dg_centroid`, which performs a 2D Gaussian fit, on a simulated star. 
+   Comparison (distance from true center) with :code:`photutils.centroids.2dg_centroid`, which performs a 2D Gaussian fit, on a simulated star.
 
 .. autoclass:: prose.blocks.NNCentroid
-    :members:
+	:members:

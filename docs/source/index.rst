@@ -6,7 +6,7 @@
 prose
 =====
 
-prose is a python package to reduce and analyse data from telescope observations. Its primary goal is the production of differential light curves from raw uncalibrated FITS images. prose features additional tools suited to exoplanet transit observations.
+A framework for FITS processing pipelines in python. Built for Astronomy, |prose| features pipelines to perform common tasks (such as automated calibration, reduction and photometry) and make building custom ones easy.
 
 .. image:: prose.png
    :width: 450
@@ -18,7 +18,7 @@ prose is a python package to reduce and analyse data from telescope observations
    :maxdepth: 1
 
    guide/installation
-   guide/quick-ref
+   guide/citing
    guide/explore
    guide/api
 
@@ -27,7 +27,6 @@ prose is a python package to reduce and analyse data from telescope observations
    :maxdepth: 1
 
    tutorials/reduction/reduction
-   tutorials/photometry-analysis/photometry-analysis
    tutorials/modular-reduction/modular-reduction
 
 

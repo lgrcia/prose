@@ -16,8 +16,5 @@ An elliptical 2D Moffat model expressed as
 
 is fitted from an effective psf. :code:`scipy.optimize.minimize` is used to minimize :math:`\chi ^2` from data. Initial parameters are found using the moments of the `effective psf <https://photutils.readthedocs.io/en/stable/epsf.html>`_. 
 
-
 .. autoclass:: prose.blocks.Moffat2D
-    :members:
-
-    .. automethod:: __init__
+	:members:
