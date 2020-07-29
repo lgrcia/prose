@@ -119,9 +119,6 @@ class PSFModel(Block):
 
     def sigma_to_fwhm(self, *args):
         return gaussian_sigma_to_fwhm
-    
-    def stack_method(self, image):
-        print("{} global psf FWHM: {:.2f} (pixels)".format(INFO_LABEL, np.mean(image.fwhm)))
 
     def run(self, image):
         self.epsf = self.build_epsf(image.data, image.stars_coords)

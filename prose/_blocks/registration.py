@@ -168,21 +168,14 @@ class XYShift(Registration):
     Compute the linear shift between two point clouds
     """
 
-    def __init__(self, tolerance=1.5, clean=False, detection=None, reference=1/2, **kwargs):
+    def __init__(self, reference, tolerance=1.5, clean=False, detection=None, **kwargs):
         super().__init__(detection=detection, **kwargs)
         self.tolerance = tolerance
         self.clean = clean
         self.reference = reference
 
-    def initialize(self, fits_manager):
-        reference_frame = int(self.reference*len(fits_manager.files))
-        reference_image_path = fits_manager.files[reference_frame]
-        reference_image = fits_manager.trim(reference_image_path)
-        
-        self.reference_stars = self.detection.single_detection(reference_image)[0]
-
     def run(self, image, **kwargs):
-        shift = xyshift(image.stars_coords, self.reference_stars, tolerance=self.tolerance, clean=self.clean)
+        shift = xyshift(image.stars_coords, self.reference, tolerance=self.tolerance, clean=self.clean)
         image.shift = shift
         image.header["DX"] = shift[0]
         image.header["DY"] = shift[1],

@@ -1,11 +1,12 @@
-from prose import Unit
-from prose import blocks
-from prose import io
+from prose import Unit, blocks, io
 import os
 from os import path
+from astropy.io import fits
+from prose.console_utils import INFO_LABEL
+import numpy as np
 
 
-class Reduction(Unit):
+class Reduction:
     """
     Reduction unit producing a reduced FITS folder
 
@@ -42,63 +43,83 @@ class Reduction(Unit):
             self,
             fits_manager,
             destination=None,
-            reference=1/2,
+            reference=1 / 2,
             overwrite=False,
-            n_images=None,
             calibration=True):
-
 
         self.fits_manager = fits_manager
         self.destination = destination
         self.overwrite = overwrite
         self.calibration = calibration
 
+        # set on prepare
+        self.stack_path = None
+        self.gif_path = None
         self.prepare()
 
-        default_methods = [
-            blocks.Calibration(name="calibration") if calibration else blocks.Trim(name="calibration"),
-            blocks.SegmentedPeaks(n_stars=50, name="detection"),
-            blocks.XYShift(detection=blocks.SegmentedPeaks(n_stars=50), reference=reference, name="shift"),
-            blocks.Align(reference=reference, name="alignment"),
-            blocks.Gaussian2D(name="fwhm"),
-            blocks.Stack(self.stack_path, overwrite=overwrite, name="stack"),
-            blocks.SaveReduced(self.destination, overwrite=overwrite, name="saving"),
-            blocks.Video(self.gif_path, name="video", from_fits=True)
-        ]
+        # set reference file
+        reference_id = int(reference * len(self.files))
+        self.reference_fits = self.files[reference_id]
 
-        super().__init__(default_methods, self.fits_manager, "Reduction", files="light", show_progress=True,
-                         n_images=n_images)
+    def run(self):
+
+        reference_unit = Unit([
+            blocks.Calibration(self.fits_manager.get("dark"), self.fits_manager.get("flat"), self.fits_manager.get("bias"),
+                               name="calibration"),
+            blocks.Trim(name="trimming"),
+            blocks.SegmentedPeaks(n_stars=50, name="detection"),
+            blocks.ImageBuffer(name="buffer")
+        ], self.reference_fits, telescope=self.fits_manager.telescope, show_progress=False)
+
+        reference_unit.run()
+
+        ref_image = reference_unit.blocks_dict["buffer"].image
+        calibration_block = reference_unit.blocks_dict["calibration"]
+
+        reduction_unit = Unit([
+            calibration_block if self.calibration else blocks.Pass(),
+            blocks.Trim(name="trimming"),
+            blocks.SegmentedPeaks(n_stars=50, name="detection"),
+            blocks.XYShift(ref_image.stars_coords, name="shift"),
+            blocks.Align(ref_image.data, name="alignment"),
+            blocks.Gaussian2D(name="fwhm"),
+            blocks.Stack(self.stack_path, header=ref_image.header, overwrite=self.overwrite, name="stack"),
+            blocks.SaveReduced(self.destination, overwrite=self.overwrite, name="saving"),
+            blocks.Video(self.gif_path, name="video", from_fits=True)
+        ], self.files, telescope=self.fits_manager.telescope, name="Reduction")
+
+        reduction_unit.run()
 
     def prepare(self):
-        if len(self.fits_manager.observations) == 1:
+        if len(self.fits_manager._observations) == 1:
             self.fits_manager.set_observation(
                 0,
                 check_calib_telescope=self.calibration,
-                keep_closest_calibration=self.calibration,
+                calibration=self.calibration,
                 calibration_date_limit=0
             )
 
         if self.destination is None:
-            self.destination = path.join(path.dirname(self.fits_manager.folder), self.fits_manager.products_denominator)
-
+            self.destination = path.join(path.dirname(self.fits_manager.folder),
+                                         self.fits_manager.products_denominator)
         self.stack_path = "{}{}".format(
             path.join(self.destination, self.fits_manager.products_denominator),
             "_stack.fits",
         )
-
         self.gif_path = "{}{}".format(
             path.join(self.destination, self.fits_manager.products_denominator),
             "_movie.gif",
         )
-
         if path.exists(self.stack_path) and not self.overwrite:
             raise AssertionError("stack {} already exists".format(self.stack_path))
 
         if not path.exists(self.destination):
             os.mkdir(self.destination)
 
+        self.files = self.fits_manager.get("light")
 
-class Photometry(Unit):
+
+class Photometry:
     """Photometric extraction unit
 
     Parameters
@@ -106,36 +127,46 @@ class Photometry(Unit):
     fits_manager : prose.FitsManager
         Fits manager of the observation. Should contain a single obs
     overwrite : bool, optional
-        wether to overwrtie existing products, by default False
+        whether to overwrite existing products, by default False
     n_stars : int, optional
         max number of stars to take into account, by default 500
-    psf : bool, optional
-        weather to perform psf photomery, aperture otherwise, by default False
-    n_images : int, optional
-        number of images to process, by default None for all images
     """
 
-    def __init__(self, fits_manager, overwrite=False, n_stars=500, psf=False, n_images=None):
+    def __init__(self, fits_manager, overwrite=False, n_stars=500):
 
         self.fits_manager = fits_manager
         self.overwrite = overwrite
+        self.n_stars = n_stars
 
         self.prepare()
 
-        default_methods = [
-            blocks.DAOFindStars(n_stars=n_stars, stack=True, name="detection"),
-            blocks.Gaussian2D(stack=True, name="fwhm"),
-            blocks.ForcedAperturePhotometry(name="photometry"),
-            blocks.SavePhots(self.phot_path, overwrite=overwrite, name="saving")
-        ]
+    def run(self):
 
-        super().__init__(
-            default_methods,
-            self.fits_manager,
-            "Photometric extraction",
-            files="reduced",
-            show_progress=True,
-            n_images=n_images)
+        stack_path = self.fits_manager.get("stack")[0]
+        assert stack_path is not None, "No stack found"
+
+        reference_detection_unit =  Unit([
+            blocks.DAOFindStars(n_stars=self.n_stars, name="detection"),
+            blocks.Moffat2D(name="fwhm"),
+            blocks.ImageBuffer(name="buffer"),
+            ], stack_path, telescope=self.fits_manager.telescope, show_progress=False)
+
+        reference_detection_unit.run()
+        stack_image = reference_detection_unit.blocks_dict["buffer"].image
+        ref_stars = stack_image.stars_coords
+        fwhm = stack_image.fwhm
+
+        print("{} detected stars: {}".format(INFO_LABEL, len(ref_stars)))
+        print("{} global psf FWHM: {:.2f} (pixels)".format(INFO_LABEL, np.mean(fwhm)))
+
+        photometry_unit = Unit([
+            blocks.Set(stars_coords=ref_stars, name="set stars"),
+            blocks.Set(fwhm=fwhm, name="set fwhm"),
+            blocks.SEAperturePhotometry(name="photometry"),
+            blocks.SavePhots(self.phot_path, header=fits.getheader(stack_path), overwrite=self.overwrite, name="saving")
+        ], self.files, telescope=self.fits_manager.telescope, name="Photometry")
+
+        photometry_unit.run()
 
     def prepare(self):
         if isinstance(self.fits_manager, str):
@@ -153,4 +184,6 @@ class Photometry(Unit):
 
         if path.exists(self.phot_path) and not self.overwrite:
             raise OSError("{}already exists".format(self.phot_path))
+
+        self.files = self.fits_manager.get("reduced")
 

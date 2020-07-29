@@ -10,12 +10,10 @@ from tabulate import tabulate
 class Unit:
     # TODO: add index self.i in image within unit loop
 
-    def __init__(self, blocks, fits_manager, name="default", files="light", show_progress=True, n_images=None, **kwargs):
+    def __init__(self, blocks, files, name="default", show_progress=True, telescope=None, **kwargs):
         self.name = name
-        self.fits_manager = fits_manager
+        self.files = files if not isinstance(files, str) else [files]
         self.blocks = blocks
-
-        self.retrieve_files(files, n_images=n_images)
 
         if show_progress:
             self.progress = lambda x: tqdm(
@@ -30,9 +28,18 @@ class Unit:
             self.progress = lambda x: x
 
         self.data = {}
+        self._telescope = None
+        self.telescope = telescope
 
-        if self.fits_manager.has_stack():
-            self.stack_image = Image(self.fits_manager.get("stack")[0])
+    @property
+    def telescope(self):
+        return self._telescope
+
+    @telescope.setter
+    def telescope(self, telescope):
+        self._telescope = telescope
+        for block in self.blocks:
+            block.set_telescope(telescope)
 
     @property
     def blocks(self):
@@ -45,13 +52,6 @@ class Unit:
             for i, block in enumerate(blocks)
         })
 
-    def retrieve_files(self, keyword, n_images=None):
-        self.fits_manager.files = self.fits_manager.get(keyword, n_images=n_images)
-        self.files = self.fits_manager.files
-
-    def get_data_header(self, file_path):
-        return fits.getdata(file_path), fits.getheader(file_path)
-
     def run(self):
         if isinstance(self.files, list):
             if len(self.files) == 0:
@@ -59,24 +59,19 @@ class Unit:
         elif self.files is None:
             raise ValueError("No files to process")
 
+        # initialization
         for block in self.blocks:
-            block.initialize(self.fits_manager)
+            block.set_telescope(self.telescope)
+            block.set_unit_data(self.data)
+            block.initialize()
 
-        stack_blocks = [block for block in self.blocks if block.stack]
-        blocks = [block for block in self.blocks if not block.stack]
-        has_stack_block = len(stack_blocks) > 0
-
-        for block in stack_blocks:
-            block.run(self.stack_image)
-            block.stack_method(self.stack_image)
-
+        # run
         for file_path in self.progress(self.files):
             image = Image(file_path)
-            if has_stack_block:
-                image.get_other_data(self.stack_image)
-            for block in blocks:
+            for block in self.blocks:
                 block.run(image)
 
+        # terminate
         for block in self.blocks:
             block.terminate()
 
@@ -109,12 +104,19 @@ class Image:
 
 class Block:
 
-    def __init__(self, stack=False, name=None):
-        self.stack = stack
+    def __init__(self, name=None):
         self.name = name
+        self.unit_data = None
+        self.telescope = None
 
     def initialize(self, *args):
         pass
+
+    def set_unit_data(self, unit_data):
+        self.unit_data = unit_data
+
+    def set_telescope(self, telescope):
+        self.telescope = telescope
 
     def run(self, image, **kwargs):
         raise NotImplementedError()
@@ -136,21 +138,37 @@ class Block:
         return ""
 
 
-class PrintDim(Block):
+class Pipeline:
 
-    def __init__(self):
-        pass
+    def __init__(self, units, name="default", **kwargs):
+        self.name = name
+        self.units = units
+        self.data = {}
+        self._telescope = None
 
-    def initialize(self, *args):
-        print("I am a block")
+    @property
+    def telescope(self):
+        return self._telescope
 
-    def run(self, image):
-        pass
+    @telescope.setter
+    def telescope(self, telescope):
+        self._telescope = telescope
+        for unit in self.units:
+            unit.set_telescope(telescope)
 
+    @property
+    def blocks(self):
+        return self.units_dict.values()
 
-class Reduction(Unit):
+    @blocks.setter
+    def blocks(self, units):
+        self.units_dict = OrderedDict({
+            unit.name if unit.name is not None else "block{}".format(i): unit
+            for i, unit in enumerate(units)
+        })
 
-    def __init__(self, ):
-        pass
-
+    def run(self):
+        # run
+        for unit in self.units:
+            unit.run()
 

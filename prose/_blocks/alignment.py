@@ -15,23 +15,13 @@ class Align(Alignment):
 
     Parameters
     ----------
-    reference : 1/2, optional
-        reference image to use for alignment from 0 (first image) to 1 (last image), by default 1/2
+    reference : np.,darray
+        reference image on which alignment is done
 
     """
 
-    def __init__(self, reference=1 / 2, **kwargs):
+    def __init__(self, reference_image, **kwargs):
         super().__init__(**kwargs)
-        self.reference = reference
-
-        self.ref_shape = None
-        self.ref_center = None
-
-    def initialize(self, fits_manager):
-        reference_frame = int(self.reference * len(fits_manager.files))
-        reference_image_path = fits_manager.files[reference_frame]
-        reference_image = fits_manager.trim(reference_image_path)
-
         self.ref_shape = np.array(reference_image.shape)
         self.ref_center = self.ref_shape[::-1] / 2
 
