@@ -18,15 +18,15 @@ class Stack(Block):
 
     Parameters
     ----------
-    destination : str
-        path of the stack image (must be a .fits file name)
+    destination : str, optional
+        path of the stack image (must be a .fits file name), dfault is None and does not save
     header : dict, optional
         header base of the stack image to be saved, default is None for fresh header
     overwrite : bool, optional
         weather to overwrite file if exists, by default False
     """
 
-    def __init__(self, destination, header=None, overwrite=False, **kwargs):
+    def __init__(self, destination=None, header=None, overwrite=False, **kwargs):
 
         super(Stack, self).__init__(**kwargs)
         self.stack = None
@@ -49,37 +49,34 @@ class Stack(Block):
 
     def terminate(self):
 
-        self.stack_header[self.telescope.keyword_image_type] = "Stack image"
-        self.stack_header["BZERO"] = 0
-        self.stack_header["REDDATE"] = Time.now().to_value("fits")
-        self.stack_header["NIMAGES"] = self.n_images
+        self.stack /= self.n_images
 
-        # changing_flip_idxs = np.array([
-        #     idx for idx, (i, j) in enumerate(zip(self.fits_manager.files_df["flip"],
-        #                                          self.fits_manager.files_df["flip"][1:]), 1) if i != j])
-        #
-        # if len(changing_flip_idxs) > 0:
-        #     self.stack_header["FLIPTIME"] = self.fits_manager.files_df["jd"].iloc[changing_flip_idxs].values[0]
+        if self.destination is not None:
+            self.stack_header[self.telescope.keyword_image_type] = "Stack image"
+            self.stack_header["BZERO"] = 0
+            self.stack_header["REDDATE"] = Time.now().to_value("fits")
+            self.stack_header["NIMAGES"] = self.n_images
 
-        stack_hdu = fits.PrimaryHDU(self.stack, header=self.stack_header)
-        stack_hdu.writeto(self.destination, overwrite=self.overwrite)
+            # changing_flip_idxs = np.array([
+            #     idx for idx, (i, j) in enumerate(zip(self.fits_manager.files_df["flip"],
+            #                                          self.fits_manager.files_df["flip"][1:]), 1) if i != j])
+            #
+            # if len(changing_flip_idxs) > 0:
+            #     self.stack_header["FLIPTIME"] = self.fits_manager.files_df["jd"].iloc[changing_flip_idxs].values[0]
+
+            stack_hdu = fits.PrimaryHDU(self.stack, header=self.stack_header)
+            stack_hdu.writeto(self.destination, overwrite=self.overwrite)
 
 
 class StackStd(Block):
 
-    def __init__(self, destination, overwrite=False):
-        super(StackStd, self).__init__()
+    def __init__(self, destination=None, overwrite=False, **kwargs):
+        super(StackStd, self).__init__(**kwargs)
         self.images = []
-        self.stack_header = None
-        self.destination = destination
-        self.fits_manager = None
+        # self.stack_header = None
+        # self.destination = destination
         self.overwrite = overwrite
         self.stack_std = None
-
-    def initialize(self, fits_manager):
-        self.fits_manager = fits_manager
-        if fits_manager.has_stack():
-            self.stack_header = fits.getheader(fits_manager.get("stack")[0])
 
     def run(self, image, **kwargs):
         self.images.append(image.data)
@@ -89,9 +86,9 @@ class StackStd(Block):
         # shape_divisors = utils.divisors(self.images[0].shape[1])
         # n = shape_divisors[np.argmin(np.abs(50 - shape_divisors))]
         self.stack_std = np.std(self.images, axis=0) #concatenate([np.std(im, axis=0) for im in np.split(self.images, n, axis=1)])
-        stack_hdu = fits.PrimaryHDU(self.stack_std, header=self.stack_header)
-        stack_hdu.header["IMTYPE"] = "std"
-        stack_hdu.writeto(self.destination, overwrite=self.overwrite)
+        # stack_hdu = fits.PrimaryHDU(self.stack_std, header=self.stack_header)
+        # stack_hdu.header["IMTYPE"] = "std"
+        # stack_hdu.writeto(self.destination, overwrite=self.overwrite)
 
 
 class SaveReduced(Block):

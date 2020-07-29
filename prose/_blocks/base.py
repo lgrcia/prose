@@ -75,6 +75,8 @@ class Unit:
         for block in self.blocks:
             block.terminate()
 
+        return self
+
     def summary(self):
         rows = [[block.name, block.__class__.__name__] for block in self.blocks]
         headers = ["name", "type"]
