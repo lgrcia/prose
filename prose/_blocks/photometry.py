@@ -107,11 +107,9 @@ class PhotutilsAperturePhotometry(Block):
         radius of the inner annulus in fraction of fwhm, by default 5
     annulus_outer_radius : int, optional
         radius of the outer annulus in fraction of fwhm, by default 8
-    forced: bool, optional
-        weather to keep sources positions constant (taken from first image) over the photometric extraction, by default True
     """
 
-    def __init__(self, apertures=None, annulus_inner_radius=5, annulus_outer_radius=8, forced=True, **kwargs):
+    def __init__(self, apertures=None, annulus_inner_radius=5, annulus_outer_radius=8, **kwargs):
 
         super().__init__(**kwargs)
         if apertures is None:
@@ -131,12 +129,6 @@ class PhotutilsAperturePhotometry(Block):
 
         self.circular_apertures_area = None
         self.annulus_area = None
-
-        self.forced=forced
-
-    def initialize(self, fits_manager):
-        if isinstance(fits_manager, FitsManager):
-            self.fits_manager = fits_manager
 
     def set_apertures(self, stars_coords, fwhm):
 
@@ -162,10 +154,7 @@ class PhotutilsAperturePhotometry(Block):
         self.n_stars = len(stars_coords)
 
     def run(self, image, **kwargs):
-        if self.circular_apertures is None:
-            self.set_apertures(image.stars_coords, image.fwhm)
-        elif not self.forced:
-            self.set_apertures(image.stars_coords, image.fwhm)
+        self.set_apertures(image.stars_coords, image.fwhm)
 
         bkg_median = []
         for mask in self.annulus_masks:
@@ -194,12 +183,12 @@ class PhotutilsAperturePhotometry(Block):
 
         for i, aperture_area in enumerate(self.circular_apertures_area):
             area = aperture_area * (1 + aperture_area / self.annulus_area)
-            image.fluxes_errors[i, :] = self.fits_manager.telescope.error(
+            image.fluxes_errors[i, :] = self.telescope.error(
                 image.fluxes[i],
                 area,
                 image.sky,
-                image.header[self.fits_manager.telescope.keyword_exposure_time],
-                airmass=image.header[self.fits_manager.telescope.keyword_airmass],
+                image.header[self.telescope.keyword_exposure_time],
+                airmass=image.header[self.telescope.keyword_airmass],
             )
 
     def citations(self):
@@ -261,7 +250,6 @@ class SEAperturePhotometry(BasePhotometry):
 
         self.annulus_inner_radius = annulus_inner_radius
         self.annulus_outer_radius = annulus_outer_radius
-        self.fits_manager = None
 
         self.n_apertures = len(self.apertures)
         self.n_stars = None
@@ -272,13 +260,9 @@ class SEAperturePhotometry(BasePhotometry):
         self.circular_apertures_area = None
         self.annulus_area = None
 
-    def initialize(self, fits_manager):
-        if isinstance(fits_manager, FitsManager):
-            self.fits_manager = fits_manager
-
     def run(self, image):
-        r_in= self.annulus_inner_radius * image.fwhm
-        r_out= self.annulus_outer_radius * image.fwhm
+        r_in = self.annulus_inner_radius * image.fwhm
+        r_out = self.annulus_outer_radius * image.fwhm
         r = self.apertures * image.fwhm
 
         self.n_stars = len(image.stars_coords)
@@ -322,12 +306,12 @@ class SEAperturePhotometry(BasePhotometry):
 
         for i, aperture_area in enumerate(image.apertures_area):
             area = aperture_area * (1 + aperture_area / image.annulus_area)
-            image.fluxes_errors[i, :] = self.fits_manager.telescope.error(
+            image.fluxes_errors[i, :] = self.telescope.error(
                 image.fluxes[i],
                 area,
                 image.sky,
-                image.header[self.fits_manager.telescope.keyword_exposure_time],
-                airmass=image.header[self.fits_manager.telescope.keyword_airmass],
+                image.header[self.telescope.keyword_exposure_time],
+                airmass=image.header[self.telescope.keyword_airmass],
             )
 
     @staticmethod

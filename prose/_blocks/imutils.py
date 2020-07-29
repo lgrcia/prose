@@ -20,29 +20,23 @@ class Stack(Block):
     ----------
     destination : str
         path of the stack image (must be a .fits file name)
-    reference : 1/2, optional
-        reference image to take header from. :code:`float` from 0 (first image) to 1 (last image), by default 1/2
+    header : dict, optional
+        header base of the stack image to be saved, default is None for fresh header
     overwrite : bool, optional
         weather to overwrite file if exists, by default False
     """
 
-    def __init__(self, destination, reference=1/2, overwrite=False, **kwargs):
+    def __init__(self, destination, header=None, overwrite=False, **kwargs):
 
         super(Stack, self).__init__(**kwargs)
-        self.reference = reference
         self.stack = None
-        self.stack_header = None
+        self.n_images = 0
+        self.stack_header = header
         self.destination = destination
         self.fits_manager = None
         self.overwrite = overwrite
 
         self.reference_image_path = None
-
-    def initialize(self, fits_manager):
-        self.fits_manager = fits_manager
-        reference_frame = int(self.reference * len(fits_manager.files))
-        self.reference_image_path = fits_manager.files[reference_frame]
-        self.stack_header = fits.getheader(self.reference_image_path)
 
     def run(self, image):
         if self.stack is None:
@@ -51,23 +45,21 @@ class Stack(Block):
         else:
             self.stack += image.data
 
-        if image.path == self.reference_image_path:
-            self.stack_header.update(image.wcs.to_header())
+        self.n_images += 1
 
     def terminate(self):
 
-        self.stack /= len(self.fits_manager.files)
-        self.stack_header[self.fits_manager.telescope.keyword_image_type] = "Stack image"
+        self.stack_header[self.telescope.keyword_image_type] = "Stack image"
         self.stack_header["BZERO"] = 0
         self.stack_header["REDDATE"] = Time.now().to_value("fits")
-        self.stack_header["NIMAGES"] = len(self.fits_manager.files)
+        self.stack_header["NIMAGES"] = self.n_images
 
-        changing_flip_idxs = np.array([
-            idx for idx, (i, j) in enumerate(zip(self.fits_manager.files_df["flip"],
-                                                 self.fits_manager.files_df["flip"][1:]), 1) if i != j])
-
-        if len(changing_flip_idxs) > 0:
-            self.stack_header["FLIPTIME"] = self.fits_manager.files_df["jd"].iloc[changing_flip_idxs].values[0]
+        # changing_flip_idxs = np.array([
+        #     idx for idx, (i, j) in enumerate(zip(self.fits_manager.files_df["flip"],
+        #                                          self.fits_manager.files_df["flip"][1:]), 1) if i != j])
+        #
+        # if len(changing_flip_idxs) > 0:
+        #     self.stack_header["FLIPTIME"] = self.fits_manager.files_df["jd"].iloc[changing_flip_idxs].values[0]
 
         stack_hdu = fits.PrimaryHDU(self.stack, header=self.stack_header)
         stack_hdu.writeto(self.destination, overwrite=self.overwrite)
@@ -117,10 +109,6 @@ class SaveReduced(Block):
         super().__init__(**kwargs)
         self.destination = destination
         self.overwrite = overwrite
-        self.telescope = None
-
-    def initialize(self, fits_manager):
-        self.telescope = fits_manager.telescope
 
     def run(self, image, **kwargs):
 
@@ -194,7 +182,7 @@ class SavePhots(Block):
     overwrite : bool, optional
         weather to overwrite file if exists, by default False
     """
-    def __init__(self, destination, overwrite=False, **kwargs):
+    def __init__(self, destination, overwrite=False, header=None, **kwargs):
         super().__init__(**kwargs)
         self.destination = destination
         self.overwrite = overwrite
@@ -203,27 +191,14 @@ class SavePhots(Block):
         self.stack_path = None
         self.telescope = None
         self.fits_manager = None
-
-    def initialize(self, fits_manager):
-        self.fits_manager = fits_manager
-        if fits_manager.has_stack():
-            self.stack_path = fits_manager.get("stack")[0]
-
-        self.telescope = fits_manager.telescope
+        self.header = header
 
     def run(self, image, **kwargs):
         self.images.append(image)
 
     def terminate(self):
-        if self.stack_path is not None:
-            header = fits.PrimaryHDU(header=fits.getheader(self.stack_path))
-        elif len(io.get_files("_stack.fits", path.dirname(self.destination))) > 0:
-            self.stack_path = io.get_files("_stack.fits", path.dirname(self.destination))
-            header = fits.PrimaryHDU(header=fits.getheader(self.stack_path))
-        else:
-            header = fits.PrimaryHDU()
-
-        header.header["REDDATE"] = Time.now().to_value("fits")
+        if self.header is not None:
+            self.header["REDDATE"] = Time.now().to_value("fits")
 
         fluxes = np.array([im.fluxes for im in self.images])
         fluxes_errors = np.array([im.fluxes_errors for im in self.images])
@@ -265,7 +240,7 @@ class SavePhots(Block):
                 data[keyword.lower()] = _data
 
         hdu_list = [
-            header,
+            fits.PrimaryHDU(header=self.header),
             fits.ImageHDU(fluxes, name="photometry"),
             fits.ImageHDU(fluxes_errors, name="photometry errors"),
             fits.ImageHDU(stars, name="stars")
@@ -288,6 +263,7 @@ class SavePhots(Block):
 
         hdu = fits.HDUList(hdu_list)
         hdu.writeto(self.destination, overwrite=self.overwrite)
+
 
 from astropy.stats import sigma_clipped_stats
 
@@ -321,3 +297,43 @@ class CleanCosmics(Block):
         mask = image.data > (self.stack_data + self.std_stack * self.threshold)
         image.data[mask] = self.stack_data[mask]
 
+
+class Pass(Block):
+    """A Block that does nothing"""
+    def run(self, image):
+        pass
+
+
+class ImageBuffer(Block):
+    """Store the last Image
+    """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.image = None
+
+    def run(self, image):
+        self.image = image
+
+
+class Set(Block):
+    """Set specific attribute to every image
+
+    For example to set attributes ``a`` with the value 2 on every image (i.e Image.a = 2):
+    
+    .. code-block:: python
+
+        from prose import blocks
+
+        set_block = blocks.Set(a=2)
+
+    Parameters
+    ----------
+    kwargs : kwargs
+        keywords argument and values to be set on every image
+    """
+    def __init__(self, name=None, **kwargs):
+        super().__init__(name=name)
+        self.kwargs = kwargs
+
+    def run(self, image):
+        image.__dict__.update(self.kwargs)

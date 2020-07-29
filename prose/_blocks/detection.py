@@ -4,7 +4,6 @@ from photutils import DAOStarFinder
 from astropy.stats import sigma_clipped_stats
 from prose._blocks.registration import clean_stars_positions
 from prose._blocks.base import Block
-from prose.console_utils import INFO_LABEL
 from sep import extract
 
 
@@ -16,15 +15,13 @@ class StarsDetection(Block):
         self.n_stars = n_stars
         self.sort = sort
         self.min_separation = min_separation
+        self.last_coords = None
 
     def single_detection(self, image):
         """
         Running detection on single or multiple images
         """
         raise NotImplementedError("method needs to be overidden")
-
-    def stack_method(self, image):
-        print("{} detected stars: {}".format(INFO_LABEL, len(image.stars_coords)))
 
     def run(self, image, return_coords=False):
         coordinates, fluxes = self.single_detection(image)
@@ -36,6 +33,8 @@ class StarsDetection(Block):
             coordinates = clean_stars_positions(coordinates, tolerance=self.min_separation)
 
         image.stars_coords = coordinates
+
+        self.last_coords = coordinates
 
 
 class DAOFindStars(StarsDetection):

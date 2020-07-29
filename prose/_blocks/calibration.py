@@ -4,15 +4,27 @@ from astropy.io import fits
 from prose import utils, io
 import matplotlib.pyplot as plt
 import prose.visualisation as viz
+from astropy.nddata import Cutout2D
 
 
 class Calibration(Block):
     """
     Flat, Bias and Dark calibration
+
+    Parameters
+    ----------
+    dark : list
+        list of dark files paths
+    flat : list
+        list of flat files paths
+    bias : list
+        list of bias files paths
     """
-    def __init__(self, **kwargs):
+    def __init__(self, dark, flat, bias, **kwargs):
 
         super().__init__(**kwargs)
+        self.images = {"dark": dark, "flat": flat, "bias": bias}
+
         self.master_dark = None
         self.master_flat = None
         self.master_bias = None
@@ -23,14 +35,13 @@ class Calibration(Block):
     def _produce_master(self, image_type):
         _master = []
         kw_exp_time = self.telescope.keyword_exposure_time
-        images = self.fits_explorer.get(image_type)
+        images = self.images[image_type]
         assert len(images) > 0, "No {} images found".format(image_type)
         for i, fits_path in enumerate(images):
             hdu = fits.open(fits_path)
             primary_hdu = hdu[0]
             image, header = primary_hdu.data, primary_hdu.header
             hdu.close()
-            image = self.fits_explorer._trim(image, raw=True)
             if image_type == "dark":
                 _dark = (image - self.master_bias) / header[kw_exp_time]
                 if i == 0:
@@ -60,14 +71,8 @@ class Calibration(Block):
             self.master_flat = np.concatenate([np.median(im, axis=0) for im in np.split(_master, n, axis=1)])
             del _master
 
-    def initialize(self, fits_manager):
-        if isinstance(fits_manager, io.FitsManager):
-            self.fits_explorer = fits_manager            
-        else:
-            self.fits_explorer = io.FitsManager(fits_manager)
-
-        self.telescope = self.fits_explorer.telescope
-
+    def initialize(self):
+        assert self.telescope is not None, "Calibration block needs telescope to be set"
         self._produce_master("bias")
         self._produce_master("dark")
         self._produce_master("flat")
@@ -91,15 +96,13 @@ class Calibration(Block):
         # TODO: Investigate flip
         data = image.data
         header = image.header
-        trim_image = self.fits_explorer._trim(data, wcs=image.wcs)
         exp_time = header[self.telescope.keyword_exposure_time]
-        calibrated_image = self.calibration(trim_image.data, exp_time)
+        calibrated_image = self.calibration(data, exp_time)
 
         # if flip:
         #     calibrated_image = calibrated_image[::-1, ::-1]
 
         image.data = calibrated_image
-        image.wcs = trim_image.wcs
 
     def citations(self):
         return "astropy", "numpy"
@@ -112,11 +115,10 @@ class Trim(Block):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    def initialize(self, fits_manager):
-        if isinstance(fits_manager, io.FitsManager):
-            self.fits_explorer = fits_manager
-
     def run(self, image, **kwargs):
-        trim_image = self.fits_explorer.trim(image.data)
+        shape = np.array(image.data.shape)
+        center = shape[::-1] / 2
+        dimension = shape - 2 * np.array(self.telescope.trimming[::-1])
+        trim_image = Cutout2D(image.data, center, dimension, wcs=image.wcs)
         image.data = trim_image.data
         image.wcs = trim_image.wcs
