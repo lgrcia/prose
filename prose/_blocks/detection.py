@@ -10,12 +10,14 @@ from sep import extract
 class StarsDetection(Block):
     """Base class for stars detection.
     """
-    def __init__(self, n_stars=None, sort=True, min_separation=None, **kwargs):
+    def __init__(self, n_stars=None, sort=True, min_separation=None, check_nans=False, **kwargs):
         super().__init__(**kwargs)
         self.n_stars = n_stars
         self.sort = sort
         self.min_separation = min_separation
         self.last_coords = None
+
+        self.check_nans = check_nans
 
     def single_detection(self, image):
         """
@@ -24,7 +26,8 @@ class StarsDetection(Block):
         raise NotImplementedError("method needs to be overidden")
 
     def run(self, image, return_coords=False):
-        coordinates, fluxes = self.single_detection(image)
+        data = np.nan_to_num(image.data, 0) if self.check_nans else image.data
+        coordinates, fluxes = self.single_detection(data)
         if self.sort:
             coordinates = coordinates[np.argsort(fluxes)[::-1]]
         if self.n_stars is not None:
@@ -64,8 +67,7 @@ class DAOFindStars(StarsDetection):
         self.min_separation = min_separation
         self.sort = sort
 
-    def single_detection(self, image):
-        data = image.data
+    def single_detection(self, data):
         mean, median, std = sigma_clipped_stats(data, sigma=self.sigma_clip)
         finder = DAOStarFinder(fwhm=self.fwhm, threshold=self.lower_snr * std)
         sources = finder(data - median)
@@ -104,9 +106,8 @@ class SegmentedPeaks(StarsDetection):
         self.threshold = threshold
         self.min_separation = min_separation
 
-    def single_detection(self, image):
-        data = image.data
-        threshold = self.threshold*np.median(data)
+    def single_detection(self, data):
+        threshold = self.threshold*np.nanmedian(data)
         regions = regionprops(label(data > threshold), data)
         coordinates = np.array([region.weighted_centroid[::-1] for region in regions])
         fluxes = np.array([np.sum(region.intensity_image) for region in regions])
@@ -150,8 +151,8 @@ class SEDetection(StarsDetection):
         self.threshold = threshold
         self.min_separation = min_separation
 
-    def single_detection(self, image, return_coords=False):
-        sep_data = extract(image.data, self.threshold*np.median(image.data))
+    def single_detection(self, data):
+        sep_data = extract(data, self.threshold*np.median(data))
         coordinates = np.array([sep_data["x"], sep_data["y"]])
         fluxes = np.array(sep_data["flux"])
 
