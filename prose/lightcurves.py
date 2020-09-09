@@ -214,9 +214,11 @@ def Broeg2005(
 
             i += 1
 
-
     elif keep is None:
         _keep = np.min([np.shape(fluxes)[1], n_comps])
+    else:
+        _keep = keep
+        keep = "float" if isinstance(keep, float) else "int"
 
     # Compute the final lightcurves
     # -----------------------------
