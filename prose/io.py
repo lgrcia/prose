@@ -110,7 +110,7 @@ class FitsManager:
     FileNotFoundError
         If folder doesn't exists
     """
-    def __init__(self, folder, verbose=True, telescope_kw="TELESCOP", depth=1, light_kw="light", update=False, index=False):
+    def __init__(self, folder, verbose=True, telescope_kw="TELESCOP", depth=1, light_kw="light", update=False, index=None):
 
         self.depth = depth
         self._temporary_files_headers = None
@@ -131,7 +131,7 @@ class FitsManager:
         self.index_file = None
         
         if index:
-            has_index = self._load_index()
+            has_index = self._load_index(index=index)
             if update or not has_index:
                 self._build_files_df()
         else:
@@ -144,7 +144,7 @@ class FitsManager:
         # To embed useful files
         self.files = None
 
-    def _load_index(self, force_single=False):
+    def _load_index(self, force_single=False, index=None):
         """Load index files (default is prose_index.csv within self.folder)
 
         Parameters
@@ -164,22 +164,28 @@ class FitsManager:
         ValueError
             raised if force_single is True and multiple index files are present
         """
-
-        index_files = get_files("*index.csv", self.folder, single_list_removal=False, none_for_empty=False)
-        if len(index_files) == 0:
-            if force_single:
-                raise ValueError("No *index.csv found")
-            return False
-        elif len(index_files) > 1: 
-            if force_single:
-                raise ValueError("Too many *index.csv found, should be unique")
-            return False
+        if index is None:
+            index_files = get_files("*index.csv", self.folder, single_list_removal=False, none_for_empty=False)
+            if len(index_files) == 1:
+                self.index_file = index_files[0]
+            else:
+                if len(index_files) == 0:
+                    if force_single:
+                        raise ValueError("No *index.csv found")
+                    return False
+                elif len(index_files) > 1:
+                    if force_single:
+                        raise ValueError("Too many *index.csv found, should be unique")
+                    return False
         else:
-            self.index_file = index_files[0]
-            self.files_df = pd.read_csv(self.index_file, na_filter=False)
-            self.files_df["complete_date"] = pd.to_datetime(self.files_df["complete_date"])
-            self.files_df["date"] = pd.to_datetime(self.files_df["date"]).apply(lambda x: x.date())
-            return True
+            self.index_file = index
+            if not path.exists(self.index_file):
+                return False
+
+        self.files_df = pd.read_csv(self.index_file, na_filter=False)
+        self.files_df["complete_date"] = pd.to_datetime(self.files_df["complete_date"])
+        self.files_df["date"] = pd.to_datetime(self.files_df["date"]).apply(lambda x: x.date())
+        return True
 
     def _build_files_df(self):
         """
@@ -297,8 +303,9 @@ class FitsManager:
         """
         # current file name, not implemented but TODO later
         #datetime.datetime.now().strftime("pwd_%Y%m%d_%H%M_index.csv")
-
-        self.files_df.to_csv(path.join(self.folder, "prose_index.csv"), index=False)
+        if self.index_file is None:
+            self.index_file = path.join(self.folder, "prose_index.csv")
+        self.files_df.to_csv(self.index_file, index=False)
 
     def _check_telescope_file(self):
         """

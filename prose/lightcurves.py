@@ -229,7 +229,7 @@ def Broeg2005(
     elif keep is "int":
         # Using a simple mean
         ordered_weights = np.ones((n_apertures, _keep))
-        
+
     keep = int(_keep)
 
     ordered_fluxes = np.array([fluxes[a, ordered_stars[a], :] for a in range(n_apertures)])
