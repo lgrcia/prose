@@ -130,16 +130,12 @@ def Broeg2005(
     original_fluxes = fluxes.copy()
     initial_n_stars = np.shape(original_fluxes)[1]
 
-    _fluxes = fluxes.copy()
-    _errors = errors.copy()
-
     # Normalization
     # -------------
-    fluxes = np.array([[ff / np.nanmean(ff) for ff in f] for f in _fluxes])
-    errors = np.array([
-            [ee / np.nanmean(ff) for ee, ff in zip(e, f)]
-            for e, f in zip(_errors, _fluxes)
-        ])
+
+    mean_fluxes = np.nanmean(fluxes, 2)[:, :, None]
+    fluxes = fluxes.copy() / mean_fluxes
+    errors = errors.copy() / mean_fluxes
 
     # Cleaning
     # --------
@@ -182,105 +178,72 @@ def Broeg2005(
         # record.append(evolution)
         last_weights = weights
 
-        art_lc = np.zeros((n_apertures, n_points))
-
-        for a in range(n_apertures):
-            art_lc[a, :] = np.sum(
-                [fluxes[a, s] * w for s, w in zip(range(n_stars), weights[a])], axis=0,
-            ) / np.sum(weights[a])
-
-        lcs = np.zeros((np.shape(fluxes)))
-
-        for a in range(n_apertures):
-            for s in range(np.shape(fluxes)[1]):
-                lcs[a, s, :] = fluxes[a, s] / art_lc[a, :]
+        weighted_fluxes = fluxes * weights[:, :, None]
+        art_lc = np.sum(weighted_fluxes, 1) / weights.sum(1)[:, None]
+        lcs = fluxes / art_lc[:, None, :]
 
         i += 1
 
+    # Setting target weight to 0 and removing it from the set of comparable stars
+    weights[:, target] = 0
     ordered_stars = np.argsort(weights, axis=1)[:, ::-1]
+    ordered_stars = ordered_stars[:, 0:-1]
 
     # Find the best number of comp stars to keep if None
     # --------------------------------------------------
     if isinstance(keep, str):
 
         metric = []
-        k_range = np.arange(2, np.min([np.shape(fluxes)[1], n_comps]))
+        krange = np.arange(1, np.min([np.shape(fluxes)[1], n_comps]))
 
-        for k in k_range:
-            best_stars = ordered_stars[:, 0 : int(k)]
-            best_art_lc = np.zeros((n_apertures, n_points))
+        weighted_fluxes = fluxes * weights[:, :, None]
+        ordered_weighted_fluxes = np.array([weighted_fluxes[a, ordered_stars[a], :] for a in range(n_apertures)])
+        ordered_summed_weighted_fluxes = np.array([ordered_weighted_fluxes[:, 0:k, :].sum(1) for k in krange])
+        ordered_summed_weights = np.array([weights[:, 0:k].sum(1) for k in krange])
 
-            for a in range(n_apertures):
-                best_art_lc[a, :] = np.sum(
-                    [
-                        fluxes[a, s] * w
-                        for s, w in zip(best_stars[a], weights[a, best_stars[a]])
-                    ],
-                    axis=0,
-                ) / np.sum(weights[a, best_stars[a]])
+        metric = 1e18
+        last_metric = np.inf
+        i = 0
 
-            _lcs = np.zeros(np.shape(fluxes))
+        while metric < last_metric:
+            _keep = krange[i]
+            last_metric = metric
+            _art_lc = ordered_summed_weighted_fluxes[i] / ordered_summed_weights[i][:, None]
+            _lcs = fluxes / _art_lc[:, None, :]
+            metric = np.std([utils.std_diff_metric(f) for f in _lcs[:, target, :]])
 
-            for a in range(n_apertures):
-                for s in range(np.shape(fluxes)[1]):
-                    _lcs[a, s, :] = fluxes[a, s] / best_art_lc[a, :]
+            i += 1
 
-            metric.append(np.std([utils.std_diff_metric(f) for f in _lcs[:, target, :]]))
 
-        if keep == "float":
-            keep = float(k_range[np.argmin(metric)])
-        elif keep == "int":
-            keep = int(k_range[np.argmin(metric)])
-            
     elif keep is None:
-        keep = float(np.min([np.shape(fluxes)[1], n_comps]))
+        _keep = np.min([np.shape(fluxes)[1], n_comps])
 
     # Compute the final lightcurves
     # -----------------------------
-    # Keeping `keep` number of stars with the best weights
-    ordered_stars = np.array(
-        [np.delete(bs, np.where(bs == target)) for bs in ordered_stars]
-    ).astype(int)
-    best_stars = ordered_stars[:, 0 : int(keep)]
-    # Removing target from kept stars
-    # best_stars = np.array([np.delete(bs, np.where(bs == target)) for bs in best_stars]).astype(int)
-    best_art_lc = np.zeros((n_apertures, n_points))
-    best_art_error = np.zeros((n_apertures, n_points))
+    if keep is "float":
+        # Using the weighted sum
+        ordered_weights = np.array([weights[a, ordered_stars[a, :]] for a in range(n_apertures)])
+    elif keep is "int":
+        # Using a simple mean
+        ordered_weights = np.ones(n_apertures, keep)
 
-    best_stars_n = np.shape(best_stars)[1]
+    keep = int(_keep)
 
-    for a in range(n_apertures):
-        if type(keep) is float:
-            # Using the weighted sum
-            _weights = weights[a, best_stars[a]]
-        elif type(keep) is int:
-            # Using a simple mean
-            _weights = np.ones(best_stars_n)
+    ordered_fluxes = np.array([fluxes[a, ordered_stars[a], :] for a in range(n_apertures)])
+    ordered_errors = np.array([errors[a, ordered_stars[a], :] for a in range(n_apertures)])
 
-        best_art_lc[a, :] = np.sum(
-            [fluxes[a, s] * w for s, w in zip(best_stars[a], _weights)], axis=0,
-        ) / np.sum(_weights)
+    best_art_lc = (ordered_fluxes[:, 0:keep, :] * ordered_weights[:, 0:keep, None]).sum(1) / ordered_weights[:,
+                                                                                             0:keep].sum(1)[:, None]
+    best_art_error = (ordered_errors[:, 0:keep, :] ** 2 * ordered_weights[:, 0:keep, None] ** 2).sum(
+        1) / ordered_weights[:, 0:keep].sum(1)[:, None]
 
-        best_art_error[a, :] = np.sqrt(
-            np.sum(
-                [errors[a, s] ** 2 * w ** 2 for s, w in zip(best_stars[a], _weights)],
-                axis=0,
-            )
-        ) / np.sum(_weights)
+    lcs = fluxes / best_art_lc[:, None]
+    lcs /= np.median(lcs, 2)[:, :, None]
+    lcs_errors = np.sqrt(errors ** 2 + best_art_error[:, None, :] ** 2)
 
-    lcs = np.zeros(np.shape(original_fluxes))
-    lcs_errors = np.zeros(np.shape(original_fluxes))
-
-    for a in range(n_apertures):
-        for s, cs in enumerate(clean_stars):
-            lcs[a, cs, :] = fluxes[a, s] / best_art_lc[a, :]
-            lcs_errors[a, cs, :] = np.sqrt(
-                errors[a, s] ** 2 + best_art_error[a, :] ** 2
-            )
-
-    # Final normalization and return
+    # Return
     # ------------------------------
-    lcs = np.array([[ll / np.nanmedian(ll) for ll in l] for l in lcs])
+    best_stars = ordered_stars[:, 0:keep]
     np.seterr(divide="warn")  # Set warnings back
 
     if show_comps:
@@ -344,6 +307,13 @@ class LightCurve:
         Flux error from best aperture
         """
         return self.errors[self.best_aperture_id]
+
+    @property
+    def aslist(self):
+        """
+        Flux error from best aperture
+        """
+        return [self.time, self.flux, self.error, self.data]
     
     def _pick_best_aperture(self, method="stddiff"):
         """
@@ -424,6 +394,23 @@ class LightCurve:
     
     def Pont2006(self, plot=True, n=35):
         return Pont2006(self.time, self.flux, n=n, plot=plot)
+
+    
+    def save(self, name):
+        np.save("{}.lc".format(name), [{
+            "fluxes": self.fluxes,
+            "errors": self.errors,
+            "data": self.data,
+            "time": self.time,
+            "best_aperture_id": self.best_aperture_id
+        }], allow_pickle=True)
+    
+    @staticmethod
+    def load(filename):
+        data = np.load(filename, allow_pickle=True)[0]
+        lc = LightCurve(data["time"], data["fluxes"], data["errors"], data["data"])
+        lc.best_aperture_id = data["best_aperture_id"]
+        return lc
         
 
 class LightCurves:
@@ -451,6 +438,22 @@ class LightCurves:
     
     def __iter__(self):
         return iter(self._lightcurves)
+
+    @property
+    def time(self):
+        return np.hstack(self.times)
+    
+    @property
+    def flux(self):
+        return np.hstack(self.fluxes)
+
+    @property
+    def error(self):
+        return np.hstack(self.errors)
+    
+    @property
+    def times(self):
+        return np.array([lc.time for lc in self._lightcurves])
 
     @property
     def fluxes(self):
