@@ -216,6 +216,7 @@ def Broeg2005(
 
     elif keep is None:
         _keep = np.min([np.shape(fluxes)[1], n_comps])
+        keep = "float"
     else:
         _keep = keep
         keep = "float" if isinstance(keep, float) else "int"
@@ -227,8 +228,8 @@ def Broeg2005(
         ordered_weights = np.array([weights[a, ordered_stars[a, :]] for a in range(n_apertures)])
     elif keep is "int":
         # Using a simple mean
-        ordered_weights = np.ones(n_apertures, keep)
-
+        ordered_weights = np.ones((n_apertures, _keep))
+        
     keep = int(_keep)
 
     ordered_fluxes = np.array([fluxes[a, ordered_stars[a], :] for a in range(n_apertures)])
