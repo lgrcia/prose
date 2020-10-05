@@ -85,9 +85,9 @@ The previously set telescope has been recognized and a ``fake_telescope_20200229
 
 .. code-block:: python3
 
-    from prose import Photometry
+    from prose import AperturePhotometry
 
-    photometry = Photometry(reduction.destination)
+    photometry = AperturePhotometry(reduction.destination)
     photometry.run()
 
 

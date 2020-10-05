@@ -12,5 +12,5 @@ from prose.io import FitsManager
 from prose.lightcurves import LightCurve, LightCurves
 from prose.telescope import Telescope
 from prose._blocks.base import Block, Unit, Image
-from prose._blocks.units import Reduction, Photometry
+from prose._blocks.units import Reduction, AperturePhotometry
 from prose.photproducts import PhotProducts

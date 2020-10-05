@@ -119,7 +119,7 @@ class Reduction:
         self.files = self.fits_manager.get("light")
 
 
-class Photometry:
+class AperturePhotometry:
     """Photometric extraction unit
 
     Parameters
@@ -132,41 +132,72 @@ class Photometry:
         max number of stars to take into account, by default 500
     """
 
-    def __init__(self, fits_manager, overwrite=False, n_stars=500):
+    def __init__(self,
+                 fits_manager,
+                 overwrite=False,
+                 n_stars=500,
+                 apertures=np.arange(0.1, 10, 0.25),
+                 r_in = 5,
+                 r_out = 8,
+                 fwhm_scale = True,
+                 sigclip = 3.,
+                 method="photutils"):
 
         self.fits_manager = fits_manager
         self.overwrite = overwrite
         self.n_stars = n_stars
+        self.reference_detection_unit = None
+        self.photometry_unit = None
+        self.destination = None
 
         self.prepare()
+        if method == "sextractor":
+            self.photometry = blocks.SEAperturePhotometry(
+                apertures=apertures,
+                r_in=r_in,
+                r_out=r_out,
+                sigclip=sigclip,
+                fwhm_scale=fwhm_scale,
+                name="photometry"
+            )
+        elif method == "photutils":
+            self.photometry = blocks.PhotutilsAperturePhotometry(
+                apertures=apertures,
+                r_in=r_in,
+                r_out=r_out,
+                sigclip=sigclip,
+                fwhm_scale=fwhm_scale,
+                name="photometry"
+            )
 
-    def run(self):
-
+    def run_reference_detection(self):
         stack_path = self.fits_manager.get("stack")[0]
         assert stack_path is not None, "No stack found"
 
-        reference_detection_unit =  Unit([
+        self.reference_detection_unit = Unit([
             blocks.DAOFindStars(n_stars=self.n_stars, name="detection"),
-            blocks.Moffat2D(name="fwhm"),
+            blocks.Gaussian2D(name="fwhm"),
             blocks.ImageBuffer(name="buffer"),
-            ], stack_path, telescope=self.fits_manager.telescope, show_progress=False)
+        ], stack_path, telescope=self.fits_manager.telescope, show_progress=False)
 
-        reference_detection_unit.run()
-        stack_image = reference_detection_unit.blocks_dict["buffer"].image
+        self.reference_detection_unit.run()
+        stack_image = self.reference_detection_unit.blocks_dict["buffer"].image
         ref_stars = stack_image.stars_coords
         fwhm = stack_image.fwhm
 
         print("{} detected stars: {}".format(INFO_LABEL, len(ref_stars)))
         print("{} global psf FWHM: {:.2f} (pixels)".format(INFO_LABEL, np.mean(fwhm)))
 
-        photometry_unit = Unit([
+        self.photometry_unit = Unit([
             blocks.Set(stars_coords=ref_stars, name="set stars"),
             blocks.Set(fwhm=fwhm, name="set fwhm"),
-            blocks.SEAperturePhotometry(name="photometry"),
+            self.photometry,
             blocks.SavePhots(self.phot_path, header=fits.getheader(stack_path), overwrite=self.overwrite, name="saving")
         ], self.files, telescope=self.fits_manager.telescope, name="Photometry")
 
-        photometry_unit.run()
+    def run(self):
+        self.run_reference_detection()
+        self.photometry_unit.run()
 
     def prepare(self):
         if isinstance(self.fits_manager, str):
@@ -186,4 +217,7 @@ class Photometry:
             raise OSError("{}already exists".format(self.phot_path))
 
         self.files = self.fits_manager.get("reduced")
+
+        self.stack_path = self.fits_manager.get("stack")[0]
+        assert self.stack_path is not None, "No stack found"
 
