@@ -100,3 +100,6 @@ def divisors(n) :
             divisors.append(i) 
         i = i + 1
     return np.array(divisors)
+
+def fold(t, t0, p):
+    return (t - t0 + 0.5 * p) % p - 0.5 * p

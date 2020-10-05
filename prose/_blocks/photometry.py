@@ -103,13 +103,20 @@ class PhotutilsAperturePhotometry(Block):
     ----------
     apertures : ndarray or list, optional
         apertures in fraction of fwhm, by default None, i.e. np.arange(0.1, 10, 0.25)
-    annulus_inner_radius : int, optional
+    r_in : int, optional
         radius of the inner annulus in fraction of fwhm, by default 5
-    annulus_outer_radius : int, optional
+    r_out : int, optional
         radius of the outer annulus in fraction of fwhm, by default 8
     """
 
-    def __init__(self, apertures=None, annulus_inner_radius=5, annulus_outer_radius=8, **kwargs):
+    def __init__(
+            self,
+            apertures=None,
+            r_in=5,
+            r_out=8,
+            fwhm_scale=True,
+            sigclip = 2.,
+            **kwargs):
 
         super().__init__(**kwargs)
         if apertures is None:
@@ -117,8 +124,8 @@ class PhotutilsAperturePhotometry(Block):
         else:
             self.apertures = apertures
 
-        self.annulus_inner_radius = annulus_inner_radius
-        self.annulus_outer_radius = annulus_outer_radius
+        self.annulus_inner_radius = r_in
+        self.annulus_outer_radius = r_out
         self.fits_manager = None
 
         self.n_apertures = len(self.apertures)
@@ -129,6 +136,8 @@ class PhotutilsAperturePhotometry(Block):
 
         self.circular_apertures_area = None
         self.annulus_area = None
+        self.fwhm_scale = fwhm_scale
+        self.sigclip = sigclip
 
     def set_apertures(self, stars_coords, fwhm):
 
@@ -154,13 +163,13 @@ class PhotutilsAperturePhotometry(Block):
         self.n_stars = len(stars_coords)
 
     def run(self, image, **kwargs):
-        self.set_apertures(image.stars_coords, image.fwhm)
+        self.set_apertures(image.stars_coords, image.fwhm if self.fwhm_scale else 1)
 
         bkg_median = []
         for mask in self.annulus_masks:
             annulus_data = mask.multiply(image.data)
             annulus_data_1d = annulus_data[mask.data > 0]
-            _, median_sigma_clip, _ = sigma_clipped_stats(annulus_data_1d)
+            _, median_sigma_clip, _ = sigma_clipped_stats(annulus_data_1d, sigma=self.sigclip)
             bkg_median.append(median_sigma_clip)
 
         bkg_median = np.array(bkg_median)
@@ -234,13 +243,13 @@ class SEAperturePhotometry(BasePhotometry):
         FitsManager containing a single observation
     apertures : ndarray or list, optional
         apertures in fraction of fwhm, by default None, i.e. np.arange(0.1, 10, 0.25)
-    annulus_inner_radius : int, optional
+    r_in : int, optional
         radius of the inner annulus in fraction of fwhm, by default 5
-    annulus_outer_radius : int, optional
+    r_out : int, optional
         radius of the outer annulus in fraction of fwhm, by default 8
     """
 
-    def __init__(self, apertures=None, annulus_inner_radius=5, annulus_outer_radius=8, **kwargs):
+    def __init__(self, apertures=None, r_in=5, r_out=8, fwhm_scale=True, **kwargs):
 
         super().__init__(**kwargs)
         if apertures is None:
@@ -248,8 +257,8 @@ class SEAperturePhotometry(BasePhotometry):
         else:
             self.apertures = apertures
 
-        self.annulus_inner_radius = annulus_inner_radius
-        self.annulus_outer_radius = annulus_outer_radius
+        self.annulus_inner_radius = r_in
+        self.annulus_outer_radius = r_out
 
         self.n_apertures = len(self.apertures)
         self.n_stars = None
@@ -259,11 +268,17 @@ class SEAperturePhotometry(BasePhotometry):
 
         self.circular_apertures_area = None
         self.annulus_area = None
+        self.fwhm_scale = fwhm_scale
 
     def run(self, image):
-        r_in = self.annulus_inner_radius * image.fwhm
-        r_out = self.annulus_outer_radius * image.fwhm
-        r = self.apertures * image.fwhm
+        if self.fwhm_scale:
+            r_in = self.annulus_inner_radius * image.fwhm
+            r_out = self.annulus_outer_radius * image.fwhm
+            r = self.apertures * image.fwhm
+        else:
+            r_in = self.annulus_inner_radius
+            r_out = self.annulus_outer_radius
+            r = self.apertures
 
         self.n_stars = len(image.stars_coords)
         image.fluxes = np.zeros((self.n_apertures, self.n_stars))

@@ -32,22 +32,26 @@ def plot_lc(
     plot_kwargs={},
     errorbar_kwargs={}
 ):
-    plot_kwargs = dict(
+    _plot_kwargs = dict(
         c="gainsboro",
         zorder=0,
         ms=5,
-        label="raw_data",
-        **plot_kwargs)
+        label="raw_data")\
 
-    errorbar_kwargs = dict(
+    _plot_kwargs.update(plot_kwargs)
+    plot_kwargs = _plot_kwargs
+
+    _errorbar_kwargs = dict(
         fmt=".",
         capsize=2,
         elinewidth=0.75,
         c="C0",
         ecolor="C0",
         markersize=6,
-        label="binned data ({} JD)".format(bins),
-        **errorbar_kwargs)
+        label="binned data ({} JD)".format(bins))\
+
+    _errorbar_kwargs.update(errorbar_kwargs)
+    errorbar_kwargs = _errorbar_kwargs
 
     if bins is not None:
         blc = binning(time, flux, bins=bins, error=error, std=std)
@@ -236,7 +240,7 @@ class AnchoredHScaleBar(matplotlib.offsetbox.AnchoredOffsetbox):
                                                         **kwargs)
 
 
-def plot_lcs(data, planets={}, W=4, show=None, hide=None, ylim=None, size=[4,3], indexes=None, colors=None):
+def plot_lcs(data, planets={}, W=4, show=None, hide=None, ylim=None, size=[4,3], indexes=None, colors=None, bins=0.005):
     """
     A global plot for multiple lightcurves
     
@@ -296,7 +300,7 @@ def plot_lcs(data, planets={}, W=4, show=None, hide=None, ylim=None, size=[4,3],
                     )
                     ax.add_patch(p1)
 
-            plot_lc(jd, lc)
+            plot_lc(jd, lc, bins=bins)
             if ylim is not None:
                 plt.ylim(ylim)
 
@@ -333,7 +337,7 @@ def bokeh_style(xminor=True, yminor=True, axes=None):
     
     if axes is None:
         axes = plt.gcf().axes
-    elif not isinstance(axis, list):
+    elif not isinstance(axes, list):
         axes = [axes]
     
     for axe in axes:
@@ -353,8 +357,11 @@ def bokeh_style(xminor=True, yminor=True, axes=None):
             axe.spines['right'].set_linewidth(1)
 
 
-def paper_style():
-    axes = plt.gcf().axes
+def paper_style(axes=None):
+    if axes is None:
+        axes = plt.gcf().axes
+    elif not isinstance(axes, list):
+        axes = [axes]
     
     for axe in axes:
         axe.set_titleweight = 500
@@ -674,7 +681,7 @@ def fancy_show_stars(
     return fig
 
 
-def plot_comparison_lcs(lcs, idxs, bins=0.005, offset_factor=2.5):
+def plot_comparison_lcs(lcs, idxs, bins=0.005, offset_factor=2.5, std=False):
     """Plot comparison stars light curves along target star light curve
     """
     time = lcs[0].time
@@ -684,7 +691,7 @@ def plot_comparison_lcs(lcs, idxs, bins=0.005, offset_factor=2.5):
     plt.grid(color="whitesmoke")
     amp = np.percentile(lcs[0].flux, 95) - np.percentile(lcs[0].flux, 5)
     for i, lc in enumerate(lcs):
-        lc.plot(offset=-offset_factor * amp * i)
+        lc.plot(offset=-offset_factor * amp * i, std=std)
         plt.annotate(
             "{}".format(idxs[i]), 
             (lc.time.min() + 0.005, 1.01 - offset_factor * amp * i)
@@ -838,7 +845,7 @@ def plot_systematics(time, lc, data, fields=None, bins=0.005, offset_factor=1):
     plt.tight_layout()
 
 
-def plot_lc_raw_diff(self, binning=0.005, detrended=False, options={}):
+def plot_lc_raw_diff(self, binning=0.005, detrended=False, options={}, std=False):
 
     _options = {
         "raw_markersize": 5,
@@ -866,7 +873,7 @@ def plot_lc_raw_diff(self, binning=0.005, detrended=False, options={}):
     plt.subplot(211)
     plt.title("Differential lightcurve", loc="left")
     self.lc.plot(
-        bins=binning,
+        bins=binning, std=std
     )
     plt.grid(color="whitesmoke")
 
@@ -883,35 +890,36 @@ def plot_lc_raw_diff(self, binning=0.005, detrended=False, options={}):
     plt.tight_layout()
 
 
-def save_report(self, destination, fields, remove_temp=True):
+def draw_table(pdf, table, table_start, marg=5, table_cell=(20,4)):
 
-    def draw_table(table, table_start, marg=5, table_cell=(20,4)):
+    pdf.set_draw_color(200,200,200)
 
-        pdf.set_draw_color(200,200,200)
+    for i, datum in enumerate(table):
+        pdf.set_font("helvetica", size=6)
+        pdf.set_fill_color(249,249,249)
 
-        for i, datum in enumerate(table):
-            pdf.set_font("helvetica", size=6)
-            pdf.set_fill_color(249,249,249)
+        pdf.rect(table_start[0] + 5, table_start[1] + 1.2 + i*table_cell[1],
+                table_cell[0]*3, table_cell[1], "FD" if i%2 == 0 else "D")
 
-            pdf.rect(table_start[0] + 5, table_start[1] + 1.2 + i*table_cell[1],
-                    table_cell[0]*3, table_cell[1], "FD" if i%2 == 0 else "D")
+        pdf.set_text_color(100,100,100)
 
-            pdf.set_text_color(100,100,100)
+        value = datum[1]
+        if value is None:
+            value = "--"
+        else:
+            value = str(value)
 
-            value = datum[1]
-            if value is None:
-                value = "--"
-            else:
-                value = str(value)
+        pdf.text(
+            table_start[0] + marg + 2,
+            table_start[1] + marg + i*table_cell[1] - 1.2, datum[0])
 
-            pdf.text(
-                table_start[0] + marg + 2,
-                table_start[1] + marg + i*table_cell[1] - 1.2, datum[0])
+        pdf.set_text_color(50,50,50)
+        pdf.text(
+            table_start[0] + marg + 2 + table_cell[0],
+            table_start[1] + marg + i*table_cell[1] - 1.2, value)
 
-            pdf.set_text_color(50,50,50)
-            pdf.text(
-                table_start[0] + marg + 2 + table_cell[0],
-                table_start[1] + marg + i*table_cell[1] - 1.2, value)
+
+def save_report(self, destination, fields, remove_temp=True, std=False, ylim=None):
 
     if path.isdir(destination):
         file_name = "{}_report.pdf".format(self.products_denominator)
@@ -936,7 +944,7 @@ def save_report(self, destination, fields, remove_temp=True):
     plt.close()
     
     plt.figure(figsize=(6,10))
-    self.plot_raw_diff()
+    self.plot_raw_diff(std=std)
     lc_report_plot = path.join(temp_folder, "lcreport.png")
     fig = plt.gcf()
     fig.patch.set_alpha(0)
@@ -953,7 +961,7 @@ def save_report(self, destination, fields, remove_temp=True):
 
     if self.comparison_stars is not None:
         plt.figure(figsize=(6,10))
-        self.plot_comps_lcs()
+        self.plot_comps_lcs(std=std)
         lc_comps_plot = path.join(temp_folder, "lccompreport.png")
         fig = plt.gcf()
         fig.patch.set_alpha(0)

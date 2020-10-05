@@ -31,6 +31,9 @@ class Unit:
         self._telescope = None
         self.telescope = telescope
 
+    def __getattr__(self, item):
+        return self.blocks_dict[item]
+
     @property
     def telescope(self):
         return self._telescope
@@ -87,6 +90,11 @@ class Unit:
     def citations(self):
         citations = [block.citations() for block in self.blocks if block.citations() is not None]
         return citations if len(citations) > 0 else None
+
+    def insert_before(self, before, block):
+        pass
+
+
 
 
 class Image:
