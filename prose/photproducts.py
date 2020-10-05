@@ -5,7 +5,7 @@ from os import path
 from astropy.time import Time
 from astropy import units as u
 from astropy.coordinates import SkyCoord
-from prose.lightcurves import LightCurves, Broeg2005, differential_photometry
+from prose.lightcurves import LightCurves, Broeg2005, differential_photometry, newBroeg2005
 import warnings
 from prose import visualisation as viz
 from astropy.io import fits
@@ -16,6 +16,9 @@ from astropy.wcs import WCS, utils as wcsutils
 import pandas as pd
 from scipy.stats import binned_statistic
 from prose._blocks.psf import Gaussian2D, Moffat2D
+import os
+import shutil
+from astropy.stats import sigma_clip
 
 
 # TODO: add n_stars to show_stars
@@ -307,6 +310,41 @@ class PhotProducts:
         self.lcs.set_best_aperture_id(best_aperture_id)
         self._comparison_stars = np.array(comps)
 
+    def newBroeg2005(self, **kwargs):
+        """
+        Differential photometry using the `Broeg (2005) <https://ui.adsabs.harvard.edu/abs/2005AN....326..134B/abstract>`_ algorithm
+
+        Parameters
+        ----------
+        keep: None, int, float, string or None (optional, default is 'float')
+            - if ``None``: use a weighted artificial comparison star based on all stars (weighted mean)
+            - if ``float``: use a weighted artificial comparison star based on `keep` stars (weighted mean)
+            - if ``int``: use a simple artificial comparison star based on `keep` stars (mean)
+            - if ``'float'``: use a weighted artificial comparison star based on an optimal number of stars (weighted mean)
+            - if ``'int'``: use a simple artificial comparison star based on an optimal number of stars (mean)
+        max_iteration: int (optional, default is 50)
+            maximum number of iteration to adjust weights
+        tolerance: float (optional, default is 1e-8)
+            mean difference between weights to reach
+        n_comps: int (optional, default is 500)
+            limit on the number of stars to keep (see keep kwargs)
+        show_comps: bool (optional, default is False)
+            show stars and weights used to build the artificial comparison star
+
+        """
+        assert self.target["id"] is not None, "target id is not defined"
+
+        fluxes, fluxes_errors = self.fluxes.as_array()
+
+        lcs, lcs_errors, art_lcs, comps = newBroeg2005(
+            fluxes, fluxes_errors, self.target_id, return_art_lc=True, return_comps=True, **kwargs
+        )
+        self.artificial_lcs = np.array(art_lcs)
+        self.lcs = LightCurves(self.time, np.moveaxis(lcs, 0, 1), np.moveaxis(lcs_errors, 0, 1))
+        best_aperture_id = self.lcs[self.target["id"]].best_aperture_id
+        self.lcs.set_best_aperture_id(best_aperture_id)
+        self._comparison_stars = np.array(comps)
+
     def DiffPhot(self, comps):
         """
         Manual differential photometry
@@ -360,7 +398,7 @@ class PhotProducts:
     # Plot
     # ----
 
-    def show_stars(self, size=10, flip=False, view=None, zoom=True):
+    def show_stars(self, size=10, flip=False, view=None, zoom=True, n_stars=None):
         """
         Show stack image and detected stars
 
@@ -381,16 +419,25 @@ class PhotProducts:
         .. image:: /guide/examples_images/plot_stars.png
            :align: center
         """
+
+
+        if n_stars is not None:
+            if view == "reference":
+                raise AssertionError("'n_stars' kwargs is incompatible with 'reference' view that will display all stars")
+            stars = self.stars[0:n_stars]
+        else:
+            stars = self.stars
+
         if view is None:
             view = "reference" if self.comparison_stars is not None else "all"
         if view == "all":
             viz.fancy_show_stars(
-                self.stack_fits, self.stars,
+                self.stack_fits, stars,
                 flip=flip, size=size, target=self.target["id"],
                 pixel_scale=self.telescope.pixel_scale)
         elif view == "reference":
             viz.fancy_show_stars(
-                self.stack_fits, self.stars,
+                self.stack_fits, stars,
                 ref_stars=self.comparison_stars, target=self.target["id"],
                 flip=flip, size=size, view="reference", pixel_scale=self.telescope.pixel_scale, zoom=zoom)
 
@@ -434,7 +481,7 @@ class PhotProducts:
         ax.set_xlim(np.array([-size / 2, size / 2]) + self.stars[star][0])
         ax.set_ylim(np.array([size / 2, -size / 2]) + self.stars[star][1])
 
-    def plot_comps_lcs(self, n=5):
+    def plot_comps_lcs(self, n=5, ylim=(0.98, 1.02)):
         """
         Plot comparison stars light curves along target star light curve
 
@@ -446,9 +493,25 @@ class PhotProducts:
         self._check_lcs()
         idxs = [self.target["id"], *self.comparison_stars[0:n]]
         lcs = [self.lcs[i] for i in idxs]
-        if len(plt.gcf().get_axes()) == 0:
-            plt.figure(figsize=(5, 8))
-        viz.plot_comparison_lcs(lcs, idxs)
+
+        if ylim is None:
+            ylim = (self.lc.flux.min() * 0.99, self.lc.flux.max() * 1.01)
+
+        offset = ylim[1] - ylim[0]
+
+        if len(plt.gcf().axes) == 0:
+            plt.figure(figsize=(5 ,10))
+
+        self.lc.plot()
+
+        for i, lc in enumerate(lcs):
+            viz.plot_lc(self.time, lc.flux - (i + 1) * offset, errorbar_kwargs=dict(c="grey", ecolor="grey"))
+            plt.annotate(idxs[i], (self.time.min() + 0.005, 1 - (i + 1) * offset + offset / 3))
+
+        plt.ylim(1 - (i + 1.5) * offset, ylim[1])
+        plt.title("Comparison stars", loc="left")
+        plt.grid(color="whitesmoke")
+        plt.tight_layout()
 
     def plot_data(self, key):
         """
@@ -482,7 +545,7 @@ class PhotProducts:
            :align: center
         """
 
-        psf_fit = Moffat2D()
+        psf_fit = Gaussian2D()
         image = Image(self.stack_fits, stars_coords=self.stars)
         psf_fit.run(image)
 
@@ -513,23 +576,177 @@ class PhotProducts:
             target=self.target["id"],
             highlights=self.comparison_stars)
 
-    def plot_systematics(self, fields=None):
+    def plot_systematics(self, fields=None, ylim=(0.98, 1.02)):
         if fields is None:
             fields = ["dx", "dy", "fwhm", "airmass", "sky"]
 
-        viz.plot_systematics(self.time, self.lc.flux, self.data, fields=[f for f in fields if f in self.data])
+        if ylim is None:
+            ylim = (self.lc.flux.min() * 0.99, self.lc.flux.max() * 1.01)
 
-    def plot_raw_diff(self):
-        viz.plot_lc_raw_diff(self)
+        offset = ylim[1] - ylim[0]
 
-    def save_report(self, destination=None, fields=None):
+        if len(plt.gcf().axes) == 0:
+            plt.figure(figsize=(5 ,10))
+
+        self.lc.plot()
+
+        for i, field in enumerate(fields):
+            if field in self.data:
+                scaled_data = sigma_clip(self.data[field])
+                scaled_data -= np.median(scaled_data)
+                scaled_data /= np.std(scaled_data)
+                scaled_data *= np.std(self.lc.flux)
+                scaled_data += 1 - (i + 1) * offset
+                viz.plot_lc(self.time, scaled_data, errorbar_kwargs=dict(c="grey", ecolor="grey"))
+                plt.annotate(field, (self.time.min() + 0.005, 1 - (i + 1) * offset + offset / 3))
+            else:
+                i -= 1
+
+        plt.ylim(1 - (i + 1.5) * offset, ylim[1])
+        plt.title("Systematics", loc="left")
+        plt.grid(color="whitesmoke")
+        plt.tight_layout()
+
+    def plot_raw_diff(self, std=False):
+        viz.plot_lc_raw_diff(self, std=std)
+
+    def save_report(self, destination=None, fields=None, std=None, ylim=(0.98, 1.02), remove_temp=True):
+
         if destination is None:
             destination = self.folder
 
         if fields is None:
             fields = ["dx", "dy", "fwhm", "airmass", "sky"]
 
-        viz.save_report(self, destination, fields=fields)
+        if path.isdir(destination):
+            file_name = "{}_report.pdf".format(self.products_denominator)
+        else:
+            file_name = path.basename(destination.strip(".html").strip(".pdf"))
+
+        temp_folder = path.join(path.dirname(destination), "temp")
+
+        if path.isdir("temp"):
+            shutil.rmtree(temp_folder)
+
+        if os.path.exists(temp_folder):
+            shutil.rmtree(temp_folder)
+
+        os.mkdir(temp_folder)
+
+        self.show_stars(10, view="reference")
+        star_plot = path.join(temp_folder, "starplot.png")
+        fig = plt.gcf()
+        fig.patch.set_alpha(0)
+        plt.savefig(star_plot)
+        plt.close()
+
+        plt.figure(figsize=(6, 10))
+        self.plot_raw_diff(std=std)
+        if ylim is not None:
+            plt.gcf().axes[0].set_ylim(ylim)
+        lc_report_plot = path.join(temp_folder, "lcreport.png")
+        fig = plt.gcf()
+        fig.patch.set_alpha(0)
+        plt.savefig(lc_report_plot)
+        plt.close()
+
+        plt.figure(figsize=(6, 10))
+        self.plot_systematics(fields=fields)
+        syst_plot = path.join(temp_folder, "systplot.png")
+        fig = plt.gcf()
+        fig.patch.set_alpha(0)
+        plt.savefig(syst_plot)
+        plt.close()
+
+        if self.comparison_stars is not None:
+            plt.figure(figsize=(6, 10))
+            self.plot_comps_lcs()
+            lc_comps_plot = path.join(temp_folder, "lccompreport.png")
+            fig = plt.gcf()
+            fig.patch.set_alpha(0)
+            plt.savefig(lc_comps_plot)
+            plt.close()
+
+        plt.figure(figsize=(10, 3.5))
+        psf_p = self.plot_psf_fit()
+
+        psf_fit = path.join(temp_folder, "psf_fit.png")
+        plt.savefig(psf_fit, dpi=60)
+        plt.close()
+        theta = psf_p["theta"]
+        std_x = psf_p["std_x"]
+        std_y = psf_p["std_y"]
+
+        marg_x = 10
+        marg_y = 8
+
+        pdf = viz.prose_FPDF(orientation='L', unit='mm', format='A4')
+        pdf.add_page()
+
+        pdf.set_draw_color(200, 200, 200)
+
+        pdf.set_font("helvetica", size=12)
+        pdf.set_text_color(50, 50, 50)
+        pdf.text(marg_x, 10, txt="{}".format(self.target["name"]))
+
+        pdf.set_font("helvetica", size=6)
+        pdf.set_text_color(74, 144, 255)
+        pdf.text(marg_x, 17, txt="simbad")
+        pdf.link(marg_x, 15, 8, 3, self.simbad)
+
+        pdf.set_text_color(150, 150, 150)
+        pdf.set_font("Helvetica", size=7)
+        pdf.text(marg_x, 14, txt="{} · {} · {}".format(
+            self.observation_date, self.telescope.name, self.filter))
+
+        pdf.image(star_plot, x=78, y=17, h=93.5)
+        pdf.image(lc_report_plot, x=172, y=17, h=95)
+        pdf.image(syst_plot, x=227, y=17, h=95)
+
+        if self.comparison_stars is not None:
+            pdf.image(lc_comps_plot, x=227, y=110, h=95)
+
+        datetimes = Time(self.jd, format='jd', scale='utc').to_datetime()
+        min_datetime = datetimes.min()
+        max_datetime = datetimes.max()
+
+        obs_duration = "{} - {} [{}h{}]".format(
+            min_datetime.strftime("%H:%M"),
+            max_datetime.strftime("%H:%M"),
+            (max_datetime - min_datetime).seconds // 3600,
+            ((max_datetime - min_datetime).seconds // 60) % 60)
+
+        max_psf = np.max([std_x, std_y])
+        min_psf = np.min([std_x, std_y])
+        ellipticity = (max_psf ** 2 - min_psf ** 2) / max_psf ** 2
+
+        viz.draw_table(pdf, [
+            ["Time", obs_duration],
+            ["RA - DEC", "{} - {}".format(*self.target["radec"])],
+            ["images", len(self.time)],
+            ["GAIA id", None],
+            ["mean std · fwhm",
+             "{:.2f} · {:.2f} pixels".format(np.mean(self.fwhm) / (2 * np.sqrt(2 * np.log(2))), np.mean(self.fwhm))],
+            ["Telescope", self.telescope.name],
+            ["Filter", self.filter],
+            ["exposure", "{} s".format(np.mean(self.data.exptime))],
+        ], (5, 20))
+
+        viz.draw_table(pdf, [
+            ["PSF std · fwhm (x)", "{:.2f} · {:.2f} pixels".format(std_x, 2 * np.sqrt(2 * np.log(2)) * std_x)],
+            ["PSF std · fwhm (y)", "{:.2f} · {:.2f} pixels".format(std_y, 2 * np.sqrt(2 * np.log(2)) * std_y)],
+            ["PSF ellipicity", "{:.2f}".format(ellipticity)],
+        ], (5, 78))
+
+        pdf.image(psf_fit, x=5.5, y=55, w=65)
+
+        pdf_path = path.join(destination, "{}.pdf".format(file_name.strip(".html").strip(".pdf")))
+        pdf.output(pdf_path)
+
+        if path.isdir("temp") and remove_temp:
+            shutil.rmtree(temp_folder)
+
+        print("report saved at {}".format(pdf_path))
 
     def plot_precision(self, bins=0.005, aperture=None):
         if aperture is None:
