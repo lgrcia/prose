@@ -53,6 +53,7 @@ class Telescope:
         self.diameter = 100
         self.pixel_scale = None
         self.latlong = [None, None]
+        self.saturation = 55000
 
         if telescope_file is not None:
             success = self.load(telescope_file)
