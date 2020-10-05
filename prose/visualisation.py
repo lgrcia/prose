@@ -14,7 +14,6 @@ import matplotlib.pyplot as plt
 from skimage.transform import resize
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.ticker import AutoMinorLocator
-from IPython.display import display, Math
 import os 
 from os import path
 from fpdf import FPDF
@@ -781,6 +780,7 @@ def fancy_gif_image_array(image, median_psf, factor=0.25):
     return np.fromstring(canvas.tostring_rgb(), dtype='uint8').reshape(height, width, 3)
 
 def TeX(a, fmt='{: 0.3f}', dim=True):
+    from IPython.display import display, Math
     if isinstance(a, tuple):
         a = np.array(a)
         
@@ -1064,3 +1064,15 @@ class prose_FPDF(FPDF):
         self.set_font("helvetica", size=6)
         self.cell(w=0, txt=" · page {}".format(self.page_no()), ln=1,
                   align='L', fill=False, link='', border=0)
+
+
+def rename_tab(name):
+    """Rename a notebook tab
+
+    Parameters
+    ----------
+    name : str
+        name to be used
+    """
+    from IPython.display import display, Javascript
+    Javascript('document.title="{}"'.format(name))
