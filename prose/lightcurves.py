@@ -9,6 +9,7 @@ from prose import utils
 import matplotlib.pyplot as plt
 from prose import visualisation as viz
 from scipy.optimize import curve_fit
+from astropy.stats import sigma_clipped_stats, sigma_clip
 
 def nu(n, sw, sr):
     return (sw**2)/n + sr**2
@@ -81,7 +82,220 @@ def differential_photometry(fluxes, errors, comps, return_art_lc=False):
 
     return return_values
 
+
 def Broeg2005(
+        fluxes,
+        errors,
+        target,
+        keep="float",
+        max_iteration=50,
+        tolerance=1e-8,
+        n_comps=500,
+        show_comps=False,
+        return_art_lc=False,
+        return_comps=False
+):
+    """
+    Implementation of the Broeg (2004) algorithm to compute optimum weighted artificial comparison star
+    Parameters
+    ----------
+    fluxes : np.ndarray
+        Fluxes with shape (n_apertures, n_stars, n_images)
+    errors: np.ndarray
+        Errors on fluxes with shape (n_apertures, n_stars, n_images)
+    target: int
+        Target id
+    keep: None, int, float, string or None (optional, default is 'float')
+        - if None: use a weighted artificial comparison star based on all stars (weighted mean)
+        - if float: use a weighted artificial comparison star based on `keep` stars (weighted mean)
+        - if int: use a simple artificial comparison star based on `keep` stars (mean)
+        - if 'float': use a weighted artificial comparison star based on an optimal number of stars (weighted mean)
+        - if 'int': use a simple artificial comparison star based on an optimal number of stars (mean)
+    max_iteration: int (optional, default is 50)
+        maximum number of iteration to adjust weights
+    tolerance: float (optional, default is 1e-8)
+        mean difference between weights to reach
+    n_comps: int (optional, default is 500)
+        limit on the number of stars to keep (see keep kwargs)
+    show_comps: bool (optional, default is False)
+        show stars and weights used to build the artificial comparison star
+    Returns
+    -------
+    lcs : np.ndarray
+        Light curves with shape (n_apertures, n_stars, n_images)
+    """
+
+    np.seterr(divide="ignore")  # Ignore divide by 0 warnings here
+
+    original_fluxes = fluxes.copy()
+    initial_n_stars = np.shape(original_fluxes)[1]
+
+    _fluxes = fluxes.copy()
+    _errors = errors.copy()
+
+    # Normalization
+    # -------------
+    fluxes = np.array([[ff / np.nanmean(ff) for ff in f] for f in _fluxes])
+    errors = np.array([
+        [ee / np.nanmean(ff) for ee, ff in zip(e, f)]
+        for e, f in zip(_errors, _fluxes)
+    ])
+
+    # Cleaning
+    # --------
+    # To keep track of which stars are clean and get a light curve (if not containing infs, nans or zeros)
+    clean_stars = np.arange(0, initial_n_stars)
+
+    # Data cleaning, excluding stars with no finite flux (0, nan or inf)
+    if not np.all(np.isfinite(fluxes)):
+        idxs = np.unique(np.where(np.logical_not(np.isfinite(fluxes)))[1])
+        fluxes = np.delete(fluxes, idxs, axis=1)
+        errors = np.delete(errors, idxs, axis=1)
+        clean_stars = np.delete(clean_stars, idxs)
+    if not np.all(np.isfinite(errors)):
+        idxs = np.unique(np.where(np.logical_not(np.isfinite(errors)))[1])
+        fluxes = np.delete(fluxes, idxs, axis=1)
+        errors = np.delete(errors, idxs, axis=1)
+        clean_stars = np.delete(clean_stars, idxs)
+
+    n_apertures, n_stars, n_points = np.shape(fluxes)
+
+    i = 0
+    evolution = 1e25
+    # record = []
+
+    # Broeg 2004 algorithm to find weights of comp stars
+    # --------------------------------------------------
+    while evolution > tolerance and i < max_iteration:
+        if i == 0:
+            last_weights = np.zeros((n_apertures, n_stars))
+            weights = 1 / np.mean(errors ** 2, axis=2)
+        else:
+            # This metric is prefered from std to optimize over white noise and not red noise
+            std = utils.std_diff_metric(lcs)
+            weights = 1 / std
+
+        # Keep track of weights
+        evolution = np.std(
+            np.abs(np.mean(weights, axis=1) - np.mean(last_weights, axis=1))
+        )
+        # record.append(evolution)
+        last_weights = weights
+
+        art_lc = np.zeros((n_apertures, n_points))
+
+        for a in range(n_apertures):
+            art_lc[a, :] = np.sum(
+                [fluxes[a, s] * w for s, w in zip(range(n_stars), weights[a])], axis=0,
+            ) / np.sum(weights[a])
+
+        lcs = np.zeros((np.shape(fluxes)))
+
+        for a in range(n_apertures):
+            for s in range(np.shape(fluxes)[1]):
+                lcs[a, s, :] = fluxes[a, s] / art_lc[a, :]
+
+        i += 1
+
+    ordered_stars = np.argsort(weights, axis=1)[:, ::-1]
+
+    # Find the best number of comp stars to keep if None
+    # --------------------------------------------------
+    if isinstance(keep, str):
+
+        metric = []
+        k_range = np.arange(2, np.min([np.shape(fluxes)[1], n_comps]))
+
+        for k in k_range:
+            best_stars = ordered_stars[:, 0: int(k)]
+            best_art_lc = np.zeros((n_apertures, n_points))
+
+            for a in range(n_apertures):
+                best_art_lc[a, :] = np.sum(
+                    [
+                        fluxes[a, s] * w
+                        for s, w in zip(best_stars[a], weights[a, best_stars[a]])
+                    ],
+                    axis=0,
+                ) / np.sum(weights[a, best_stars[a]])
+
+            _lcs = np.zeros(np.shape(fluxes))
+
+            for a in range(n_apertures):
+                for s in range(np.shape(fluxes)[1]):
+                    _lcs[a, s, :] = fluxes[a, s] / best_art_lc[a, :]
+
+            metric.append(np.std([utils.std_diff_metric(f) for f in _lcs[:, target, :]]))
+
+        if keep == "float":
+            keep = float(k_range[np.argmin(metric)])
+        elif keep == "int":
+            keep = int(k_range[np.argmin(metric)])
+
+    elif keep is None:
+        keep = float(np.min([np.shape(fluxes)[1], n_comps]))
+
+    # Compute the final lightcurves
+    # -----------------------------
+    # Keeping `keep` number of stars with the best weights
+    ordered_stars = np.array(
+        [np.delete(bs, np.where(bs == target)) for bs in ordered_stars]
+    ).astype(int)
+    best_stars = ordered_stars[:, 0: int(keep)]
+    # Removing target from kept stars
+    # best_stars = np.array([np.delete(bs, np.where(bs == target)) for bs in best_stars]).astype(int)
+    best_art_lc = np.zeros((n_apertures, n_points))
+    best_art_error = np.zeros((n_apertures, n_points))
+
+    best_stars_n = np.shape(best_stars)[1]
+
+    for a in range(n_apertures):
+        if type(keep) is float:
+            # Using the weighted sum
+            _weights = weights[a, best_stars[a]]
+        elif type(keep) is int:
+            # Using a simple mean
+            _weights = np.ones(best_stars_n)
+
+        best_art_lc[a, :] = np.sum(
+            [fluxes[a, s] * w for s, w in zip(best_stars[a], _weights)], axis=0,
+        ) / np.sum(_weights)
+
+        best_art_error[a, :] = np.sqrt(
+            np.sum(
+                [errors[a, s] ** 2 * w ** 2 for s, w in zip(best_stars[a], _weights)],
+                axis=0,
+            )
+        ) / np.sum(_weights)
+
+    lcs = np.zeros(np.shape(original_fluxes))
+    lcs_errors = np.zeros(np.shape(original_fluxes))
+
+    for a in range(n_apertures):
+        for s, cs in enumerate(clean_stars):
+            lcs[a, cs, :] = fluxes[a, s] / best_art_lc[a, :]
+            lcs_errors[a, cs, :] = np.sqrt(
+                errors[a, s] ** 2 + best_art_error[a, :] ** 2
+            )
+
+    # Final normalization and return
+    # ------------------------------
+    lcs = np.array([[ll / np.nanmedian(ll) for ll in l] for l in lcs])
+    np.seterr(divide="warn")  # Set warnings back
+
+    if show_comps:
+        print(best_stars, weights)
+
+    return_values = [lcs, lcs_errors]
+
+    if return_art_lc:
+        return_values.append(best_art_lc)
+    if return_comps:
+        return_values.append(best_stars)
+
+    return return_values
+
+def newBroeg2005(
     fluxes,
     errors,
     target,
@@ -223,10 +437,10 @@ def Broeg2005(
 
     # Compute the final lightcurves
     # -----------------------------
-    if keep is "float":
+    if keep == "float":
         # Using the weighted sum
         ordered_weights = np.array([weights[a, ordered_stars[a, :]] for a in range(n_apertures)])
-    elif keep is "int":
+    elif keep == "int":
         # Using a simple mean
         ordered_weights = np.ones((n_apertures, _keep))
 
@@ -392,8 +606,13 @@ class LightCurve:
             binned_time, binned_flux, binned_error = utils.binning(self.time, flux, bins, error=error, std=False)
             binned_fluxes.append(binned_flux)
             binned_errors.append(binned_error)
+
+        binned_data = {}
+        for key, value in self.data.items():
+            binned_time, binned_value = utils.binning(self.time, value, bins)
+            binned_data[key] = binned_value
             
-        return LightCurve(binned_time, binned_fluxes, binned_errors)
+        return LightCurve(binned_time, binned_fluxes, binned_errors, binned_data)
     
     def Pont2006(self, plot=True, n=35):
         return Pont2006(self.time, self.flux, n=n, plot=plot)
@@ -414,6 +633,27 @@ class LightCurve:
         lc = LightCurve(data["time"], data["fluxes"], data["errors"], data["data"])
         lc.best_aperture_id = data["best_aperture_id"]
         return lc
+
+    def mask(self, mask):
+        lc = LightCurve(self.time[~mask], self.fluxes[:, ~mask], self.errors[:, ~mask], {
+            key: np.array(value)[~mask] for key, value in self.data.items()
+        })
+        lc.best_aperture_id = self.best_aperture_id
+        return lc
+
+    def sigma_clip(self, **kwargs):
+        siglcip_mask = sigma_clip(self.flux, **kwargs).mask
+        return self.mask(siglcip_mask)
+
+    def plot_data(self, which, **kwargs):
+        _, _, lc_std = sigma_clipped_stats(self.flux)
+        _, median_data, std_data = sigma_clipped_stats(self.flux)
+        rescaled_data = self.data[which]
+        rescaled_data -= median_data
+        rescaled_data /= std_data
+        rescaled_data *= lc_std
+
+        plt.plot(self.time, rescaled_data, **kwargs)
         
 
 class LightCurves:
@@ -451,20 +691,35 @@ class LightCurves:
         return np.hstack(self.fluxes)
 
     @property
+    def data(self):
+        keys = [list(lc.data.keys()) for lc in self]
+        n_keys = [len(k) for k in keys]
+        if len(np.unique(n_keys)) != 1:
+            raise AssertionError("LightCurves data should have same keys to be retrieved")
+
+        n_keys = np.unique(n_keys)
+        unique_keys = np.unique(keys)
+
+        if len(unique_keys) != n_keys:
+            raise AssertionError("LightCurves data should have same keys to be retrieved")
+
+        return {key: np.hstack([lc.data[key] for lc in self]) for key in unique_keys}
+
+    @property
     def error(self):
         return np.hstack(self.errors)
     
     @property
     def times(self):
-        return np.array([lc.time for lc in self._lightcurves])
+        return [lc.time for lc in self._lightcurves]
 
     @property
     def fluxes(self):
-        return np.array([lc.flux for lc in self._lightcurves])
+        return [lc.flux for lc in self._lightcurves]
 
     @property
     def errors(self):
-        return np.array([lc.error for lc in self._lightcurves])
+        return [lc.error for lc in self._lightcurves]
 
     def set_best_aperture_id(self, i):
         """
@@ -475,9 +730,10 @@ class LightCurves:
         i : int
             index of the best aperture
         """
-        for lc in self._lightcurves:
-            lc.best_aperture_id = i
-        self.best_aperture_id = i
+        if i is not None:
+            for lc in self._lightcurves:
+                lc.best_aperture_id = i
+            self.best_aperture_id = i
     
     def from_ndarray(self, fluxes, errors):
         pass
@@ -499,3 +755,54 @@ class LightCurves:
             array = np.array([lc.fluxes[aperture] for lc in self._lightcurves])
             error_array = np.array([lc.errors[aperture] for lc in self._lightcurves])
             return array, error_array
+
+    def mask(self, mask):
+        lcs = []
+        for lc in self._lightcurves:
+            _, _, idxs = np.intersect1d(lc.time, self.time, return_indices=True)
+            sub_mask = mask[idxs]
+            lcs.append(lc.mask(sub_mask))
+        lcs = LightCurves(lcs)
+        lcs.set_best_aperture_id(self.best_aperture_id)
+        return lcs
+
+    def sigma_clip(self, **kwargs):
+        sigclip_mask = sigma_clip(self.flux, **kwargs).mask
+        return self.mask(sigclip_mask)
+
+    def binned(self, bins=0.005):
+        return LightCurves([lc.binned(bins) for lc in self])
+
+    def plot(self, **kwargs):
+        viz.plot_lcs([[lc.time, lc.flux] for lc in self], **kwargs)
+
+    def save(self, name):
+        np.save("{}.lcs".format(name), [{
+            "fluxes": lc.fluxes,
+            "errors": lc.errors,
+            "data": lc.data,
+            "time": lc.time,
+            "best_aperture_id": lc.best_aperture_id
+        } for lc in self], allow_pickle=True)
+
+    @staticmethod
+    def load(filename):
+        data = np.load(filename, allow_pickle=True)
+        lcs = []
+        for d in data:
+            lc = LightCurve(d["time"], d["fluxes"], d["errors"], d["data"])
+            lc.best_aperture_id = d["best_aperture_id"]
+            lcs.append(lc)
+
+        return LightCurves(lcs)
+
+    def folded(self, t0, period):
+        folded_time = utils.fold(self.time, t0, period)
+        idxs = np.argsort(folded_time)
+        folded_time = folded_time[idxs]
+        flux = self.flux[idxs]
+        error = self.error[idxs]
+
+        lc = LightCurve(folded_time, [flux], [error])
+
+        return lc
