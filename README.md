@@ -9,12 +9,12 @@ A framework for FITS processing pipelines in python. Built for Astronomy, *prose
 
 ```python
 
-from prose import Reduction, Photometry
+from prose import Reduction, AperturePhotometry
 
 reduction = Reduction(fits_folder)
 reduction.run()
 
-photometry = Photometry(reduction.destination)
+photometry = AperturePhotometry(reduction.destination)
 photometry.run()
 
 ```
