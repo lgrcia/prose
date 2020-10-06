@@ -80,12 +80,15 @@ class Unit:
 
         return self
 
-    def summary(self):
+    def __str__(self):
         rows = [[block.name, block.__class__.__name__] for block in self.blocks]
         headers = ["name", "type"]
-        print("{} unit blocks summary:\n{}".format(self.__class__.__name__, tabulate(
+        return "{} unit blocks summary:\n{}".format(self.__class__.__name__, tabulate(
             rows, headers, tablefmt="fancy_grid"
-        )))
+        ))
+
+    def _repr_html_(self):
+        return self.__str__()
 
     def citations(self):
         citations = [block.citations() for block in self.blocks if block.citations() is not None]
@@ -93,8 +96,6 @@ class Unit:
 
     def insert_before(self, before, block):
         pass
-
-
 
 
 class Image:

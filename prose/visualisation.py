@@ -1075,4 +1075,4 @@ def rename_tab(name):
         name to be used
     """
     from IPython.display import display, Javascript
-    Javascript('document.title="{}"'.format(name))
+    return Javascript('document.title="{}"'.format(name))
