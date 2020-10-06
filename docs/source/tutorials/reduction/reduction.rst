@@ -18,7 +18,7 @@ you can follow this tutorial on your own data or generate a synthetic dataset wi
 Telescope setting
 ^^^^^^^^^^^^^^^^^
 
-We start by setting up the telescope information we need for the reduction, for example some fits keywords that are specific to this observatory plus few specs:
+We start by setting up the :py:class:`~prose.Telescope` information we need for the reduction, for example some fits keywords that are specific to this observatory plus few specs:
 
 .. code-block:: python3
 
@@ -68,7 +68,7 @@ We have 80 images of the *prose* target together with some calibration files. Mo
 Reduction and Photometry
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-|prose| provides basic pipelines for reduction and photometry. Using these, the reduction is simply
+|prose| provides basic pipelines for reduction and photometry. Using these, the :py:class:`~prose.Reduction` is simply
 
 .. code-block:: python3
     
@@ -81,7 +81,7 @@ Reduction and Photometry
 
     RUN Reduction: 100%|█████████████████████████| 80/80 [00:05<00:00, 13.98files/s]
 
-The previously set telescope has been recognized and a ``fake_telescope_20200229_prose_I+z`` folder has been created in which we can now run the photometry.
+The previously set telescope has been recognized and a ``fake_telescope_20200229_prose_I+z`` folder has been created in which we can now run the :py:class:`~prose.AperturePhotometry`.
 
 .. code-block:: python3
 
@@ -111,21 +111,20 @@ Here is the content of the reduced folder:
       ├── fake-C001-002020-03-01T00:02:00.000_reduced.fits
       └── ...
 
-It contains all reduced images and a stack fits of the night as well as a ``phots`` file containing all extracted fluxes (see :ref:`data products description <phots-structure>`). It also contains a small gif of the night 
+It contains:
 
-.. figure:: fake_telescope_20200229_prose_I+z_movie.gif
-   :align: center
-   :width: 200
+- all reduced images
+- a stack fits of the night
+- a ``phots`` file containing all extracted fluxes (see :ref:`data products description <phots-structure>`)
+- a ``gif`` of the night 
 
-   *fake_telescope_20200229_prose_I+z_movie.gif*
-
-All of these have been processed and created in ``Reduction`` and ``Photometry`` which are :py:class:`~prose.Unit` objects modularly built out of :py:class:`~prose.Block`. Such pipelines can be built from scratch and even contain custom :py:class:`~prose.Block` (like in the :ref:`next tutorial <modular-reduction>`).
+:py:class:`~prose.Reduction` and :py:class:`~prose.AperturePhotometry` are :py:class:`~prose.Unit` objects modularly built out of :py:class:`~prose.Block`. Such pipelines can be built from scratch and even contain custom :py:class:`~prose.Block` (like in the :ref:`next tutorial <modular-reduction>`).
 
 
 Photometry analysis
 ^^^^^^^^^^^^^^^^^^^
 
-We can now load this folder into a ``PhotProducts`` object and proceed with further analaysis. Let's instantiate a :py:class:`~prose.PhotProducts`  object containing all we need for this analysis and show the detected stars
+Let's instantiate a :py:class:`~prose.PhotProducts`  object containing all we need for this analysis and show the detected stars
 
 .. code-block:: python
 
@@ -148,6 +147,10 @@ If target was not specified in the reduction process, we need to specify it befo
     phot.target_id = 1
     phot.Broeg2005()
     phot.lc.plot()
+
+.. note:: 
+
+    We could also have picked the comparison stars ourselves using ``DiffPhot`` from :py:class:`~prose.PhotProducts`
 
 
 .. figure:: lc.png
