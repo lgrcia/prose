@@ -5,6 +5,7 @@ from astropy.stats import sigma_clipped_stats
 from prose._blocks.registration import clean_stars_positions
 from prose._blocks.base import Block
 from sep import extract
+from astropy.io import fits
 
 
 class StarsDetection(Block):
@@ -19,13 +20,13 @@ class StarsDetection(Block):
 
         self.check_nans = check_nans
 
-    def single_detection(self, image):
+    def single_detection(self, data):
         """
         Running detection on single or multiple images
         """
         raise NotImplementedError("method needs to be overidden")
 
-    def run(self, image, return_coords=False):
+    def run(self, image, **kwargs):
         data = np.nan_to_num(image.data, 0) if self.check_nans else image.data
         coordinates, fluxes = self.single_detection(data)
         if self.sort:
@@ -38,6 +39,9 @@ class StarsDetection(Block):
         image.stars_coords = coordinates
 
         self.last_coords = coordinates
+
+    def __call__(self, data):
+        return self.single_detection(data)
 
 
 class DAOFindStars(StarsDetection):
@@ -152,8 +156,9 @@ class SEDetection(StarsDetection):
         self.min_separation = min_separation
 
     def single_detection(self, data):
+        data = data.byteswap().newbyteorder()
         sep_data = extract(data, self.threshold*np.median(data))
-        coordinates = np.array([sep_data["x"], sep_data["y"]])
+        coordinates = np.array([sep_data["x"], sep_data["y"]]).T
         fluxes = np.array(sep_data["flux"])
 
         return coordinates, fluxes
