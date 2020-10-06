@@ -1,9 +1,10 @@
-from prose import Unit, blocks, io
+from prose import Unit, blocks, io, Block
 import os
 from os import path
 from astropy.io import fits
 from prose.console_utils import INFO_LABEL
 import numpy as np
+import time
 
 
 class Reduction:
@@ -73,11 +74,11 @@ class Reduction:
 
         reference_unit.run()
 
-        ref_image = reference_unit.blocks_dict["buffer"].image
-        calibration_block = reference_unit.blocks_dict["calibration"]
+        ref_image = reference_unit.buffer.image
+        calibration_block = reference_unit.calibration
 
         reduction_unit = Unit([
-            calibration_block if self.calibration else blocks.Pass(),
+            blocks.Pass() if not self.calibration else calibration_block,
             blocks.Trim(name="trimming"),
             blocks.SegmentedPeaks(n_stars=50, name="detection"),
             blocks.XYShift(ref_image.stars_coords, name="shift"),
@@ -91,6 +92,16 @@ class Reduction:
         reduction_unit.run()
 
     def prepare(self):
+        """
+        This will prepare the `self.destination` containing the:
+
+        - ``self.stack_path``
+        - ``self.gif_path``
+
+        Returns
+        -------
+
+        """
         if len(self.fits_manager._observations) == 1:
             self.fits_manager.set_observation(
                 0,
@@ -120,28 +131,49 @@ class Reduction:
 
 
 class AperturePhotometry:
-    """Photometric extraction unit
+    """Aperture Photometry unit
 
     Parameters
     ----------
     fits_manager : prose.FitsManager
-        Fits manager of the observation. Should contain a single obs
+         FitsManager of the observation. Should contain a single obs. One of `fits_manager` or `files` should  be provided
+    files : list of str, optional
+        List of files to process. One of `fits_manager` or `files` should  be provided
     overwrite : bool, optional
         whether to overwrite existing products, by default False
     n_stars : int, optional
         max number of stars to take into account, by default 500
+    apertures : list or np.ndarray, optional
+        Apertures radii to be used. If None, by default np.arange(0.1, 10, 0.25)
+    r_in : int, optional
+        Radius of the inner annulus to be used in pixels, by default 5
+    r_out : int, optional
+        Radius of the outer annulus to be used in pixels, by default 8
+    fwhm_scale : bool, optional
+        wheater to multiply `apertures`, `r_in` and `r_out` by the global fwhm, by default True
+    sigclip : float, optional
+        Sigma clipping factor used in the annulus, by default 3. No effect if `method="sextrcator"`
+    method : str, optional
+        Method to bue used ("photutils" or "sextractor"), by default "photutils"
+    centroid : prose.Block, optional
+        Centroid block to be used, by default None
     """
 
     def __init__(self,
-                 fits_manager,
+                 fits_manager=None,
+                 files = None,
                  overwrite=False,
                  n_stars=500,
-                 apertures=np.arange(0.1, 10, 0.25),
+                 apertures=None,
                  r_in = 5,
                  r_out = 8,
                  fwhm_scale = True,
                  sigclip = 3.,
-                 method="photutils"):
+                 method="photutils",
+                 centroid=None):
+
+        if apertures is None:
+            apertures = np.arange(0.1, 10, 0.25)
 
         self.fits_manager = fits_manager
         self.overwrite = overwrite
@@ -149,8 +181,9 @@ class AperturePhotometry:
         self.reference_detection_unit = None
         self.photometry_unit = None
         self.destination = None
+        self.centroid_block = centroid
 
-        self.prepare()
+        self.prepare(fits_manager=fits_manager, files=files)
         if method == "sextractor":
             self.photometry = blocks.SEAperturePhotometry(
                 apertures=apertures,
@@ -181,25 +214,33 @@ class AperturePhotometry:
         ], stack_path, telescope=self.fits_manager.telescope, show_progress=False)
 
         self.reference_detection_unit.run()
-        stack_image = self.reference_detection_unit.blocks_dict["buffer"].image
+        stack_image = self.reference_detection_unit.buffer.image
         ref_stars = stack_image.stars_coords
         fwhm = stack_image.fwhm
 
         print("{} detected stars: {}".format(INFO_LABEL, len(ref_stars)))
         print("{} global psf FWHM: {:.2f} (pixels)".format(INFO_LABEL, np.mean(fwhm)))
 
+        time.sleep(0.5)
+
         self.photometry_unit = Unit([
             blocks.Set(stars_coords=ref_stars, name="set stars"),
             blocks.Set(fwhm=fwhm, name="set fwhm"),
+            blocks.Pass() if not isinstance(self.centroid_block, Block) else self.centroid_block,
             self.photometry,
             blocks.SavePhots(self.phot_path, header=fits.getheader(stack_path), overwrite=self.overwrite, name="saving")
         ], self.files, telescope=self.fits_manager.telescope, name="Photometry")
 
-    def run(self):
+    def run(self, destination=None):
+        self.phot_path = destination.replace(".phots", "") + ".phots"
         self.run_reference_detection()
         self.photometry_unit.run()
 
     def prepare(self):
+        """
+        Check that stack and observation is present and set ``self.phot_path``
+
+        """
         if isinstance(self.fits_manager, str):
             self.fits_manager = io.FitsManager(self.fits_manager, light_kw="reduced", verbose=False)
 
