@@ -4,7 +4,10 @@ from photutils import DAOStarFinder
 from astropy.stats import sigma_clipped_stats
 from prose._blocks.registration import clean_stars_positions
 from prose._blocks.base import Block
-from sep import extract
+try:
+    from sep import extract
+except:
+    pass
 from astropy.io import fits
 
 
