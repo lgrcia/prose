@@ -1,7 +1,10 @@
 import numpy as np
 import george
 from scipy import interpolate
-import celerite
+try:
+    import celerite
+except:
+    pass
 from datetime import datetime
 import uuid
 from prose import LightCurve, LightCurves
