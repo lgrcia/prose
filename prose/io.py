@@ -98,7 +98,7 @@ class FitsManager:
         FITS header keyword where to find telescope name, by default "TELESCOP"
     depth : int, optional
         Depth of exploration in terms of sub-folders, by default 1
-    light_kw : str, optional
+    image_kw : str, optional
         Main image type you want to retrieve, by default "light"
     update : bool, optional
         Wether to update the index if `index=True`, by default False
@@ -110,7 +110,8 @@ class FitsManager:
     FileNotFoundError
         If folder doesn't exists
     """
-    def __init__(self, folder, verbose=True, telescope_kw="TELESCOP", depth=1, light_kw="light", update=False, index=None):
+
+    def __init__(self, folder, verbose=True, telescope_kw="TELESCOP", depth=1, image_kw="light", update=False, index=None, idxs=None):
 
         self.depth = depth
         self._temporary_files_headers = None
@@ -118,7 +119,14 @@ class FitsManager:
         self.files_df = None
         self.verbose = verbose
         self.telescope_kw = telescope_kw
-        self.light_kw = light_kw
+        self.image_kw = image_kw
+
+        if isinstance(idxs, (list, tuple)):
+            idxs = slice(idxs)
+        elif isinstance(idxs, int):
+            pass
+
+        self.idxs = idxs
 
         self.folder = folder
         if not path.isdir(self.folder):
@@ -144,6 +152,26 @@ class FitsManager:
         # To embed useful files
         self.files = None
 
+    @property
+    def stack(self):
+        stack_images = self.get('stack')
+        if len(stack_images) == 0:
+            raise AssertionError("Not stack found")
+        elif len(stack_images) > 1:
+            raise AssertionError("Multiple stack found")
+
+        return stack_images[0]
+
+    @property
+    def images(self):
+        if self.idxs is not None:
+            return self.get()[self.idxs]
+        else:
+            return self.get()
+
+    def __getitem__(self, item):
+        return self.get()[item]
+
     def _load_index(self, force_single=False, index=None):
         """Load index files (default is prose_index.csv within self.folder)
 
@@ -164,6 +192,9 @@ class FitsManager:
         ValueError
             raised if force_single is True and multiple index files are present
         """
+        if isinstance(index, bool):
+            index = None
+
         if index is None:
             index_files = get_files("*index.csv", self.folder, single_list_removal=False, none_for_empty=False)
             if len(index_files) == 1:
@@ -206,7 +237,7 @@ class FitsManager:
         flip = []
         jd = []
 
-        _types = ["flat", "dark", "bias", self.light_kw]
+        _types = ["flat", "dark", "bias", self.image_kw]
 
         last_telescope_name = "fake_00000"
         _temporary_telescope = Telescope()
@@ -249,8 +280,8 @@ class FitsManager:
                         _type = "bias"
                     elif "stack" in _type:
                         _type = "stack"
-                    elif _type == self.light_kw:
-                        _type = self.light_kw
+                    elif _type == self.image_kw:
+                        _type = self.image_kw
 
                     _filter = header.get(_temporary_telescope.keyword_filter, "")
                     _combined = "{}_{}_{}_{}_{}".format(
@@ -753,7 +784,7 @@ class FitsManager:
     
     @property
     def _observations(self):
-        light_rows = self.files_df.loc[self.files_df["type"].str.contains(self.light_kw)]
+        light_rows = self.files_df.loc[self.files_df["type"].str.contains(self.image_kw)]
         observations = (
             light_rows.pivot_table(
                 index=["date", "telescope", "target", "dimensions", "filter"],

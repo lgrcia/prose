@@ -28,14 +28,16 @@ class PhotProducts:
     Class to load and analyze photometry products
     """
 
-    def __init__(self, folder_or_file=None, sort_stars=False, keyword=None):
+    def __init__(self, folder_or_phots=None, sort_stars=False, keyword=None, stack=None):
         """
         Parameters
         ----------
-        folder_or_file : str path, optional
+        folder_or_phots : str path, optional
             Path of folder or file. If folder, should contain at least a ``.phots`` file. If file, should be a ``.phots`` file. By default None
         sort_stars : bool, optional
             wether to sort stars by luminosity on loading, by default True
+        stack: str
+            path of the stack image if phots is given as input
         """
         # Photometry
         self.fluxes = None
@@ -70,14 +72,15 @@ class PhotProducts:
         self.wcs = None
         self.hdu = None
 
-        if folder_or_file is not None:
-            isdir = self._check_folder_or_file(folder_or_file)
+        if folder_or_phots is not None:
+            isdir = self._check_folder_or_file(folder_or_phots)
             if isdir:
-                self.folder = folder_or_file
-                self.load_folder(folder_or_file, sort_stars=sort_stars, keyword=keyword)
+                self.folder = folder_or_phots
+                self.load_folder(folder_or_phots, sort_stars=sort_stars, keyword=keyword)
             else:
-                self.phot_file = folder_or_file
-                self.load_phot(folder_or_file)
+                self.phot_file = folder_or_phots
+                self.load_phot(folder_or_phots)
+                self.load_stack(stack)
 
     # Properties
     # ----------
@@ -106,6 +109,9 @@ class PhotProducts:
     @target_id.setter
     def target_id(self, id):
         self.target["id"] = id
+
+    def _check_stack(self):
+        assert self.stack_fits is not None, "No stack found"
 
     # Loaders and savers (files and data)
     # ------------------------
@@ -168,10 +174,16 @@ class PhotProducts:
         if len(stack_fits) > 1:
             raise ValueError("Several stack files present in folder, should contain one")
         elif len(stack_fits) == 1:
-            self.stack_fits = stack_fits[0]
+            stack_fits = stack_fits[0]
+        else:
+            stack_fits = None
 
         self.gif = io.get_files("gif", folder_path, none_for_empty=True)
         self.load_phot(self.phot_file, sort_stars=sort_stars)
+        self.load_stack(stack_fits)
+
+    def load_stack(self, stack):
+        self.stack_fits = stack
         if self.stack_fits is not None:
             self.wcs = WCS(self.stack_fits)
 
@@ -420,6 +432,7 @@ class PhotProducts:
            :align: center
         """
 
+        self._check_stack()
 
         if n_stars is not None:
             if view == "reference":
@@ -810,7 +823,7 @@ class PhotProducts:
             path of destination where to save file, by default None
         """
         if destination is None:
-            if self.folder is not None:
+            if self.phot_file is not None:
                 destination = self.phot_file
             else:
                 raise ValueError("destination must be specified")

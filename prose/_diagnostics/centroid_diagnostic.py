@@ -96,7 +96,7 @@ class CentroidDiagnostic(Unit):
             blocks = [blocks]
 
         if isinstance(fits_manager, str):
-            fits_manager = FitsManager(fits_manager, light_kw="reduced", verbose=False)
+            fits_manager = FitsManager(fits_manager, image_kw="reduced", verbose=False)
 
         default_methods = [
             #DAOFindStars(stack=True, name="detection")

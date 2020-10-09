@@ -19,9 +19,9 @@ def nu(n, sw, sr):
 # TODO: a rms reject method and a sigma clip method in LightCurves
 
 def Pont2006(x, y, n=30, plot=True, return_error=False):
-    dt = np.min(np.diff(x))
+    dt = np.median(np.diff(x))
     ns = np.arange(1, n)
-    binned = [utils.binning(x, y, dt*_n)[1] for _n in ns]
+    binned = [utils.fast_binning(x, y, dt*_n)[1] for _n in ns]
     _nu = [np.var(b) for b in binned]
     (sw, sr), pcov = curve_fit(nu, ns, _nu)
     if plot:
@@ -642,6 +642,7 @@ class LightCurve:
         return lc
 
     def sigma_clip(self, **kwargs):
+        # TODO: pre-smooth parameter to sigma-clip without trend (otherwise affecting the std)
         siglcip_mask = sigma_clip(self.flux, **kwargs).mask
         return self.mask(siglcip_mask)
 

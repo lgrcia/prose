@@ -23,9 +23,10 @@ class NNCentroid(Block):
         self.cutout_size = cutout_size
         self.build_model()
         self.x, self.y = np.indices((cutout_size, cutout_size))
+        self.load_model()
 
     def initialize(self, *args):
-        self.load_model()
+        pass
 
     def build_model(self):
         self.model = models.Sequential()
@@ -137,6 +138,11 @@ class NNCentroid(Block):
         plt.ylabel('Accuracy')
         plt.ylim()
         plt.legend(loc='lower right')
+
+    def __call__(self, data, cutout=True):
+        assert data.shape == (21, 21), "Data should have shape (21, 21)"
+        data_reshaped = np.array([(data / np.max(data)).reshape(21, 21, 1)])
+        return self.model(data_reshaped, training=False).numpy()[:, ::-1][0]
 
     def run(self, image):
         initial_positions = image.stars_coords.copy()

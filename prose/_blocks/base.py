@@ -87,9 +87,6 @@ class Unit:
             rows, headers, tablefmt="fancy_grid"
         ))
 
-    def _repr_html_(self):
-        return self.__str__()
-
     def citations(self):
         citations = [block.citations() for block in self.blocks if block.citations() is not None]
         return citations if len(citations) > 0 else None

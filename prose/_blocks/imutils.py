@@ -11,6 +11,7 @@ from prose import utils
 from astropy.stats import SigmaClip
 from photutils import Background2D, MedianBackground
 from prose import io
+from prose._blocks.psf import cutouts
 
 
 class Stack(Block):
@@ -124,7 +125,6 @@ class SaveReduced(Block):
 
         new_hdu.writeto(fits_new_path, overwrite=self.overwrite)
 
-# TODO: make ImageIOBlock block
 
 class Video(Block):
     """Build a video of all :code:`Image.data`.
@@ -155,6 +155,10 @@ class Video(Block):
         self.fps = fps
         self.from_fits = from_fits
 
+    def initialize(self, *args):
+        # Check if writer is available (sometimes require extra packages)
+        _ = imageio.get_writer(self.destination, mode="I")
+
     def run(self, image, **kwargs):
         if self.from_fits:
             self.images.append(viz.gif_image_array(image.data, factor=self.factor))
@@ -166,7 +170,6 @@ class Video(Block):
 
     def citations(self):
         return "imageio"
-
 
 
 class SavePhots(Block):
@@ -334,3 +337,13 @@ class Set(Block):
 
     def run(self, image):
         image.__dict__.update(self.kwargs)
+
+
+class Cutouts(Block):
+
+    def __init__(self, size=21, **kwargs):
+        super().__init__(**kwargs)
+        self.size = size
+
+    def run(self, image, **kwargs):
+        image.cutouts_idxs, image.cutouts = cutouts(image.data, image.stars_coords, size=self.size)

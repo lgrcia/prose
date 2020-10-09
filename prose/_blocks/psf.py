@@ -11,7 +11,7 @@ from prose.console_utils import INFO_LABEL
 import matplotlib.pyplot as plt
 
 
-def image_psf(image, stars, size=15, normalize=False):
+def image_psf(image, stars, size=15, normalize=False, return_cutouts=False):
     """
     Get global psf from image using photutils routines
 
@@ -34,7 +34,10 @@ def image_psf(image, stars, size=15, normalize=False):
     cuts = cuts.data
     if normalize:
         cuts = [c/np.sum(c) for c in cuts]
-    return np.median(cuts, axis=0)
+    if return_cutouts:
+        return np.median(cuts, axis=0), cuts
+    else:
+        return np.median(cuts, axis=0)
 
 
 def cutouts(image, stars, size=15):
@@ -93,9 +96,10 @@ def moments(data):
 
 class PSFModel(Block):
 
-    def __init__(self, cutout_size=21, **kwargs):
+    def __init__(self, cutout_size=21, save_cutouts=False, **kwargs):
         super().__init__(**kwargs)
         self.cutout_size = cutout_size
+        self.save_cutouts = save_cutouts
         self.x, self.y = None, None
         self.epsf = None
 
@@ -105,7 +109,7 @@ class PSFModel(Block):
 
     def build_epsf(self, image, stars):
         self.x, self.y = np.indices((self.cutout_size, self.cutout_size))
-        return image_psf(image, stars.copy(), size=self.cutout_size)
+        return image_psf(image, stars.copy(), size=self.cutout_size, return_cutouts=self.save_cutouts)
 
     def model(self):
         raise NotImplementedError("")
@@ -121,7 +125,10 @@ class PSFModel(Block):
         return gaussian_sigma_to_fwhm
 
     def run(self, image):
-        self.epsf = self.build_epsf(image.data, image.stars_coords)
+        if self.save_cutouts:
+            self.epsf, image.cutouts = self.build_epsf(image.data, image.stars_coords)
+        else:
+            self.epsf = self.build_epsf(image.data, image.stars_coords)
         image.fwhmx, image.fwhmy, image.theta = self.optimize()
         image.fwhm = np.mean([image.fwhmx, image.fwhmy])
         image.psf_sigma_x = image.fwhmx / self.sigma_to_fwhm()

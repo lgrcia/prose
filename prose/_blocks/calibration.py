@@ -72,7 +72,7 @@ class Calibration(Block):
             del _master
 
     def initialize(self):
-        assert self.telescope is not None, "Calibration block needs telescope to be set"
+        assert self.telescope is not None, "Calibration block needs telescope to be set (in Unit)"
         self._produce_master("bias")
         self._produce_master("dark")
         self._produce_master("flat")
