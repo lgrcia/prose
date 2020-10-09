@@ -8,6 +8,7 @@ except:
 from datetime import datetime
 import uuid
 from prose import LightCurve, LightCurves
+import matplotlib.pyplot as plt
 
 
 def protopapas2005(t, t0, duration, depth, c=20, period=1):
@@ -74,54 +75,23 @@ def generate_systematics(
         measure_hyperparam,
         model_hyperparam,
         measurement_error):
-    model_range = np.linspace(-3, 3, 100)
-    a, l = model_hyperparam
-    model_kernel = a * george.kernels.ExpSquaredKernel(l)
-    gp_model = george.GP(model_kernel)
-    gp_model.compute(model_range, 0)
-    model = sigma_r * rescale(gp_model.sample(model_range))
+    model_range = np.linspace(-1, 1, 100)
+    model_kernel = celerite.terms.SHOTerm(log_omega0=np.log(2 * np.pi / model_hyperparam), log_S0=np.log(1), log_Q=np.log(1e3))
+    gp_model = celerite.GP(model_kernel)
+    gp_model.compute(model_range)
+    model = sigma_r * rescale(gp_model.sample(len(model_range))[0])
 
     func_model = interpolate.interp1d(model_range, model, fill_value="extrapolate")
 
-    a, l = measure_hyperparam
-    measure_kernel = a * george.kernels.Matern32Kernel(l)
-    gp = george.GP(measure_kernel)
-    gp.compute(time, 0)
-    measure = rescale(gp.sample(time))
+    measure_kernel = celerite.terms.SHOTerm(log_omega0=np.log(2 * np.pi / 100), log_S0=np.log(1), log_Q=np.log(measure_hyperparam))
+    gp = celerite.GP(measure_kernel)
+    gp.compute(time)
+    measure = rescale(gp.sample(len(time))[0])
     noisy_measure = measure + np.random.normal(scale=measurement_error, size=len(measure))
 
     lc = func_model(measure)
 
     return lc, noisy_measure, model, model_range
-
-
-def load_observations(dataset, blind=True):
-    if isinstance(dataset, str):
-        dataset = np.load(dataset, allow_pickle=True)[0]
-
-    dataset_obs = dataset["data"]
-
-    observations = []
-    obs = utils.slice_observation(dataset_obs["time"], dataset_obs["lc"])
-    systematics = dataset_obs["systematics"]
-
-    for i, o in enumerate(obs):
-        observations.append({
-            "time": o[0],
-            "lc": o[1],
-            "systematics": {name: value[1] for name, value in systematics[i].items()}
-        })
-
-    if blind:
-        return observations
-    else:
-        return observations, dataset["info"]
-
-
-def save_dataset(dataset, version=0):
-    obsid = "simlc_v{}_{}_{}.npy".format(version, datetime.now().strftime('%Y%m%d%H%M%S'), str(uuid.uuid4()))
-    np.save(obsid, [dataset])
-    return obsid
 
 
 def simulate_lcs(
@@ -134,8 +104,8 @@ def simulate_lcs(
         variability_Q =  100,
         transits_params=[],
         systematics_names=["dx", "dy", "sky", "airmass", "fwhm"],
-        systematics_models_kernel_params=(3, 1),
-        systematics_measures_kernel_params=(6, 0.2),
+        systematics_models_kernel_params=2.5,
+        systematics_measures_kernel_params=5e-3,
         systematics_measures_std=0.05,
         return_models=False,
         return_LightCurve=False):
@@ -340,3 +310,27 @@ def get_observations(dataset, asarray=False):
         else:
             observations.append(get_data(dataset, i))
     return observations
+
+
+def plot_model(time, lc, measure, model, model_range, name="systematic"):
+    plt.figure(figsize=(14,3))
+
+    # plotting simulated measurements
+    plt.subplot(131)
+    plt.plot(time, measure, c="k")
+    plt.xlabel("time"), plt.ylabel(name)
+
+    # plotting light curve
+    plt.subplot(132)
+    plt.plot(measure, lc, ".", alpha=0.3)
+    plt.plot(model_range, model, c="k")
+    plt.xlim(np.percentile(measure, 5), np.percentile(measure, 95))
+    plt.xlabel(name), plt.ylabel("red noise flux")
+
+    # plotting light curve
+    plt.subplot(133)
+    plt.plot(time, 1 + lc, c="k")
+    plt.ylim([0.98, 1.02])
+    plt.ylabel("ligth curve") ,plt.xlabel("time")
+
+    plt.tight_layout()
