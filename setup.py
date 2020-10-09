@@ -33,6 +33,8 @@ setup(
         "george",
         "fpdf",
         "tensorflow",
+        "sep",
+        "numba"
     ],
     zip_safe=True,
     classifiers=[
