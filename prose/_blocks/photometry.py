@@ -13,7 +13,10 @@ from photutils.psf import IntegratedGaussianPRF, DAOGroup, BasicPSFPhotometry
 from prose.console_utils import TQDM_BAR_FORMAT, INFO_LABEL
 from prose._blocks.psf import Gaussian2D
 from prose._blocks.base import Block
-import sep
+try:
+    import sep
+except:
+    pass
 
 
 # TODO: differential_vaphot
