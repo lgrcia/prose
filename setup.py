@@ -33,7 +33,6 @@ setup(
         "george",
         "fpdf",
         "tensorflow",
-        "sep"
     ],
     zip_safe=True,
     classifiers=[

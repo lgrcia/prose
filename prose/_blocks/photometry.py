@@ -16,7 +16,7 @@ from prose._blocks.base import Block
 try:
     import sep
 except:
-    pass
+    raise AssertionError("Please install sep")
 
 
 # TODO: differential_vaphot

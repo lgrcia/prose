@@ -7,7 +7,7 @@ from prose._blocks.base import Block
 try:
     from sep import extract
 except:
-    pass
+    raise AssertionError("Please install sep")
 from astropy.io import fits
 
 
