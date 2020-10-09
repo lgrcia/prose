@@ -74,32 +74,80 @@ def binning(x, y, bins, error=None, std=False, mean_method=np.mean,
         return np.array(final_bins), np.array(binned_flux)
 
 
+# @numba.jit(fastmath=True, parallel=False, nopython=True)
+# def fast_binning(x, y, bins, error=None, std=False):
+#     bins = np.arange(np.min(x), np.max(x), bins)
+#     d = np.digitize(x, bins)
+#
+#     binned_x = []
+#     binned_y = []
+#     binned_error = []
+#
+#     for i in range(1, np.max(d) + 1):
+#         s = np.where(d == i)
+#         if len(s[0]) > 0:
+#             s = s[0]
+#             binned_y.append(np.mean(y[s]))
+#             binned_x.append(np.mean(x[s]))
+#             binned_error.append(np.std(y[s]) / np.sqrt(len(s)))
+#
+#             if error is not None:
+#                 err = error[s]
+#                 binned_error.append(np.sqrt(np.sum(np.power(err, 2))) / len(err))
+#             else:
+#                 binned_error.append(np.std(y[s]) / np.sqrt(len(s)))
+#
+#     return np.array(binned_x), np.array(binned_y), np.array(binned_error)
+
+
 @numba.jit(fastmath=True, parallel=False, nopython=True)
 def fast_binning(x, y, bins, error=None, std=False):
     bins = np.arange(np.min(x), np.max(x), bins)
     d = np.digitize(x, bins)
 
-    binned_x = []
-    binned_y = []
-    binned_error = []
+    N = np.max(d) + 2
 
-    for i in range(1, np.max(d) + 1):
+    binned_x = np.empty(N)
+    binned_y = np.empty(N)
+    binned_error = np.empty(N)
+
+    binned_x[:] = -np.pi
+    binned_y[:] = -np.pi
+    binned_error[:] = -np.pi
+
+    for i in range(0, N):
         s = np.where(d == i)
         if len(s[0]) > 0:
             s = s[0]
-            binned_y.append(np.mean(y[s]))
-            binned_x.append(np.mean(x[s]))
-            binned_error.append(np.std(y[s]) / np.sqrt(len(s)))
+            binned_y[i] = np.mean(y[s])
+            binned_x[i] = np.mean(x[s])
+            binned_error[i] = np.std(y[s]) / np.sqrt(len(s))
 
             if error is not None:
                 err = error[s]
-                binned_error.append(np.sqrt(np.sum(np.power(err, 2))) / len(err))
+                binned_error[i] = np.sqrt(np.sum(np.power(err, 2))) / len(err)
             else:
-                binned_error.append(np.std(y[s]) / np.sqrt(len(s)))
+                binned_error[i] = np.std(y[s]) / np.sqrt(len(s))
 
-    return np.array(binned_x), np.array(binned_y), np.array(binned_error)
+    nans = binned_x == -np.pi
+
+    return binned_x[~nans], binned_y[~nans], binned_error[~nans]
 
 
+@numba.jit(fastmath=True, parallel=False, nopython=True)
+def fast_points_binning(x, y, n):
+    N = int(len(x) / n)
+    bins = np.linspace(x.min(), x.max(), N)
+    digitized = np.digitize(x, bins)
+    binned_mean = np.zeros(N)
+    binned_std = np.zeros(N)
+    binned_time = np.zeros(N)
+    for i in range(1, len(bins)):
+        binned_mean[i] = y[digitized == i].mean()
+        binned_std[i] = y[digitized == i].std()
+        binned_time[i] = x[digitized == i].mean()
+
+    return binned_time, binned_mean, binned_std
 def z_scale(data, c=0.05):
     if type(data) == str:
         data = fits.getdata(data)
