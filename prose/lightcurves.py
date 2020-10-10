@@ -18,16 +18,12 @@ def nu(n, sw, sr):
 # TODO: check if working properly with a single aperture/lc
 # TODO: a rms reject method and a sigma clip method in LightCurves
 
-def Pont2006(x, y, n=30, plot=True):
+def Pont2006(x, y, n=30, plot=True, return_error=False):
     dt = np.median(np.diff(x))
     ns = np.arange(1, n)
     binned = [utils.fast_binning(x, y, dt*_n)[1] for _n in ns]
-    _nu = np.array([np.var(b) for b in binned])
-    X = 1/ns
-    dm = np.vstack((X, np.ones(n-1)))
-    w = np.linalg.lstsq(dm.T, _nu, rcond=None)[0]
-    sw, sr = np.sqrt(w)
-
+    _nu = [np.var(b) for b in binned]
+    (sw, sr), pcov = curve_fit(nu, ns, _nu)
     if plot:
         plt.plot(ns, np.std(y)/np.sqrt(ns), ":k", label="$\sigma / \sqrt{n}$")
         plt.plot(ns, np.sqrt(nu(ns, sw, sr)), "k", label="fit")
@@ -35,7 +31,10 @@ def Pont2006(x, y, n=30, plot=True):
         plt.xlabel("n points")
         plt.ylabel("$\\nu^{1/2}(n)$")
         plt.legend()
-    return sw, sr
+    if return_error:
+        return sw, sr, np.sqrt(np.diag(pcov))
+    else:
+        return sw, sr
 
 def differential_photometry(fluxes, errors, comps, return_art_lc=False):
 
