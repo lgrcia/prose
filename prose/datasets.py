@@ -34,7 +34,7 @@ def create_image(peaks, stars, n):
     return image
 
 
-def generate_prose_reduction_datatset(destination, n_images=80, moving=None):
+def generate_prose_reduction_dataset(destination, n_images=80, moving=None):
 
     # moving_exmaple: [5, [0,40], [75, 60]]
 

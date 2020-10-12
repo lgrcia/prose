@@ -11,9 +11,9 @@ you can follow this tutorial on your own data or generate a synthetic dataset wi
 
 .. code-block:: python3
 
-    from prose.datasets import generate_prose_reduction_datatset
+    from prose.datasets import generate_prose_reduction_dataset
 
-    fits_folder = generate_prose_reduction_datatset("./tutorial_dataset")
+    fits_folder = generate_prose_reduction_dataset("./tutorial_dataset")
 
 Telescope setting
 ^^^^^^^^^^^^^^^^^
