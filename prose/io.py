@@ -165,9 +165,9 @@ class FitsManager:
     @property
     def images(self):
         if self.idxs is not None:
-            return self.get()[self.idxs]
+            return self.get(self.image_kw)[self.idxs]
         else:
-            return self.get()
+            return self.get(self.image_kw)
 
     def __getitem__(self, item):
         return self.get()[item]

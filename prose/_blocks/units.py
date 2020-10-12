@@ -122,7 +122,7 @@ class Reduction:
             "_movie.gif",
         )
         if path.exists(self.stack_path) and not self.overwrite:
-            raise AssertionError("stack {} already exists".format(self.stack_path))
+            raise AssertionError("stack {} already exists, consider using the 'overwrite' kwargs".format(self.stack_path))
 
         if not path.exists(self.destination):
             os.mkdir(self.destination)
