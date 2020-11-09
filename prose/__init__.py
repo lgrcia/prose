@@ -9,9 +9,13 @@ from prose import config
 CONFIG = config.ConfigManager()
 
 from prose.io import FitsManager
-from prose.lightcurves import LightCurve, LightCurves
+from prose.fluxes import Fluxes, LightCurves
 from prose.telescope import Telescope
 from prose._blocks.base import Block, Unit, Image
 from prose._blocks.units import Reduction, AperturePhotometry
-from prose.photproducts import PhotProducts
+from prose.observation import Observation
 import prose.visualisation as viz
+
+
+def load(photfile):
+    return Observation(photfile)

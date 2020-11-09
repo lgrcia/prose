@@ -12,7 +12,7 @@ from prose.telescope import Telescope
 import glob
 from prose import CONFIG
 import warnings
-from prose.lightcurves import LightCurves
+from prose.fluxes import LightCurves
 from astropy.nddata import Cutout2D
 from astropy.wcs import WCS
 import shutil

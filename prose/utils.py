@@ -133,6 +133,21 @@ def fast_binning(x, y, bins, error=None, std=False):
 
     return binned_x[~nans], binned_y[~nans], binned_error[~nans]
 
+@numba.jit(fastmath=True, parallel=False, nopython=True)
+def index_binning(x, bins):
+    bins = np.arange(np.min(x), np.max(x), bins)
+    d = np.digitize(x, bins)
+    N = np.max(d) + 2
+    indexes = []
+
+    for i in range(0, N):
+        s = np.where(d == i)
+        if len(s[0]) > 0:
+            s = s[0]
+            indexes.append(s)
+
+    return indexes
+
 
 @numba.jit(fastmath=True, parallel=False, nopython=True)
 def fast_points_binning(x, y, n):
@@ -148,6 +163,7 @@ def fast_points_binning(x, y, n):
         binned_time[i] = x[digitized == i].mean()
 
     return binned_time, binned_mean, binned_std
+
 def z_scale(data, c=0.05):
     if type(data) == str:
         data = fits.getdata(data)

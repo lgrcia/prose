@@ -73,6 +73,8 @@ class Telescope:
                 telescope = yaml.load(f)
         elif isinstance(file, dict):
             telescope = file
+        elif isinstance(file, str):
+            telescope = CONFIG.match_telescope_name(file)
         elif file is None:
             return False
         else:
@@ -107,3 +109,9 @@ class Telescope:
             _squarred_error += np.power(signal * scintillation, 2)
 
         return np.sqrt(_squarred_error)
+
+    @staticmethod
+    def from_name(name):
+        telescope = Telescope()
+        telescope.load(name)
+        return telescope

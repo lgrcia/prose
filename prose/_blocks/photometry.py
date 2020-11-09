@@ -144,6 +144,9 @@ class PhotutilsAperturePhotometry(Block):
 
     def set_apertures(self, stars_coords, fwhm):
 
+        #limit apertures to 100px
+        self.aperture = self.apertures[self.apertures*fwhm < 100]
+
         self.annulus_apertures = CircularAnnulus(
             stars_coords,
             r_in=self.annulus_inner_radius * fwhm,
@@ -177,6 +180,7 @@ class PhotutilsAperturePhotometry(Block):
 
         bkg_median = np.array(bkg_median)
 
+        image.apertures_radii = self.apertures
         image.apertures_area = self.circular_apertures_area
         image.sky = bkg_median
         image.fluxes = np.zeros((self.n_apertures, self.n_stars))

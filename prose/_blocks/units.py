@@ -1,4 +1,5 @@
 from prose import Unit, blocks, io, Block, Telescope
+from prose._blocks import io as bio
 import os
 from os import path
 from astropy.io import fits
@@ -236,14 +237,18 @@ class AperturePhotometry:
             blocks.Set(fwhm=fwhm, name="set fwhm"),
             blocks.Pass() if not isinstance(self.centroid_block, Block) else self.centroid_block,
             self.photometry,
-            blocks.SavePhots(self.phot_path, header=fits.getheader(self.stack_path), overwrite=self.overwrite, name="saving")
+            bio.SavePhot(
+                self.phot_path,
+                header=fits.getheader(self.stack_path),
+                stack=fits.getdata(self.stack_path),
+                name="saving")
         ], self.files, telescope=self.telescope, name="Photometry")
 
     def run(self, destination=None):
         if self.phot_path is None:
             assert destination is not None, "You must provide a destination"
         if destination is not None:
-            self.phot_path = destination.replace(".phots", "") + ".phots"
+            self.phot_path = destination.replace(".phot", "") + ".phot"
 
         self._check_phot_path()
 
@@ -262,6 +267,9 @@ class AperturePhotometry:
         if fits_manager is not None:
             if isinstance(self.fits_manager, str):
                 self.fits_manager = io.FitsManager(self.fits_manager, image_kw="reduced", verbose=False)
+            elif isinstance(self.fits_manager, io.FitsManager):
+                if self.fits_manager.image_kw != "reduced":
+                    print(f"Warning: image keyword is '{self.fits_manager.image_kw}'")
 
             self.destination = self.fits_manager.folder
 
@@ -271,7 +279,7 @@ class AperturePhotometry:
                 self.fits_manager.describe("obs")
 
             self.phot_path = path.join(
-                self.destination, "{}.phots".format(self.fits_manager.products_denominator))
+                self.destination, "{}.phot".format(self.fits_manager.products_denominator))
 
             self.files = self.fits_manager.images
             self.stack_path = self.fits_manager.stack
