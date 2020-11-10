@@ -312,7 +312,7 @@ class Fluxes:
         return Fluxes(self.xarray.copy())
 
     def _pick_best_aperture(self, method="stddiff", return_criterion=False):
-        if self.apertures > 1:
+        if len(self.apertures) > 1:
             if method == "stddiff":
                 criterion = utils.std_diff_metric(self.xarray.fluxes.sel(star=self.target))
             elif method == "stability":
@@ -326,10 +326,11 @@ class Fluxes:
                 raise ValueError("{} is not a valid method".format(method))
 
             self.aperture = np.argmin(criterion)
+
+            if return_criterion:
+                return criterion
         else:
             self.aperture = 0
-        if return_criterion:
-            return criterion
 
     def where(self, *args, **kwargs):
         return Fluxes(self.xarray.where(*args, **kwargs))
