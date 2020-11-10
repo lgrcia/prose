@@ -312,7 +312,7 @@ class Fluxes:
         return Fluxes(self.xarray.copy())
 
     def _pick_best_aperture(self, method="stddiff", return_criterion=False):
-        if self.aperture > 1:
+        if self.apertures > 1:
             if method == "stddiff":
                 criterion = utils.std_diff_metric(self.xarray.fluxes.sel(star=self.target))
             elif method == "stability":
