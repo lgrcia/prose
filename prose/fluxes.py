@@ -256,27 +256,40 @@ class Fluxes:
         return Fluxes(self.xarray.where(xr.DataArray(mask, dims=dim), drop=True))
 
     @staticmethod
-    def _binn(var, bins, std=False):
+    def _binn(var, *bins):
         if var.dtype.name != 'object':
-            if "errors" in var.name:
-                if std:
+            if "time" in var.dims:
+                if "errors" in var.name:
                     return xr.concat(
-                        [(var.isel(time=b).std(dim="time") / np.sqrt(len(b))).expand_dims('time', -1) for b in bins],
-                        dim="time")
+                        [(np.sqrt(np.power(var.isel(time=b), 2).sum(dim="time")) / len(b)).expand_dims('time', -1) for b
+                         in bins], dim="time")
                 else:
-                    return xr.concat(
-                        [(np.sqrt((var.isel(time=b) ** 2).mean(dim="time")) / len(b)).expand_dims('time', -1) for b in
-                         bins], dim="time")
+                    return xr.concat([var.isel(time=b).mean(dim="time").expand_dims('time', -1) for b in bins],
+                                     dim="time")
             else:
-                return xr.concat([var.isel(time=b).mean(dim="time").expand_dims('time', -1) for b in bins], dim="time")
+                return var
+        else:
+            return xr.DataArray(np.ones(len(bins)) * -1, dims="time")
 
     def binn(self, dt, std=False):
         x = self.xarray
         bins = utils.index_binning(self.time, dt)
         new_time = np.array([self.time[b].mean() for b in bins])
 
-        x = x.reset_index("time", drop=True)
-        x = x.map(Fluxes._binn, args=(bins, std), keep_attrs=True)
+        x = x.map(self._binn, args=(bins), keep_attrs=True)
+
+        if std:
+            if "fluxes" in self.xarray:
+                flu = self.xarray.fluxes.copy()
+                x['errors'] = xr.concat(
+                    [(flu.isel(time=b).std(dim="time") / np.sqrt(len(b))).expand_dims('time', -1) for b in bins],
+                    dim="time")
+            if "raw_fluxes" in self.xarray:
+                raw_flu = self.xarray.raw_fluxes.copy()
+                x['raw_errors'] = xr.concat(
+                    [(raw_flu.isel(time=b).std(dim="time") / np.sqrt(len(b))).expand_dims('time', -1) for b in bins],
+                    dim="time")
+
         x.coords['time'] = new_time
 
         new_self = self.copy()
@@ -402,11 +415,10 @@ class Fluxes:
     # Plotting
     # ========
 
-    def plot(self, which="None", bins=0.005, color="k"):
-        binned = self.binn(bins, std=True)
+    def plot(self, which="None", bins=0.005, color="k", std=True):
+        binned = self.binn(bins, std=std)
         plt.plot(self.time, self.flux, ".", c="gainsboro", zorder=0, alpha=0.6)
         plt.errorbar(binned.time, binned.flux, yerr=binned.error, fmt=".", zorder=1, color=color, alpha=0.8)
-
 
 
 class LightCurves:
