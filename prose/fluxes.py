@@ -231,6 +231,7 @@ class Fluxes:
     @target.setter
     def target(self, value):
         self.xarray.attrs['target'] = value
+        self._pick_best_aperture()
 
     @property
     def aperture(self):
@@ -253,7 +254,9 @@ class Fluxes:
         return self.xarray.__iter__()
 
     def mask(self, mask, dim="time"):
-        return Fluxes(self.xarray.where(xr.DataArray(mask, dims=dim), drop=True))
+        new_self = self.copy()
+        new_self.xarray = new_self.xarray.where(xr.DataArray(mask, dims=dim), drop=True)
+        return new_self
 
     @staticmethod
     def _binn(var, *bins):
@@ -333,7 +336,9 @@ class Fluxes:
             self.aperture = 0
 
     def where(self, *args, **kwargs):
-        return Fluxes(self.xarray.where(*args, **kwargs))
+        new_self = self.copy()
+        new_self.xarray = self.xarray.where(*args, **kwargs)
+        return new_self
 
     def pont2006(self, plot=True):
         return pont2006(self.time, self.xarray.fluxes.isel(apertures=self.aperture, star=self.target).values, plot=plot)

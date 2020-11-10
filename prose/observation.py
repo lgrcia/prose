@@ -56,7 +56,15 @@ class Observation(Fluxes):
         assert 'stack' in self.xarray is not None, "No stack found"
 
     # Loaders and savers (files and data)
-    # ------------------------
+    # ------------------------------------
+    def __copy__(self):
+        copied = Observation(self.xarray.copy())
+        copied.phot = self.phot
+        return copied
+
+    def copy(self):
+        return self.__copy__()
+
     def save_mcmc_file(self, destination):
 
         assert self.lcs is not None, "Lightcurve is missing"
@@ -82,7 +90,7 @@ class Observation(Fluxes):
         )
 
     def save(self, filepath=None):
-        self.save(self.phot if filepath is None else filepath)
+        self.xarray.to_netcdf(self.phot if filepath is None else filepath)
 
     # Convenience
     # -----------
@@ -130,12 +138,6 @@ class Observation(Fluxes):
         self.bjd_tdb = (time + light_travel_tbd).value
         self.data["bjd tdb"] = self.bjd_tdb
 
-    def __copy__(self):
-        return Observation(self.xarray.copy())
-
-    def copy(self):
-        return Observation(self.xarray.copy())
-
     def query_gaia(self, n_stars=1000):
         from astroquery.gaia import Gaia
 
@@ -161,7 +163,7 @@ class Observation(Fluxes):
     # Plot
     # ----
 
-    def show_stars(self, size=10, flip=False, view=None, zoom=True, n_stars=None):
+    def show_stars(self, size=10, flip=False, view=None, zoom=False, n_stars=None):
         """
         Show stack image and detected stars
 
@@ -207,7 +209,7 @@ class Observation(Fluxes):
         elif view == "reference":
             viz.fancy_show_stars(
                 self.stack, stars,
-                ref_stars=self.comps, target=self.target,
+                ref_stars=self.xarray.comps.isel(apertures=self.aperture).values, target=self.target,
                 flip=flip, size=size, view="reference", pixel_scale=self.telescope.pixel_scale, zoom=zoom)
 
     def show_gaia(self, color="lightblue", alpha=0.5, **kwargs):
