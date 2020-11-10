@@ -222,7 +222,7 @@ class Fluxes:
         elif name in self.xarray.attrs:
             return self.xarray.attrs[name]
         else:
-            return self.__getattribute__(name)
+            return self.xarray.__getattr__(name)
 
     @property
     def target(self):
@@ -256,44 +256,33 @@ class Fluxes:
         return Fluxes(self.xarray.where(xr.DataArray(mask, dims=dim), drop=True))
 
     @staticmethod
-    def _binnTimeVariable(var, bins):
-        reorganise_dims = [d for d in var.dims if d != 'time']
-        return xr.DataArray(
-            np.array([var.isel(time=b).mean('time').values for b in bins]),
-            dims=['time', *reorganise_dims]).transpose(*var.dims)
+    def _binn(var, bins, std=False):
+        if var.dtype.name != 'object':
+            if "errors" in var.name:
+                if std:
+                    return xr.concat(
+                        [(var.isel(time=b).std(dim="time") / np.sqrt(len(b))).expand_dims('time', -1) for b in bins],
+                        dim="time")
+                else:
+                    return xr.concat(
+                        [(np.sqrt((var.isel(time=b) ** 2).mean(dim="time")) / len(b)).expand_dims('time', -1) for b in
+                         bins], dim="time")
+            else:
+                return xr.concat([var.isel(time=b).mean(dim="time").expand_dims('time', -1) for b in bins], dim="time")
 
     def binn(self, dt, std=False):
+        x = self.xarray
         bins = utils.index_binning(self.time, dt)
         new_time = np.array([self.time[b].mean() for b in bins])
-        original_dims = self.xarray.fluxes.dims
 
-        # Binning fluxes and errors
-        # =========================
-        new_data_vars = {
-            "fluxes": xr.DataArray(np.array([self.fluxes[:, :, b].mean(2) for b in bins]),
-                                   dims=["time", "apertures", "star"]).transpose(*original_dims),
-            "errors": xr.DataArray(
-                np.array([self.fluxes[:, :, b].std(2) / np.sqrt(len(b)) if std else np.sqrt(
-                    np.sum(self.errors[:, :, b] ** 2, 2)) / len(b) for b in bins]),
-                dims=["time", "apertures", "star"]).transpose(*original_dims)
-        }
+        x = x.reset_index("time", drop=True)
+        x = x.map(Fluxes._binn, args=(bins, std), keep_attrs=True)
+        x.coords['time'] = new_time
 
-        # Binning vars along time only
-        # ============================
-        for name, value in self.xarray.data_vars.items():
-            if "fluxes" not in name and "errors" not in name:
-                if 'time' in value.dims and value.dtype.name != "object":
-                    new_data_vars[name] = self._binnTimeVariable(value, bins)
+        new_self = self.copy()
+        new_self.xarray = x
 
-        # New Dataset
-        # ===========
-        new_dataset = xr.Dataset(
-            new_data_vars,
-            attrs=self.xarray.attrs,
-            coords={name: value for name, value in self.xarray.coords.items() if name != 'time'})
-        new_dataset = new_dataset.assign_coords(time=new_time)
-
-        return Fluxes(new_dataset)
+        return new_self
 
     @property
     def flux(self):
@@ -356,7 +345,8 @@ class Fluxes:
     def diff(self, comps, keep_raw=True):
         new_self = self.copy()
         self._restart_raw(new_self)
-        diff_fluxes, diff_errors, alc = differential_photometry(new_self.fluxes, new_self.errors, comps, return_alc=True)
+        diff_fluxes, diff_errors, alc = differential_photometry(new_self.fluxes, new_self.errors, comps,
+                                                                return_alc=True)
         dims = self.xarray.fluxes.dims
 
         if keep_raw:
@@ -366,7 +356,8 @@ class Fluxes:
         new_self.xarray['errors'] = (dims, diff_errors)
 
         # Since we reset ncomps, older vars with ncomp in dims are removed
-        new_self.xarray = new_self.xarray.drop_vars([name for name, value in new_self.xarray.items() if 'ncomps' in value.dims])
+        new_self.xarray = new_self.xarray.drop_vars(
+            [name for name, value in new_self.xarray.items() if 'ncomps' in value.dims])
 
         new_self.xarray['comps'] = (("ncomps"), comps)
         new_self.xarray['alc'] = (('apertures', 'time'), alc)
@@ -377,7 +368,8 @@ class Fluxes:
     def broeg2005(self, keep='float', keep_raw=True):
         new_self = self.copy()
         self._restart_raw(new_self)
-        diff_fluxes, diff_errors, info = broeg2005(new_self.fluxes, new_self.errors, self.target, keep=keep, return_alc=True)
+        diff_fluxes, diff_errors, info = broeg2005(new_self.fluxes, new_self.errors, self.target, keep=keep,
+                                                   return_alc=True)
         dims = self.xarray.fluxes.dims
 
         if keep_raw:
@@ -387,7 +379,8 @@ class Fluxes:
         new_self.xarray['errors'] = (dims, diff_errors)
 
         # Since we reset ncomps, older vars with ncomp in dims are removed
-        new_self.xarray = new_self.xarray.drop_vars([name for name, value in new_self.xarray.items() if 'ncomps' in value.dims])
+        new_self.xarray = new_self.xarray.drop_vars(
+            [name for name, value in new_self.xarray.items() if 'ncomps' in value.dims])
 
         new_self.xarray['comps'] = (("apertures", "ncomps"), info['comps'])
         new_self.xarray['weights'] = (("apertures", "ncomps"), info['weights'])

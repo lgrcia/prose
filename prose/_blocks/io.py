@@ -44,7 +44,6 @@ class SavePhot(Block):
         fluxes = xr.Dataset({
             "fluxes": xr.DataArray(fluxes, dims=["time", "apertures", "star"]).transpose(*dims),
             "errors": xr.DataArray(errors, dims=["time",  "apertures", "star"]).transpose(*dims),
-            "stars": xr.DataArray(stars, dims=["star", "coords"]),
         }, attrs=attrs)
 
         for key in [
@@ -87,9 +86,10 @@ class SavePhot(Block):
                     raise AssertionError("")
 
         if self.stack is not None:
-            fluxes["stack"] = (('x', 'y'), self.stack)
+            fluxes = fluxes.assign_coords(stack=(('w', 'h'), self.stack))
 
         fluxes = fluxes.assign_coords(time=fluxes.jd)
+        fluxes = fluxes.assign_coords(stars=(('star', 'n'), stars))
         fluxes.to_netcdf(self.destination)
 
 
