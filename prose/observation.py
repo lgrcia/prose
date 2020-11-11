@@ -15,7 +15,7 @@ from astropy.table import Table
 from astropy.wcs import WCS, utils as wcsutils
 import pandas as pd
 from scipy.stats import binned_statistic
-from prose._blocks.psf import Gaussian2D, Moffat2D
+from prose.blocks.psf import Gaussian2D, Moffat2D
 import os
 import shutil
 from astropy.stats import sigma_clip
@@ -314,7 +314,7 @@ class Observation(Fluxes):
         """
 
         psf_fit = Gaussian2D()
-        image = Image(self.stack, stars_coords=self.stars)
+        image = Image(data=self.stack, stars_coords=self.stars)
         psf_fit.run(image)
 
         if len(plt.gcf().get_axes()) == 0:

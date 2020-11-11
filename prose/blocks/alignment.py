@@ -1,4 +1,4 @@
-from prose._blocks.base import Block
+from prose.blocks.base import Block
 from astropy.nddata import Cutout2D
 import numpy as np
 

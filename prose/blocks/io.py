@@ -1,5 +1,5 @@
 import numpy as np
-from prose import Block
+from prose.blocks.base import Block
 from astropy.time import Time
 import xarray as xr
 

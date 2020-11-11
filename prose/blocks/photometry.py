@@ -11,8 +11,8 @@ from photutils import CircularAperture, CircularAnnulus
 from prose import io, FitsManager
 from photutils.psf import IntegratedGaussianPRF, DAOGroup, BasicPSFPhotometry
 from prose.console_utils import TQDM_BAR_FORMAT, INFO_LABEL
-from prose._blocks.psf import Gaussian2D
-from prose._blocks.base import Block
+from prose.blocks.psf import Gaussian2D
+from prose.blocks.base import Block
 try:
     import sep
 except:

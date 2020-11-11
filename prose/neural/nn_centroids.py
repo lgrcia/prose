@@ -1,11 +1,11 @@
-from prose import Block
+from prose.blocks.base import Block
 import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
 from tensorflow.keras import datasets, layers, models
 from photutils.centroids import centroid_com, centroid_epsf, centroid_2dg
 import time
-from prose._blocks.psf import cutouts
+from prose.blocks.psf import cutouts
 from os import path
 
 

@@ -353,7 +353,7 @@ class Fluxes:
     @staticmethod
     def _restart_raw(obj):
         if "raw_fluxes" in obj:
-            obj.xarray = obj.xarray.drop(("fluxes", "errors"))
+            obj.xarray = obj.xarray.drop_vars(("fluxes", "errors"))
             obj.xarray = obj.xarray.rename({
                 "raw_fluxes": "fluxes",
                 "raw_errors": "errors"

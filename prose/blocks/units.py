@@ -1,5 +1,5 @@
 from prose import Unit, blocks, io, Block, Telescope
-from prose._blocks import io as bio
+from prose.blocks import io as bio
 import os
 from os import path
 from astropy.io import fits

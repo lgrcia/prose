@@ -1,9 +1,8 @@
 from prose.blocks.base import Block
 import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
-import prose.visualisation as viz
+from prose import viz
 
 
 class ShowStars(Block):

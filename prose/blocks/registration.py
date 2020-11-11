@@ -1,7 +1,7 @@
 import astroalign
 import numpy as np
 from scipy.spatial import KDTree
-from prose._blocks.base import Block
+from prose.blocks.base import Block
 
 
 def distance(p1, p2):
