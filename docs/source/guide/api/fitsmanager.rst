@@ -1,7 +1,5 @@
-.. _explore:
-
-Fits manager
---------------
+Fits Manager
+============
 
 |prose| provides a :py:class:`~prose.FitsManager` class to deal with fits folder exploration, mainly to identify and retrieve calibration files
 associated with specific observations. This class is heavily used and comes handy to deal with unorganized fits folders (e.g. where there is no separation between multiple observations, science and calibration images)
@@ -119,10 +117,15 @@ Specific paths can then be retrieved with
 
 
 Index file
-==========
+----------
 
 Every time a folder is explored with :py:class:`~prose.FitsManager`, an index file is created. When dealing with large folders, the keyword :code:`index=True` can be used avoid re-analyzing folder content and save time. Using the example above we would do:
 
 .. code-block:: python
 
     fm = FitsManager("test_folder", index=True)
+
+API
+----
+.. autoclass:: prose.FitsManager
+    :members:

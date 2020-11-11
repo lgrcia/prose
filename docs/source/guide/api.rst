@@ -3,30 +3,12 @@
 API
 ===
 
-FitsManager
-------------
-.. autoclass:: prose.FitsManager
-    :members:
+.. toctree::
+   :maxdepth: 1
 
-PhotProducts
---------------------
-.. autoclass:: prose.PhotProducts
-    :members:
-
-LightCurve
-----------
-.. autoclass:: prose.LightCurve
-    :members:
-
-LightCurves
------------
-.. autoclass:: prose.LightCurves
-    :members:
-
-Telescope
------------
-.. autoclass:: prose.Telescope
-    :members:
+   api/fitsmanager
+   api/observation
+   api/telescope
 
 AperturePhotometry
 -----------

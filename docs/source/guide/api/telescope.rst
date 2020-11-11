@@ -1,9 +1,7 @@
-.. _telescope-config:
+Telescope
+=========
 
-Telescope setting
-=================
-
-``fits`` headers can change from one observatory to another. |prose| uses dictionnaries to analyse any telescope data with the following format:
+``FITS`` headers can change from one observatory to another. To analyse data from any telescope, |prose| makes use of the :py:class:`~prose.Telescope` object which stores header translations in a dictionnary like:
 
 .. code-block:: yaml
 
@@ -35,7 +33,7 @@ Telescope setting
     pixel_scale: 0.33 # arcsec
     latlong: : [24.6275, 70.4044] # deg
 
-These dictionaries are used by the ``Telescope`` object used by |prose| which can be instantiated from:
+:py:class:`~prose.Telescope` can then be instantiated from:
 
 - a **python** ``dict``:
 
@@ -50,7 +48,7 @@ These dictionaries are used by the ``Telescope`` object used by |prose| which ca
             diameter: 80
         }
 
-        telescope = Telescope(telescope_dict)
+        Telescope(telescope_dict)
 
 
 - a ``.yaml`` file with a structure similar to the one shown above:
@@ -68,6 +66,12 @@ These dictionaries are used by the ``Telescope`` object used by |prose| which ca
 
     .. code-block:: python
 
-        telescope = Telescope("path_to/my_telescope.yaml")
+        Telescope("path_to/my_telescope.yaml")
 
-When working with a new telescope, this operation needs to be done only **once**, after which the telescope dictionnary is saved and automatically used whenever the telescope name is encountered in a fits header. See :ref:`reduction` for a use case.
+When working with a new telescope, this operation needs to be done only **once**, after which the telescope dictionnary is saved and automatically used whenever the telescope name is encountered in a fits header. See tutorials for use cases.
+
+
+API
+---
+.. autoclass:: prose.Telescope
+    :members:

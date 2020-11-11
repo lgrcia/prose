@@ -8,6 +8,7 @@
 
 import os
 import sys
+import jupytext
 
 sys.path.insert(0, os.path.abspath("../.."))
 
@@ -17,21 +18,24 @@ project = 'prose'
 copyright = '2020, Lionel Garcia'
 author = 'Lionel Garcia'
 
-extensions = ["sphinx.ext.autodoc", 
-"sphinx.ext.napoleon", 
-'sphinx.ext.autosummary']
+extensions = [
+    "sphinx.ext.autodoc", 
+    "sphinx.ext.napoleon", 
+    'sphinx.ext.autosummary', 
+    'nbsphinx'
+    ]
 
 master_doc = 'index'
 
 exclude_patterns = []
-source_suffix = [".rst"]
+source_suffix = {'.rst': 'restructuredtext'}
 
 # -- Options for HTML output -------------------------------------------------
 
 html_theme = "sphinx_rtd_theme"
 
 html_static_path = ["_static"]
-
+html_css_files = ["css/style.css"]
 html_style = "css/style.css"
 
 pygments_style = "friendly"
@@ -41,6 +45,8 @@ html_theme_options = {
 
 napoleon_numpy_docstring = True
 napoleon_use_param = False
+
+nbsphinx_execute = 'never'
 
 # html_favicon = "_static/specphot logo small.png"
 

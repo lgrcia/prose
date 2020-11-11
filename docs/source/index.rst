@@ -19,21 +19,20 @@ A framework for FITS processing pipelines in python. Built for Astronomy, |prose
 
    guide/installation
    guide/citing
-   guide/explore
    guide/api
 
 .. toctree::
    :caption: Tutorials
    :maxdepth: 1
 
-   tutorials/reduction/reduction
-   tutorials/modular-reduction/modular-reduction
+   tutorials/reduction/reduction.ipynb
+   tutorials/modular-reduction/custom_pipeline.ipynb
 
 
 .. toctree::
    :caption: Notes
    :maxdepth: 1
 
-   notes/phots-structure
+   notes/phot.ipynb
    notes/telescope-config
    notes/blocks
