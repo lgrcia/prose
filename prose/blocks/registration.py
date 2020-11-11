@@ -165,11 +165,21 @@ class DistanceRegistration(Registration):
 
 class XYShift(Registration):
     """
-    Compute the linear shift between two point clouds
+    Compute the linear shift between two point clouds. Star coordinates in the image are expected in image.stars_coords
+
+    Parameters
+    ----------
+    reference : [type]
+        (x,y) coordinates of n reference stars (shape should be (2, n))
+    tolerance : float, optional
+        maximum difference for which shifts are considered similar, by default 1.5
+    clean : bool, optional
+        Merge coordinates if too close, by default False
     """
 
-    def __init__(self, reference, tolerance=1.5, clean=False, detection=None, **kwargs):
-        super().__init__(detection=detection, **kwargs)
+    def __init__(self, reference, tolerance=1.5, clean=False, **kwargs):
+
+        super().__init__(**kwargs)
         self.tolerance = tolerance
         self.clean = clean
         self.reference = reference

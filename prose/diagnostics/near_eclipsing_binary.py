@@ -1,4 +1,4 @@
-from prose._blocks.registration import distances
+from prose.blocks.registration import distances
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.io import fits

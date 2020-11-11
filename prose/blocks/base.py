@@ -97,11 +97,19 @@ class Unit:
 
 class Image:
 
-    def __init__(self, file_path, **kwargs):
-        self.data = fits.getdata(file_path)
-        self.header = fits.getheader(file_path)
+    def __init__(self, fitspath=None, data=None, header=None, **kwargs):
+        if fitspath is not None:
+            self.data = fits.getdata(fitspath)
+            self.header = fits.getheader(fitspath)
+            self.path = fitspath
+        else:
+            assert data is not None, "If FITS path is not provided, data kwarg should be set"
+            self.data = data
+            self.header = header if header is not None else {}
+            self.path = None
+
         self.wcs = WCS(self.header)
-        self.path = file_path
+
         self.__dict__.update(kwargs)
 
     def get_other_data(self, image):

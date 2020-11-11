@@ -1,6 +1,6 @@
 import numpy as np
 from prose import FitsManager, Block
-from prose._blocks.psf import moments
+from prose.blocks.psf import moments
 from prose import Unit
 from prose.blocks import DAOFindStars
 import warnings
