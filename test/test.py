@@ -10,12 +10,14 @@ RAW = "synthetic_dataset"
 _REDUCED = "_synthetic_dataset"
 REDUCED = "synthetic_dataset"
 
+PHOT = "../docs/source/notes/fake_telescope_20200229_prose_I+z.phot"
+
 
 class TestReduction(unittest.TestCase):
 
     def test_reduction(self):
         
-        generate_prose_reduction_dataset(RAW, n_images=100)
+        generate_prose_reduction_dataset(RAW, n_images=3)
         
         Telescope({
             "name": "fake_telescope",
@@ -30,20 +32,20 @@ class TestReduction(unittest.TestCase):
         photometry = AperturePhotometry(reduction.destination, overwrite=True)
         photometry.run()
 
-        # shutil.rmtree(reduction.destination)
+        shutil.rmtree(reduction.destination)
+        shutil.rmtree(RAW)
 
 
-class TestPhotometry(unittest.TestCase):
+class TestObservation(unittest.TestCase):
 
-    def test_diff_from_phots(self):
-        phot = Observation(REDUCED)
-        phot.target["id"] = 0
-        phot.Broeg2005()
-        phot.save()
+    def test_diff(self):
+        obs = Observation(PHOT)
+        obs.target = 1
+        df = obs.broeg2005()
 
-    def test_plot_lc(self):
-        phot = Observation(REDUCED)
-        phot.lc.plot()
+    def test_plot(self):
+        obs = Observation(PHOT)
+        obs.plot()
         plt.close()
 
 
