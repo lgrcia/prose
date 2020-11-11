@@ -50,8 +50,5 @@ class TestObservation(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # check folder exist
-    if path.exists(_REDUCED):
-        shutil.rmtree(_REDUCED)
 
     unittest.main()

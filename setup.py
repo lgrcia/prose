@@ -26,14 +26,14 @@ setup(
         "astroquery",
         "pyyaml",
         "sphinx",
+        "nbsphinx",
         "docutils",
         "tabulate",
         "sphinx_rtd_theme",
         "imageio",
-        "george",
         "fpdf",
-        "tensorflow",
         "sep",
+        "xarray"
         "numba"
     ],
     zip_safe=True,
