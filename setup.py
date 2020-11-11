@@ -34,7 +34,8 @@ setup(
         "fpdf",
         "sep",
         "xarray",
-        "numba"
+        "numba",
+        "netcdf4"
     ],
     zip_safe=True,
     classifiers=[

@@ -18,5 +18,7 @@ sphinx_rtd_theme
 imageio
 xarray
 fpdf
+numba
 ipython
 sep
+netcdf4
