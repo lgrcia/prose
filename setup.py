@@ -33,7 +33,7 @@ setup(
         "imageio",
         "fpdf",
         "sep",
-        "xarray"
+        "xarray",
         "numba"
     ],
     zip_safe=True,
