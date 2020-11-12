@@ -103,13 +103,13 @@ class Reduction:
         -------
 
         """
-        if len(self.fits_manager._observations) == 1:
-            self.fits_manager.set_observation(
-                0,
-                check_calib_telescope=self.calibration,
-                calibration=self.calibration,
-                calibration_date_limit=0
-            )
+        # if len(self.fits_manager._observations) == 1:
+        #     self.fits_manager.set_observation(
+        #         0,
+        #         check_calib_telescope=self.calibration,
+        #         calibration=self.calibration,
+        #         calibration_date_limit=0
+        #     )
 
         if self.destination is None:
             self.destination = path.join(path.dirname(self.fits_manager.folder),
@@ -128,7 +128,7 @@ class Reduction:
         if not path.exists(self.destination):
             os.mkdir(self.destination)
 
-        self.files = self.fits_manager.get("light")
+        self.files = self.fits_manager.images
 
 
 class AperturePhotometry:
