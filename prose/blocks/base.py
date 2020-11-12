@@ -69,10 +69,16 @@ class Unit:
             block.initialize()
 
         # run
-        for file_path in self.progress(self.files):
+        for i, file_path in enumerate(self.progress(self.files)):
             image = Image(file_path)
+            discard_message = False
             for block in self.blocks:
-                block.run(image)
+                # This allows to discard image in any blocks
+                if not image.discarded:
+                    block.run(image)
+                elif not discard_message:
+                    discard_message = True
+                    print(f"Warning: image {i} (...{file_path[-10:-1]}) discarded in {block.__name__}")
 
         # terminate
         for block in self.blocks:
@@ -109,6 +115,7 @@ class Image:
             self.path = None
 
         self.wcs = WCS(self.header)
+        self.discarded = False
 
         self.__dict__.update(kwargs)
 

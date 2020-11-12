@@ -39,9 +39,12 @@ class StarsDetection(Block):
         if self.min_separation is not None:
             coordinates = clean_stars_positions(coordinates, tolerance=self.min_separation)
 
-        image.stars_coords = coordinates
+        if len(coordinates) > 2:
+            image.stars_coords = coordinates
+            self.last_coords = coordinates
 
-        self.last_coords = coordinates
+        else:
+            image.discarded = True
 
     def __call__(self, data):
         return self.single_detection(data)
