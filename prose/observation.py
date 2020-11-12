@@ -303,7 +303,7 @@ class Observation(Fluxes):
                  )
         plt.legend()
 
-    def plot_psf_fit(self, size=21, cmap="inferno", c="blueviolet"):
+    def plot_psf_fit(self, size=21, cmap="inferno", c="blueviolet", model=Gaussian2D):
         """
          Plot a 2D gaussian fit of the global psf (extracted from stack fits)
 
@@ -313,7 +313,7 @@ class Observation(Fluxes):
            :align: center
         """
 
-        psf_fit = Gaussian2D()
+        psf_fit = model()
         image = Image(data=self.stack, stars_coords=self.stars)
         psf_fit.run(image)
 

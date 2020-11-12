@@ -173,7 +173,8 @@ class AperturePhotometry:
                  r_out=8,
                  fwhm_scale=True,
                  sigclip=3.,
-                 method="photutils",
+                 psf=blocks.Gaussian2D,
+                 photometry=blocks.PhotutilsAperturePhotometry,
                  centroid=None):
 
         if apertures is None:
@@ -185,8 +186,6 @@ class AperturePhotometry:
         self.reference_detection_unit = None
         self.photometry_unit = None
         self.destination = None
-        assert centroid is None or isinstance(centroid, Block), "centroid must be a Block instance"
-        self.centroid_block = centroid
 
         # preparing inputs and outputs
         self.destination = None
@@ -196,29 +195,27 @@ class AperturePhotometry:
         self.telescope = None
         self.prepare(fits_manager=fits_manager, files=files, stack=stack)
 
-        if method == "sextractor":
-            self.photometry = blocks.SEAperturePhotometry(
-                apertures=apertures,
-                r_in=r_in,
-                r_out=r_out,
-                sigclip=sigclip,
-                fwhm_scale=fwhm_scale,
-                name="photometry"
-            )
-        elif method == "photutils":
-            self.photometry = blocks.PhotutilsAperturePhotometry(
-                apertures=apertures,
-                r_in=r_in,
-                r_out=r_out,
-                sigclip=sigclip,
-                fwhm_scale=fwhm_scale,
-                name="photometry"
-            )
+        # Blocks
+        assert centroid is None or issubclass(centroid, Block), "centroid must be a subclass of Block"
+        self.centroid = centroid
+        # ==
+        assert psf is None or issubclass(psf, Block), "psf must be a subclass of Block"
+        self.psf = psf
+        # ==
+        assert photometry is None or issubclass(photometry, Block), "photometry must be a subclass of Block"
+        self.photometry = photometry(
+            apertures=apertures,
+            r_in=r_in,
+            r_out=r_out,
+            sigclip=sigclip,
+            fwhm_scale=fwhm_scale,
+            name="photometry"
+        )
 
     def run_reference_detection(self):
         self.reference_detection_unit = Unit([
             blocks.DAOFindStars(n_stars=self.n_stars, name="detection"),
-            blocks.Gaussian2D(name="fwhm"),
+            self.psf(name="fwhm"),
             blocks.ImageBuffer(name="buffer"),
         ], self.stack_path, telescope=self.fits_manager.telescope, show_progress=False)
 
@@ -235,7 +232,7 @@ class AperturePhotometry:
         self.photometry_unit = Unit([
             blocks.Set(stars_coords=ref_stars, name="set stars"),
             blocks.Set(fwhm=fwhm, name="set fwhm"),
-            blocks.Pass() if not isinstance(self.centroid_block, Block) else self.centroid_block,
+            blocks.Pass() if not isinstance(self.centroid, Block) else self.centroid,
             self.photometry,
             bio.SavePhot(
                 self.phot_path,
