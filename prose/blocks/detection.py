@@ -32,14 +32,15 @@ class StarsDetection(Block):
     def run(self, image, **kwargs):
         data = np.nan_to_num(image.data, 0) if self.check_nans else image.data
         coordinates, fluxes = self.single_detection(data)
-        if self.sort:
-            coordinates = coordinates[np.argsort(fluxes)[::-1]]
-        if self.n_stars is not None:
-            coordinates = coordinates[0:self.n_stars]
-        if self.min_separation is not None:
-            coordinates = clean_stars_positions(coordinates, tolerance=self.min_separation)
 
         if len(coordinates) > 2:
+            if self.sort:
+                coordinates = coordinates[np.argsort(fluxes)[::-1]]
+            if self.n_stars is not None:
+                coordinates = coordinates[0:self.n_stars]
+            if self.min_separation is not None:
+                coordinates = clean_stars_positions(coordinates, tolerance=self.min_separation)
+
             image.stars_coords = coordinates
             self.last_coords = coordinates
 

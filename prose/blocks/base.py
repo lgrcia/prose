@@ -78,7 +78,7 @@ class Unit:
                     block.run(image)
                 elif not discard_message:
                     discard_message = True
-                    print(f"Warning: image {i} (...{file_path[-10:-1]}) discarded in {block.__name__}")
+                    print(f"Warning: image {i} (...{file_path[-10:-1]}) discarded in {type(block).__name__}")
 
         # terminate
         for block in self.blocks:
