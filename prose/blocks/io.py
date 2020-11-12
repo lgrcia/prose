@@ -32,7 +32,7 @@ class SavePhot(Block):
         if self.header is not None:
             self.header["REDDATE"] = Time.now().to_value("fits")
 
-        fluxes = np.array([im.fluxes for im in self.images])
+        x = np.array([im.fluxes for im in self.images])
         errors = np.array([im.fluxes_errors for im in self.images])
         stars = self.images[0].stars_coords
 
@@ -41,8 +41,8 @@ class SavePhot(Block):
         attrs = self.header if isinstance(self.header, dict) else {}
         attrs.update(dict(target=-1, aperture=-1, telescope=self.telescope.name))
 
-        fluxes = xr.Dataset({
-            "fluxes": xr.DataArray(fluxes, dims=["time", "apertures", "star"]).transpose(*dims),
+        x = xr.Dataset({
+            "fluxes": xr.DataArray(x, dims=["time", "apertures", "star"]).transpose(*dims),
             "errors": xr.DataArray(errors, dims=["time",  "apertures", "star"]).transpose(*dims),
         }, attrs=attrs)
 
@@ -66,7 +66,7 @@ class SavePhot(Block):
                 for image in self.images:
                     _data.append(image.header[key])
 
-                fluxes[key.lower()] = ('time', _data)
+                x[key.lower()] = ('time', _data)
 
         for key in [
             "apertures_area",
@@ -79,25 +79,25 @@ class SavePhot(Block):
                 _data = np.array(_data)
 
                 if len(_data.shape) == 2:
-                    fluxes[key.lower()] = (('time', 'apertures'), _data)
+                    x[key.lower()] = (('time', 'apertures'), _data)
                 elif len(_data.shape) == 1:
-                    fluxes[key.lower()] = ('time', _data)
+                    x[key.lower()] = ('time', _data)
                 else:
                     raise AssertionError("")
 
         if self.stack is not None:
-            fluxes = fluxes.assign_coords(stack=(('w', 'h'), self.stack))
+            x = x.assign_coords(stack=(('w', 'h'), self.stack))
 
         for key, value in self.header.items():
             if isinstance(value, str):
-                fluxes.xarray.attrs[key] = value
+                x.attrs[key] = value
             elif isinstance(value, (float, np.ndarray, np.number)):
-                fluxes.xarray.attrs[key] = float(value)
+                x.attrs[key] = float(value)
             elif isinstance(value, (int, bool)):
-                fluxes.xarray.attrs[key] = int(value)
+                x.attrs[key] = int(value)
 
-        fluxes = fluxes.assign_coords(time=fluxes.jd)
-        fluxes = fluxes.assign_coords(stars=(('star', 'n'), stars))
-        fluxes.to_netcdf(self.destination)
+        x = x.assign_coords(time=x.jd)
+        x = x.assign_coords(stars=(('star', 'n'), stars))
+        x.to_netcdf(self.destination)
 
 
