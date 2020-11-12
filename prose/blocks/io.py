@@ -88,6 +88,14 @@ class SavePhot(Block):
         if self.stack is not None:
             fluxes = fluxes.assign_coords(stack=(('w', 'h'), self.stack))
 
+        for key, value in self.header.items():
+            if isinstance(value, str):
+                fluxes.xarray.attrs[key] = value
+            elif isinstance(value, (float, np.ndarray, np.number)):
+                fluxes.xarray.attrs[key] = float(value)
+            elif isinstance(value, (int, bool)):
+                fluxes.xarray.attrs[key] = int(value)
+
         fluxes = fluxes.assign_coords(time=fluxes.jd)
         fluxes = fluxes.assign_coords(stars=(('star', 'n'), stars))
         fluxes.to_netcdf(self.destination)
