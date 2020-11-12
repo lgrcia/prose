@@ -63,6 +63,8 @@ class Reduction:
         reference_id = int(reference * len(self.files))
         self.reference_fits = self.files[reference_id]
 
+        self.reduction_unit = None
+
     def run(self):
 
         reference_unit = Unit([
@@ -78,7 +80,7 @@ class Reduction:
         ref_image = reference_unit.buffer.image
         calibration_block = reference_unit.calibration
 
-        reduction_unit = Unit([
+        self.reduction_unit = Unit([
             blocks.Pass() if not self.calibration else calibration_block,
             blocks.Trim(name="trimming"),
             blocks.SegmentedPeaks(n_stars=50, name="detection"),
@@ -90,7 +92,7 @@ class Reduction:
             blocks.Video(self.gif_path, name="video", from_fits=True)
         ], self.files, telescope=self.fits_manager.telescope, name="Reduction")
 
-        reduction_unit.run()
+        self.reduction_unit.run()
 
     def prepare(self):
         """

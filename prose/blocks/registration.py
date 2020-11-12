@@ -55,6 +55,8 @@ def xyshift(im_stars_pos, ref_stars_pos, tolerance=1.5, clean=False):
     ndarray
         (dx, dy) shift
     """
+    assert len(im_stars_pos) > 2, f"{len(im_stars_pos)} star coordinates provided (should be > 2)"
+
     if clean:
         clean_ref = clean_stars_positions(ref_stars_pos)
         clean_im = clean_stars_positions(im_stars_pos)
