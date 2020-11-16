@@ -4,7 +4,7 @@ import yaml
 import numpy as np
 from prose import CONFIG
 import astropy.units as u
-
+from warnings import warn
 
 def str_to_astropy_unit(unit_string):
     return u.__dict__[unit_string]
@@ -73,12 +73,16 @@ class Telescope:
             telescope = file
         elif isinstance(file, str):
             telescope = CONFIG.match_telescope_name(file)
+            if telescope is None:
+                warn(f"telescope {file} not found")
+
         elif file is None:
             return False
         else:
             raise ValueError("file must be path or dict")
-        
-        self.__dict__.update(telescope)
+
+        if telescope is not None:
+            self.__dict__.update(telescope)
 
         if telescope is None:
             return False
