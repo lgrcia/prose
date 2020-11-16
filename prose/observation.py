@@ -26,6 +26,12 @@ from astropy.stats import sigma_clip
 class Observation(Fluxes):
     """
     Class to load and analyze photometry products
+
+    Parameters
+    ----------
+    photfile : str
+        path of the `.phot` file to load
+
     """
 
     def __init__(self, photfile):
@@ -92,8 +98,15 @@ class Observation(Fluxes):
             "{}/MCMC_{}.txt".format(destination, self.products_denominator), sep=" ", index=False
         )
 
-    def save(self, filepath=None):
-        self.xarray.to_netcdf(self.phot if filepath is None else filepath)
+    def save(self, destination=None):
+        """Save current observation
+
+        Parameters
+        ----------
+        destination : str, optional
+            path to phot file, by default None
+        """
+        self.xarray.to_netcdf(self.phot if destination is None else destination)
 
     def export_stack(self, destination, **kwargs):
         header = {name: value for name, value in self.xarray.attrs.items() if name.isupper()}
@@ -112,8 +125,15 @@ class Observation(Fluxes):
 
     # Convenience
     # -----------
+
+    @property
+    def products_denominator(self):
+        return f"{self.telecope}_{self.date}_{self.name}_{self.filter}"
+
     @property
     def skycoord(self):
+        """astropy SkyCoord object for the target
+        """
         return SkyCoord(self.RA, self.DEC, frame='icrs', unit=(self.telescope.ra_unit, self.telescope.dec_unit))
 
     @property
@@ -133,15 +153,6 @@ class Observation(Fluxes):
         return f"http://simbad.u-strasbg.fr/simbad/sim-coo?Coord={self.RA}+{self.DEC}&CooFrame=FK5&CooEpoch=2000&CooEqui=" \
                "2000&CooDefinedFrames=none&Radius=2&Radius.unit=arcmin&submit=submit+query&CoordList="
 
-    @property
-    def products_denominator(self):
-        return "{}_{}_{}_{}".format(
-            self.telescope.name,
-            self.observation_date.strftime(format="%Y%m%d"),
-            self.target["name"],
-            self.filter,
-        )
-
     # Methods
     # -------
 
@@ -156,7 +167,9 @@ class Observation(Fluxes):
         # Catalog queries
         # ---------------
 
-    def query_gaia(self, n_stars=1000):
+    def query_gaia(self):
+        """Query gaia catalog for stars in the field
+        """
         from astroquery.gaia import Gaia
 
         header = self.xarray.attrs
@@ -179,7 +192,9 @@ class Observation(Fluxes):
 
         self.gaia_data["x"], self.gaia_data["y"] = np.array(wcsutils.skycoord_to_pixel(skycoords, self.wcs))
 
-    def query_tic(self, n_stars=1000):
+    def query_tic(self):
+        """Query TIC catalog (through MAST) for stars in the field
+        """
         from astroquery.mast import Catalogs
 
         header = self.xarray.attrs
@@ -200,32 +215,81 @@ class Observation(Fluxes):
     # Plot
     # ----
 
-    def show_stars(self, size=10, flip=False, view=None, zoom=False, n=None):
-        """
-        Show stack image and detected stars
+    def show(self, size=10, flip=False, zoom=False, contrast=0.05, wcs=False, cmap="Greys_r"):
+        """Show stack image
 
         Parameters
         ----------
-        size: float (optional)
-            pyplot figure (size, size)
-        n: int
-            max number of stars to show
-        flip: bool
-            flip image
-        view: 'all', 'reference'
-            - ``reference`` : only highlight target and comparison stars
-            - ``all`` : all stars are shown
-
-        Example
-        -------
-        .. image:: /guide/examples_images/plot_stars.png
-           :align: center
+        size : int, optional
+           size of the square figure, by default 10
+        flip : bool, optional
+            , by default False
+        zoom : bool, optional
+            whether to include a zoom inlay in the image, by default False
+        contrast : float, optional
+            contrast for the Zscale of image, by default 0.05
+        wcs : bool, optional
+            whether to show grid ans axes to world coordinate
         """
-
         if self.target == -1:
             zoom = False
 
         self._check_stack()
+
+        fig = plt.figure(figsize=(size, size))
+
+        if flip:
+            image = utils.z_scale(self.stack, c=contrast)[::-1, ::-1]
+        else:
+            image = utils.z_scale(self.stack, c=contrast)
+
+        if wcs:
+            ax = plt.subplot(projection=self.wcs, label='overlays')
+        else:
+            ax = fig.add_subplot(111)
+
+        _ = ax.imshow(image, cmap=cmap, origin="lower")
+        _ = plt.title("Stack image", loc="left")
+
+        if wcs:
+            ax.coords.grid(True, color='white', ls='solid', alpha=0.3)
+            ax.coords[0].set_axislabel('Galactic Longitude')
+            ax.coords[1].set_axislabel('Galactic Latitude')
+
+            overlay = ax.get_coords_overlay('fk5')
+            overlay.grid(color='white', ls='--', alpha=0.3)
+            overlay[0].set_axislabel('Right Ascension (J2000)')
+            overlay[1].set_axislabel('Declination (J2000)')
+
+    def _check_show(self, **kwargs):
+
+        axes = plt.gcf().axes
+
+        if len(axes) == 0:
+            self.show(**kwargs)
+
+    def show_stars(self, view=None, n=None, flip=False, comp_color="yellow", color=[0.51, 0.86, 1.], **kwargs):
+        """Show detected stars over stack image
+
+
+        Parameters
+        ----------
+        size : int, optional
+            size of the square figure, by default 10
+        flip : bool, optional
+            wether to flip image, by default False
+        view : str, optional
+            "all" to see all stars OR "reference" to have target and comparison stars hilighted, by default None
+        n : int, optional
+            max number of stars to show, by default None,
+
+        Raises
+        ------
+        AssertionError
+            [description]
+        """
+
+        self._check_show(flip=flip, **kwargs)
 
         if n is not None:
             if view == "reference":
@@ -237,90 +301,84 @@ class Observation(Fluxes):
         if view is None:
             view = "reference" if 'comps' in self else "all"
 
+        image_size = np.array(np.shape(self.stack))[::-1]
+
+        if flip:
+            stars = np.array(image_size) - stars
+
         if view == "all":
-            viz.fancy_show_stars(
-                self.stack, stars,
-                flip=flip, size=size, target=self.target,
-                pixel_scale=self.telescope.pixel_scale, zoom=zoom)
+            others = np.arange(n, len(self.stars))
+            others = np.setdiff1d(others, self.target)
+
+            viz.plot_marks(*stars.T, np.arange(len(stars)), color=color)
+            viz.plot_marks(*self.stars[others].T, alpha=0.4, color=color)
 
         elif view == "reference":
+            x = self.xarray.isel(apertures=self.aperture)
             assert 'comps' in self, "No differential photometry"
-            viz.fancy_show_stars(
-                self.stack, stars,
-                ref_stars=self.xarray.comps.isel(apertures=self.aperture).values, target=self.target,
-                flip=flip, size=size, view="reference", pixel_scale=self.telescope.pixel_scale, zoom=zoom)
 
-    @staticmethod
-    def plot_ids(x, y, idxs, color, alpha, n=None, split=False, **kwargs):
-        ax = plt.gcf().axes[0]
-        xlim, ylim = ax.get_xlim(), ax.get_ylim()
+            comps = x.comps.values
 
-        if n is not None:
-            x = x[0:n]
-            y = y[0:n]
-            idxs = idxs[0:n]
+            others = np.setdiff1d(np.arange(len(stars)), x.comps.values)
+            others = np.setdiff1d(others, self.target)
 
-        within = np.argwhere(np.logical_and.reduce([xlim[0] < x,  x < xlim[1],  ylim[1] < y,  y < ylim[0]])).flatten()
-        x = x[within]
-        y = y[within]
-        idxs = idxs[within]
+            viz.plot_marks(*stars[self.target], self.target, color=color)
+            viz.plot_marks(*stars[comps].T, comps, color=comp_color)
+            _ = viz.plot_marks(*stars[others].T, alpha=0.4, color=color)
 
-        ax.plot(x, y, "x", color=color, alpha=alpha, **kwargs)
-        ax = plt.gca()
+    def show_gaia(self, color="lightblue", alpha=1, n=None, idxs=True):
+        """Overlay Gaia objects on stack image
 
-        for x, y, i in zip(x, y, idxs):
-            if xlim[0] < x < xlim[1] and ylim[1] < y < ylim[0]:
-                _id = str(i)
-                if split:
-                    _id = f"{_id[0:len(_id) // 2]}\n{_id[len(_id) // 2::]}"
-                plt.annotate(_id,
-                             xy=[x, y - 12],
-                             color=color,
-                             ha='center', fontsize=8, va='bottom')
-
-    def show_gaia(self, color="lightblue", alpha=0.5, n=None, **kwargs):
-        """
-        Overlay Gaia objects on last axis
 
         Parameters
         ----------
         color : str, optional
-            color of markers, by default "lightblue"
-        alpha : float, optional
-            opacity of markers, by default 0.5
-        **kwargs : dict
-            any kwargs compatible with pyplot.plot function
+            color of marks and font, by default "lightblue"
+        alpha : int, optional
+            opacity of marks and font, by default 1
+        n : int, optional
+            max number of stars to show, by default None, by default None for all stars
+        idxs : bool, optional
+            wether to show gaia ids, by default True
         """
+
+        self._check_show()
+
         if self.gaia_data is None:
             self.query_gaia()
 
-        self.plot_ids(
-            self.gaia_data["x"].data,
-            self.gaia_data["y"].data,
-            self.gaia_data["source_id"].data,
-            color=color, alpha=alpha, n=n, split=True, **kwargs)
+        x = self.gaia_data["x"].data
+        y = self.gaia_data["y"].data
+        labels = self.gaia_data["source_id"].data.astype(str)
+        labels = [f"{_id[0:len(_id) // 2]}\n{_id[len(_id) // 2::]}" for _id in labels]
 
-    def show_tic(self, color="white", alpha=0.7, n=None, **kwargs):
-        """
-        Overlay TIC objects on last axis
+        _ = viz.plot_marks(x, y, labels if idxs else None, color=color, alpha=alpha, n=n, position="top", fontsize=6)
+
+    def show_tic(self, color="white", alpha=1, n=None, idxs=True):
+        """Overlay TIC objects on stack image
+
 
         Parameters
         ----------
         color : str, optional
-            color of markers, by default "lightblue"
-        alpha : float, optional
-            opacity of markers, by default 0.5
-        **kwargs : dict
-            any kwargs compatible with pyplot.plot function
+            color of marks and font, by default "lightblue"
+        alpha : int, optional
+            opacity of marks and font, by default 1
+        n : int, optional
+            max number of stars to show, by default None, by default None for all stars
+        idxs : bool, optional
+            wether to show TIC ids, by default True
         """
+
+        self._check_show()
+
         if self.tic_data is None:
             self.query_tic()
 
-        self.plot_ids(
-            self.tic_data["x"].data,
-            self.tic_data["y"].data,
-            self.tic_data["ID"].data,
-            color=color, alpha=alpha, n=n, **kwargs)
+        x = self.tic_data["x"].data
+        y = self.tic_data["y"].data
+        ID = self.tic_data["ID"].data
+        _ = viz.plot_marks(x, y, ID if idxs else None, color=color, alpha=alpha, n=n, position="top", fontsize=9, offset=10)
 
     def show_cutout(self, star=None, size=200):
         """
@@ -341,13 +399,14 @@ class Observation(Fluxes):
         ax.set_ylim(np.array([size / 2, -size / 2]) + self.stars[star][1])
 
     def plot_comps_lcs(self, n=5, ylim=(0.98, 1.02)):
-        """
-        Plot comparison stars light curves along target star light curve
+        """Plot comparison stars light curves along target star light curve
 
-        Example
-        -------
-        .. image: /examples_images/plot_comps.png
-           :align: center
+        Parameters
+        ----------
+        n : int, optional
+            Number max of comparison to show, by default 5
+        ylim : tuple, optional
+            ylim of the plot, by default (0.98, 1.02)
         """
         idxs = [self.target, *self.xarray.comps.isel(apertures=self.aperture).values[0:n]]
         lcs = [self.xarray.fluxes.isel(star=i, apertures=self.aperture).values for i in idxs]
@@ -370,19 +429,7 @@ class Observation(Fluxes):
         plt.tight_layout()
 
     def plot_data(self, key):
-        """
-        Plot a data time-serie on top of the target light curve
 
-        Parameters
-        ----------
-        key : str
-            key of data time-serie in self.data dict
-
-        Examples
-        --------
-        .. image:: /guide/examples_images/plot_systematic.png
-           :align: center
-        """
         self.plot()
         amp = (np.percentile(self.flux, 95) - np.percentile(self.flux, 5)) / 2
         plt.plot(self.time, amp * utils.rescale(self.xarray[key]) + 1,
@@ -392,13 +439,23 @@ class Observation(Fluxes):
         plt.legend()
 
     def plot_psf_fit(self, size=21, cmap="inferno", c="blueviolet", model=Gaussian2D):
-        """
-         Plot a 2D gaussian fit of the global psf (extracted from stack fits)
+        """Plot a 2D gaussian fit of the global psf (extracted from stack fits)
 
-        Example
+        Parameters
+        ----------
+        size : int, optional
+            square size of extracted PSF, by default 21
+        cmap : str, optional
+            color map of psf image, by default "inferno"
+        c : str, optional
+            color of model plot line, by default "blueviolet"
+        model : prose.blocks, optional
+            a PsfFit block, by default Gaussian2D
+
+        Returns
         -------
-        .. image:: /guide/examples_images/plot_psf_fit.png
-           :align: center
+        dict
+            PSF fit info (theta, std_x, std_y, fwhm_x, fwhm_y)
         """
 
         psf_fit = model()
@@ -416,13 +473,12 @@ class Observation(Fluxes):
                 "fwhm_y": image.fwhmy }
 
     def plot_rms(self, bins=0.005):
-        """
-        Plot binned rms of lightcurves vs the CCD equation
+        """Plot binned rms of lightcurves vs the CCD equation
 
-        Example
-        -------
-        .. image:: /guide/examples_images/plot_rms.png
-           :align: center
+        Parameters
+        ----------
+        bins : float, optional
+            bin size used to compute error, by default 0.005 (in days)
         """
         self._check_diff()
         viz.plot_rms(
@@ -433,6 +489,15 @@ class Observation(Fluxes):
             highlights=self.comparison_stars)
 
     def plot_systematics(self, fields=None, ylim=(0.98, 1.02)):
+        """Plot ystematics measurements along target light curve
+
+        Parameters
+        ----------
+        fields : list of str, optional
+            list of systematic to include (must be in self), by default None
+        ylim : tuple, optional
+            plot ylim, by default (0.98, 1.02)
+        """
         if fields is None:
             fields = ["dx", "dy", "fwhm", "airmass", "sky"]
 
@@ -467,6 +532,8 @@ class Observation(Fluxes):
         plt.tight_layout()
 
     def plot_raw_diff(self):
+        """Plot raw target flux and differantial flux 
+        """
 
         plt.subplot(211)
         plt.title("Differential lightcurve", loc="left")
@@ -486,6 +553,21 @@ class Observation(Fluxes):
         plt.tight_layout()
 
     def save_report(self, destination, fields=None, std=None, ylim=(0.98, 1.02), remove_temp=True):
+        """Save a complete report of the observation
+
+        Parameters
+        ----------
+        destination : str
+            path of the pdf report (must include extension .pdf)
+        fields : [type], optional
+            list of systematic to include (must be in self), by default None
+        std : bool, optional
+            weather to show bins error as std (otherwise computed from theoretical error), by default None
+        ylim : tuple, optional
+            main diff. flux plot ylim, by default (0.98, 1.02)
+        remove_temp : bool, optional
+            remove temporary files folder created to build report, by default True
+        """
 
         if fields is None:
             fields = ["dx", "dy", "fwhm", "airmass", "sky"]
@@ -617,6 +699,15 @@ class Observation(Fluxes):
         print("report saved at {}".format(path.abspath(file_name)))
 
     def plot_precision(self, bins=0.005, aperture=None):
+        """Plot observation precision estimate against theorethical error (background noise, photon noise and CCD equation)
+
+        Parameters
+        ----------
+        bins : float, optional
+            bin size used to estimate error, by default 0.005 (in days)
+        aperture : int, optional
+            chosen aperture, by default None
+        """
 
         n_bin = int(bins / (np.mean(self.exptime) / (60 * 60 * 24)))
 
