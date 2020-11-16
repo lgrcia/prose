@@ -44,6 +44,7 @@ saintex.update({"name": "SaintEx"})
 artemis = speculoos_south.copy()
 artemis.update({
     "name": "Artemis",
+    "ra_unit": "hourangle",
     "latlong": [28.4754, 16.3089]})
 
 trappist = speculoos_south.copy()
