@@ -67,7 +67,7 @@ for name, obj in inspect.getmembers(blocks):
         if issubclass(obj, Block):
             block_doc = obj.doc()
             if block_doc is not None:
-                filename = path.join("./notes/blocks", "{}.rst".format(name))
+                filename = path.join("./guide/api/blocks", "{}.rst".format(name))
                 with open(filename, "w") as f:
                     f.write("{}\n{}".format(name, "-"*len(name)))
                     f.write("\n\n{}".format(block_doc))
