@@ -59,6 +59,12 @@ trappistN.update({
     "ra_unit": "hourangle",
     "latlong": [31.2027, 7.8586]})
 
+saintex = artemis.copy()
+saintex.update({
+    "name": "Saint-Ex",  
+    "ra_unit": "hourangle",
+    "latlong": [31.0439, -115.4637]})
+
 built_in_telescopes = {
     "trappist": trappist,
     "artemis": artemis,
@@ -67,5 +73,6 @@ built_in_telescopes = {
     "ganymede": ganymede,
     "io": io,
     "callisto": callisto,
-    "ntm": trappistN
+    "ntm": trappistN,
+    "saint-ex": saintex
 }
