@@ -4,7 +4,7 @@ import numpy as np
 from os import path
 from astropy.time import Time
 from astropy import units as u
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import SkyCoord, Distance
 from prose.fluxes import Fluxes
 import warnings
 from prose import visualisation as viz
@@ -41,6 +41,9 @@ class Observation(Fluxes):
 
         self.phot = photfile
         self.telescope = Telescope.from_name(self.telescope)
+
+        self.gaia_data = None
+        self.tic_data = None
         # self.stars = None  # in pixels
         # self.target = {"id": None,
         #                "name": None,
@@ -49,7 +52,7 @@ class Observation(Fluxes):
         # # Convenience
         # self.bjd_tdb = None
         # self.gaia_data = None
-        # self.wcs = None
+        self.wcs = WCS(self.xarray.attrs)
         # self.hdu = None
 
     def _check_stack(self):
@@ -92,17 +95,31 @@ class Observation(Fluxes):
     def save(self, filepath=None):
         self.xarray.to_netcdf(self.phot if filepath is None else filepath)
 
+    def export_stack(self, destination, **kwargs):
+        header = {name: value for name, value in self.xarray.attrs.items() if name.isupper()}
+        data = self.stack
+
+        hdul = fits.HDUList([fits.PrimaryHDU(data=data, header=fits.Header(header))])
+        hdul.writeto(destination, **kwargs)
+
+    def import_stack(self, fitsfile):
+        data = fits.getdata(fitsfile)
+        header = fits.getheader(fitsfile)
+
+        self.wcs = WCS(header)
+        self.xarray.attrs.update(utils.header_to_cdf4_dict(header))
+        self.xarray["stack"] = (('w', 'h'), data)
+
     # Convenience
     # -----------
     @property
     def skycoord(self):
-        ra, dec = self.target["radec"]
-        return SkyCoord(ra, dec, frame='icrs', unit=(self.telescope.ra_unit, self.telescope.dec_unit))
+        return SkyCoord(self.RA, self.DEC, frame='icrs', unit=(self.telescope.ra_unit, self.telescope.dec_unit))
 
     @property
     def simbad_url(self):
         """
-        [notebook feature] clickable simbad query url for specified ``target_id``
+        [notebook feature] clickable simbad query url for specified target
         """
         from IPython.core.display import display, HTML
 
@@ -111,12 +128,10 @@ class Observation(Fluxes):
     @property
     def simbad(self):
         """
-        simbad query url for specified ``target_id``
+        simbad query url for specified target
         """
-        ra, dec = self.target["radec"]
-        return "http://simbad.u-strasbg.fr/simbad/sim-coo?Coord={}+{}&CooFrame=FK5&CooEpoch=2000&CooEqui=" \
-               "2000&CooDefinedFrames=none&Radius=2&Radius.unit=arcmin&submit=submit+query&CoordList=".format(
-            ra, dec)
+        return f"http://simbad.u-strasbg.fr/simbad/sim-coo?Coord={self.RA}+{self.DEC}&CooFrame=FK5&CooEpoch=2000&CooEqui=" \
+               "2000&CooDefinedFrames=none&Radius=2&Radius.unit=arcmin&submit=submit+query&CoordList="
 
     @property
     def products_denominator(self):
@@ -138,27 +153,49 @@ class Observation(Fluxes):
         self.bjd_tdb = (time + light_travel_tbd).value
         self.data["bjd tdb"] = self.bjd_tdb
 
+        # Catalog queries
+        # ---------------
+
     def query_gaia(self, n_stars=1000):
         from astroquery.gaia import Gaia
 
-        header = fits.getheader(self.stack_fits)
-        shape = fits.getdata(self.stack_fits).shape
+        header = self.xarray.attrs
+        shape = self.stack.shape
         cone_radius = np.sqrt(2) * np.max(shape) * self.telescope.pixel_scale / 120
-        wcs = WCS(header)
 
         coord = self.skycoord
         radius = u.Quantity(cone_radius, u.arcminute)
         gaia_query = Gaia.cone_search_async(coord, radius, verbose=False, )
         self.gaia_data = gaia_query.get_results()
+        self.gaia_data.sort("phot_g_mean_flux", reverse=True)
 
         skycoords = SkyCoord(
             ra=self.gaia_data['ra'],
             dec=self.gaia_data['dec'],
             pm_ra_cosdec=self.gaia_data['pmra'],
             pm_dec=self.gaia_data['pmdec'],
-            radial_velocity=self.gaia_data['radial_velocity'])
+            radial_velocity=self.gaia_data['radial_velocity'],
+            obstime=Time(2015.0, format='decimalyear'))
 
         self.gaia_data["x"], self.gaia_data["y"] = np.array(wcsutils.skycoord_to_pixel(skycoords, self.wcs))
+
+    def query_tic(self, n_stars=1000):
+        from astroquery.mast import Catalogs
+
+        header = self.xarray.attrs
+        shape = self.stack.shape
+        cone_radius = np.sqrt(2) * np.max(shape) * self.telescope.pixel_scale / 120
+
+        coord = self.skycoord
+        radius = u.Quantity(cone_radius, u.arcminute)
+        self.tic_data = Catalogs.query_region(coord, radius, "TIC", verbose=False)
+        self.tic_data.sort("Jmag")
+
+        skycoords = SkyCoord(
+            ra=self.tic_data['ra'],
+            dec=self.tic_data['dec'], unit="deg")
+
+        self.tic_data["x"], self.tic_data["y"] = np.array(wcsutils.skycoord_to_pixel(skycoords, self.wcs))
 
     # Plot
     # ----
@@ -207,12 +244,41 @@ class Observation(Fluxes):
                 pixel_scale=self.telescope.pixel_scale, zoom=zoom)
 
         elif view == "reference":
+            assert 'comps' in self, "No differential photometry"
             viz.fancy_show_stars(
                 self.stack, stars,
                 ref_stars=self.xarray.comps.isel(apertures=self.aperture).values, target=self.target,
                 flip=flip, size=size, view="reference", pixel_scale=self.telescope.pixel_scale, zoom=zoom)
 
-    def show_gaia(self, color="lightblue", alpha=0.5, **kwargs):
+    @staticmethod
+    def plot_ids(x, y, idxs, color, alpha, n=None, split=False, **kwargs):
+        ax = plt.gcf().axes[0]
+        xlim, ylim = ax.get_xlim(), ax.get_ylim()
+
+        if n is not None:
+            x = x[0:n]
+            y = y[0:n]
+            idxs = idxs[0:n]
+
+        within = np.argwhere(np.logical_and.reduce([xlim[0] < x,  x < xlim[1],  ylim[1] < y,  y < ylim[0]])).flatten()
+        x = x[within]
+        y = y[within]
+        idxs = idxs[within]
+
+        ax.plot(x, y, "x", color=color, alpha=alpha, **kwargs)
+        ax = plt.gca()
+
+        for x, y, i in zip(x, y, idxs):
+            if xlim[0] < x < xlim[1] and ylim[1] < y < ylim[0]:
+                _id = str(i)
+                if split:
+                    _id = f"{_id[0:len(_id) // 2]}\n{_id[len(_id) // 2::]}"
+                plt.annotate(_id,
+                             xy=[x, y - 12],
+                             color=color,
+                             ha='center', fontsize=6, va='bottom')
+
+    def show_gaia(self, color="lightblue", alpha=0.5, n=None, **kwargs):
         """
         Overlay Gaia objects on last axis
 
@@ -228,11 +294,34 @@ class Observation(Fluxes):
         if self.gaia_data is None:
             self.query_gaia()
 
-        ax = plt.gcf().axes[0]
-        xlim, ylim = ax.get_xlim(), ax.get_ylim()
-        ax.plot(self.gaia_data["x"], self.gaia_data["y"], "x", color=color, alpha=alpha, **kwargs)
-        ax.set_xlim(xlim)
-        ax.set_ylim(ylim)
+        self.plot_ids(
+            self.gaia_data["x"].data,
+            self.gaia_data["y"].data,
+            self.gaia_data["source_id"].data,
+            color=color, alpha=alpha, n=n, split=True, **kwargs)
+
+
+    def show_tic(self, color="lightblue", alpha=0.5, n=None, **kwargs):
+        """
+        Overlay TIC objects on last axis
+
+        Parameters
+        ----------
+        color : str, optional
+            color of markers, by default "lightblue"
+        alpha : float, optional
+            opacity of markers, by default 0.5
+        **kwargs : dict
+            any kwargs compatible with pyplot.plot function
+        """
+        if self.tic_data is None:
+            self.query_tic()
+
+        self.plot_ids(
+            self.tic_data["x"].data,
+            self.tic_data["y"].data,
+            self.tic_data["ID"].data,
+            color=color, alpha=alpha, n=n, **kwargs)
 
     def show_cutout(self, star=None, size=200):
         """
@@ -361,8 +450,8 @@ class Observation(Fluxes):
         for i, field in enumerate(fields):
             if field in self:
                 scaled_data = sigma_clip(self.xarray[field].values)
-                scaled_data -= np.median(scaled_data)
-                scaled_data /= np.std(scaled_data)
+                scaled_data = scaled_data - np.median(scaled_data)
+                scaled_data = scaled_data / np.std(scaled_data)
                 scaled_data *= np.std(self.flux)
                 scaled_data += 1 - (i + 1) * offset
                 viz.plot_lc(self.time, scaled_data, errorbar_kwargs=dict(c="grey", ecolor="grey"))
@@ -394,18 +483,12 @@ class Observation(Fluxes):
         plt.xlim([np.min(self.time), np.max(self.time)])
         plt.tight_layout()
 
-    def save_report(self, destination=None, fields=None, std=None, ylim=(0.98, 1.02), remove_temp=True):
-
-        if destination is None:
-            destination = self.folder
+    def save_report(self, destination, fields=None, std=None, ylim=(0.98, 1.02), remove_temp=True):
 
         if fields is None:
             fields = ["dx", "dy", "fwhm", "airmass", "sky"]
 
-        if path.isdir(destination):
-            file_name = "{}_report.pdf".format(self.products_denominator)
-        else:
-            file_name = path.basename(destination.strip(".html").strip(".pdf"))
+        file_name = destination
 
         temp_folder = path.join(path.dirname(destination), "temp")
 
@@ -425,7 +508,7 @@ class Observation(Fluxes):
         plt.close()
 
         plt.figure(figsize=(6, 10))
-        self.plot_raw_diff(std=std)
+        self.plot_raw_diff()
         if ylim is not None:
             plt.gcf().axes[0].set_ylim(ylim)
         lc_report_plot = path.join(temp_folder, "lcreport.png")
@@ -442,7 +525,7 @@ class Observation(Fluxes):
         plt.savefig(syst_plot)
         plt.close()
 
-        if self.comparison_stars is not None:
+        if 'comps' in self:
             plt.figure(figsize=(6, 10))
             self.plot_comps_lcs()
             lc_comps_plot = path.join(temp_folder, "lccompreport.png")
@@ -471,7 +554,7 @@ class Observation(Fluxes):
 
         pdf.set_font("helvetica", size=12)
         pdf.set_text_color(50, 50, 50)
-        pdf.text(marg_x, 10, txt="{}".format(self.target["name"]))
+        pdf.text(marg_x, 10, txt="{}".format(self.name))
 
         pdf.set_font("helvetica", size=6)
         pdf.set_text_color(74, 144, 255)
@@ -481,24 +564,24 @@ class Observation(Fluxes):
         pdf.set_text_color(150, 150, 150)
         pdf.set_font("Helvetica", size=7)
         pdf.text(marg_x, 14, txt="{} · {} · {}".format(
-            self.observation_date, self.telescope.name, self.filter))
+            self.date, self.telescope.name, self.filter))
 
         pdf.image(star_plot, x=78, y=17, h=93.5)
         pdf.image(lc_report_plot, x=172, y=17, h=95)
         pdf.image(syst_plot, x=227, y=17, h=95)
 
-        if self.comparison_stars is not None:
+        if 'comps' in self:
             pdf.image(lc_comps_plot, x=227, y=110, h=95)
 
-        datetimes = Time(self.jd, format='jd', scale='utc').to_datetime()
+        datetimes = Time(self.time, format='jd', scale='utc').to_datetime()
         min_datetime = datetimes.min()
         max_datetime = datetimes.max()
 
-        obs_duration = "{} - {} [{}h{}]".format(
-            min_datetime.strftime("%H:%M"),
-            max_datetime.strftime("%H:%M"),
-            (max_datetime - min_datetime).seconds // 3600,
-            ((max_datetime - min_datetime).seconds // 60) % 60)
+        obs_duration_hours = (max_datetime - min_datetime).seconds // 3600
+        obs_duration_mins = ((max_datetime - min_datetime).seconds // 60) % 60
+
+        obs_duration = f"{min_datetime.strftime('%H:%M')} - {max_datetime.strftime('%H:%M')} " \
+            f"[{obs_duration_hours}h{obs_duration_mins if obs_duration_mins!=0 else ''}]"
 
         max_psf = np.max([std_x, std_y])
         min_psf = np.min([std_x, std_y])
@@ -506,49 +589,48 @@ class Observation(Fluxes):
 
         viz.draw_table(pdf, [
             ["Time", obs_duration],
-            ["RA - DEC", "{} - {}".format(*self.target["radec"])],
+            ["RA - DEC", f"{self.RA} {self.DEC}"],
             ["images", len(self.time)],
             ["GAIA id", None],
             ["mean std · fwhm",
-             "{:.2f} · {:.2f} pixels".format(np.mean(self.fwhm) / (2 * np.sqrt(2 * np.log(2))), np.mean(self.fwhm))],
+             f"{np.mean(self.fwhm) / (2 * np.sqrt(2 * np.log(2))):.2f} · {np.mean(self.fwhm):.2f} pixels"],
             ["Telescope", self.telescope.name],
             ["Filter", self.filter],
-            ["exposure", "{} s".format(np.mean(self.data.exptime))],
+            ["exposure", f"{np.mean(self.exptime)} s"],
         ], (5, 20))
 
         viz.draw_table(pdf, [
-            ["PSF std · fwhm (x)", "{:.2f} · {:.2f} pixels".format(std_x, 2 * np.sqrt(2 * np.log(2)) * std_x)],
-            ["PSF std · fwhm (y)", "{:.2f} · {:.2f} pixels".format(std_y, 2 * np.sqrt(2 * np.log(2)) * std_y)],
-            ["PSF ellipicity", "{:.2f}".format(ellipticity)],
+            ["PSF std · fwhm (x)", f"{std_x:.2f} · {2 * np.sqrt(2 * np.log(2)) * std_x:.2f} pixels"],
+            ["PSF std · fwhm (y)", f"{std_y:.2f} · {2 * np.sqrt(2 * np.log(2)) * std_y:.2f} pixels"],
+            ["PSF ellipicity", f"{ellipticity:.2f}"],
         ], (5, 78))
 
         pdf.image(psf_fit, x=5.5, y=55, w=65)
 
-        pdf_path = path.join(destination, "{}.pdf".format(file_name.strip(".html").strip(".pdf")))
-        pdf.output(pdf_path)
+        pdf.output(file_name)
 
         if path.isdir("temp") and remove_temp:
             shutil.rmtree(temp_folder)
 
-        print("report saved at {}".format(pdf_path))
+        print("report saved at {}".format(path.abspath(file_name)))
 
     def plot_precision(self, bins=0.005, aperture=None):
-        if aperture is None:
-            assert self.lcs is not None, "You must set 'aperture' kwargs (light-curve not present to pick best aperture id)"
-            aperture = self.lc.best_aperture_id
 
         n_bin = int(bins / (np.mean(self.exptime) / (60 * 60 * 24)))
 
         assert len(self.time) > n_bin, "Your 'bins' size is less than the total exposure"
 
-        fluxes, errors = self.fluxes.as_array(aperture)
+        x = self.xarray.isel(apertures=self.aperture if aperture is None else aperture).copy()
+
+        fluxes = x.raw_fluxes.values
+        errors = x.raw_errors.values
 
         mean_fluxes = np.mean(fluxes, axis=1)
         mean_errors = np.mean(errors, axis=1)
 
-        error_estimate = [np.median(binned_statistic(self.time, f, statistic='std', bins=n_bin)[0]) for f in
-                          fluxes]
-        area = self.apertures_area[0][aperture]
+        error_estimate = [np.median(binned_statistic(self.time, f, statistic='std', bins=n_bin)[0]) for f in fluxes]
+
+        area = x.apertures_area[0].values
 
         # ccd_equation = phot_prose.telescope.error(
         # prose_fluxes, tp_area, np.mean(self.sky), np.mean(self.exptime), np.mean(self.airmass))
@@ -564,7 +646,7 @@ class Observation(Fluxes):
         sorted_fluxes_idxs = np.argsort(mean_fluxes)
 
         plt.plot(np.log(mean_fluxes), inv_snr_estimate, ".", alpha=0.5, ms=2, c="k",
-                 label="flux rms ({:.1f} min bins)".format(0.005 * (60 * 24)))
+                 label=f"flux rms ({0.005 * (60 * 24):.1f} min bins)")
         plt.plot(np.log(mean_fluxes)[sorted_fluxes_idxs], (np.sqrt(mean_fluxes) / mean_fluxes)[sorted_fluxes_idxs],
                  "--", c="k", label="photon noise", alpha=0.5)
         plt.plot(np.log(mean_fluxes)[sorted_fluxes_idxs],
