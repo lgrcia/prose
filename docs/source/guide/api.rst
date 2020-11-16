@@ -3,6 +3,9 @@
 API
 ===
 
+Main objects
+------------
+
 .. toctree::
    :maxdepth: 1
 
@@ -10,13 +13,21 @@ API
    api/observation
    api/telescope
 
-AperturePhotometry
------------
-.. autoclass:: prose.AperturePhotometry
-    :members:
+Pipeline tools
+--------------
 
-Reduction
------------
-.. autoclass:: prose.Reduction
-    :members:
+.. toctree::
+   :maxdepth: 1
 
+   api/blocks
+   api/aperturephotometry
+   api/reduction
+
+
+Diagnostics
+-----------
+
+.. toctree::
+   :maxdepth: 1
+
+   api/neb

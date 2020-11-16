@@ -27,6 +27,7 @@ A framework for FITS processing pipelines in python. Built for Astronomy, |prose
 
    tutorials/reduction/reduction.ipynb
    tutorials/modular-reduction/custom_pipeline.ipynb
+   tutorials/NEB/neb_diagnostic.ipynb
 
 
 .. toctree::
@@ -34,5 +35,3 @@ A framework for FITS processing pipelines in python. Built for Astronomy, |prose
    :maxdepth: 1
 
    notes/phot.ipynb
-   notes/telescope-config
-   notes/blocks

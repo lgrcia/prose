@@ -5,7 +5,7 @@ Blocks
 
 :py:class:`~Block` objects are dedicated to image analysis and/or modification and are aranged into :py:class:`~Unit`. The following diagram shows how an :py:class:`~Image` object is sequentially processed through the individual blocks of a unit. An example is provided `here <modular-reduction>`_
 
-.. figure:: ../tutorials/modular-reduction/unit_structure.png
+.. figure:: /_static/unit_structure.png
    :align: center
    :height: 350
 
