@@ -77,3 +77,5 @@ built_in_telescopes = {
     "ntm": trappistN,
     "saint-ex": saintex
 }
+
+TESS_pixel = 2.5 # arcmin

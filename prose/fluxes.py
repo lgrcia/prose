@@ -356,7 +356,7 @@ class Fluxes:
         })
 
     @staticmethod
-    def _restart_raw(obj):
+    def _reset_raw(obj):
         if "raw_fluxes" in obj:
             obj.xarray = obj.xarray.drop_vars(("fluxes", "errors"))
             obj.xarray = obj.xarray.rename({
@@ -368,7 +368,7 @@ class Fluxes:
     # ===============================
     def diff(self, comps, keep_raw=True):
         new_self = self.copy()
-        self._restart_raw(new_self)
+        self._reset_raw(new_self)
         diff_fluxes, diff_errors, alc = differential_photometry(new_self.fluxes, new_self.errors, comps,
                                                                 return_alc=True)
         dims = self.xarray.fluxes.dims
@@ -391,7 +391,7 @@ class Fluxes:
 
     def broeg2005(self, keep='float', keep_raw=True):
         new_self = self.copy()
-        self._restart_raw(new_self)
+        self._reset_raw(new_self)
         diff_fluxes, diff_errors, info = broeg2005(new_self.fluxes, new_self.errors, self.target, keep=keep,
                                                    return_alc=True)
         dims = self.xarray.fluxes.dims

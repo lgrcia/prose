@@ -8,8 +8,10 @@ import prose.visualisation as viz
 import os
 from os import path
 import shutil
+from prose import Observation
 from astropy.time import Time
 from astropy import units as u
+from prose.models import transit
 
 
 def protopapas2005(t, t0, duration, depth, c, period=1):
@@ -23,31 +25,70 @@ def template_transit(t, t0, duration):
     return protopapas2005(t, t0, duration, 1, 50, 100)
 
 
-class NearEclipsingBinary:
+class NEB(Observation):
+    """Tool to detect and diagnose near ecllipsing binaries in a field
 
-    def __init__(self, phot, t0, duration, radius=2.5):
-        self.phot = phot
+    Parameters
+    ----------
+    observation : prose.Observation
+        observation on which to apply the tool
+    radius : float, optional
+       radius around the target in which to analyse other stars fluxes, by default 2.5 (in arcminutes)
+    """
+
+    def __init__(self, observation, radius=2.5):
+        
+        super(NEB, self).__init__(observation.xarray.copy())
+        
         self.radius = radius
-        target_distance = np.array(distances(phot.stars.T, phot.stars[phot.target_id]))
-        self.nearby_ids = np.argwhere(target_distance * phot.telescope.pixel_scale / 60 < self.radius).flatten()
+        target_distance = np.array(distances(observation.stars.T, observation.stars[observation.target]))
+        self.nearby_ids = np.argwhere(target_distance * observation.telescope.pixel_scale / 60 < self.radius).flatten()
 
-        self.nearby_ids = self.nearby_ids[np.argsort(np.array(distances(phot.stars[self.nearby_ids].T, phot.stars[phot.target_id])))]
+        self.nearby_ids = self.nearby_ids[np.argsort(np.array(distances(observation.stars[self.nearby_ids].T, observation.stars[observation.target])))]
 
-        self.time = self.phot.time
-        self.t0 = t0
-        self.duration = duration
-        self.X = np.hstack([
-            utils.rescale(self.time)[:, None] ** np.arange(0, 3),
-            template_transit(self.time, self.t0, self.duration)[:, None]
-        ])
-        self.XXT_inv = np.linalg.inv(self.X.T @ self.X)
+        self.time = self.time
+        self.epoch = None
+        self.duration = None
+        self.period = None
 
         self.score = np.ones(len(self.nearby_ids)) * -1
         self.depths = np.ones(len(self.nearby_ids)) * -1
-        self.ws = np.ones((len(self.nearby_ids), self.X.shape[1]))
+        self.X = None
+        self.XXT_inv = None
+        self.ws = None
 
-        self.evaluate_score()
         self.cmap =['r', 'g']
+
+    @property
+    def transit(self):
+        return self.epoch, self.period, self.duration
+
+    @transit.setter
+    def transit(self, value):
+        """Set transit parameters and run analysis of other stars to detect matching signals
+
+        Parameters
+        ----------
+        value : dict
+            dict containing:
+
+            - epoch
+            - duration 
+            - period
+
+            in same time unit as observation
+        """
+        self.epoch = value["epoch"]
+        self.duration = value["duration"]
+        self.period = value["period"]
+
+        self.X = np.hstack([
+            utils.rescale(self.time)[:, None] ** np.arange(0, 2),
+            transit(self.time, self.epoch, self.duration, 1, c=50, period=self.period)[:, None]
+        ])
+        self.XXT_inv = np.linalg.inv(self.X.T @ self.X)
+        self.ws = np.ones((len(self.nearby_ids), self.X.shape[1]))
+        self.evaluate_score()
 
     def evaluate_transit(self, lc, error):
         w = (self.XXT_inv @ self.X.T) @ lc
@@ -57,34 +98,32 @@ class NearEclipsingBinary:
     def evaluate_score(self):
         target_score = None
         for i, i_star in enumerate(self.nearby_ids):
-            lc = self.phot.lcs[i_star].flux
-            error = self.phot.lcs[i_star].error
-            w, dw = self.evaluate_transit(lc, error)
+            x = self.xarray.isel(star=i_star, apertures=self.aperture)
+            flux = x.fluxes.values
+            error = x.errors.values
+            w, dw = self.evaluate_transit(flux, error)
             self.ws[i] = w
-            self.depths[i], self.score[i] = w[-1], w[-1]/np.sqrt(np.diag(dw))[-1]
-            if i_star == self.phot.target_id:
+            self.depths[i], self.score[i] = w[-1], np.abs(w[-1]/np.sqrt(np.diag(dw))[-1])
+            if i_star == self.target:
                 target_score = self.score[i]
 
         self.score[self.score < 0] = 0
         self.score = np.abs(self.score)
         self.score /= target_score
+        self.suspects = self.score > 5 * np.std(self.score)
+        self.potentials = self.score > 3.5 * np.std(self.score)
 
     def plot_lc(self, i):
-        viz.plot_lc(self.time, self.phot.lcs[self.nearby_ids[i]].flux, std=True)
+        viz.plot_lc(self.time, self.fluxes[self.aperture, self.nearby_ids[i]].flux, std=True)
         plt.plot(self.time, self.X @ self.ws[i], label="model")
         plt.legend()
 
-    def show(self, size=15):
-        marker_size = 12
-        marker_color = np.array([131, 220, 255]) / 255
-        image = fits.getdata(self.phot.stack_fits)
-        image_size = np.array(np.shape(image))[::-1]
+    def show_stars(self, size=10):
 
-        fig = plt.figure(figsize=(size, size))
-        image = utils.z_scale(image, c=0.05)
+        self._check_show(size=size)
 
-        search_radius = 60*self.radius/self.phot.telescope.pixel_scale
-        target_coord = self.phot.stars[self.phot.target_id]
+        search_radius = 60*self.radius/self.telescope.pixel_scale
+        target_coord = self.stars[self.target]
         circle = mpatches.Circle(
             target_coord,
             search_radius,
@@ -92,66 +131,75 @@ class NearEclipsingBinary:
             ec="white",
             alpha=0.6)
 
-        plt.imshow(image, cmap="Greys_r")
-        plt.title("Stack image", loc="left")
-
         ax = plt.gca()
         ax.add_artist(circle)
         plt.annotate("radius {}'".format(self.radius),
-                     xy=[target_coord[0], target_coord[1] - search_radius - 15],
+                     xy=[target_coord[0], target_coord[1] + search_radius + 15],
                      color="white",
                      ha='center', fontsize=12, va='bottom', alpha=0.6)
 
-        for coord in self.phot.stars:
-            circle = mpatches.Circle(coord, marker_size, fill=None, ec=marker_color, alpha=0.4)
-            ax = plt.gca()
-            ax.add_artist(circle)
+        viz.plot_marks(*self.stars.T, alpha=0.4)
 
-        for i, coord in enumerate(self.phot.stars[self.nearby_ids]):
-            if self.nearby_ids[i] == self.phot.target_id:
-                color = marker_color
-            else:
-                color = self.color(i)
-            circle = mpatches.Circle(coord, marker_size, fill=None, ec=color)
-            ax = plt.gca()
-            ax.add_artist(circle)
-            plt.annotate(str(self.nearby_ids[i]),
-                         xy=[coord[0], coord[1] - marker_size - 6],
-                         color=color,
-                         ha='center', fontsize=12, va='bottom')
+        clean = self.nearby_ids[np.argwhere(np.logical_and(np.logical_not(self.potentials), np.logical_not(self.suspects))).flatten()]
+        clean = np.setdiff1d(clean, self.target)
+        suspects = self.nearby_ids[np.argwhere(self.suspects).flatten()]
+        potentials = np.setdiff1d(self.nearby_ids[np.argwhere(self.potentials).flatten()], suspects)
 
+        viz.plot_marks(*self.stars[self.target], self.target, position="top")
+        viz.plot_marks(*self.stars[clean].T, clean, color="white", position="top")
+        viz.plot_marks(*self.stars[potentials].T, potentials, color="goldenrod", position="top")
+        viz.plot_marks(*self.stars[suspects].T, suspects, color="indianred", position="top")
+
+        # plt.tight_layout()
+        # ax = plt.gca()
+        #
+        # if self.telescope.pixel_scale is not None:
+        #     ob = viz.AnchoredHScaleBar(size=60 / self.telescope.pixel_scale,
+        #                                label="1'", loc=4, frameon=False, extent=0,
+        #                                pad=0.6, sep=4, linekw=dict(color="white", linewidth=0.8))
+        #     ax.add_artist(ob)
+
+        ylim = np.array([target_coord[1] + search_radius + 100, target_coord[1] - search_radius - 100])
+        xlim = np.array([target_coord[0] - search_radius - 100, target_coord[0] + search_radius + 100])
+        xlim.sort()
+        ylim.sort()
+
+        plt.ylim(ylim)
+        plt.xlim(xlim)
         plt.tight_layout()
-        ax = plt.gca()
-
-        if self.phot.telescope.pixel_scale is not None:
-            ob = viz.AnchoredHScaleBar(size=60 / self.phot.telescope.pixel_scale,
-                                       label="1'", loc=4, frameon=False, extent=0,
-                                       pad=0.6, sep=4, linekw=dict(color="white", linewidth=0.8))
-            ax.add_artist(ob)
-
-        plt.ylim(target_coord[1] + search_radius + 100, target_coord[1] - search_radius - 100)
-        plt.xlim(target_coord[0] - search_radius - 100, target_coord[0] + search_radius + 100)
 
     def color(self, i, white=False):
-        if self.nearby_ids[i] == self.phot.target_id:
+        if self.nearby_ids[i] == self.target:
             return 'k'
-        elif self.score[i] >= 0.8:
+        elif self.suspects[i]:
             return "firebrick"
-        elif self.score[i] >= 0.5:
+        elif self.potentials[i]:
             return "goldenrod"
         else:
             if white:
-                return "olivedrab"
+                return "grey"
             else:
                 return "yellowgreen" #np.array([131, 220, 255]) / 255 #np.array([78, 144, 67])/255
 
+    def plot_suspects(self):
+        """Plot fluxes on which a suspect NEB signal has been identified
+        """
+        self.plot(idxs=np.unique(np.hstack([np.argwhere(self.suspects).flatten(), np.argwhere(self.potentials).flatten()])), force_width=False)
+
     def plot(self, idxs=None, **kwargs):
+        """Plot all fluxes and model fit used for NEB detection
+
+        Parameters
+        ----------
+        idxs : list of int, optional
+            list of star indexes to plot, by default None and plot fluxes of all stars
+        """
         if idxs is None:
             idxs = np.arange(len(self.nearby_ids))
 
         nearby_ids = self.nearby_ids[idxs]
         viz.plot_lcs(
-            [(self.time, self.phot.lcs[i].flux) for i in nearby_ids],
+            [(self.time, self.fluxes[self.aperture, i]) for i in nearby_ids],
             indexes=nearby_ids,
             colors=[self.color(idxs[i], white=True) for i in range(len(nearby_ids))],
             **kwargs
@@ -159,17 +207,22 @@ class NearEclipsingBinary:
         axes = plt.gcf().get_axes()
         for i, axe in enumerate(axes):
             if i < len(nearby_ids):
-                if nearby_ids[i] == self.phot.target_id:
+                if nearby_ids[i] == self.target:
                     color = "k"
                 else:
                     color = self.color(idxs[i], white=True)
                 axe.plot(self.time, self.X @ self.ws[idxs[i]], c=color)
 
-    def save_report(self, destination=None, remove_temp=True):
+    def save_report(self, destination, remove_temp=True):
+        """Save a detailed report of the NEB check
 
-        if destination is None:
-            destination = self.phot.folder
-
+        Parameters
+        ----------
+        destination : str
+            path of the pdf report to be saved (must contain extension .pdf)
+        remove_temp : bool, optional
+            weather to remove the emporary folder used to build report, by default True
+        """
         def draw_table(table, table_start, marg=5, table_cell=(20, 4)):
 
             pdf.set_draw_color(200, 200, 200)
@@ -199,7 +252,7 @@ class NearEclipsingBinary:
                     table_start[1] + marg + i * table_cell[1] - 1.2, value)
 
         if path.isdir(destination):
-            file_name = "{}_NEB_{}arcmin.pdf".format(self.phot.products_denominator, self.radius)
+            file_name = "{}_NEB_{}arcmin.pdf".format(self.products_denominator, self.radius)
         else:
             file_name = path.basename(destination.strip(".html").strip(".pdf"))
 
@@ -214,7 +267,7 @@ class NearEclipsingBinary:
         os.mkdir(temp_folder)
 
         star_plot = path.join(temp_folder, "starplot.png")
-        self.show(10)
+        self.show_stars()
         fig = plt.gcf()
         fig.patch.set_alpha(0)
         plt.savefig(star_plot)
@@ -243,7 +296,7 @@ class NearEclipsingBinary:
         lcs = np.array(lcs)
 
         plt.figure(figsize=(10, 3.5))
-        psf_p = self.phot.plot_psf_fit(cmap="viridis", c="C0")
+        psf_p = self.plot_psf_fit(cmap="viridis", c="C0")
 
         psf_fit = path.join(temp_folder, "psf_fit.png")
         plt.savefig(psf_fit, dpi=60)
@@ -262,7 +315,7 @@ class NearEclipsingBinary:
 
         pdf.set_font("helvetica", size=12)
         pdf.set_text_color(50, 50, 50)
-        pdf.text(marg_x, 10, txt="{}".format(self.phot.target["name"]))
+        pdf.text(marg_x, 10, txt="{}".format(self.name))
 
         pdf.set_font("helvetica", size=6)
         pdf.set_text_color(50, 50, 50)
@@ -271,14 +324,14 @@ class NearEclipsingBinary:
         pdf.set_font("helvetica", size=6)
         pdf.set_text_color(74, 144, 255)
         pdf.text(marg_x, 17, txt="simbad")
-        pdf.link(marg_x, 15, 8, 3, self.phot.simbad)
+        pdf.link(marg_x, 15, 8, 3, self.simbad)
 
         pdf.set_text_color(150, 150, 150)
         pdf.set_font("Helvetica", size=7)
         pdf.text(marg_x, 14, txt="{} · {} · {}".format(
-            self.phot.observation_date, self.phot.telescope.name, self.phot.filter))
+            self.date, self.telescope.name, self.filter))
 
-        datetimes = Time(self.phot.jd, format='jd', scale='utc').to_datetime()
+        datetimes = Time(self.jd, format='jd', scale='utc').to_datetime()
         min_datetime = datetimes.min()
         max_datetime = datetimes.max()
 
@@ -294,27 +347,25 @@ class NearEclipsingBinary:
 
         draw_table([
             ["Time", obs_duration],
-            ["RA Dec", "{:.4f} {:.4f}".format(
-                self.phot.skycoord.ra,
-                self.phot.skycoord.dec)],
+            ["RA DEC", f"{self.RA} {self.DEC}"],
             ["images", len(self.time)],
             ["GAIA id", None],
-            ["mean fwhm", "{:.2f} pixels ({:.2f}\")".format(np.mean(self.phot.fwhm),
-            np.mean(self.phot.fwhm)*self.phot.telescope.pixel_scale)],
-            ["Telescope", self.phot.telescope.name],
-            ["Filter", self.phot.filter],
-            ["exposure", "{} s".format(np.mean(self.phot.data.exptime))],
+            ["mean fwhm", "{:.2f} pixels ({:.2f}\")".format(np.mean(self.fwhm),
+                                                            np.mean(self.fwhm) * self.telescope.pixel_scale)],
+            ["Telescope", self.telescope.name],
+            ["Filter", self.filter],
+            ["exposure", "{} s".format(np.mean(self.exptime))],
         ], (5 + 12, 20 + 100))
 
         draw_table([
             ["stack PSF fwhm (x)", "{:.2f} pixels ({:.2f}\")".format(psf_p["fwhm_x"],
-            psf_p["fwhm_x"]*self.phot.telescope.pixel_scale)],
+                                                                     psf_p["fwhm_x"] * self.telescope.pixel_scale)],
             ["stack PSF fwhm (y)", "{:.2f} pixels ({:.2f}\")".format(psf_p["fwhm_y"],
-            psf_p["fwhm_y"]*self.phot.telescope.pixel_scale)],
+                                                                     psf_p["fwhm_y"] * self.telescope.pixel_scale)],
             ["stack PSF model", "Moffat2D"],
             ["stack PSF ellipicity", "{:.2f}".format(ellipticity)],
             ["diff. flux std", "{:.3f} ppt (5 min bins)".format(
-                np.mean(utils.binning(self.phot.time, self.phot.lc.flux, 5/(24*60), std=True)[2])*1e3)]
+                np.mean(utils.binning(self.time, self.flux, 5 / (24 * 60), std=True)[2]) * 1e3)]
         ], (5 + 12, 78 + 100))
 
         pdf.image(psf_fit, x=5.5 + 12, y=55 + 100, w=65)
@@ -325,11 +376,10 @@ class NearEclipsingBinary:
             pdf.add_page()
             pdf.image(lcs_path, x=5, y=22, w=280)
 
-        pdf_path = path.join(destination, "{}.pdf".format(file_name.strip(".html").strip(".pdf")))
-        pdf.output(pdf_path)
+        pdf.output(destination)
 
         if path.isdir("temp") and remove_temp:
             shutil.rmtree(temp_folder)
 
-        print("report saved at {}".format(pdf_path))
+        print("report saved at {}".format(destination))
 
