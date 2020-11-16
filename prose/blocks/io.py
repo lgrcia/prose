@@ -2,6 +2,7 @@ import numpy as np
 from prose.blocks.base import Block
 from astropy.time import Time
 import xarray as xr
+from prose import utils
 
 
 class SavePhot(Block):
@@ -39,7 +40,15 @@ class SavePhot(Block):
         dims = ("apertures", "star", "time")
 
         attrs = self.header if isinstance(self.header, dict) else {}
-        attrs.update(dict(target=-1, aperture=-1, telescope=self.telescope.name))
+        attrs.update(dict(
+            target=-1,
+            aperture=-1,
+            telescope=self.telescope.name,
+            filter=self.header[self.telescope.keyword_filter],
+            exptime=self.header[self.telescope.keyword_exposure_time],
+            name=self.header[self.telescope.keyword_object],
+            date=str(utils.format_iso_date(self.header[self.telescope.keyword_observation_date])).replace("-", ""),
+        ))
 
         x = xr.Dataset({
             "fluxes": xr.DataArray(x, dims=["time", "apertures", "star"]).transpose(*dims),
@@ -88,13 +97,7 @@ class SavePhot(Block):
         if self.stack is not None:
             x = x.assign_coords(stack=(('w', 'h'), self.stack))
 
-        for key, value in self.header.items():
-            if isinstance(value, str):
-                x.attrs[key] = value
-            elif isinstance(value, (float, np.ndarray, np.number)):
-                x.attrs[key] = float(value)
-            elif isinstance(value, (int, bool)):
-                x.attrs[key] = int(value)
+        x.attrs.update(utils.header_to_cdf4_dict(self.header))
 
         x = x.assign_coords(time=x.jd)
         x = x.assign_coords(stars=(('star', 'n'), stars))

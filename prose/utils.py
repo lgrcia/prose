@@ -194,3 +194,17 @@ def divisors(n) :
 
 def fold(t, t0, p):
     return (t - t0 + 0.5 * p) % p - 0.5 * p
+
+def header_to_cdf4_dict(header):
+
+    header_dict = {}
+
+    for key, value in header.items():
+        if isinstance(value, str):
+            header_dict[key] = value
+        elif isinstance(value, (float, np.ndarray, np.number)):
+            header_dict[key] = float(value)
+        elif isinstance(value, (int, bool)):
+            header_dict[key] = int(value)
+
+    return header_dict
