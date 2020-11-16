@@ -200,7 +200,7 @@ class Observation(Fluxes):
     # Plot
     # ----
 
-    def show_stars(self, size=10, flip=False, view=None, zoom=False, n_stars=None):
+    def show_stars(self, size=10, flip=False, view=None, zoom=False, n=None):
         """
         Show stack image and detected stars
 
@@ -208,7 +208,7 @@ class Observation(Fluxes):
         ----------
         size: float (optional)
             pyplot figure (size, size)
-        n_stars: int
+        n: int
             max number of stars to show
         flip: bool
             flip image
@@ -227,10 +227,10 @@ class Observation(Fluxes):
 
         self._check_stack()
 
-        if n_stars is not None:
+        if n is not None:
             if view == "reference":
                 raise AssertionError("'n_stars' kwargs is incompatible with 'reference' view that will display all stars")
-            stars = self.stars[0:n_stars]
+            stars = self.stars[0:n]
         else:
             stars = self.stars
 
@@ -276,7 +276,7 @@ class Observation(Fluxes):
                 plt.annotate(_id,
                              xy=[x, y - 12],
                              color=color,
-                             ha='center', fontsize=6, va='bottom')
+                             ha='center', fontsize=8, va='bottom')
 
     def show_gaia(self, color="lightblue", alpha=0.5, n=None, **kwargs):
         """
@@ -300,8 +300,7 @@ class Observation(Fluxes):
             self.gaia_data["source_id"].data,
             color=color, alpha=alpha, n=n, split=True, **kwargs)
 
-
-    def show_tic(self, color="lightblue", alpha=0.5, n=None, **kwargs):
+    def show_tic(self, color="white", alpha=0.7, n=None, **kwargs):
         """
         Overlay TIC objects on last axis
 
@@ -437,22 +436,25 @@ class Observation(Fluxes):
         if fields is None:
             fields = ["dx", "dy", "fwhm", "airmass", "sky"]
 
+        flux = self.flux.copy()
+        flux /= np.mean(flux)
+
         if ylim is None:
-            ylim = (self.flux.min() * 0.99, self.flux.max() * 1.01)
+            ylim = (flux.min() * 0.99, flux.max() * 1.01)
 
         offset = ylim[1] - ylim[0]
 
         if len(plt.gcf().axes) == 0:
             plt.figure(figsize=(5 ,10))
 
-        self.plot(color="C0")
+        viz.plot_lc(self.time, flux, errorbar_kwargs=dict(c="C0", ecolor="C0"))
 
         for i, field in enumerate(fields):
             if field in self:
                 scaled_data = sigma_clip(self.xarray[field].values)
                 scaled_data = scaled_data - np.median(scaled_data)
                 scaled_data = scaled_data / np.std(scaled_data)
-                scaled_data *= np.std(self.flux)
+                scaled_data *= np.std(flux)
                 scaled_data += 1 - (i + 1) * offset
                 viz.plot_lc(self.time, scaled_data, errorbar_kwargs=dict(c="grey", ecolor="grey"))
                 plt.annotate(field, (self.time.min() + 0.005, 1 - (i + 1) * offset + offset / 3))
