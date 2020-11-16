@@ -274,8 +274,8 @@ class Fluxes:
         else:
             return xr.DataArray(np.ones(len(bins)) * -1, dims="time")
 
-    def binn(self, dt, std=False):
-        x = self.xarray
+    def binn(self, dt, std=False, keep_coords=True):
+        x = self.xarray.copy()
         bins = utils.index_binning(self.time, dt)
         new_time = np.array([self.time[b].mean() for b in bins])
 
@@ -294,6 +294,11 @@ class Fluxes:
                     dim="time")
 
         x.coords['time'] = new_time
+
+        if keep_coords:
+            for name, value in self.xarray.coords.items():
+                if "time" not in value.dims:
+                    x.coords[name] = value
 
         new_self = self.copy()
         new_self.xarray = x
