@@ -20,6 +20,7 @@ from fpdf import FPDF
 import shutil
 from astropy.time import Time
 import matplotlib.patches as mpatches
+from prose.models import transit
 
 
 def plot_lc(
@@ -34,7 +35,8 @@ def plot_lc(
     _plot_kwargs = dict(
         c="gainsboro",
         zorder=0,
-        ms=5,
+        alpha=0.6,
+        # ms=5,
         label="raw_data")\
 
     _plot_kwargs.update(plot_kwargs)
@@ -42,11 +44,13 @@ def plot_lc(
 
     _errorbar_kwargs = dict(
         fmt=".",
-        capsize=2,
-        elinewidth=0.75,
-        c="C0",
-        ecolor="C0",
-        markersize=6,
+        # capsize=2,
+        # elinewidth=0.75,
+        c="k",
+        zorder=1,
+        alpha=0.8,
+        # ecolor="C0",
+        # markersize=6,
         label="binned data ({} JD)".format(bins))\
 
     _errorbar_kwargs.update(errorbar_kwargs)
@@ -239,7 +243,7 @@ class AnchoredHScaleBar(matplotlib.offsetbox.AnchoredOffsetbox):
                                                         **kwargs)
 
 
-def plot_lcs(data, planets={}, W=4, show=None, hide=None, ylim=None, size=[4,3], indexes=None, colors=None, bins=0.005):
+def plot_lcs(data, planets={}, W=4, show=None, hide=None, ylim=None, size=[4,3], indexes=None, colors=None, bins=0.005, force_width=True):
     """
     A global plot for multiple lightcurves
     
@@ -272,13 +276,15 @@ def plot_lcs(data, planets={}, W=4, show=None, hide=None, ylim=None, size=[4,3],
     idxs = np.setdiff1d(show, hide)
 
     H = np.ceil(len(idxs) / W).astype(int)
+    if not force_width:
+        W = np.min([len(idxs), W])
     fig, axes = plt.subplots(H,W,figsize=(W * size[0], H * size[1]))
     
     max_duration = np.max([jd.max() - jd.min() for jd, lc in [data[i] for i in idxs]])
 
     planet_colors = ["C0", "C1", "C2", "C3", "C4"]
     
-    for _i, ax in enumerate(axes.flat):
+    for _i, ax in enumerate(axes.flat if len(idxs) > 1 else [axes]):
         if _i < len(idxs):
             i = idxs[_i]
             plt.sca(ax)
@@ -510,6 +516,48 @@ class AnchoredHScaleBar(matplotlib.offsetbox.AnchoredOffsetbox):
                                                         **kwargs)
 
 
+def plot_marks(x, y, label=None, position="bottom", offset=7, fontsize=12, color=[0.51, 0.86, 1.], ms=12, n=None, inside=True, alpha=1):
+    y_offset = ms + offset
+
+    if position == "top":
+        y_offset *= -1
+
+    if not isinstance(x, (list, np.ndarray, tuple)):
+        x = np.array([x])
+        y = np.array([y])
+        if label is not None:
+            label = np.array([label])
+
+    if inside:
+        ax = plt.gcf().axes[0]
+        xlim, ylim = np.array(ax.get_xlim()), np.array(ax.get_ylim())
+        xlim.sort()
+        ylim.sort()
+        within = np.argwhere(np.logical_and.reduce([xlim[0] < x,  x < xlim[1],  ylim[0] < y,  y < ylim[1]])).flatten()
+        x = x[within]
+        y = y[within]
+        if label is not None:
+            label = label[within]
+
+    if n is not None:
+        x = x[0:n]
+        y = y[0:n]
+        if label is not None:
+            label = label[0:n]
+
+    if label is None:
+        label = [None for _ in range(len(x))]
+
+    for _x, _y, _label in zip(x, y, label):
+        circle = mpatches.Circle((_x, _y), ms, fill=None, ec=color, alpha=alpha)
+        ax = plt.gca()
+        ax.add_artist(circle)
+        f = 5
+        if _label is not None:
+            plt.annotate(_label, xy=[_x, _y - y_offset], color=color, ha='center', fontsize=fontsize, alpha=alpha,
+                         va="top" if position is "bottom" else "bottom")
+
+
 def fancy_show_stars(
         image,
         stars,
@@ -603,7 +651,7 @@ def fancy_show_stars(
             ax = plt.gca()
             ax.add_artist(circle)
             plt.annotate(str(i),
-                         xy=[coord[0], coord[1] + marker_size+1],
+                         xy=[coord[0], coord[1] + marker_size + 8],
                          color=marker_color,
                          ha='center', fontsize=12, va='top')
 
@@ -611,7 +659,7 @@ def fancy_show_stars(
         circle = mpatches.Circle(stars[target, :], marker_size, fill=None, ec=marker_color, label="target")
         ax = plt.gca()
         ax.add_artist(circle)
-        plt.annotate(target, xy=[stars[target][0], stars[target][1] + marker_size+1],
+        plt.annotate(target, xy=[stars[target][0], stars[target][1] + marker_size + 8],
                      color=marker_color, ha='center', fontsize=12, va='top')
 
         plt.imshow(image, cmap="Greys_r")
@@ -619,7 +667,7 @@ def fancy_show_stars(
         for i in ref_stars:
             circle = mpatches.Circle(stars[i, :], marker_size, fill=None, ec="yellow", label="comparison")
             ax.add_artist(circle)
-            plt.annotate(str(i), xy=[stars[i][0], stars[i][1] + marker_size+1], color="yellow",
+            plt.annotate(str(i), xy=[stars[i][0], stars[i][1] + marker_size+8], color="yellow",
                          fontsize=12,
                          ha='center',
                          va='top')
@@ -1047,6 +1095,22 @@ def save_report(self, destination, fields, remove_temp=True, std=False, ylim=Non
         shutil.rmtree(temp_folder)
 
     print("report saved at {}".format(pdf_path))
+
+
+def plot_expected_transit(time, epoch, period, duration, depth=None, color="gainsboro"):
+    tmax = time.max()
+    t_epoch = tmax - epoch
+    t0 = t_epoch % period
+    egress = tmax - t0 + duration / 2
+    ingress = tmax - t0 - duration / 2
+
+    plt.axvspan(ingress, egress, color=color, alpha=0.02, zorder=-1)
+    plt.axvline(ingress, color=color, alpha=0.3, zorder=-1, label="expected transit")
+    plt.axvline(egress, color=color, alpha=0.3, zorder=-1)
+
+    if depth is not None:
+        model = transit(time, epoch, duration, depth, period=period)
+        plt.plot(time, model, c="grey")
 
 
 class prose_FPDF(FPDF):

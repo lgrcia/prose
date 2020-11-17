@@ -1,3 +1,0 @@
-from prose._diagnostics.near_eclipsing_binary import NearEclipsingBinary
-from prose._diagnostics.centroid_diagnostic import CentroidDiagnostic
-from prose._diagnostics.show_stars import ShowStars

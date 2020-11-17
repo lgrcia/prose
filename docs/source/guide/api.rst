@@ -3,38 +3,40 @@
 API
 ===
 
-FitsManager
+Main objects
 ------------
-.. autoclass:: prose.FitsManager
-    :members:
 
-PhotProducts
---------------------
-.. autoclass:: prose.PhotProducts
-    :members:
+.. toctree::
+   :maxdepth: 1
 
-LightCurve
-----------
-.. autoclass:: prose.LightCurve
-    :members:
+   api/fitsmanager
+   api/observation
+   api/telescope
 
-LightCurves
+Pipeline tools
+--------------
+
+.. toctree::
+   :maxdepth: 1
+
+   api/blocks
+   api/aperturephotometry
+   api/reduction
+
+
+Diagnostics
 -----------
-.. autoclass:: prose.LightCurves
-    :members:
 
-Telescope
------------
-.. autoclass:: prose.Telescope
-    :members:
+.. toctree::
+   :maxdepth: 1
 
-AperturePhotometry
------------
-.. autoclass:: prose.AperturePhotometry
-    :members:
+   api/neb
 
-Reduction
------------
-.. autoclass:: prose.Reduction
-    :members:
 
+Others
+------
+
+.. toctree::
+   :maxdepth: 1
+
+   api/converters

@@ -8,10 +8,16 @@ from prose import config
 
 CONFIG = config.ConfigManager()
 
-from prose.io import FitsManager
-from prose.lightcurves import LightCurve, LightCurves
-from prose.telescope import Telescope
-from prose._blocks.base import Block, Unit, Image
-from prose._blocks.units import Reduction, AperturePhotometry
-from prose.photproducts import PhotProducts
+
 import prose.visualisation as viz
+
+from prose.io import FitsManager
+from prose.fluxes import Fluxes, LightCurves
+from prose.telescope import Telescope
+from prose.blocks.base import Block, Unit, Image
+from prose.blocks.units import Reduction, AperturePhotometry
+from prose.observation import Observation
+
+
+def load(photfile):
+    return Observation(photfile)

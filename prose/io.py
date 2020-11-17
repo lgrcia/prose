@@ -12,7 +12,7 @@ from prose.telescope import Telescope
 import glob
 from prose import CONFIG
 import warnings
-from prose.lightcurves import LightCurves
+from prose.fluxes import LightCurves
 from astropy.nddata import Cutout2D
 from astropy.wcs import WCS
 import shutil
@@ -445,7 +445,7 @@ class FitsManager:
         self,
         telescope=None,
         date=None,
-        im_filter=None,
+        filter=None,
         target=None,
         calibration=True,
         check_telescope=True,
@@ -460,7 +460,7 @@ class FitsManager:
             telescope name, by default None for all
         date : str, optional
             date as %Ym%%d, by default None for all
-        im_filter : str, optional
+        filter : str, optional
             filter name, by default None for all
         target : str, optional
             target name, by default None for all
@@ -484,7 +484,7 @@ class FitsManager:
             self.get(
                 return_conditions=True,
                 telescope=telescope,
-                filter=im_filter,
+                filter=filter,
                 target=target,
                 date=date,
             )
@@ -499,7 +499,6 @@ class FitsManager:
 
         obs_telescope = np.unique(self.files_df["telescope"])[0]
         obs_dimensions = np.unique(self.files_df["dimensions"])[0]
-
         self._set_telescope(obs_telescope)
 
         if calibration:
@@ -528,6 +527,7 @@ class FitsManager:
                 "flat",
                 obs_dimensions,
                 obs_telescope,
+                filter=filter,
                 days_limit=calibration_date_limit,
             )
 
@@ -535,7 +535,7 @@ class FitsManager:
             self._sort_by_date()
 
     def _find_closest_calibration(
-        self, observation_date, im_type, obs_dimensions, telescope=None, days_limit=0
+        self, observation_date, im_type, obs_dimensions, telescope=None, filter=None, days_limit=0
     ):
         """
 
@@ -570,12 +570,18 @@ class FitsManager:
                 telescope.lower() + "*"
             )
 
+        # Check filter
+        if filter is not None:
+            condition = condition & (
+                original_df["filter"].str.lower().str.contains(filter.lower() + "*")
+            )
+
         condition_checker = bool(len(original_df.loc[condition]))
 
         if not condition_checker:
             raise ValueError(
-                "No '{}' calibration from {} could be retrieved. Common error when calibration "
-                "files do not provide telescope information".format(im_type, telescope)
+                f"No '{im_type}' calibration from {telescope} could be retrieved. Common error when calibration "
+                "files do not provide telescope information"
             )
 
         # Check dimensions
@@ -583,11 +589,7 @@ class FitsManager:
         condition_checker = bool(len(original_df.loc[condition]))
 
         if not condition_checker:
-            raise ValueError(
-                "Could not find calibration images of {} pixels for {}".format(
-                    obs_dimensions, telescope
-                )
-            )
+            raise ValueError(f"Could not find calibration images of {obs_dimensions} pixels for {telescope}")
 
         calibration = original_df.loc[condition]
 
@@ -849,7 +851,7 @@ class FitsManager:
         self.keep(
             telescope=obs["telescope"],
             date=obs["date"],
-            im_filter=obs["filter"],
+            filter=obs["filter"],
             target=obs["target"],
             check_telescope=check_calib_telescope,
             calibration=calibration,

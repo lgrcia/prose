@@ -12,7 +12,6 @@
 
 box-shadow: 0 1px 2px rgba(60,64,67, 0.3), 0 1px 3px 1px rgba(60,64,67, 0.15); */
 
-
 /* @import '../alabaster.css';
 
 div.admonition {
@@ -49,7 +48,6 @@ tt.descname, tt.descclassname, code.descname, code.descclassname {
 } */
 
 @import 'theme.css';
-
 .method {
     margin-bottom: 25px;
 }
@@ -74,11 +72,11 @@ div.highlight pre {
     font-size: 0.85em;
 }
 
-.contents.local li p:first-child{
+.contents.local li p:first-child {
     margin-bottom: 0px
 }
 
-.contents.local li ul{
+.contents.local li ul {
     margin: 0 0 0 30px;
 }
 
@@ -107,4 +105,45 @@ div.topic {
 .wy-nav-top {
     background-image: url("prose_bkg.png");
     background-size: cover;
+}
+
+div.nbinput.container div.prompt, div.nboutput.container div.prompt {
+    display: none;
+}
+
+div.nboutput.container div.output_area.stderr {
+    background: none !important;
+}
+
+div.nbinput.container div.input_area pre {
+    padding: 12px 12px !important;
+}
+
+.xr-wrap {
+    font-size: 13px
+}
+
+.xr-dim-list li {
+    margin-left: 5px !important;
+}
+
+.xr-attrs dd, 
+.xr-attrs dt {
+    margin: 0px 3px !important;
+    padding: 0px !important;
+}
+
+.xr-attrs dt {
+    background: inherit !important;
+    color: inherit !important;
+    border-top: inherit !important;
+}
+
+/* frf */
+div.nboutput.container div.output_area > div {
+    text-align: left !important;
+}
+
+div.nboutput.container div.output_area {
+    text-align: center !important;
 }

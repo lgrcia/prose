@@ -133,6 +133,21 @@ def fast_binning(x, y, bins, error=None, std=False):
 
     return binned_x[~nans], binned_y[~nans], binned_error[~nans]
 
+@numba.jit(fastmath=True, parallel=False, nopython=True)
+def index_binning(x, bins):
+    bins = np.arange(np.min(x), np.max(x), bins)
+    d = np.digitize(x, bins)
+    N = np.max(d) + 2
+    indexes = []
+
+    for i in range(0, N):
+        s = np.where(d == i)
+        if len(s[0]) > 0:
+            s = s[0]
+            indexes.append(s)
+
+    return indexes
+
 
 @numba.jit(fastmath=True, parallel=False, nopython=True)
 def fast_points_binning(x, y, n):
@@ -148,6 +163,7 @@ def fast_points_binning(x, y, n):
         binned_time[i] = x[digitized == i].mean()
 
     return binned_time, binned_mean, binned_std
+
 def z_scale(data, c=0.05):
     if type(data) == str:
         data = fits.getdata(data)
@@ -178,3 +194,17 @@ def divisors(n) :
 
 def fold(t, t0, p):
     return (t - t0 + 0.5 * p) % p - 0.5 * p
+
+def header_to_cdf4_dict(header):
+
+    header_dict = {}
+
+    for key, value in header.items():
+        if isinstance(value, str):
+            header_dict[key] = value
+        elif isinstance(value, (float, np.ndarray, np.number)):
+            header_dict[key] = float(value)
+        elif isinstance(value, (int, bool)):
+            header_dict[key] = int(value)
+
+    return header_dict
