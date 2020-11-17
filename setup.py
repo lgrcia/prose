@@ -34,7 +34,8 @@ setup(
         "fpdf",
         "tensorflow",
         "sep",
-        "numba"
+        "numba",
+        "jupytex"
     ],
     zip_safe=True,
     classifiers=[
