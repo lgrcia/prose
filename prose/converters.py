@@ -184,6 +184,18 @@ def trapphot_to_prose(folder, destination=None):
 
 
 def old_to_new(folder_path, destination=None, keyword_observatory="OBSERVAT"):
+    """Convert an old data products folder (contianing *.phots and *_stack.fits) into .phot
+
+    Parameters
+    ----------
+    folder_path : str
+        path of old data products folder
+    destination : str, optional
+        path of converted file (must contain extension .phot), by default None and a {folder_path}.phot is created
+    keyword_observatory : str, optional
+        fits header where telescope name can be found, by default "OBSERVAT"
+    """
+    
     # READING FITS
     # ============
     if not path.isdir(folder_path):

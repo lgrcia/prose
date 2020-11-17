@@ -31,3 +31,12 @@ Diagnostics
    :maxdepth: 1
 
    api/neb
+
+
+Others
+------
+
+.. toctree::
+   :maxdepth: 1
+
+   api/converters
