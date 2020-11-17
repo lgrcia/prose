@@ -36,7 +36,8 @@ setup(
         "xarray",
         "numba",
         "netcdf4",
-        "jupytext"
+        "jupytext",
+        "nbsphinx"
     ],
     zip_safe=True,
     classifiers=[
