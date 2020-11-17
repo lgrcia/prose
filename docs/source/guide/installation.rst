@@ -50,3 +50,21 @@ Then to locally install |prose|
 
     cd prose_env
     python3.6 -m pip install -e ../prose
+
+
+Upgrading
+=========
+
+- In |prose| source code folder:
+
+.. code-block:: sh
+
+    git pull
+
+- In your **activated** virtualenv:
+
+.. code-block:: sh 
+
+    pip install --upgrade -e ../prose
+
+And |prose| should be up-to-date with the main branch
