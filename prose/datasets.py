@@ -52,7 +52,7 @@ def generate_prose_reduction_dataset(destination, n_images=80, moving=None):
     # y *= 4e-3
     # y += 1
 
-    x = np.linspace(0, 1 / 24, n_images)
+    x = np.linspace(0, 1 / 24, n_images) + 2459000
     y = np.random.normal(1, 1.5e-3, size=len(x)) + np.sin(x * 2 * np.pi * 24 / 0.5) * 6e-3
 
     p = np.poly1d([0.3, 0.6, 0.8], r=True)
@@ -102,7 +102,6 @@ def generate_prose_reduction_dataset(destination, n_images=80, moving=None):
 
         all_stars_coords[:, moving_star, 0] = x_pos
         all_stars_coords[:, moving_star, 1] = y_pos
-
 
     for i, (peaks, stars_coords) in enumerate(zip(all_peaks, all_stars_coords)):
         im = create_image(peaks, stars_coords, n)

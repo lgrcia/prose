@@ -158,3 +158,4 @@ class ConfigManager:
         )[0]
         if len(has_telescope) > 0:
             return self.telescopes_dict()[available_telescopes_names[has_telescope[0]]]
+

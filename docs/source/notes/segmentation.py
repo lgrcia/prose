@@ -4,7 +4,7 @@ from astropy.io import fits
 from photutils import DAOStarFinder
 from astropy.stats import sigma_clipped_stats
 from prose.pipeline_methods.alignment import clean_stars_positions
-from prose import PhotProducts
+from prose import Observation
 import matplotlib.pyplot as plt
 from prose import utils
 from astropy.io import fits

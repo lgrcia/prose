@@ -1,11 +1,17 @@
-from prose import Block
+from prose.blocks.base import Block
 import numpy as np
 import matplotlib.pyplot as plt
-import tensorflow as tf
-from tensorflow.keras import datasets, layers, models
+
+try:
+    import tensorflow as tf
+    from tensorflow.keras import datasets, layers, models
+
+except ModuleNotFoundError:
+    raise ModuleNotFoundError("prose.neural requires tensorflow (pip install tensorflow)")
+
 from photutils.centroids import centroid_com, centroid_epsf, centroid_2dg
 import time
-from prose._blocks.psf import cutouts
+from prose.blocks.psf import cutouts
 from os import path
 
 

@@ -16,8 +16,9 @@ docutils
 tabulate
 sphinx_rtd_theme
 imageio
-george
+xarray
 fpdf
-tensorflow>2.0
+numba
 ipython
 sep
+netcdf4

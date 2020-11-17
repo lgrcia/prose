@@ -1,10 +1,11 @@
 import numpy as np
-import george
 from scipy import interpolate
+
 try:
     import celerite
-except:
-    pass
+except ModuleNotFoundError:
+    ModuleNotFoundError("prose.simulations requires celerite (pip install celerite)")
+
 from datetime import datetime
 import uuid
 from prose import LightCurve, LightCurves

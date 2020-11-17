@@ -1,18 +1,21 @@
 import os
-from os import path
-from prose import io
-import numpy as np
 import re
 import datetime
 import pandas as pd
-from astropy.io import fits
-from astropy.table import Table
-from prose import telescope
-from prose import CONFIG, FitsManager
 import shutil
+from prose import io, Telescope, FitsManager
+from os import path
+from astropy.io import fits
+from prose import utils
+from astropy.table import Table
+import numpy as np
+from astropy.time import Time
+import xarray as xr
+
 
 def get_phot_stack(folder, phot_extension, stack_extension="stack.fits"):
     return io.get_files(phot_extension, folder), io.get_files(stack_extension, folder)
+
 
 def trapphot_to_prose(folder, destination=None):
 
@@ -21,14 +24,11 @@ def trapphot_to_prose(folder, destination=None):
             0
         ].split()[-1]
 
-
     def string_date2datetime(string):
         try:
             return datetime.datetime.strptime(string, "%Y-%m-%dT%H:%M:%S.%f")
         except ValueError:
             return datetime.datetime.strptime(string, "%Y-%m-%dT%H:%M:%S")
-
-
 
     def read_tp_photfile(photfile, ape=None, opt_filter=None, n_stars=None, box=[40, 2000]):
         with open(photfile, "r") as phot:
@@ -181,3 +181,144 @@ def trapphot_to_prose(folder, destination=None):
     print("Conversion done to {}".format(new_folder))
 
     # TODO: if comp and target add diff lightcurve processing
+
+
+def old_to_new(folder_path, destination=None, keyword_observatory="OBSERVAT"):
+    """Convert an old data products folder (contianing *.phots and *_stack.fits) into .phot
+
+    Parameters
+    ----------
+    folder_path : str
+        path of old data products folder
+    destination : str, optional
+        path of converted file (must contain extension .phot), by default None and a {folder_path}.phot is created
+    keyword_observatory : str, optional
+        fits header where telescope name can be found, by default "OBSERVAT"
+    """
+    
+    # READING FITS
+    # ============
+    if not path.isdir(folder_path):
+        raise FileNotFoundError("Folder does not exist")
+
+    # Loading unique phot file
+    phot_files = io.get_files(".phot*", folder_path, single_list_removal=False)
+
+    if len(phot_files) == 0:
+        raise ValueError("Cannot find a phot file in this folder, should contain one")
+    else:
+        phot_file = phot_files[0]
+
+    # Loading unique stack file
+    stack_fits = io.get_files("_stack.f*ts", folder_path, single_list_removal=False)
+
+    if len(stack_fits) > 1:
+        raise ValueError("Several stack files present in folder, should contain one")
+    elif len(stack_fits) == 1:
+        stack_fits = stack_fits[0]
+    else:
+        stack_fits = None
+
+    phot_dict = io.phot2dict(phot_file)
+
+    header = phot_dict["header"]
+    n_images = phot_dict.get("nimages", None)
+
+    # Loading telescope, None if name doesn't match any
+    telescope_name = header.get(keyword_observatory, None)
+    telescope = Telescope.from_name(telescope_name)
+
+    # Loading data
+    data = Table(phot_dict.get("time series")).to_pandas()
+
+    # Loading time and exposure (load data first to create self.data)
+    time = Table(phot_dict.get("time series", None))
+    if "jd" in time:
+        time = time["jd"]
+    else:
+        time = phot_dict.get("jd")
+
+    assert time is not None, "time cannot be found in this phots"
+
+    # Loading fluxes and sort by flux if specified
+    raw_fluxes = phot_dict.get("photometry", None)
+    raw_errors = phot_dict.get("photometry errors", None)
+
+    # Loading stars, target, apertures
+    stars = phot_dict.get("stars", None)
+    apertures_area = phot_dict.get("apertures area", None)
+    annulus_area = phot_dict.get("annulus area", None)
+    annulus_sky = phot_dict.get("annulus sky", None)
+    target_id = header.get("targetid", None)
+
+    # Loading light curves
+    fluxes = phot_dict.get("lightcurves", None)
+    errors = phot_dict.get("lightcurves errors", None)
+    comparison_stars = phot_dict.get("comparison stars", None)
+    artificial_lcs = phot_dict.get("artificial lcs", None)
+
+    # WRITING XARRAY
+    # ==============
+
+    header["REDDATE"] = Time.now().to_value("fits")
+
+    dims = ("apertures", "star", "time")
+
+    attrs = header if isinstance(header, dict) else {}
+    attrs.update(dict(
+        target=-1,
+        aperture=-1,
+        telescope=telescope.name,
+        filter=header[telescope.keyword_filter],
+        exptime=header[telescope.keyword_exposure_time],
+        name=header[telescope.keyword_object],
+        date=str(utils.format_iso_date(header[telescope.keyword_observation_date])).replace("-", ""),
+    ))
+
+    x = xr.Dataset({
+        "fluxes" if fluxes is None else "raw_fluxes": xr.DataArray(raw_fluxes, dims=dims),
+        "errors" if errors is None else "raw_error": xr.DataArray(raw_errors, dims=dims)
+    }, attrs=attrs)
+
+    for key in [
+        "sky",
+        "fwhm",
+        "fwhmx",
+        "fwhmy",
+        "psf_angle",
+        "dx",
+        "dy",
+        "airmass",
+        telescope.keyword_exposure_time,
+        telescope.keyword_julian_date,
+        telescope.keyword_seeing,
+        telescope.keyword_ra,
+        telescope.keyword_dec,
+    ]:
+        if key in data:
+            x[key.lower()] = ('time', data[key].values)
+
+    for value, key in [
+        (apertures_area, "apertures_area"),
+        (annulus_area, "annulus_area")
+    ]:
+        if value is not None:
+            if len(value.shape) == 2:
+                x[key.lower()] = (('time', 'apertures'), value)
+            elif len(value.shape) == 1:
+                x[key.lower()] = ('time', value)
+            else:
+                raise AssertionError("")
+
+    if stack_fits is not None:
+        x = x.assign_coords(stack=(('w', 'h'), fits.getdata(stack_fits)))
+
+    x.attrs.update(utils.header_to_cdf4_dict(header))
+
+    x = x.assign_coords(time=time)
+    x = x.assign_coords(stars=(('star', 'n'), stars))
+
+    if destination is None:
+        destination = f"{folder_path}.phot"
+
+    x.to_netcdf(destination)
