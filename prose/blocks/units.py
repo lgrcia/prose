@@ -157,11 +157,11 @@ class AperturePhotometry:
     fwhm_scale : bool, optional
         wheater to multiply ``apertures``, ``r_in`` and ``r_out`` by the global fwhm, by default True
     sigclip : float, optional
-        Sigma clipping factor used in the annulus, by default 3. No effect if ``SEAperturePhotometry`` is used
+        Sigma clipping factor used in the annulus, by default 3. No effect if :class:`~prose.blocks.SEAperturePhotometry` is used
     psf : Block, optional
-        PSF modeling Block (mainly used to estimate fwhm and scale aperture if ``fwhm_scale`` is ``True``), by default blocks.Gaussian2D
+        PSF modeling Block (mainly used to estimate fwhm and scale aperture if ``fwhm_scale`` is ``True``), by default :class:`~prose.blocks.Gaussian2D`
     photometry : Block, optional
-        aperture photometry Block, by default blocks.PhotutilsAperturePhotometry
+        aperture photometry Block, by default :class:`~prose.blocks.PhotutilsAperturePhotometry`
     centroid : Block, optional
         centroid computing Block, by default None to keep centroid fixed
     """
