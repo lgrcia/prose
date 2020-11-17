@@ -141,7 +141,7 @@ class AperturePhotometry:
     fits_manager : prose.FitsManager
          FitsManager of the observation. Should contain a single obs. One of ``fits_manager`` or ``files`` and ``stack` should  be provided
     files : list of str, optional
-        List of files to process. One of ``fits_manager`` or ``files`` and ``stack` should  be provided
+        List of files to process. One of ``fits_manager`` or ``files`` and ``stack`` should  be provided
     stack: str, optional
         Path of the stack image. Should be specified if ``files`` is specified.
     overwrite : bool, optional
@@ -155,13 +155,15 @@ class AperturePhotometry:
     r_out : int, optional
         Radius of the outer annulus to be used in pixels, by default 8
     fwhm_scale : bool, optional
-        wheater to multiply `apertures`, `r_in` and `r_out` by the global fwhm, by default True
+        wheater to multiply ``apertures``, ``r_in`` and ``r_out`` by the global fwhm, by default True
     sigclip : float, optional
-        Sigma clipping factor used in the annulus, by default 3. No effect if `method="sextrcator"`
-    method : str, optional
-        Method to bue used ("photutils" or "sextractor"), by default "photutils"
-    centroid : prose.Block, optional
-        Centroid block to be used, by default None
+        Sigma clipping factor used in the annulus, by default 3. No effect if ``SEAperturePhotometry`` is used
+    psf : Block, optional
+        PSF modeling Block (mainly used to estimate fwhm and scale aperture if ``fwhm_scale`` is ``True``), by default blocks.Gaussian2D
+    photometry : Block, optional
+        aperture photometry Block, by default blocks.PhotutilsAperturePhotometry
+    centroid : Block, optional
+        centroid computing Block, by default None to keep centroid fixed
     """
 
     def __init__(self,
@@ -178,7 +180,7 @@ class AperturePhotometry:
                  psf=blocks.Gaussian2D,
                  photometry=blocks.PhotutilsAperturePhotometry,
                  centroid=None):
-
+                 
         if apertures is None:
             apertures = np.arange(0.1, 10, 0.25)
 
