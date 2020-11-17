@@ -294,9 +294,10 @@ class Observation(Fluxes):
         if n is not None:
             if view == "reference":
                 raise AssertionError("'n_stars' kwargs is incompatible with 'reference' view that will display all stars")
-            stars = self.stars[0:n]
         else:
-            stars = self.stars
+            n = len(self.stars)
+
+        stars = self.stars[0:n]
 
         if view is None:
             view = "reference" if 'comps' in self else "all"
