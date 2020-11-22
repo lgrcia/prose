@@ -1123,7 +1123,7 @@ class prose_FPDF(FPDF):
         self.set_xy(-26, -15)
         self.set_font("helvetica", size=6, style="UIB")
         self.cell(w=0, txt="prose", ln=1,
-                  align='L', fill=False, link="https://github.com/LionelGarcia/prose", border=0)
+                  align='L', fill=False, link="https://github.com/lgrcia/prose", border=0)
         self.set_xy(-20, -15)
         self.set_font("helvetica", size=6)
         self.cell(w=0, txt=" · page {}".format(self.page_no()), ln=1,

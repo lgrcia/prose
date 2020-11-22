@@ -23,7 +23,7 @@ Then to locally install |prose|
 
 .. code-block:: sh
 
-    git clone https://github.com/LionelGarcia/prose.git
+    git clone https://github.com/lgrcia/prose.git
 
     cd prose_env
     python3.6 -m pip install -e ../prose
@@ -46,7 +46,7 @@ Then to locally install |prose|
 
 .. code-block:: sh
 
-    git clone https://github.com/LionelGarcia/prose.git
+    git clone https://github.com/lgrcia/prose.git
 
     cd prose_env
     python3.6 -m pip install -e ../prose

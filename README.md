@@ -35,7 +35,7 @@ source prose_env/bin/activate.bin
 Then to locally install prose
 
 ```shell
-git clone https://github.com/LionelGarcia/prose.git
+git clone https://github.com/lgrcia/prose.git
 
 cd prose_env
 python3.6 -m pip install -e ../prose
