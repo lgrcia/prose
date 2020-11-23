@@ -20,6 +20,11 @@ import os
 import shutil
 from astropy.stats import sigma_clip
 
+from astropy.io.fits.verify import VerifyWarning
+import warnings
+
+warnings.simplefilter('ignore', category=VerifyWarning)
+
 
 # TODO: add n_stars to show_stars
 
@@ -58,7 +63,7 @@ class Observation(Fluxes):
         # # Convenience
         # self.bjd_tdb = None
         # self.gaia_data = None
-        self.wcs = WCS(self.xarray.attrs)
+        self.wcs = WCS(self.xarray.attrs, )
         # self.hdu = None
 
     def _check_stack(self):
@@ -74,15 +79,13 @@ class Observation(Fluxes):
     def copy(self):
         return self.__copy__()
 
-    def save_mcmc_file(self, destination):
-
-        assert self.lcs is not None, "Lightcurve is missing"
+    def to_csv(self, destination, sep=" "):
 
         df = pd.DataFrame(
             {
                 "BJD-TDB": self.time,
-                "DIFF_FLUX": self.lc.flux,
-                "ERROR": self.lc.error,
+                "DIFF_FLUX": self.flux,
+                "ERROR": self.error,
                 "dx_MOVE": self.dx,
                 "dy_MOVE": self.dy,
                 "FWHM": self.fwhm,
@@ -95,7 +98,7 @@ class Observation(Fluxes):
         )
 
         df.to_csv(
-            "{}/MCMC_{}.txt".format(destination, self.products_denominator), sep=" ", index=False
+            "{}/MCMC_{}.txt".format(destination, self.products_denominator), sep=sep, index=False
         )
 
     def save(self, destination=None):
@@ -156,13 +159,22 @@ class Observation(Fluxes):
     # Methods
     # -------
 
-    def _compute_bjd(self):
+    def compute_bjd(self):
         assert self.telescope is not None
         assert self.skycoord is not None
-        time = Time(self._time, format="jd", scale="utc", location=self.telescope.earth_location)
-        light_travel_tbd = time.light_travel_time(self.skycoord, location=self.telescope.earth_location)
-        self.bjd_tdb = (time + light_travel_tbd).value
-        self.data["bjd tdb"] = self.bjd_tdb
+
+        # For now we say it is JD but in future Telescope may include time format
+        if "time_format" not in self.xarray.attrs:
+            self.xarray.attrs["time_format"] = "jd"
+
+        if "bjd" in self.xarray.time_format:
+            pass
+        else:
+            time = Time(self.time, format="jd", scale="utc", location=self.telescope.earth_location)
+            light_travel_tbd = time.light_travel_time(self.skycoord, location=self.telescope.earth_location)
+            self.xarray = self.xarray.assign_coords(jd=("time", self.time))
+            self.xarray = self.xarray.assign_coords(time=(time + light_travel_tbd).value)
+            self.xarray.attrs["time_format"] = "bjd"
 
         # Catalog queries
         # ---------------

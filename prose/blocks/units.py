@@ -9,20 +9,6 @@ import time
 
 
 class Reduction:
-    """
-    Reduction unit producing a reduced FITS folder
-
-    Parameters
-    ----------
-    fits_manager: prose.FitsManager
-        Fits manager of the observation. Should contain a single obs
-
-    destination: destination (
-    reference
-    overwrite
-    n_images
-    calibration
-    """
     """A reduction unit producing a reduced FITS folder
 
     Parameters
@@ -39,6 +25,8 @@ class Reduction:
         number of images to process, by default None for all images
     calibration : bool, optional
         weather to perform calibration, by default True (if False images are still trimmed)
+    ignore_telescope: bool, optional
+        whether to load a default telescope if telescope not recognised, by default False
     """
 
     def __init__(
@@ -47,7 +35,8 @@ class Reduction:
             destination=None,
             reference=1 / 2,
             overwrite=False,
-            calibration=True):
+            calibration=True,
+            ignore_telescope=False):
 
         self.fits_manager = fits_manager
         self.destination = destination
@@ -58,6 +47,10 @@ class Reduction:
         self.stack_path = None
         self.gif_path = None
         self.prepare()
+
+        if not ignore_telescope:
+            assert self.fits_manager.telescope.name != "Unknown", \
+                "Telescope has not been recognised, to load a default one set ignore_telescope=True (kwargs)"
 
         # set reference file
         reference_id = int(reference * len(self.files))
@@ -105,13 +98,12 @@ class Reduction:
         -------
 
         """
-        # if len(self.fits_manager._observations) == 1:
-        #     self.fits_manager.set_observation(
-        #         0,
-        #         check_calib_telescope=self.calibration,
-        #         calibration=self.calibration,
-        #         calibration_date_limit=0
-        #     )
+
+        if len(self.fits_manager._observations) == 1:
+            self.fits_manager.set_observation(0, check_calib_telescope=False, calibration=True, calibration_date_limit=100000)
+        else:
+            self.fits_manager.describe("obs")
+            raise AssertionError("Multiple observations found")
 
         if self.destination is None:
             self.destination = path.join(path.dirname(self.fits_manager.folder),
@@ -164,6 +156,8 @@ class AperturePhotometry:
         aperture photometry Block, by default :class:`~prose.blocks.PhotutilsAperturePhotometry`
     centroid : Block, optional
         centroid computing Block, by default None to keep centroid fixed
+    ignore_telescope: bool, optional
+        whether to load a default telescope if telescope not recognised, by default False
     """
 
     def __init__(self,
@@ -179,7 +173,8 @@ class AperturePhotometry:
                  sigclip=3.,
                  psf=blocks.Gaussian2D,
                  photometry=blocks.PhotutilsAperturePhotometry,
-                 centroid=None):
+                 centroid=None,
+                 ignore_telescope=False):
                  
         if apertures is None:
             apertures = np.arange(0.1, 10, 0.25)
@@ -198,6 +193,10 @@ class AperturePhotometry:
         self.files = None
         self.telescope = None
         self.prepare(fits_manager=fits_manager, files=files, stack=stack)
+
+        if not ignore_telescope:
+            assert self.fits_manager.telescope.name != "Unknown", \
+                "Telescope has not been recognised, to load a default one set ignore_telescope=True (kwargs)"
 
         # Blocks
         assert centroid is None or issubclass(centroid, Block), "centroid must be a subclass of Block"
