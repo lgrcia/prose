@@ -192,9 +192,15 @@ def broeg2005(
     best_art_error = (ordered_errors[:, 0:keep, :] ** 2 * ordered_weights[:, 0:keep, None] ** 2).sum(
         1) / ordered_weights[:, 0:keep].sum(1)[:, None]
 
-    lcs = fluxes / best_art_lc[:, None]
-    lcs /= np.median(lcs, 2)[:, :, None]
-    lcs_errors = np.sqrt(errors ** 2 + best_art_error[:, None, :] ** 2)
+    lcs = np.zeros(np.shape(original_fluxes))
+    lcs_errors = np.zeros(np.shape(original_fluxes))
+
+    for a in range(n_apertures):
+        for s, cs in enumerate(clean_stars):
+            lcs[a, cs, :] = fluxes[a, s] / best_art_lc[a, :]
+            lcs_errors[a, cs, :] = np.sqrt(
+                errors[a, s] ** 2 + best_art_error[a, :] ** 2
+            )
 
     # Return
     # ------------------------------
