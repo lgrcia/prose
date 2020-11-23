@@ -6,7 +6,7 @@ setup(
     author="Lionel J. Garcia",
     description="Reduction and analysis of FITS telescope observations",
     py_modules=["prose"],
-    url="https://github.com/LionelGarcia/prose",
+    url="https://github.com/lgrcia/prose",
     # entry_points="""
     #     [console_scripts]
     #     prose=main:cli
