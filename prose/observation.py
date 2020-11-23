@@ -44,7 +44,7 @@ class Observation(Fluxes):
 
         self.gaia_data = None
         self.tic_data = None
-        self.wcs = WCS(self.xarray.attrs, )
+        self.wcs = WCS(self.xarray.attrs)
 
         if "bjd_tdb" not in self:
             try:
@@ -115,10 +115,6 @@ class Observation(Fluxes):
     # -----------
 
     @property
-    def products_denominator(self):
-        return f"{self.telescope.file_name}_{self.date}_{self.name}_{self.filter}"
-
-    @property
     def skycoord(self):
         """astropy SkyCoord object for the target
         """
@@ -141,6 +137,10 @@ class Observation(Fluxes):
         return f"http://simbad.u-strasbg.fr/simbad/sim-coo?Coord={self.RA}+{self.DEC}&CooFrame=FK5&CooEpoch=2000&CooEqui=" \
                "2000&CooDefinedFrames=none&Radius=2&Radius.unit=arcmin&submit=submit+query&CoordList="
 
+    @property
+    def denominator(self):
+        return f"{self.telecope}_{self.date}_{self.name}_{self.filter}"
+        
     # Methods
     # -------
 
