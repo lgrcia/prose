@@ -11,6 +11,7 @@ setup(
     #     [console_scripts]
     #     prose=main:cli
     # """,
+    
     install_requires=[
         "numpy",
         "scipy",
