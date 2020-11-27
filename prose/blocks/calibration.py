@@ -122,4 +122,4 @@ class Trim(Block):
         dimension = shape - 2 * np.array(self.telescope.trimming[::-1])
         trim_image = Cutout2D(image.data, center, dimension, wcs=image.wcs)
         image.data = trim_image.data
-        image.wcs = trim_image.wcs
+        image.header.update(trim_image.wcs.to_header())

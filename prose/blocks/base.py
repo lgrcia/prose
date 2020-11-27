@@ -114,10 +114,13 @@ class Image:
             self.header = header if header is not None else {}
             self.path = None
 
-        self.wcs = WCS(self.header)
         self.discarded = False
 
         self.__dict__.update(kwargs)
+
+    @property
+    def wcs(self):
+        return WCS(self.header)
 
     def get_other_data(self, image):
         for key, value in image.__dict__.items():

@@ -37,7 +37,6 @@ class Align(Alignment):
                     )
         image.data = aligned_image.data
         image.stars_coords += shift
-        image.wcs = aligned_image.wcs
 
     def citations(self, image):
         return "astropy", "numpy"
