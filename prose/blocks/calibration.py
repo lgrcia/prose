@@ -41,6 +41,7 @@ class Calibration(Block):
             hdu = fits.open(fits_path)
             primary_hdu = hdu[0]
             image, header = primary_hdu.data, primary_hdu.header
+            image = image.astype("float64")
             hdu.close()
             if image_type == "dark":
                 _dark = (image - self.master_bias) / header[kw_exp_time]
