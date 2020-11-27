@@ -1,15 +1,10 @@
-import math
 import numpy as np
-from tqdm import tqdm
-from os import path
-from astropy.io import fits
-from astropy.stats import sigma_clip
-from . import io, utils
+from . import utils
 import matplotlib.pyplot as plt
 from . import visualisation as viz
 from scipy.optimize import curve_fit
 import xarray as xr
-from astropy.stats import sigma_clipped_stats, sigma_clip
+from astropy.stats import sigma_clip
 
 # TODO: check if working properly with a single aperture/lc
 # TODO: a rms reject method and a sigma clip method in LightCurves
@@ -20,7 +15,6 @@ def differential_photometry(fluxes, errors, comps, return_alc=False):
     np.seterr(divide="ignore")  # Ignore divide by 0 warnings here
 
     comps = np.array(comps)
-    original_fluxes = fluxes.copy()
 
     # Normalization
     # ==============
@@ -54,7 +48,7 @@ def pont2006(x, y, n=30, plot=True, return_error=False):
     _nu = [np.var(b) for b in binned]
     (sw, sr), pcov = curve_fit(nu, ns, _nu)
     if plot:
-        plt.plot(ns, np.std(y) / np.sqrt(ns), ":k", label="$\sigma / \sqrt{n}$")
+        plt.plot(ns, np.std(y) / np.sqrt(ns), ":k", label=r"$\sigma / \sqrt{n}$")
         plt.plot(ns, np.sqrt(nu(ns, sw, sr)), "k", label="fit")
         plt.plot(ns, np.sqrt(_nu), "d", markerfacecolor="w", markeredgecolor="k")
         plt.xlabel("n points")
@@ -65,6 +59,7 @@ def pont2006(x, y, n=30, plot=True, return_error=False):
     else:
         return sw, sr
 
+
 def broeg2005(
     fluxes,
     errors,
@@ -72,8 +67,7 @@ def broeg2005(
     keep="float",
     max_iteration=50,
     tolerance=1e-8,
-    n_comps=500,
-    return_alc=False
+    n_comps=500
 ):
 
     np.seterr(divide="ignore")  # Ignore divide by 0 warnings here
@@ -109,16 +103,18 @@ def broeg2005(
 
     i = 0
     evolution = 1e25
+    lcs = None
+    weights = None
+    last_weights = np.zeros((n_apertures, n_stars))
     # record = []
 
     # Broeg 2004 algorithm to find weights of comp stars
     # --------------------------------------------------
     while evolution > tolerance and i < max_iteration:
         if i == 0:
-            last_weights = np.zeros((n_apertures, n_stars))
             weights = 1 / np.mean(errors ** 2, axis=2)
         else:
-            # This metric is prefered from std to optimize over white noise and not red noise
+            # This metric is preferred from std to optimize over white noise and not red noise
             std = utils.std_diff_metric(lcs)
             weights = 1 / std
 
@@ -144,20 +140,20 @@ def broeg2005(
     # --------------------------------------------------
     if isinstance(keep, str):
 
-        metric = []
-        krange = np.arange(1, np.min([np.shape(fluxes)[1], n_comps]))
+        k_range = np.arange(1, np.min([np.shape(fluxes)[1], n_comps]))
 
         weighted_fluxes = fluxes * weights[:, :, None]
         ordered_weighted_fluxes = np.array([weighted_fluxes[a, ordered_stars[a], :] for a in range(n_apertures)])
-        ordered_summed_weighted_fluxes = np.array([ordered_weighted_fluxes[:, 0:k, :].sum(1) for k in krange])
-        ordered_summed_weights = np.array([weights[:, 0:k].sum(1) for k in krange])
+        ordered_summed_weighted_fluxes = np.array([ordered_weighted_fluxes[:, 0:k, :].sum(1) for k in k_range])
+        ordered_summed_weights = np.array([weights[:, 0:k].sum(1) for k in k_range])
 
         metric = 1e18
         last_metric = np.inf
         i = 0
+        _keep = None
 
         while metric < last_metric:
-            _keep = krange[i]
+            _keep = k_range[i]
             last_metric = metric
             _art_lc = ordered_summed_weighted_fluxes[i] / ordered_summed_weights[i][:, None]
             _lcs = fluxes / _art_lc[:, None, :]
@@ -180,14 +176,15 @@ def broeg2005(
     elif keep == "int":
         # Using a simple mean
         ordered_weights = np.ones((n_apertures, _keep))
+    else:
+        raise AssertionError(f"Unknown issue: keep has value {keep}")
 
     keep = int(_keep)
 
     ordered_fluxes = np.array([fluxes[a, ordered_stars[a], :] for a in range(n_apertures)])
     ordered_errors = np.array([errors[a, ordered_stars[a], :] for a in range(n_apertures)])
 
-    best_art_lc = (ordered_fluxes[:, 0:keep, :] * ordered_weights[:, 0:keep, None]).sum(1) / ordered_weights[:,
-                                                                                             0:keep].sum(1)[:, None]
+    best_art_lc = (ordered_fluxes[:, 0:keep, :] * ordered_weights[:, 0:keep, None]).sum(1) / ordered_weights[:, 0:keep].sum(1)[:, None]
     best_art_error = (ordered_errors[:, 0:keep, :] ** 2 * ordered_weights[:, 0:keep, None] ** 2).sum(
         1) / ordered_weights[:, 0:keep].sum(1)[:, None]
 
@@ -397,8 +394,7 @@ class Fluxes:
     def broeg2005(self, keep='float', keep_raw=True):
         new_self = self.copy()
         self._reset_raw(new_self)
-        diff_fluxes, diff_errors, info = broeg2005(new_self.fluxes, new_self.errors, self.target, keep=keep,
-                                                   return_alc=True)
+        diff_fluxes, diff_errors, info = broeg2005(new_self.fluxes, new_self.errors, self.target, keep=keep)
         dims = self.xarray.fluxes.dims
 
         if keep_raw:
@@ -453,20 +449,20 @@ class LightCurves:
             ]
         self.apertures = None
         self.best_aperture_id = None
-        
+
     def __getitem__(self, key):
         return self._lightcurves[key]
 
     def __len__(self):
         return len(self._lightcurves)
-    
+
     def __iter__(self):
         return iter(self._lightcurves)
 
     @property
     def time(self):
         return np.hstack(self.times)
-    
+
     @property
     def flux(self):
         return np.hstack(self.fluxes)
@@ -489,7 +485,7 @@ class LightCurves:
     @property
     def error(self):
         return np.hstack(self.errors)
-    
+
     @property
     def times(self):
         return [lc.time for lc in self._lightcurves]
@@ -515,7 +511,7 @@ class LightCurves:
             for lc in self._lightcurves:
                 lc.best_aperture_id = i
             self.best_aperture_id = i
-    
+
     def from_ndarray(self, fluxes, errors):
         pass
 
