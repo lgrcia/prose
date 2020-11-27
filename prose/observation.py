@@ -1,21 +1,21 @@
-from prose import io, Image
+from . import io, Image
 import matplotlib.pyplot as plt
 import numpy as np
 from os import path
 from astropy.time import Time
 from astropy import units as u
 from astropy.coordinates import SkyCoord, Distance
-from prose.fluxes import Fluxes
+from .fluxes import Fluxes
 import warnings
-from prose import visualisation as viz
+from . import visualisation as viz
 from astropy.io import fits
-from prose.telescope import Telescope
-from prose import utils, CONFIG
+from .telescope import Telescope
+from . import utils, CONFIG
 from astropy.table import Table
 from astropy.wcs import WCS, utils as wcsutils
 import pandas as pd
 from scipy.stats import binned_statistic
-from prose.blocks.psf import Gaussian2D, Moffat2D
+from .blocks.psf import Gaussian2D, Moffat2D
 import os
 import shutil
 from astropy.stats import sigma_clip
@@ -223,6 +223,11 @@ class Observation(Fluxes):
             dec=self.tic_data['dec'], unit="deg")
 
         self.tic_data["x"], self.tic_data["y"] = np.array(wcsutils.skycoord_to_pixel(skycoords, self.wcs))
+
+        w, h = self.stack.shape
+        if np.abs(np.mean(self.tic_data["x"])) > w or np.abs(np.mean(self.tic_data["y"])) > h:
+            warnings.warn("Catalog stars seem out of the field. Check that your stack is solved and that telescope "
+                          "'ra_unit' and 'dec_unit' are well set")
 
     # Plot
     # ----
