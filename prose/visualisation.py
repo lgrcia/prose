@@ -486,8 +486,6 @@ def show_stars(image, stars=None, highlight=None, size=15, options={}, flip=None
 
         plt.tight_layout()
 
-    return fig
-
 
 class AnchoredHScaleBar(matplotlib.offsetbox.AnchoredOffsetbox):
     """ size: length of bar in data units
@@ -1140,3 +1138,36 @@ def rename_tab(name):
     """
     from IPython.display import display, Javascript
     return Javascript('document.title="{}"'.format(name))
+
+
+# Debugging helpers
+
+from astroquery.mast import Catalogs
+import astropy.units as u
+import numpy as np
+from astropy.wcs import WCS, utils as wcsutils
+from prose.telescope import Telescope
+from astropy.coordinates import SkyCoord
+
+
+def _show_tics(data, header=None, telescope_kw="TELESCOP", r=12*u.arcminute):
+    if header is None:
+        header = fits.getheader(data)
+        data = fits.getdata(data)
+
+    telescope = Telescope.from_name(header[telescope_kw])
+    ra = header["RA"]
+    dec = header["DEC"]
+    skycoord = SkyCoord(ra, dec, frame='icrs', unit=(telescope.ra_unit, telescope.dec_unit))
+
+    coord = skycoord
+    tic_data = Catalogs.query_region(coord, r, "TIC", verbose=False)
+    tic_data.sort("Jmag")
+
+    skycoords = SkyCoord(
+        ra=tic_data['ra'],
+        dec=tic_data['dec'], unit="deg")
+
+    x, y = np.array(wcsutils.skycoord_to_pixel(skycoords, WCS(header)))
+    _ = show_stars(data, contrast=0.5)
+    plot_marks(x, y)
