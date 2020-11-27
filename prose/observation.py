@@ -1,4 +1,4 @@
-time formatfrom . import Image
+from . import Image
 import matplotlib.pyplot as plt
 import numpy as np
 from os import path
