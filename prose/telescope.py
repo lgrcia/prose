@@ -95,7 +95,7 @@ class Telescope:
 
     @property
     def earth_location(self):
-        return EarthLocation(*self.latlong, self.altitude)
+        return EarthLocation(self.latlong[1], self.latlong[0], self.altitude)
 
     def error(self, signal, area, sky, exposure, airmass=None, scinfac=0.09):
         _signal = signal.copy() 
