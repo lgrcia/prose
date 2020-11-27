@@ -47,7 +47,7 @@ def stability_aperture(fluxes):
 
 
 def binning(x, y, bins, error=None, std=False, mean_method=np.mean,
-            mean_error_method=lambda l: np.sqrt(np.sum(np.power(l, 2))) / len(l)):
+            mean_error_method=lambda x: np.sqrt(np.sum(np.power(x, 2))) / len(x)):
 
     bins = np.arange(np.min(x), np.max(x), bins)
     d = np.digitize(x, bins)
@@ -105,17 +105,17 @@ def fast_binning(x, y, bins, error=None, std=False):
     bins = np.arange(np.min(x), np.max(x), bins)
     d = np.digitize(x, bins)
 
-    N = np.max(d) + 2
+    n = np.max(d) + 2
 
-    binned_x = np.empty(N)
-    binned_y = np.empty(N)
-    binned_error = np.empty(N)
+    binned_x = np.empty(n)
+    binned_y = np.empty(n)
+    binned_error = np.empty(n)
 
     binned_x[:] = -np.pi
     binned_y[:] = -np.pi
     binned_error[:] = -np.pi
 
-    for i in range(0, N):
+    for i in range(0, n):
         s = np.where(d == i)
         if len(s[0]) > 0:
             s = s[0]
@@ -133,14 +133,15 @@ def fast_binning(x, y, bins, error=None, std=False):
 
     return binned_x[~nans], binned_y[~nans], binned_error[~nans]
 
+
 @numba.jit(fastmath=True, parallel=False, nopython=True)
 def index_binning(x, bins):
     bins = np.arange(np.min(x), np.max(x), bins)
     d = np.digitize(x, bins)
-    N = np.max(d) + 2
+    n = np.max(d) + 2
     indexes = []
 
-    for i in range(0, N):
+    for i in range(0, n):
         s = np.where(d == i)
         if len(s[0]) > 0:
             s = s[0]
@@ -151,12 +152,12 @@ def index_binning(x, bins):
 
 @numba.jit(fastmath=True, parallel=False, nopython=True)
 def fast_points_binning(x, y, n):
-    N = int(len(x) / n)
-    bins = np.linspace(x.min(), x.max(), N)
+    n = int(len(x) / n)
+    bins = np.linspace(x.min(), x.max(), n)
     digitized = np.digitize(x, bins)
-    binned_mean = np.zeros(N)
-    binned_std = np.zeros(N)
-    binned_time = np.zeros(N)
+    binned_mean = np.zeros(n)
+    binned_std = np.zeros(n)
+    binned_time = np.zeros(n)
     for i in range(1, len(bins)):
         binned_mean[i] = y[digitized == i].mean()
         binned_std[i] = y[digitized == i].std()
@@ -164,11 +165,13 @@ def fast_points_binning(x, y, n):
 
     return binned_time, binned_mean, binned_std
 
+
 def z_scale(data, c=0.05):
     if type(data) == str:
         data = fits.getdata(data)
     interval = ZScaleInterval(contrast=c)
     return interval(data.copy())
+
 
 def rescale(y):
     ry = y - np.mean(y)
@@ -183,17 +186,20 @@ def check_class(_class, base, default):
     else:
         raise TypeError("ubclass of {} expected".format(base.__name__))
 
-def divisors(n) : 
-    divisors = []
+
+def divisors(n):
+    _divisors = []
     i = 1
-    while i <= n : 
-        if (n % i==0) : 
-            divisors.append(i) 
+    while i <= n:
+        if n % i == 0:
+            _divisors.append(i)
         i = i + 1
-    return np.array(divisors)
+    return np.array(_divisors)
+
 
 def fold(t, t0, p):
     return (t - t0 + 0.5 * p) % p - 0.5 * p
+
 
 def header_to_cdf4_dict(header):
 
@@ -201,10 +207,13 @@ def header_to_cdf4_dict(header):
 
     for key, value in header.items():
         if isinstance(value, str):
-            header_dict[key] = value
+            if len(key) > 0 and len(value) > 0:
+                header_dict[key] = value
         elif isinstance(value, (float, np.ndarray, np.number)):
             header_dict[key] = float(value)
         elif isinstance(value, (int, bool)):
             header_dict[key] = int(value)
+        else:
+            pass
 
     return header_dict
