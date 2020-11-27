@@ -4,10 +4,9 @@ from tqdm import tqdm
 from os import path
 from astropy.io import fits
 from astropy.stats import sigma_clip
-from prose import io
-from prose import utils
+from . import io, utils
 import matplotlib.pyplot as plt
-from prose import visualisation as viz
+from . import visualisation as viz
 from scipy.optimize import curve_fit
 import xarray as xr
 from astropy.stats import sigma_clipped_stats, sigma_clip

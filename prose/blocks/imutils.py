@@ -1,17 +1,16 @@
-from prose.blocks.base import Block
+from .base import Block
 from astropy.io import fits
 import numpy as np
 from astropy.time import Time
 from os import path
 import imageio
-import prose.visualisation as viz
+from .. import visualisation as viz
 from astropy.table import Table
 import pandas as pd
-from prose import utils
+from .. import utils, io
 from astropy.stats import SigmaClip
 from photutils import Background2D, MedianBackground
-from prose import io
-from prose.blocks.psf import cutouts
+from .psf import cutouts
 
 
 class Stack(Block):

@@ -2,8 +2,8 @@ from skimage.measure import label, regionprops
 import numpy as np
 from photutils import DAOStarFinder
 from astropy.stats import sigma_clipped_stats
-from prose.blocks.registration import clean_stars_positions
-from prose.blocks.base import Block
+from .registration import clean_stars_positions
+from .base import Block
 try:
     from sep import extract
 except:

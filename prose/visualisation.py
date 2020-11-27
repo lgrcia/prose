@@ -1,8 +1,8 @@
 import matplotlib
 import matplotlib.pyplot as plt
-from prose.utils import binning
+from .utils import binning
 import numpy as np
-from prose import utils
+from . import utils
 import matplotlib.offsetbox
 from matplotlib.lines import Line2D
 from matplotlib import patches
@@ -20,7 +20,7 @@ from fpdf import FPDF
 import shutil
 from astropy.time import Time
 import matplotlib.patches as mpatches
-from prose.models import transit
+from .models import transit
 
 
 def plot_lc(

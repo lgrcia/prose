@@ -6,8 +6,8 @@ from astropy.table import Table
 from astropy.nddata import NDData
 from photutils.psf import extract_stars
 from astropy.stats import gaussian_sigma_to_fwhm
-from prose.blocks.base import Block
-from prose.console_utils import INFO_LABEL
+from .base import Block
+from ..console_utils import INFO_LABEL
 import matplotlib.pyplot as plt
 
 

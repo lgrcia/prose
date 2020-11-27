@@ -1,8 +1,8 @@
 import numpy as np
-from prose.blocks.base import Block
+from .base import Block
 from astropy.time import Time
 import xarray as xr
-from prose import utils
+from .. import utils
 
 
 class SavePhot(Block):

@@ -4,19 +4,19 @@ import warnings
 from astropy.wcs import FITSFixedWarning
 warnings.simplefilter("ignore", FITSFixedWarning)
 
-from prose import config
+from . import config
 
 CONFIG = config.ConfigManager()
 
 
 import prose.visualisation as viz
 
-from prose.io import FitsManager
-from prose.fluxes import Fluxes, LightCurves
-from prose.telescope import Telescope
-from prose.blocks.base import Block, Unit, Image
-from prose.blocks.units import Reduction, AperturePhotometry
-from prose.observation import Observation
+from .io import FitsManager
+from .fluxes import Fluxes, LightCurves
+from .telescope import Telescope
+from .blocks.base import Block, Unit, Image
+from .blocks.units import Reduction, AperturePhotometry
+from .observation import Observation
 
 
 def load(photfile):

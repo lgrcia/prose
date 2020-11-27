@@ -1,12 +1,14 @@
-from prose.blocks.registration import XYShift, AstroAlignShift
-from prose.blocks.alignment import Align
-from prose.blocks.detection import SegmentedPeaks, DAOFindStars, SEDetection
-from prose.blocks.calibration import Calibration, Trim
-from prose.blocks.psf import Gaussian2D, Moffat2D
-from prose.blocks.base import Unit, Block
-from prose.blocks.photometry import PhotutilsAperturePhotometry, SEAperturePhotometry, PSFPhotometry
-from prose.blocks.imutils import *
-from prose.blocks.io import SavePhot
+from .registration import XYShift, AstroAlignShift
+from .alignment import Align
+from .detection import SegmentedPeaks, DAOFindStars, SEDetection
+from .calibration import Calibration, Trim
+from .psf import Gaussian2D, Moffat2D
+from .base import Unit, Block
+from .photometry import PhotutilsAperturePhotometry, SEAperturePhotometry, PSFPhotometry
+from .imutils import *
+from .io import SavePhot
+
+
 
 # import prose
 # from prose import Block

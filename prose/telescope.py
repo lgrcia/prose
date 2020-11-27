@@ -2,7 +2,7 @@ from os import path
 from astropy.coordinates import EarthLocation
 import yaml
 import numpy as np
-from prose import CONFIG
+from . import CONFIG
 import astropy.units as u
 from warnings import warn
 

@@ -1,9 +1,9 @@
-from prose import Unit, blocks, io, Block, Telescope
-from prose.blocks import io as bio
+from .. import Unit, blocks, io, Block, Telescope
+from . import io as bio
 import os
 from os import path
 from astropy.io import fits
-from prose.console_utils import INFO_LABEL
+from ..console_utils import INFO_LABEL
 import numpy as np
 import time
 

@@ -7,12 +7,12 @@ import numpy as np
 from tabulate import tabulate
 from collections import OrderedDict
 from tqdm import tqdm
-from prose import utils
-from prose.telescope import Telescope
+from . import utils
+from .telescope import Telescope
 import glob
 from prose import CONFIG
 import warnings
-from prose.fluxes import LightCurves
+from .fluxes import LightCurves
 from astropy.nddata import Cutout2D
 from astropy.wcs import WCS
 import shutil

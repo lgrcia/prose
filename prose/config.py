@@ -5,7 +5,7 @@ import yaml
 from yaml import Loader
 import numpy as np
 import shutil
-from prose.builtins import built_in_telescopes
+from .builtins import built_in_telescopes
 import glob
 
 package_name = "prose"

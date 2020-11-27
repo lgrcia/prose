@@ -1,9 +1,9 @@
 import numpy as np
-from prose.blocks.base import Block
+from .base import Block
 from astropy.io import fits
-from prose import utils, io
+from .. import utils, io
 import matplotlib.pyplot as plt
-import prose.visualisation as viz
+from .. import visualisation as viz
 from astropy.nddata import Cutout2D
 
 

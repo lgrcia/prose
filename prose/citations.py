@@ -1,4 +1,4 @@
-from prose import Block, Unit
+from . import Block, Unit
 
 
 def get_citations(*args):

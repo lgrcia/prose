@@ -4,7 +4,7 @@ import struct
 import platform
 import subprocess
 from colorama import Fore
-from prose import CONFIG
+from . import CONFIG
 
 style = {
         "spinner_color": {

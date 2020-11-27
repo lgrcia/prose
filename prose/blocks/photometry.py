@@ -8,11 +8,11 @@ from photutils.background import MMMBackground
 from astropy.stats import gaussian_sigma_to_fwhm
 from astropy.modeling.fitting import LevMarLSQFitter
 from photutils import CircularAperture, CircularAnnulus
-from prose import io, FitsManager
+from .. import io, FitsManager
 from photutils.psf import IntegratedGaussianPRF, DAOGroup, BasicPSFPhotometry
-from prose.console_utils import TQDM_BAR_FORMAT, INFO_LABEL
-from prose.blocks.psf import Gaussian2D
-from prose.blocks.base import Block
+from ..console_utils import TQDM_BAR_FORMAT, INFO_LABEL
+from .psf import Gaussian2D
+from .base import Block
 try:
     import sep
 except:

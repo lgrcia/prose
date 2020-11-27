@@ -6,7 +6,7 @@ import shutil
 from prose import io, Telescope, FitsManager
 from os import path
 from astropy.io import fits
-from prose import utils
+from . import utils
 from astropy.table import Table
 import numpy as np
 from astropy.time import Time
