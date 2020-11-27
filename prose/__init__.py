@@ -1,5 +1,3 @@
-__version__ = "0.0.1"
-
 import warnings
 from astropy.wcs import FITSFixedWarning
 warnings.simplefilter("ignore", FITSFixedWarning)
