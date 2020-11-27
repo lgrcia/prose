@@ -1,32 +1,29 @@
-from . import io, Image
+time formatfrom . import Image
 import matplotlib.pyplot as plt
 import numpy as np
 from os import path
 from astropy.time import Time
 from astropy import units as u
-from astropy.coordinates import SkyCoord, Distance
+from astropy.coordinates import SkyCoord
 from .fluxes import Fluxes
-import warnings
 from . import visualisation as viz
 from astropy.io import fits
 from .telescope import Telescope
-from . import utils, CONFIG
-from astropy.table import Table
+from . import utils
 from astropy.wcs import WCS, utils as wcsutils
 import pandas as pd
 from scipy.stats import binned_statistic
-from .blocks.psf import Gaussian2D, Moffat2D
+from .blocks.psf import Gaussian2D
 import os
 import shutil
 from astropy.stats import sigma_clip
+from .console_utils import INFO_LABEL
 
 from astropy.io.fits.verify import VerifyWarning
 import warnings
 
 warnings.simplefilter('ignore', category=VerifyWarning)
 
-
-# TODO: add n_stars to show_stars
 
 class Observation(Fluxes):
     """
@@ -42,29 +39,19 @@ class Observation(Fluxes):
     def __init__(self, photfile):
         super().__init__(photfile)
 
-        # Observation info
-        # self.observation_date = None
-        # self.n_images = None
-        # self.filter = None
-        # self.exposure = None
-        # self.data = {}  # dict
-        # self.all_data = {}
-
         self.phot = photfile
         self.telescope = Telescope.from_name(self.telescope)
 
         self.gaia_data = None
         self.tic_data = None
-        # self.stars = None  # in pixels
-        # self.target = {"id": None,
-        #                "name": None,
-        #                "radec": [None, None]} # ra dec are loaded as written in stack FITS header
-        #
-        # # Convenience
-        # self.bjd_tdb = None
-        # self.gaia_data = None
         self.wcs = WCS(self.xarray.attrs, )
-        # self.hdu = None
+
+        if self.telescope.keyword_bjd.lower() not in self:
+            try:
+                self.compute_bjd()
+                print(f"{INFO_LABEL} Time converted to BJD TDB")
+            except:
+                print(f"{INFO_LABEL} Could not convert time to BJD TDB")
 
     def _check_stack(self):
         assert 'stack' in self.xarray is not None, "No stack found"
@@ -160,20 +147,30 @@ class Observation(Fluxes):
     # -------
 
     def compute_bjd(self):
+        """Compute BJD_tdb based on current time
+
+        Once this is done self.time is BJD tdb and time format can be checked in self.time_format
+        """
         assert self.telescope is not None
         assert self.skycoord is not None
 
-        # For now we say it is JD but in future Telescope may include time format
+        bjd_kw = self.telescope.keyword_bjd.lower()
+        jd_kw = self.telescope.keyword_jd.lower()
+
+        # For backward compatibility
+        # --------------------------
         if "time_format" not in self.xarray.attrs:
             self.xarray.attrs["time_format"] = "jd"
+            self.xarray[jd_kw] = ("time", self.time)
+        # -------------------------
 
-        if "bjd" in self.xarray.time_format:
+        if bjd_kw in self.xarray.time_format:
             pass
         else:
-            time = Time(self.time, format="jd", scale="utc", location=self.telescope.earth_location)
+            time = Time(self.xarray[jd_kw], format="jd", scale="utc", location=self.telescope.earth_location)
             light_travel_tbd = time.light_travel_time(self.skycoord, location=self.telescope.earth_location)
-            self.xarray = self.xarray.assign_coords(jd=("time", self.time))
             self.xarray = self.xarray.assign_coords(time=(time + light_travel_tbd).value)
+            self.xarray[bjd_kw] = ("time", (time + light_travel_tbd).value)
             self.xarray.attrs["time_format"] = "bjd"
 
         # Catalog queries
@@ -203,6 +200,11 @@ class Observation(Fluxes):
             obstime=Time(2015.0, format='decimalyear'))
 
         self.gaia_data["x"], self.gaia_data["y"] = np.array(wcsutils.skycoord_to_pixel(skycoords, self.wcs))
+
+        w, h = self.stack.shape
+        if np.abs(np.mean(self.gaia_data["x"])) > w or np.abs(np.mean(self.gaia_data["y"])) > h:
+            warnings.warn("Catalog stars seem out of the field. Check that your stack is solved and that telescope "
+                          "'ra_unit' and 'dec_unit' are well set")
 
     def query_tic(self):
         """Query TIC catalog (through MAST) for stars in the field
@@ -340,8 +342,8 @@ class Observation(Fluxes):
             others = np.setdiff1d(np.arange(len(stars)), x.comps.values)
             others = np.setdiff1d(others, self.target)
 
-            viz.plot_marks(*stars[self.target], self.target, color=color)
-            viz.plot_marks(*stars[comps].T, comps, color=comp_color)
+            _ = viz.plot_marks(*stars[self.target], self.target, color=color)
+            _ = viz.plot_marks(*stars[comps].T, comps, color=comp_color)
             _ = viz.plot_marks(*stars[others].T, alpha=0.4, color=color)
 
     def show_gaia(self, color="lightblue", alpha=1, n=None, idxs=True):

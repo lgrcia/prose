@@ -288,7 +288,7 @@ class FitsManager:
                         _date.strftime("%Y%m%d"), _type, _telescope, _target, _filter,
                     )
                     _dimensions = "{}x{}".format(header["NAXIS1"], header["NAXIS2"])
-                    _jd = header.get(_temporary_telescope.keyword_julian_date, "")
+                    _jd = header.get(_temporary_telescope.keyword_jd, "")
 
                     paths.append(_path)
                     dates.append(_date)

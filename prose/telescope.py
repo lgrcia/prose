@@ -39,7 +39,8 @@ class Telescope:
         self.keyword_dec = "DEC"
         self.ra_unit = "deg"
         self.dec_unit = "deg"
-        self.keyword_julian_date = "JD"
+        self.keyword_jd = "JD"
+        self.keyword_bjd = "BJD"
         self.keyword_flip = "PIERSIDE"
 
         # Specs

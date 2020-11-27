@@ -290,7 +290,7 @@ def old_to_new(folder_path, destination=None, keyword_observatory="OBSERVAT"):
         "dy",
         "airmass",
         telescope.keyword_exposure_time,
-        telescope.keyword_julian_date,
+        telescope.keyword_jd,
         telescope.keyword_seeing,
         telescope.keyword_ra,
         telescope.keyword_dec,

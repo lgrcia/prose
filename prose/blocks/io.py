@@ -65,7 +65,8 @@ class SavePhot(Block):
             "dy",
             "airmass",
             self.telescope.keyword_exposure_time,
-            self.telescope.keyword_julian_date,
+            self.telescope.keyword_jd,
+            self.telescope.keyword_bjd,
             self.telescope.keyword_seeing,
             self.telescope.keyword_ra,
             self.telescope.keyword_dec,
@@ -99,7 +100,17 @@ class SavePhot(Block):
 
         x.attrs.update(utils.header_to_cdf4_dict(self.header))
 
-        x = x.assign_coords(time=x.jd)
+        jd_kw = self.telescope.keyword_jd.lower()
+        bjd_kw = self.telescope.keyword_bjd.lower()
+
+        # Dealing with time
+        if bjd_kw in x:
+            x = x.assign_coords(time=x.variables[bjd_kw])
+            x.attrs["time_format"] = "bjd"
+        else:
+            x = x.assign_coords(time=x.variables[jd_kw])
+            x.attrs["time_format"] = "jd"
+
         x = x.assign_coords(stars=(('star', 'n'), stars))
         x.to_netcdf(self.destination)
 
