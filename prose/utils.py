@@ -31,7 +31,7 @@ def format_iso_date(date, night_date=True):
         date = Time(date, format="datetime").datetime
 
     if night_date:
-        return (date - timedelta(hours=12)).date()
+        return (date - timedelta(hours=15)).date()  # If obs goes up to 15pm it still belongs to day before
     else:
         return date
 

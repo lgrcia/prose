@@ -18,7 +18,7 @@ import os
 import shutil
 from astropy.stats import sigma_clip
 from .console_utils import INFO_LABEL
-
+from astropy.stats import sigma_clipped_stats
 from astropy.io.fits.verify import VerifyWarning
 import warnings
 
@@ -46,7 +46,7 @@ class Observation(Fluxes):
         self.tic_data = None
         self.wcs = WCS(self.xarray.attrs, )
 
-        if self.telescope.keyword_bjd.lower() not in self:
+        if "bjd_tdb" not in self:
             try:
                 self.compute_bjd()
                 print(f"{INFO_LABEL} Time converted to BJD TDB")
@@ -70,7 +70,7 @@ class Observation(Fluxes):
 
         df = pd.DataFrame(
             {
-                "BJD-TDB": self.time,
+                "BJD-TDB" if self.time_format == "bjd_tdb" else "JD-UTC": self.time,
                 "DIFF_FLUX": self.flux,
                 "ERROR": self.error,
                 "dx_MOVE": self.dx,
@@ -84,9 +84,7 @@ class Observation(Fluxes):
             }
         )
 
-        df.to_csv(
-            "{}/MCMC_{}.txt".format(destination, self.products_denominator), sep=sep, index=False
-        )
+        df.to_csv(destination, sep=sep, index=False)
 
     def save(self, destination=None):
         """Save current observation
@@ -118,7 +116,7 @@ class Observation(Fluxes):
 
     @property
     def products_denominator(self):
-        return f"{self.telecope}_{self.date}_{self.name}_{self.filter}"
+        return f"{self.telescope.file_name}_{self.date}_{self.name}_{self.filter}"
 
     @property
     def skycoord(self):
@@ -154,24 +152,25 @@ class Observation(Fluxes):
         assert self.telescope is not None
         assert self.skycoord is not None
 
-        bjd_kw = self.telescope.keyword_bjd.lower()
-        jd_kw = self.telescope.keyword_jd.lower()
+        exposure_kw = self.telescope.keyword_exposure_time.lower()
+
+        exposure_days = self.xarray.variables[exposure_kw].values/60/60/24
 
         # For backward compatibility
         # --------------------------
         if "time_format" not in self.xarray.attrs:
-            self.xarray.attrs["time_format"] = "jd"
-            self.xarray[jd_kw] = ("time", self.time)
+            self.xarray.attrs["time_format"] = "jd_utc"
+            self.xarray["jd_utc"] = ("time", self.time)
+        if "jd_utc" not in self:
+            self.xarray["jd_utc"] = ("time", self.jd)
+            self.xarray.drop("jd")
         # -------------------------
 
-        if bjd_kw in self.xarray.time_format:
-            pass
-        else:
-            time = Time(self.xarray[jd_kw], format="jd", scale="utc", location=self.telescope.earth_location)
-            light_travel_tbd = time.light_travel_time(self.skycoord, location=self.telescope.earth_location)
-            self.xarray = self.xarray.assign_coords(time=(time + light_travel_tbd).value)
-            self.xarray[bjd_kw] = ("time", (time + light_travel_tbd).value)
-            self.xarray.attrs["time_format"] = "bjd"
+        time = Time(self.jd_utc + exposure_days/2, format="jd", scale="utc", location=self.telescope.earth_location).tdb
+        light_travel_tbd = time.light_travel_time(self.skycoord, location=self.telescope.earth_location)
+        self.xarray = self.xarray.assign_coords(time=(time + light_travel_tbd).value)
+        self.xarray["bjd_tdb"] = ("time", (time + light_travel_tbd).value)
+        self.xarray.attrs["time_format"] = "bjd_tdb"
 
         # Catalog queries
         # ---------------
@@ -234,7 +233,7 @@ class Observation(Fluxes):
     # Plot
     # ----
 
-    def show(self, size=10, flip=False, zoom=False, contrast=0.05, wcs=False, cmap="Greys_r"):
+    def show(self, size=10, flip=False, zoom=False, contrast=0.05, wcs=False, cmap="Greys_r", sigclip=None):
         """Show stack image
 
         Parameters
@@ -257,17 +256,21 @@ class Observation(Fluxes):
 
         fig = plt.figure(figsize=(size, size))
 
+        image = self.stack.copy()
+
         if flip:
-            image = utils.z_scale(self.stack, c=contrast)[::-1, ::-1]
-        else:
-            image = utils.z_scale(self.stack, c=contrast)
+            image = image[::-1, ::-1]
+
+        if sigclip is not None:
+            mean, median, std = sigma_clipped_stats(image)
+            image[image - median < 2 * std] = median
 
         if wcs:
             ax = plt.subplot(projection=self.wcs, label='overlays')
         else:
             ax = fig.add_subplot(111)
 
-        _ = ax.imshow(image, cmap=cmap, origin="lower")
+        _ = ax.imshow(utils.z_scale(image), cmap=cmap, origin="lower")
         _ = plt.title("Stack image", loc="left")
 
         if wcs:

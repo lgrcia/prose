@@ -76,6 +76,15 @@ class SavePhot(Block):
                 for image in self.images:
                     _data.append(image.header[key])
 
+                if key == self.telescope.keyword_jd or key == self.telescope.keyword_jd:
+                    if key == self.telescope.keyword_jd:
+                        x["jd_utc"] = ('time', Time(_data, format="jd", scale=self.telescope.jd_scale,
+                                                    location=self.telescope.earth_location).utc)
+                        key = "jd_utc"
+                    elif key == self.telescope.keyword_bjd:
+                        x["bjd_tdb"] = Time(_data, format="jd", scale=self.telescope.jd_scale,
+                                            location=self.telescope.earth_location).tdb
+
                 x[key.lower()] = ('time', _data)
 
         for key in [
@@ -105,11 +114,11 @@ class SavePhot(Block):
 
         # Dealing with time
         if bjd_kw in x:
-            x = x.assign_coords(time=x.variables[bjd_kw])
-            x.attrs["time_format"] = "bjd"
+            x = x.assign_coords(time=x.bjd_tdb)
+            x.attrs["time_format"] = "bjd_tdb"
         else:
-            x = x.assign_coords(time=x.variables[jd_kw])
-            x.attrs["time_format"] = "jd"
+            x = x.assign_coords(time=x.jd_utc)
+            x.attrs["time_format"] = "jd_utc"
 
         x = x.assign_coords(stars=(('star', 'n'), stars))
         x.to_netcdf(self.destination)
