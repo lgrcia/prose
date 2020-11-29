@@ -56,11 +56,12 @@ class Reduction:
         reference_id = int(reference * len(self.files))
         self.reference_fits = self.files[reference_id]
 
+        self.reference_unit = None
         self.reduction_unit = None
 
     def run(self):
 
-        reference_unit = Unit([
+        self.reference_unit = Unit([
             blocks.Calibration(self.fits_manager.get("dark"), self.fits_manager.get("flat"), self.fits_manager.get("bias"),
                                name="calibration"),
             blocks.Trim(name="trimming"),
@@ -68,10 +69,10 @@ class Reduction:
             blocks.ImageBuffer(name="buffer")
         ], self.reference_fits, telescope=self.fits_manager.telescope, show_progress=False)
 
-        reference_unit.run()
+        self.reference_unit.run()
 
-        ref_image = reference_unit.buffer.image
-        calibration_block = reference_unit.calibration
+        ref_image = self.reference_unit.buffer.image
+        calibration_block = self.reference_unit.calibration
 
         self.reduction_unit = Unit([
             blocks.Pass() if not self.calibration else calibration_block,
@@ -123,6 +124,9 @@ class Reduction:
             os.mkdir(self.destination)
 
         self.files = self.fits_manager.images
+
+    def __repr__(self):
+        return f"{self.reference_unit}\n{self.reduction_unit}"
 
 
 class Photometry:
@@ -244,6 +248,9 @@ class Photometry:
             self.stack_path = stack
             self.files = files
             self.telescope = Telescope(self.stack_path)
+
+    def __repr__(self):
+        return f"{self.reference_detection_unit}\n{self.photometry_unit}"
 
 
 class AperturePhotometry(Photometry):
