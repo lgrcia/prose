@@ -3,10 +3,10 @@ from .alignment import Align
 from .detection import SegmentedPeaks, DAOFindStars, SEDetection
 from .calibration import Calibration, Trim
 from .psf import Gaussian2D, Moffat2D
-from .base import Unit, Blfrom .photometry import PhotutilsAperturePhotometry, SEAperturePhotometry, PhotutilsPSFPhotometry
+from .base import Unit, Block
+from .photometry import PhotutilsAperturePhotometry, SEAperturePhotometry, PhotutilsPSFPhotometry
 from .imutils import *
 from .io import SavePhot
-
 
 
 # import prose
