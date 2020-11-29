@@ -78,7 +78,7 @@ class PhotutilsAperturePhotometry(Block):
 
         super().__init__(**kwargs)
         if apertures is None:
-            self.apertures = np.arange(0.1, 10, 0.25)
+            self.apertures = np.arange(0.1, 8, 0.25)
         else:
             self.apertures = apertures
 
