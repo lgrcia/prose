@@ -5,6 +5,7 @@ from astropy.wcs import WCS
 from .. import visualisation as viz
 from collections import OrderedDict
 from tabulate import tabulate
+from time import time
 
 
 class Unit:
@@ -75,7 +76,7 @@ class Unit:
             for block in self.blocks:
                 # This allows to discard image in any blocks
                 if not image.discarded:
-                    block.run(image)
+                    block._run(image)
                 elif not discard_message:
                     discard_message = True
                     print(f"Warning: image {i} (...{file_path[-12::]}) discarded in {type(block).__name__}")
@@ -87,11 +88,10 @@ class Unit:
         return self
 
     def __str__(self):
-        rows = [[block.name, block.__class__.__name__] for block in self.blocks]
-        headers = ["name", "type"]
-        return "{} unit blocks summary:\n{}".format(self.__class__.__name__, tabulate(
-            rows, headers, tablefmt="fancy_grid"
-        ))
+        rows = [[block.name, block.__class__.__name__, f"{block.processing_time:.4f} s"] for block in self.blocks]
+        headers = ["name", "type", "processing"]
+
+        return tabulate(rows, headers, tablefmt="fancy_grid")
 
     def citations(self):
         citations = [block.citations() for block in self.blocks if block.citations() is not None]
@@ -134,6 +134,7 @@ class Block:
         self.name = name
         self.unit_data = None
         self.telescope = None
+        self.processing_time = 0
 
     def initialize(self, *args):
         pass
@@ -143,6 +144,11 @@ class Block:
 
     def set_telescope(self, telescope):
         self.telescope = telescope
+
+    def _run(self, *args, **kwargs):
+        t0 = time()
+        self.run(*args, **kwargs)
+        self.processing_time += time() - t0
 
     def run(self, image, **kwargs):
         raise NotImplementedError()
