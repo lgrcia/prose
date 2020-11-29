@@ -23,53 +23,19 @@ except:
 # TODO: difference imaging
 
 
-class BasePhotometry(Block):
+class PhotutilsPSFPhotometry(Block):
 
-    def __init__(self, **kwargs):
+    def __init__(self, fwhm, **kwargs):
         super().__init__(**kwargs)
 
-
-class PSFPhotometry(BasePhotometry):
-
-    def __init__(self, fits_explorer=None, fwhm=Gaussian2D, **kwargs):
-
-        super().__init__(**kwargs)
-        self.set_fits_explorer(fits_explorer)
-        self.fwhm_fit = Gaussian2D()
-
-    def set_fits_explorer(self, fits_explorer):
-        if isinstance(fits_explorer, FitsManager):
-            self.fits_explorer = fits_explorer
-            self.files = self.fits_explorer.get("reduced")
-
-    def run(self, stars_coords):
-        stack_path = self.fits_explorer.get("stack")[0]
-        stack_fwhm = np.mean(self.fwhm_fit.run(fits.getdata(stack_path), stars_coords)[0:2])
-
-        print("{} global psf FWHM: {:.2f} (pixels)".format(INFO_LABEL, np.mean(stack_fwhm)))
-
-        n_stars = np.shape(stars_coords)[0]
-        n_images = len(self.files)
-
-        fluxes = np.zeros((n_stars, n_images))
-
-        pos = Table(
-            names=["x_0", "y_0"], data=[stars_coords[:, 0], stars_coords[:, 1]]
-        )
-
-        daogroup = DAOGroup(2.0 * stack_fwhm * gaussian_sigma_to_fwhm)
-
+        daogroup = DAOGroup(2.0 * fwhm * gaussian_sigma_to_fwhm)
         mmm_bkg = MMMBackground()
-
-        psf_model = IntegratedGaussianPRF(sigma=stack_fwhm)
+        psf_model = IntegratedGaussianPRF(sigma=fwhm)
         psf_model.sigma.fixed = False
-
-        sky = []
-
         psf_model.x_0.fixed = True
         psf_model.y_0.fixed = True
 
-        photometry = BasicPSFPhotometry(
+        self.photometry = BasicPSFPhotometry(
             group_maker=daogroup,
             bkg_estimator=mmm_bkg,
             psf_model=psf_model,
@@ -77,24 +43,13 @@ class PSFPhotometry(BasePhotometry):
             fitshape=(17, 17)
         )
 
-        for i, image in enumerate(
-                tqdm(
-                    self.files[0::],
-                    desc="Photometry extraction",
-                    unit="files",
-                    ncols=80,
-                    bar_format=TQDM_BAR_FORMAT,
-                )
-        ):
-            image = fits.getdata(image)
-
-            result_tab = photometry(image=image, init_guesses=pos)
-
-            fluxes[:, i] = result_tab["flux_fit"]
-            sky.append(1)
-
-        return fluxes, np.ones_like(fluxes), {"sky": sky}
-
+    def run(self, image, **kwargs):
+        result_tab = self.photometry(
+            image=image.data,
+            init_guesses=Table(names=["x_0", "y_0"], data=[image.stars_coords[:, 0], image.stars_coords[:, 1]])
+        )
+        image.fluxes = result_tab["flux_fit"]
+        image.fluxes_errors = result_tab['flux_unc']
 
 
 class PhotutilsAperturePhotometry(Block):
@@ -129,7 +84,6 @@ class PhotutilsAperturePhotometry(Block):
 
         self.annulus_inner_radius = r_in
         self.annulus_outer_radius = r_out
-        self.fits_manager = None
 
         self.n_apertures = len(self.apertures)
         self.n_stars = None
@@ -233,7 +187,7 @@ with :math:`S_f` a scintillation factor, :math:`d` the aperture diameter (m), :m
 The positions of individual stars are taken from :code:`Image.stars_coords` so one of the detection block should be used, placed before this one."""
 
 
-class SEAperturePhotometry(BasePhotometry):
+class SEAperturePhotometry(Block):
     """
     Aperture photometry using :code:`sep`.
     For more details check https://sep.readthedocs.io

@@ -125,7 +125,128 @@ class Reduction:
         self.files = self.fits_manager.images
 
 
-class AperturePhotometry:
+class Photometry:
+    """Base unit for Photometry
+
+    Parameters
+    ----------
+    fits_manager : prose.FitsManager
+         FitsManager of the observation. Should contain a single obs. One of ``fits_manager`` or ``files`` and ``stack` should  be provided
+    files : list of str, optional
+        List of files to process. One of ``fits_manager`` or ``files`` and ``stack`` should  be provided
+    stack: str, optional
+        Path of the stack image. Should be specified if ``files`` is specified.
+    overwrite : bool, optional
+        whether to overwrite existing products, by default False
+    n_stars : int, optional
+        max number of stars to take into account, by default 500
+    ignore_telescope: bool, optional
+        whether to load a default telescope if telescope not recognised, by default False
+    """
+
+    def __init__(self,
+                 fits_manager=None,
+                 files=None,
+                 stack=None,
+                 overwrite=False,
+                 n_stars=500,
+                 psf=blocks.Gaussian2D,
+                 ignore_telescope=False):
+
+        self.fits_manager = fits_manager
+        self.overwrite = overwrite
+        self.n_stars = n_stars
+        self.reference_detection_unit = None
+        self.photometry_unit = None
+        self.destination = None
+
+        # preparing inputs and outputs
+        self.destination = None
+        self.stack_path = None
+        self.phot_path = None
+        self.files = None
+        self.telescope = None
+        self.prepare(fits_manager=fits_manager, files=files, stack=stack)
+
+        if not ignore_telescope:
+            assert self.fits_manager.telescope.name != "Unknown", \
+                "Telescope has not been recognised, to load a default one set ignore_telescope=True (kwargs)"
+
+        assert psf is None or issubclass(psf, Block), "psf must be a subclass of Block"
+        self.psf = psf
+
+    def run_reference_detection(self):
+        self.reference_detection_unit = Unit([
+            blocks.DAOFindStars(n_stars=self.n_stars, name="detection"),
+            self.psf(name="fwhm"),
+            blocks.ImageBuffer(name="buffer"),
+        ], self.stack_path, telescope=self.fits_manager.telescope, show_progress=False)
+
+        self.reference_detection_unit.run()
+        stack_image = self.reference_detection_unit.buffer.image
+        ref_stars = stack_image.stars_coords
+        fwhm = stack_image.fwhm
+
+        print("{} detected stars: {}".format(INFO_LABEL, len(ref_stars)))
+        print("{} global psf FWHM: {:.2f} (pixels)".format(INFO_LABEL, np.mean(fwhm)))
+
+        time.sleep(0.5)
+
+        return stack_image, ref_stars, fwhm
+
+    def run(self, destination=None):
+        if self.phot_path is None:
+            assert destination is not None, "You must provide a destination"
+        if destination is not None:
+            self.phot_path = destination.replace(".phot", "") + ".phot"
+
+        self._check_phot_path()
+
+        self.run_reference_detection()
+        self.photometry_unit.run()
+
+    def _check_phot_path(self):
+        if path.exists(self.phot_path) and not self.overwrite:
+            raise OSError("{} already exists".format(self.phot_path))
+
+    def prepare(self, fits_manager=None, files=None, stack=None):
+        """
+        Check that stack and observation is present and set ``self.phot_path``
+
+        """
+        if fits_manager is not None:
+            if isinstance(self.fits_manager, str):
+                self.fits_manager = io.FitsManager(self.fits_manager, image_kw="reduced", verbose=False)
+            elif isinstance(self.fits_manager, io.FitsManager):
+                if self.fits_manager.image_kw != "reduced":
+                    print(f"Warning: image keyword is '{self.fits_manager.image_kw}'")
+
+            self.destination = self.fits_manager.folder
+
+            if len(self.fits_manager._observations) == 1:
+                self.fits_manager.set_observation(0)
+            else:
+                self.fits_manager.describe("obs")
+
+            self.phot_path = path.join(
+                self.destination, "{}.phot".format(self.fits_manager.products_denominator))
+
+            self.files = self.fits_manager.images
+            self.stack_path = self.fits_manager.stack
+
+            self.telescope = self.fits_manager.telescope
+
+            self._check_phot_path()
+
+        elif files is not None:
+            assert stack is not None, "'stack' should be specified is 'files' is specified"
+
+            self.stack_path = stack
+            self.files = files
+            self.telescope = Telescope(self.stack_path)
+
+
+class AperturePhotometry(Photometry):
     """Aperture Photometry unit
 
     Parameters
@@ -179,31 +300,19 @@ class AperturePhotometry:
         if apertures is None:
             apertures = np.arange(0.1, 10, 0.25)
 
-        self.fits_manager = fits_manager
-        self.overwrite = overwrite
-        self.n_stars = n_stars
-        self.reference_detection_unit = None
-        self.photometry_unit = None
-        self.destination = None
-
-        # preparing inputs and outputs
-        self.destination = None
-        self.stack_path = None
-        self.phot_path = None
-        self.files = None
-        self.telescope = None
-        self.prepare(fits_manager=fits_manager, files=files, stack=stack)
-
-        if not ignore_telescope:
-            assert self.fits_manager.telescope.name != "Unknown", \
-                "Telescope has not been recognised, to load a default one set ignore_telescope=True (kwargs)"
+        super().__init__(
+            fits_manager=fits_manager,
+            files=files,
+            stack=stack,
+            overwrite=overwrite,
+            n_stars=n_stars,
+            psf=psf,
+            ignore_telescope= ignore_telescope
+        )
 
         # Blocks
         assert centroid is None or issubclass(centroid, Block), "centroid must be a subclass of Block"
         self.centroid = centroid
-        # ==
-        assert psf is None or issubclass(psf, Block), "psf must be a subclass of Block"
-        self.psf = psf
         # ==
         assert photometry is None or issubclass(photometry, Block), "photometry must be a subclass of Block"
         self.photometry = photometry(
@@ -216,81 +325,74 @@ class AperturePhotometry:
         )
 
     def run_reference_detection(self):
-        self.reference_detection_unit = Unit([
-            blocks.DAOFindStars(n_stars=self.n_stars, name="detection"),
-            self.psf(name="fwhm"),
-            blocks.ImageBuffer(name="buffer"),
-        ], self.stack_path, telescope=self.fits_manager.telescope, show_progress=False)
-
-        self.reference_detection_unit.run()
-        stack_image = self.reference_detection_unit.buffer.image
-        ref_stars = stack_image.stars_coords
-        fwhm = stack_image.fwhm
-
-        print("{} detected stars: {}".format(INFO_LABEL, len(ref_stars)))
-        print("{} global psf FWHM: {:.2f} (pixels)".format(INFO_LABEL, np.mean(fwhm)))
-
-        time.sleep(0.5)
+        stack_image, ref_stars, fwhm = super().run_reference_detection()
 
         self.photometry_unit = Unit([
             blocks.Set(stars_coords=ref_stars, name="set stars"),
             blocks.Set(fwhm=fwhm, name="set fwhm"),
             blocks.Pass() if not isinstance(self.centroid, Block) else self.centroid,
             self.photometry,
+            bio.SavePhot(self.phot_path, header=stack_image.header, stack=stack_image.data, name="saving")
+        ], self.files, telescope=self.telescope, name="Photometry")
+
+
+class PSFPhotometry(Photometry):
+    """PSF Photometry unit (not tested, use not recommended)
+
+    Parameters
+    ----------
+    fits_manager : prose.FitsManager
+         FitsManager of the observation. Should contain a single obs. One of ``fits_manager`` or ``files`` and ``stack` should  be provided
+    files : list of str, optional
+        List of files to process. One of ``fits_manager`` or ``files`` and ``stack`` should  be provided
+    stack: str, optional
+        Path of the stack image. Should be specified if ``files`` is specified.
+    overwrite : bool, optional
+        whether to overwrite existing products, by default False
+    n_stars : int, optional
+        max number of stars to take into account, by default 500
+    psf : Block, optional
+        PSF modeling Block (mainly used to estimate fwhm and scale aperture if ``fwhm_scale`` is ``True``), by default :class:`~prose.blocks.Gaussian2D`
+    photometry : Block, optional
+        aperture photometry Block, by default :class:`~prose.blocks.PhotutilsAperturePhotometry`
+    ignore_telescope: bool, optional
+        whether to load a default telescope if telescope not recognised, by default False
+    """
+
+    def __init__(self,
+                 fits_manager=None,
+                 files=None,
+                 stack=None,
+                 overwrite=False,
+                 n_stars=500,
+                 psf=blocks.Gaussian2D,
+                 photometry=blocks.PhotutilsPSFPhotometry,
+                 ignore_telescope=False):
+
+        super().__init__(
+            fits_manager=fits_manager,
+            files=files,
+            stack=stack,
+            overwrite=overwrite,
+            n_stars=n_stars,
+            psf=psf,
+            ignore_telescope=ignore_telescope
+        )
+
+        # Blocks
+        assert photometry is None or issubclass(photometry, Block), "photometry must be a subclass of Block"
+        self.photometry = photometry
+
+    def run_reference_detection(self):
+        stack_image, ref_stars, fwhm = super().run_reference_detection()
+
+        self.photometry_unit = Unit([
+            blocks.Set(stars_coords=ref_stars, name="set stars"),
+            blocks.Set(fwhm=fwhm, name="set fwhm"),
+            self.photometry(fwhm),
             bio.SavePhot(
                 self.phot_path,
                 header=fits.getheader(self.stack_path),
                 stack=fits.getdata(self.stack_path),
                 name="saving")
         ], self.files, telescope=self.telescope, name="Photometry")
-
-    def run(self, destination=None):
-        if self.phot_path is None:
-            assert destination is not None, "You must provide a destination"
-        if destination is not None:
-            self.phot_path = destination.replace(".phot", "") + ".phot"
-
-        self._check_phot_path()
-
-        self.run_reference_detection()
-        self.photometry_unit.run()
-
-    def _check_phot_path(self):
-        if path.exists(self.phot_path) and not self.overwrite:
-            raise OSError("{} already exists".format(self.phot_path))
-
-    def prepare(self, fits_manager=None, files=None, stack=None):
-        """
-        Check that stack and observation is present and set ``self.phot_path``
-
-        """
-        if fits_manager is not None:
-            if isinstance(self.fits_manager, str):
-                self.fits_manager = io.FitsManager(self.fits_manager, image_kw="reduced", verbose=False)
-            elif isinstance(self.fits_manager, io.FitsManager):
-                if self.fits_manager.image_kw != "reduced":
-                    print(f"Warning: image keyword is '{self.fits_manager.image_kw}'")
-
-            self.destination = self.fits_manager.folder
-
-            if len(self.fits_manager._observations) == 1:
-                self.fits_manager.set_observation(0)
-            else:
-                self.fits_manager.describe("obs")
-
-            self.phot_path = path.join(
-                self.destination, "{}.phot".format(self.fits_manager.products_denominator))
-
-            self.files = self.fits_manager.images
-            self.stack_path = self.fits_manager.stack
-
-            self.telescope = self.fits_manager.telescope
-
-            self._check_phot_path()
-
-        elif files is not None:
-            assert stack is not None, "'stack' should be specified is 'files' is specified"
-
-            self.stack_path = stack
-            self.files = files
-            self.telescope = Telescope(self.stack_path)
