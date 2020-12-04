@@ -73,6 +73,7 @@ class ConfigManager:
         self.config_path = path.abspath("{}/.{}/config".format(str(Path.home()), package_name))
 
         self.check_config_file(load=True)
+        self.telescopes_dict = self.build_telescopes_dict()
 
     def check_config_folder(self):
         if not path.exists(self.folder_path):
@@ -105,26 +106,7 @@ class ConfigManager:
         self.config[key] = value
         self.save()
 
-    def check_telescope_files(self, name):
-        id_files = get_files(".id", self.folder_path)
-
-        if len(id_files) > 0:
-            names = [file.strip(".id").lower() for file in id_files]
-            name_in_names = [name in n for n in names]
-
-            if any(name_in_names):
-                assert (
-                    name_in_names.count == 1
-                ), "Multiple .id files got matched with name {}".format(name)
-                return id_files[np.where(name_in_names)[0]]
-
-            else:
-                return None
-
-        else:
-            return None
-
-    def telescopes_dict(self):
+    def build_telescopes_dict(self):
         id_files = get_files(".id", self.folder_path, single_list_removal=False)
 
         _telescope_dict = {}
@@ -142,20 +124,23 @@ class ConfigManager:
         if isinstance(file, str):
             name = path.basename(file).lower().split(".")[0]
             shutil.copyfile(file, path.join(self.folder_path, "{}.id".format(name)))
+            print("Telescope '{}' saved".format(name))
         elif isinstance(file, dict):
             name = file["name"].lower()
             telescope_file_path = path.join(self.folder_path, "{}.id".format(name))
             with open(telescope_file_path, "w") as f:
                 yaml.dump(file, f)
-        print("Telescope '{}' saved".format(name))
+            print("Telescope '{}' saved".format(name))
+        else:
+            raise AssertionError("input type not understood")
 
     def match_telescope_name(self, name):
         if not isinstance(name, str):
             return None
-        available_telescopes_names = list(self.telescopes_dict().keys())
+        available_telescopes_names = list(self.telescopes_dict.keys())
         has_telescope = np.where(
             [t in name.lower() for t in available_telescopes_names]
         )[0]
         if len(has_telescope) > 0:
-            return self.telescopes_dict()[available_telescopes_names[has_telescope[0]]]
+            return self.telescopes_dict[available_telescopes_names[has_telescope[0]]]
 

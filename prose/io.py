@@ -169,6 +169,18 @@ class FitsManager:
         else:
             return self.get(self.image_kw)
 
+    @property
+    def darks(self):
+        return self.get("dark")
+
+    @property
+    def bias(self):
+        return self.get("bias")
+
+    @property
+    def flats(self):
+        return self.get("flat")
+
     def __getitem__(self, item):
         return self.get()[item]
 
@@ -820,6 +832,10 @@ class FitsManager:
             single_obs["target"],
             single_obs["filter"],
         )
+
+    @property
+    def unique_obs(self):
+        return len(self._observations) == 1
 
     def set_observation(
             self,

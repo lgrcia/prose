@@ -62,7 +62,7 @@ class Reduction:
     def run(self):
 
         self.reference_unit = Unit([
-            blocks.Calibration(self.fits_manager.get("dark"), self.fits_manager.get("flat"), self.fits_manager.get("bias"),
+            blocks.Calibration(self.fits_manager.darks, self.fits_manager.flats, self.fits_manager.bias,
                                name="calibration"),
             blocks.Trim(name="trimming"),
             blocks.SegmentedPeaks(n_stars=50, name="detection"),
@@ -100,7 +100,7 @@ class Reduction:
 
         """
 
-        if len(self.fits_manager._observations) == 1:
+        if self.fits_manager.unique_obs:
             self.fits_manager.set_observation(0, check_calib_telescope=False, calibration=True, calibration_date_limit=100000)
         else:
             self.fits_manager.describe("obs")
