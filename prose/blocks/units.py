@@ -76,7 +76,7 @@ class Reduction:
 
         self.reduction_unit = Unit([
             blocks.Pass() if not self.calibration else calibration_block,
-            blocks.Trim(name="trimming"),
+            blocks.Trim(name="trimming", skip_wcs=True),
             blocks.SegmentedPeaks(n_stars=50, name="detection"),
             blocks.XYShift(ref_image.stars_coords, name="shift"),
             blocks.Align(ref_image.data, name="alignment"),
