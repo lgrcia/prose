@@ -535,7 +535,7 @@ def plot_marks(x, y, label=None, position="bottom", offset=7, fontsize=12, color
         x = x[within]
         y = y[within]
         if label is not None:
-            label = label[within]
+            label = np.array(label)[within]
 
     if n is not None:
         x = x[0:n]

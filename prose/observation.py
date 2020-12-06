@@ -20,6 +20,7 @@ from astropy.stats import sigma_clip
 from .console_utils import INFO_LABEL
 from astropy.stats import sigma_clipped_stats
 from astropy.io.fits.verify import VerifyWarning
+from datetime import datetime, timedelta
 import warnings
 
 warnings.simplefilter('ignore', category=VerifyWarning)
@@ -190,9 +191,15 @@ class Observation(Fluxes):
         self.gaia_data = gaia_query.get_results()
         self.gaia_data.sort("phot_g_mean_flux", reverse=True)
 
+        delta_years = (utils.datetime_to_years(datetime.strptime(self.date, "%Y%m%d")) - \
+                      self.gaia_data["ref_epoch"].data.data) * u.year
+
+        dra = delta_years * self.gaia_data["pmra"].to(u.deg / u.year)
+        ddec = delta_years * self.gaia_data["pmdec"].to(u.deg / u.year)
+
         skycoords = SkyCoord(
-            ra=self.gaia_data['ra'],
-            dec=self.gaia_data['dec'],
+            ra=self.gaia_data['ra'].quantity + dra,
+            dec=self.gaia_data['dec'].quantity + ddec,
             pm_ra_cosdec=self.gaia_data['pmra'],
             pm_dec=self.gaia_data['pmdec'],
             radial_velocity=self.gaia_data['radial_velocity'],
@@ -229,6 +236,20 @@ class Observation(Fluxes):
         if np.abs(np.mean(self.tic_data["x"])) > w or np.abs(np.mean(self.tic_data["y"])) > h:
             warnings.warn("Catalog stars seem out of the field. Check that your stack is solved and that telescope "
                           "'ra_unit' and 'dec_unit' are well set")
+
+    @property
+    def gaia_target(self):
+        return None
+
+    @gaia_target.setter
+    def gaia_target(self, gaia_id):
+        if self.gaia_data is None:
+            self.query_gaia()
+        _ = self.gaia_data.to_pandas()[["source_id", "x", "y"]].to_numpy()
+        ids = _[:, 0]
+        positions = _[:, 1:3]
+        gaia_i = np.argmin(np.abs(gaia_id - ids))
+        self.target = np.argmin(np.power(positions[gaia_i, :] - self.stars[:, ::-1], 2).sum(1))
 
     # Plot
     # ----

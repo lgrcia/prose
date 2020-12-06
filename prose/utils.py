@@ -217,3 +217,33 @@ def header_to_cdf4_dict(header):
             pass
 
     return header_dict
+
+
+def years_to_datetime(years):
+    """
+    https://stackoverflow.com/questions/19305991/convert-fractional-years-to-a-real-date-in-python
+    Convert atime (a float) to DT.datetime
+    This is the inverse of dt2t.
+    assert dt2t(t2dt(atime)) == atime
+    """
+    year = int(years)
+    remainder = years - year
+    boy = datetime(year, 1, 1)
+    eoy = datetime(year + 1, 1, 1)
+    seconds = remainder * (eoy - boy).total_seconds()
+    return boy + timedelta(seconds=seconds)
+
+
+def datetime_to_years(adatetime):
+    """
+    https://stackoverflow.com/questions/19305991/convert-fractional-years-to-a-real-date-in-python
+    Convert adatetime into a float. The integer part of the float should
+    represent the year.
+    Order should be preserved. If adate<bdate, then d2t(adate)<d2t(bdate)
+    time distances should be preserved: If bdate-adate=ddate-cdate then
+    dt2t(bdate)-dt2t(adate) = dt2t(ddate)-dt2t(cdate)
+    """
+    year = adatetime.year
+    boy = datetime(year, 1, 1)
+    eoy = datetime(year + 1, 1, 1)
+    return year + ((adatetime - boy).total_seconds() / ((eoy - boy).total_seconds()))
