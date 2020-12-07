@@ -98,17 +98,21 @@ class PhotutilsAperturePhotometry(Block):
 
     def set_apertures(self, stars_coords, fwhm):
 
+        self.annulus_final_rin = self.annulus_inner_radius * fwhm
+        self.annulus_final_rout = self.annulus_outer_radius * fwhm
+        self.aperture_final_r = fwhm*self.apertures
+
         self.annulus_apertures = CircularAnnulus(
             stars_coords,
-            r_in=self.annulus_inner_radius * fwhm,
-            r_out=self.annulus_outer_radius * fwhm,
+            r_in=self.annulus_final_rin,
+            r_out=self.annulus_final_rout,
         )
         if callable(self.annulus_apertures.area):
             self.annulus_area = self.annulus_apertures.area()
         else:
             self.annulus_area = self.annulus_apertures.area
 
-        self.circular_apertures = [CircularAperture(stars_coords, r=fwhm*aperture) for aperture in self.apertures]
+        self.circular_apertures = [CircularAperture(stars_coords, r=r) for r in self.aperture_final_r]
 
         # Unresolved buf; sometimes circular_apertures.area is a method, sometimes a float
         if callable(self.circular_apertures[0].area):
@@ -135,6 +139,9 @@ class PhotutilsAperturePhotometry(Block):
         image.sky = bkg_median
         image.fluxes = np.zeros((self.n_apertures, self.n_stars))
         image.annulus_area = self.annulus_area
+        image.annulus_rin = self.annulus_final_rin
+        image.annulus_rout = self.annulus_final_rout
+        image.apertures_radii = self.aperture_final_r
 
         photometry = aperture_photometry(image.data, self.circular_apertures)
         image.fluxes = np.array([

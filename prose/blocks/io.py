@@ -89,7 +89,10 @@ class SavePhot(Block):
 
         for key in [
             "apertures_area",
-            "annulus_area"
+            "annulus_area",
+            "apertures_radii",
+            "annulus_rin",
+            "annulus_rout"
         ]:
             if key in self.images[0].__dict__:
                 _data = []
