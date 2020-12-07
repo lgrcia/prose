@@ -70,6 +70,7 @@ class SavePhot(Block):
             self.telescope.keyword_seeing,
             self.telescope.keyword_ra,
             self.telescope.keyword_dec,
+            self.telescope.keyword_flip,
         ]:
             _data = []
             if key in self.images[0].header:
