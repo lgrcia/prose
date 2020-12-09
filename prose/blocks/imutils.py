@@ -253,3 +253,18 @@ class Cutouts(Block):
 
     def run(self, image, **kwargs):
         image.cutouts_idxs, image.cutouts = cutouts(image.data, image.stars_coords, size=self.size)
+
+
+class Flip(Block):
+    def __init__(self, reference_image, **kwargs):
+        super().__init__(**kwargs)
+        self.reference_image = reference_image
+        self.reference_flip_value = None
+
+    def initialize(self, *args):
+        self.reference_flip_value = self.reference_image.header.get(self.telescope.keyword_flip, None)
+
+    def run(self, image, **kwargs):
+        flip_value = image.header.get(self.telescope.keyword_flip, None)
+        if flip_value != self.reference_flip_value:
+            image.data = image.data[::-1, ::-1]
