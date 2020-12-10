@@ -36,6 +36,7 @@ class Reduction:
             reference=1 / 2,
             overwrite=False,
             calibration=True,
+            psf=blocks.FastGaussian,
             ignore_telescope=False):
 
         self.fits_manager = fits_manager
@@ -59,6 +60,9 @@ class Reduction:
         self.reference_unit = None
         self.reduction_unit = None
 
+        assert psf is None or issubclass(psf, Block), "psf must be a subclass of Block"
+        self.psf = psf
+
     def run(self):
 
         self.reference_unit = Unit([
@@ -81,7 +85,7 @@ class Reduction:
             blocks.SegmentedPeaks(n_stars=50, name="detection"),
             blocks.XYShift(ref_image.stars_coords, name="shift"),
             blocks.Align(ref_image.data, name="alignment"),
-            blocks.Gaussian2D(name="fwhm"),
+            self.psf(name="fwhm"),
             blocks.Stack(self.stack_path, header=ref_image.header, overwrite=self.overwrite, name="stack"),
             blocks.SaveReduced(self.destination, overwrite=self.overwrite, name="saving"),
             blocks.Video(self.gif_path, name="video", from_fits=True)
@@ -329,7 +333,8 @@ class AperturePhotometry(Photometry):
             r_out=r_out,
             sigclip=sigclip,
             fwhm_scale=fwhm_scale,
-            name="photometry"
+            name="photometry",
+            set_once=True
         )
 
     def run_reference_detection(self):

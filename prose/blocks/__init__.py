@@ -2,7 +2,7 @@ from .registration import XYShift, AstroAlignShift
 from .alignment import Align
 from .detection import SegmentedPeaks, DAOFindStars, SEDetection
 from .calibration import Calibration, Trim
-from .psf import Gaussian2D, Moffat2D
+from .psf import Gaussian2D, Moffat2D, FastGaussian
 from .base import Unit, Block
 from .photometry import PhotutilsAperturePhotometry, SEAperturePhotometry, PhotutilsPSFPhotometry
 from .imutils import *

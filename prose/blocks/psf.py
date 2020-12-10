@@ -147,6 +147,38 @@ class PSFModel(Block):
         fontsize=14, horizontalalignment='left', verticalalignment='bottom', transform=ax.transAxes, c="w")
 
 
+class FastGaussian(PSFModel):
+    """
+    Fit the height, mean sigma of a symetric 2D Gaussian model to an image effective PSF
+    """
+    def __init__(self, cutout_size=21, **kwargs):
+        super().__init__(cutout_size=21, **kwargs)
+
+    def model(self, height, s, m):
+        dx = self.x - self.cutout_size/2
+        dy = self.y - self.cutout_size/2
+        psf = height * np.exp(-((dx/(2*s))**2 + (dy/(2*s))**2))
+        return psf + m
+
+    def optimize(self):
+        p0 = [np.max(self.epsf), 4, np.min(self.epsf)]
+        min_sigma = 0.5
+        bounds = [
+            (0, np.infty),
+            (min_sigma, np.infty),
+            (0, np.mean(self.epsf)),
+        ]
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            params = minimize(self.nll, p0, bounds=bounds).x
+            self.optimized_params = params
+            return params[1]*self.sigma_to_fwhm(), params[1]*self.sigma_to_fwhm(), 0
+
+    def citations(self):
+        return "scipy", "photutils"
+
+
 class Gaussian2D(PSFModel):
     """
     Fit an elliptical 2D Gaussian model to an image effective PSF

@@ -74,6 +74,7 @@ class PhotutilsAperturePhotometry(Block):
             r_out=8,
             fwhm_scale=True,
             sigclip = 2.,
+            set_once=False,
             **kwargs):
 
         super().__init__(**kwargs)
@@ -95,6 +96,7 @@ class PhotutilsAperturePhotometry(Block):
         self.annulus_area = None
         self.fwhm_scale = fwhm_scale
         self.sigclip = sigclip
+        self.set_once = set_once
 
     def set_apertures(self, stars_coords, fwhm):
 
@@ -124,7 +126,10 @@ class PhotutilsAperturePhotometry(Block):
         self.n_stars = len(stars_coords)
 
     def run(self, image, **kwargs):
-        self.set_apertures(image.stars_coords, image.fwhm if self.fwhm_scale else 1)
+        if self.circular_apertures is None and self.set_once:
+            self.set_apertures(image.stars_coords, image.fwhm if self.fwhm_scale else 1)
+        else:
+            self.set_apertures(image.stars_coords, image.fwhm if self.fwhm_scale else 1)
 
         bkg_median = []
         for mask in self.annulus_masks:
