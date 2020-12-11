@@ -135,6 +135,7 @@ class Block:
         self.unit_data = None
         self.telescope = None
         self.processing_time = 0
+        self.runs = 0
 
     def initialize(self, *args):
         pass
@@ -149,6 +150,7 @@ class Block:
         t0 = time()
         self.run(*args, **kwargs)
         self.processing_time += time() - t0
+        self.runs += 1
 
     def run(self, image, **kwargs):
         raise NotImplementedError()
