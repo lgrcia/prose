@@ -68,6 +68,15 @@ class Observation(Fluxes):
         return self.__copy__()
 
     def to_csv(self, destination, sep=" "):
+        """Export a typical csv of the observation's data
+
+        Parameters
+        ----------
+        destination : str
+            Path of the csv file to save
+        sep : str, optional
+            separation string within csv, by default " "
+        """
 
         df = pd.DataFrame(
             {
@@ -98,6 +107,13 @@ class Observation(Fluxes):
         self.xarray.to_netcdf(self.phot if destination is None else destination)
 
     def export_stack(self, destination, **kwargs):
+        """Export stack to FITS file
+
+        Parameters
+        ----------
+        destination : str
+            path of FITS to export
+        """
         header = {name: value for name, value in self.xarray.attrs.items() if name.isupper()}
         data = self.stack
 
@@ -105,6 +121,13 @@ class Observation(Fluxes):
         hdul.writeto(destination, **kwargs)
 
     def import_stack(self, fitsfile):
+        """Import FITS as stack to current obs (including WCS) - do not forget to save to keep it
+
+        Parameters
+        ----------
+        fitsfile : str
+            path of FITS stack to import
+        """
         data = fits.getdata(fitsfile)
         header = fits.getheader(fitsfile)
 
@@ -140,7 +163,14 @@ class Observation(Fluxes):
 
     @property
     def denominator(self):
-        return f"{self.telecope}_{self.date}_{self.name}_{self.filter}"
+        """A conveniant name for the observation: {telescope}_{date}_{name}_{filter}
+
+        Returns
+        -------
+        [type]
+            [description]
+        """
+        return f"{self.telescope.name}_{self.date}_{self.name}_{self.filter}"
         
     # Methods
     # -------
@@ -243,6 +273,13 @@ class Observation(Fluxes):
 
     @gaia_target.setter
     def gaia_target(self, gaia_id):
+        """Set target with a gaia id
+
+        Parameters
+        ----------
+        gaia_id : int
+            gaia id
+        """
         if self.gaia_data is None:
             self.query_gaia()
         _ = self.gaia_data.to_pandas()[["source_id", "x", "y"]].to_numpy()
