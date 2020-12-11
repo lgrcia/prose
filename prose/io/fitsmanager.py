@@ -185,14 +185,17 @@ class FitsManager(FilesDataFrame):
             days_limit = past
 
         telescope = obs.telescope if same_telescope else "."
+        dimensions = obs.dimensions
 
         dates_before = (
                     pd.to_datetime(obs.date) - pd.to_datetime(original_fm.files_df.date) >= timedelta(days=days_limit))
 
-        flats = original_fm.get(telescope=telescope + "*", filter=obs["filter"].replace("+", "\+"), type="flat").loc[
-            dates_before]
-        darks = original_fm.get(telescope=telescope + "*", type="dark").loc[dates_before]
-        bias = original_fm.get(telescope=telescope + "*", type="bias").loc[dates_before]
+        flats = original_fm.get(
+            telescope=telescope + "*", filter=obs["filter"].replace("+", "\+"),
+            type="flat",
+            dimensions=dimensions).loc[ dates_before]
+        darks = original_fm.get(telescope=telescope + "*", type="dark", dimensions=dimensions).loc[dates_before]
+        bias = original_fm.get(telescope=telescope + "*", type="bias", dimensions=dimensions).loc[dates_before]
         dfs = []
 
         if len(flats) > 0:

@@ -116,15 +116,13 @@ class Reduction:
         # Either the input is a FitsManager and the following append:
         if self.fits_manager is not None:
             if self.fits_manager.unique_obs:
-                self.fits_manager.set_observation(0, check_calib_telescope=False, calibration=True, calibration_date_limit=100000)
+                self.fits_manager.set_observation(0, future=100000)
             else:
                 _ = self.fits_manager.calib
                 raise AssertionError("Multiple observations found")
 
             if self.destination is None:
-                self.destination = path.join(
-                    path.dirname(self.fits_manager.folder), self.fits_manager.products_denominator
-                )
+                self.destination = path.join(self.fits_manager.folder, self.fits_manager.products_denominator)
 
             self.stack_path = f"{path.join(self.destination, self.fits_manager.products_denominator)}_stack.fits"
             self.gif_path = f"{path.join(self.destination, self.fits_manager.products_denominator)}_movie.gif"
@@ -251,7 +249,7 @@ class Photometry:
                 _ = self.fits_manager.observations
                 raise AssertionError("Multiple observations found")
             else:
-                self.fits_manager.set_observation(0)
+                self.fits_manager.set_observation(0, future=100000)
 
             self.phot_path = path.join(
                 self.destination, "{}.phot".format(self.fits_manager.products_denominator))
