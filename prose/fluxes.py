@@ -67,10 +67,16 @@ def broeg2005(
     keep="float",
     max_iteration=50,
     tolerance=1e-8,
-    n_comps=500
+    n_comps=500,
+    exclude=None,
 ):
 
     np.seterr(divide="ignore")  # Ignore divide by 0 warnings here
+
+    if exclude is not None:
+        _exclude = np.array(exclude)
+    else:
+        _exclude = []
 
     original_fluxes = fluxes.copy()
     initial_n_stars = np.shape(original_fluxes)[1]
@@ -131,10 +137,15 @@ def broeg2005(
 
         i += 1
 
-    # Setting target weight to 0 and removing it from the set of comparable stars
+    # Setting target weight to 0
     weights[:, target] = 0
+    # Setting weights of stars to exclude to 0
+    if exclude is not None:
+        weights[:, _exclude] = 0
+
     ordered_stars = np.argsort(weights, axis=1)[:, ::-1]
-    ordered_stars = ordered_stars[:, 0:-1]
+    # Remove target and excluded stars (at the end of ordered since weight = 0
+    ordered_stars = ordered_stars[:, 0:-(1 + len(_exclude))]
 
     # Find the best number of comp stars to keep if None
     # --------------------------------------------------
@@ -391,10 +402,10 @@ class Fluxes:
 
         return new_self
 
-    def broeg2005(self, keep='float', keep_raw=True):
+    def broeg2005(self, keep='float', keep_raw=True, exclude=None):
         new_self = self.copy()
         self._reset_raw(new_self)
-        diff_fluxes, diff_errors, info = broeg2005(new_self.fluxes, new_self.errors, self.target, keep=keep)
+        diff_fluxes, diff_errors, info = broeg2005(new_self.fluxes, new_self.errors, self.target, keep=keep, exclude=exclude)
         dims = self.xarray.fluxes.dims
 
         if keep_raw:

@@ -4,11 +4,10 @@ import pandas as pd
 import numpy as np
 from tabulate import tabulate
 from collections import OrderedDict
-from prose import Telescope
+from ..telescope import Telescope
 from datetime import timedelta
 import os
-from .fitsdf import fits_to_df
-from . import get_files
+from .io import get_files, fits_to_df
 
 
 class FilesDataFrame:
@@ -78,6 +77,8 @@ class FilesDataFrame:
         else:
             files_df = self.files_df.copy()
 
+        files_df = files_df.fillna("")
+
         if len(kwargs) > 0:
             files_df = self._get(files_df, **kwargs)
             headers = list(fields) + list(kwargs.keys())
@@ -124,16 +125,20 @@ class FilesDataFrame:
 
 class FitsManager(FilesDataFrame):
 
-    def __init__(self, files_df_or_folder, verbose=True, **kwargs):
+    def __init__(self, files_df_or_folder, verbose=True, image_kw="light", **kwargs):
         if isinstance(files_df_or_folder, pd.DataFrame):
-            pass
+            files_df = files_df_or_folder
+            self.folder = None
         elif isinstance(files_df_or_folder, str):
             assert path.exists(files_df_or_folder), "Folder does not exist"
             files = get_files("*.f*ts", files_df_or_folder, depth=kwargs.get("depth", 1))
             files_df = fits_to_df(files)
+            self.folder = files_df_or_folder
+        else:
+            raise AssertionError("input must be pd.DataFrame or folder path")
 
         super().__init__(files_df, verbose=verbose)
-        self.image_kw = "light"
+        self.image_kw = image_kw
 
     @property
     def observations(self):
@@ -163,7 +168,7 @@ class FitsManager(FilesDataFrame):
         return None
 
     def set_observation(self, i, **kwargs):
-        self.files_df = self.get_observation(i)
+        self.files_df = self.get_observation(i, **kwargs)
         assert self.unique_obs, "observation should be unique, please use set_observation"
         obs = self._observations.loc[0]
         self.telescope = Telescope.from_name(obs.telescope)
@@ -200,12 +205,16 @@ class FitsManager(FilesDataFrame):
             bias = bias.loc[bias.date == bias.date.values[pd.to_datetime(bias.date).argmax()]]
             dfs.append(bias)
 
-        lights = original_fm.get(
+        others = original_fm.get(
             telescope=obs.telescope,
             filter=obs["filter"].replace("+", "\+"),
             target=obs.target.replace("+", "\+"),
-            date=obs.date, type="light")
-        dfs.append(lights)
+            date=obs.date)
+
+        for _type in ["dark", "flat", "bias"]:
+            others = others.drop(np.argwhere(FilesDataFrame._get(others, type=_type, return_conditions=True).values))
+
+        dfs.append(others)
 
         return pd.concat([pd.concat(dfs)])
 
@@ -215,7 +224,7 @@ class FitsManager(FilesDataFrame):
 
     @property
     def images(self):
-        return self.get(type="light").path.values.astype(str)
+        return self.get(type=self.image_kw).path.values.astype(str)
 
     @property
     def darks(self):
@@ -228,6 +237,10 @@ class FitsManager(FilesDataFrame):
     @property
     def flats(self):
         return self.get(type="flat").path.values.astype(str)
+
+    @property
+    def stack(self):
+        return self.get(type="stack").path.values.astype(str)
 
     @property
     def products_denominator(self):
