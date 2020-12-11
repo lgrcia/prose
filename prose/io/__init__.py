@@ -10,7 +10,6 @@ def phot2dict(filename):
 
     return dictionary
 
-
 def get_files(
         ext,
         folder,

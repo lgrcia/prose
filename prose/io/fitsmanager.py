@@ -7,6 +7,8 @@ from collections import OrderedDict
 from prose import Telescope
 from datetime import timedelta
 import os
+from .fitsdf import fits_to_df
+from . import get_files
 
 
 class FilesDataFrame:
@@ -122,7 +124,14 @@ class FilesDataFrame:
 
 class FitsManager(FilesDataFrame):
 
-    def __init__(self, files_df, verbose=True):
+    def __init__(self, files_df_or_folder, verbose=True, **kwargs):
+        if isinstance(files_df_or_folder, pd.DataFrame):
+            pass
+        elif isinstance(files_df_or_folder, str):
+            assert path.exists(files_df_or_folder), "Folder does not exist"
+            files = get_files("*.f*ts", files_df_or_folder, depth=kwargs.get("depth", 1))
+            files_df = fits_to_df(files)
+
         super().__init__(files_df, verbose=verbose)
         self.image_kw = "light"
 
@@ -134,7 +143,7 @@ class FitsManager(FilesDataFrame):
 
     @property
     def _observations(self):
-        light_rows = self.files_df.loc[self.files_df["type"].str.contains(self.image_kw)]
+        light_rows = self.files_df.loc[self.files_df["type"].str.contains(self.image_kw).fillna(False)]
         observations = (
             light_rows.pivot_table(
                 index=["date", "telescope", "target", "dimensions", "filter"],
