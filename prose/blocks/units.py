@@ -31,11 +31,14 @@ class Reduction:
 
     def __init__(
             self,
-            fits_manager,
+            fits_manager=None,
             destination=None,
             reference=1 / 2,
             overwrite=False,
             calibration=True,
+            flats=None,
+            bias=None,
+            darks=None,
             psf=blocks.FastGaussian,
             ignore_telescope=False):
 
@@ -47,6 +50,11 @@ class Reduction:
         # set on prepare
         self.stack_path = None
         self.gif_path = None
+
+        self.flats = flats
+        self.bias = bias
+        self.darks = darks
+
         self.prepare()
 
         if not ignore_telescope:
@@ -66,7 +74,7 @@ class Reduction:
     def run(self):
 
         self.reference_unit = Unit([
-            blocks.Calibration(self.fits_manager.darks, self.fits_manager.flats, self.fits_manager.bias,
+            blocks.Calibration(self.darks, self.flats, self.bias,
                                name="calibration"),
             blocks.Trim(name="trimming"),
             blocks.SegmentedPeaks(n_stars=50, name="detection"),
@@ -105,23 +113,30 @@ class Reduction:
 
         """
 
-        if self.fits_manager.unique_obs:
-            self.fits_manager.set_observation(0, check_calib_telescope=False, calibration=True, calibration_date_limit=100000)
-        else:
-            self.fits_manager.describe("obs")
-            raise AssertionError("Multiple observations found")
+        # Either the input is a FitsManager and the following append:
+        if self.fits_manager is not None:
+            if self.fits_manager.unique_obs:
+                self.fits_manager.set_observation(0, check_calib_telescope=False, calibration=True, calibration_date_limit=100000)
+            else:
+                _ = self.fits_manager.calib
+                raise AssertionError("Multiple observations found")
 
-        if self.destination is None:
-            self.destination = path.join(path.dirname(self.fits_manager.folder),
-                                         self.fits_manager.products_denominator)
-        self.stack_path = "{}{}".format(
-            path.join(self.destination, self.fits_manager.products_denominator),
-            "_stack.fits",
-        )
-        self.gif_path = "{}{}".format(
-            path.join(self.destination, self.fits_manager.products_denominator),
-            "_movie.gif",
-        )
+            if self.destination is None:
+                self.destination = path.join(
+                    path.dirname(self.fits_manager.folder), self.fits_manager.products_denominator
+                )
+
+            self.stack_path = f"{path.join(self.destination, self.fits_manager.products_denominator)}_stack.fits"
+            self.gif_path = f"{path.join(self.destination, self.fits_manager.products_denominator)}_movie.gif"
+
+            self.files = self.fits_manager.images
+            self.darks = self.fits_manager.darks
+            self.flats = self.fits_manager.flats
+            self.bias = self.fits_manager.bias
+        else:
+            self.stack_path = path.join(self.destination, "stack.fits")
+            self.gif_path = path.join(self.destination, "movie.gif")
+
         if path.exists(self.stack_path) and not self.overwrite:
             raise AssertionError("stack {} already exists, consider using the 'overwrite' kwargs".format(self.stack_path))
 
@@ -223,7 +238,7 @@ class Photometry:
         Check that stack and observation is present and set ``self.phot_path``
 
         """
-        if fits_manager is not None:
+        if self.fits_manager is not None:
             if isinstance(self.fits_manager, str):
                 self.fits_manager = io.FitsManager(self.fits_manager, image_kw="reduced", verbose=False)
             elif isinstance(self.fits_manager, io.FitsManager):
@@ -232,10 +247,11 @@ class Photometry:
 
             self.destination = self.fits_manager.folder
 
-            if len(self.fits_manager._observations) == 1:
-                self.fits_manager.set_observation(0)
+            if not self.fits_manager.unique_obs:
+                _ = self.fits_manager.observations
+                raise AssertionError("Multiple observations found")
             else:
-                self.fits_manager.describe("obs")
+                self.fits_manager.set_observation(0)
 
             self.phot_path = path.join(
                 self.destination, "{}.phot".format(self.fits_manager.products_denominator))
@@ -248,7 +264,7 @@ class Photometry:
             self._check_phot_path()
 
         elif files is not None:
-            assert stack is not None, "'stack' should be specified is 'files' is specified"
+            assert stack is not None, "'stack' should be specified if 'files' is specified"
 
             self.stack_path = stack
             self.files = files
