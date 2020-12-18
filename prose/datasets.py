@@ -122,6 +122,7 @@ def generate_prose_reduction_dataset(destination, n_images=80, moving=None):
     hdu.header["IMAGETYP"] = "dark"
     hdu.header["TELESCOP"] = telescope_name
     hdu.header["EXPTIME"] = 1
+    hdu.header["JD"] = x[0]
     hdu.header["DATE-OBS"] = Time(datetime(2020, 3, 1, int(i / 60), i % 60)).to_value("fits")
     hdu.writeto(path.join(destination, "fake-C001-dark.fits"), overwrite=True)
 
@@ -129,6 +130,7 @@ def generate_prose_reduction_dataset(destination, n_images=80, moving=None):
     hdu.header["IMAGETYP"] = "bias"
     hdu.header["TELESCOP"] = telescope_name
     hdu.header["EXPTIME"] = 1
+    hdu.header["JD"] = x[0]
     hdu.header["DATE-OBS"] = Time(datetime(2020, 3, 1, int(i / 60), i % 60)).to_value("fits")
     hdu.writeto(path.join(destination, "fake-C001-bias.fits"), overwrite=True)
 
@@ -136,6 +138,7 @@ def generate_prose_reduction_dataset(destination, n_images=80, moving=None):
     hdu.header["IMAGETYP"] = "flat"
     hdu.header["TELESCOP"] = telescope_name
     hdu.header["EXPTIME"] = 1
+    hdu.header["JD"] = x[0]
     hdu.header["FILTER"] = "I+z"
     hdu.header["DATE-OBS"] = Time(datetime(2020, 3, 1, int(i / 60), i % 60)).to_value("fits")
     hdu.writeto(path.join(destination, "fake-C001-flat0.fits"), overwrite=True)
