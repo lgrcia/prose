@@ -116,13 +116,15 @@ def fits_to_df(files, telescope_kw="TELESCOP"):
 
 def get_new_fits(current_df, folder, depth=3):
     dirs = np.array(os.listdir(folder))
-    new_dirs = dirs[np.argwhere(pd.to_datetime(dirs) > pd.to_datetime(current_df.date).max()).flatten()]
+    new_dirs = dirs[np.argwhere(pd.to_datetime(dirs, errors='coerce') > pd.to_datetime(current_df.date).max()).flatten()]
     return np.hstack([get_files("*.f*ts", path.join(folder, f), depth=depth) for f in new_dirs])
 
 
 def convert_old_index(df):
     new_df = df[["date", "path", "telescope", "type", "target", "filter", "dimensions", "flip", "jd"]]
-    new_df.dimensions = new_df.dimensions.apply(lambda x: tuple(np.array(x.split("x")).astype(int)))
+    new_df.dimensions = new_df.dimensions.apply(
+        lambda x: tuple(np.array(x.split("x")).astype(int) if x != np.nan else x)
+    )
     return new_df
 
 

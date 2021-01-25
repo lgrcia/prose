@@ -22,7 +22,6 @@ extensions = [
     "sphinx.ext.autodoc", 
     "sphinx.ext.napoleon", 
     'sphinx.ext.autosummary', 
-    'nbsphinx'
     ]
 
 master_doc = 'index'
@@ -45,8 +44,6 @@ html_theme_options = {
 
 napoleon_numpy_docstring = True
 napoleon_use_param = False
-
-nbsphinx_execute = 'never'
 
 # html_favicon = "_static/specphot logo small.png"
 
@@ -72,3 +69,6 @@ for name, obj in inspect.getmembers(blocks):
                     f.write("{}\n{}".format(name, "-"*len(name)))
                     f.write("\n\n{}".format(block_doc))
                     f.write("\n\n.. autoclass:: prose.blocks.{}\n\t:members:".format(name))
+
+
+exec(open('./convert_notebooks.py').read())
