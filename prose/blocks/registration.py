@@ -35,6 +35,43 @@ def clean_stars_positions(positions, tolerance=50, output_id=False):
         return positions[np.unique(keep)]
 
 
+def closeness(im_stars_pos, ref_stars_pos, tolerance=1.5, clean=False):
+    assert len(im_stars_pos) > 2, f"{len(im_stars_pos)} star coordinates provided (should be > 2)"
+
+    if clean:
+        clean_ref = clean_stars_positions(ref_stars_pos)
+        clean_im = clean_stars_positions(im_stars_pos)
+    else:
+        clean_ref = ref_stars_pos
+        clean_im = im_stars_pos
+
+    delta_x = np.array([clean_ref[:, 0] - v for v in clean_im[:, 0]]).flatten()
+    delta_y = np.array([clean_ref[:, 1] - v for v in clean_im[:, 1]]).flatten()
+
+    delta_x_compare = []
+    for i, dxi in enumerate(delta_x):
+        dcxi = dxi - delta_x
+        dcxi[i] = np.inf
+        delta_x_compare.append(dcxi)
+
+    delta_y_compare = []
+    for i, dyi in enumerate(delta_y):
+        dcyi = dyi - delta_y
+        dcyi[i] = np.inf
+        delta_y_compare.append(dcyi)
+
+    tests = [
+        np.logical_and(np.abs(dxc) < tolerance, np.abs(dyc) < tolerance)
+        for dxc, dyc in zip(delta_x_compare, delta_y_compare)
+    ]
+    num = np.array([np.count_nonzero(test) for test in tests])
+
+    max_count_num_i = int(np.argmax(num))
+    max_nums_ids = np.argwhere(num == num[max_count_num_i]).flatten()
+
+    return len(max_nums_ids)
+
+
 def xyshift(im_stars_pos, ref_stars_pos, tolerance=1.5, clean=False):
     """
     Compute shift between two set of coordinates (e.g. stars)
