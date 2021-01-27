@@ -105,7 +105,7 @@ class FilesDataFrame:
         else:
             raise KeyError("'{}' is not in files_df".format(field))
 
-    def describe(self, *fields, return_string=False, original=False, unique=True, index=False, return_df=False, **kwargs):
+    def describe(self, *fields, return_string=False, original=False, unique=True, index=False, hide=None, **kwargs):
         """Print a table description of dataframe
 
         Parameters
@@ -159,9 +159,6 @@ class FilesDataFrame:
             rows = OrderedDict(files_df[headers].to_dict(orient="list"))
             table_string = tabulate(rows, tablefmt="fancy_grid", headers="keys")
 
-        if return_df:
-            return files_df[headers]
-            
         if return_string:
             return table_string
         else:
