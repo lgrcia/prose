@@ -8,7 +8,6 @@
 
 import os
 import sys
-import jupytext
 
 sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
 
