@@ -46,24 +46,20 @@ class Reduction:
         self.destination = destination
         self.overwrite = overwrite
         self.calibration = calibration
+        self._reference = reference
 
         # set on prepare
-        self.stack_path = None
-        self.gif_path = None
-
         self.flats = flats
         self.bias = bias
         self.darks = darks
-
         self.prepare()
 
-        if not ignore_telescope:
+        self.files = None
+
+        if not ignore_telescope and self.fits_manager is not None:
             assert self.fits_manager.telescope.name != "Unknown", \
                 "Telescope has not been recognised, to load a default one set ignore_telescope=True (kwargs)"
-
-        # set reference file
-        reference_id = int(reference * len(self.files))
-        self.reference_fits = self.files[reference_id]
+            self.telescope = self.fits_manager.telescope
 
         self.reference_unit = None
         self.reduction_unit = None
@@ -71,15 +67,34 @@ class Reduction:
         assert psf is None or issubclass(psf, Block), "psf must be a subclass of Block"
         self.psf = psf
 
-    def run(self):
+    def run(self, images=None, destination=None):
+
+        if destination is not None:
+            self.destination = destination
+        
+        if images is not None:
+            assert isinstance(images, (list, np.ndarray)), "images must be a list of path"
+            assert isinstance(images[0], str), "images must be a list of path"
+            self.files = images
+        else:
+            assert self.fits_manager is not None, "if images kwargs is not set, a FitsManager must be provided"
+            self.files = self.fits_manager.images
+
+        if self.fits_manager is None:
+            self.telescope = Telescope.from_name(fits.getheader(self.files[0])["TELESCOP"])
+
+        # set reference file
+        reference_id = int(self._reference * len(self.files))
+        self.reference_fits = self.files[reference_id]
+
+        self.make_destination()
 
         self.reference_unit = Unit([
-            blocks.Calibration(self.darks, self.flats, self.bias,
-                               name="calibration"),
+            blocks.Pass(name="calibration") if not self.calibration else blocks.Calibration(self.darks, self.flats, self.bias, name="calibration"),
             blocks.Trim(name="trimming"),
             blocks.SegmentedPeaks(n_stars=50, name="detection"),
             blocks.ImageBuffer(name="buffer")
-        ], self.reference_fits, telescope=self.fits_manager.telescope, show_progress=False)
+        ], self.reference_fits, telescope=self.telescope, show_progress=False)
 
         self.reference_unit.run()
 
@@ -87,7 +102,7 @@ class Reduction:
         calibration_block = self.reference_unit.calibration
 
         self.reduction_unit = Unit([
-            blocks.Pass() if not self.calibration else calibration_block,
+            blocks.Pass(name="calibration") if not self.calibration else calibration_block,
             blocks.Trim(name="trimming", skip_wcs=True),
             blocks.Flip(ref_image, name="flip"),
             blocks.SegmentedPeaks(n_stars=50, name="detection"),
@@ -95,11 +110,31 @@ class Reduction:
             blocks.Align(ref_image.data, name="alignment"),
             self.psf(name="fwhm"),
             blocks.Stack(self.stack_path, header=ref_image.header, overwrite=self.overwrite, name="stack"),
-            blocks.SaveReduced(self.destination, overwrite=self.overwrite, name="saving"),
+            blocks.SaveReduced(self.destination if destination is None else destination, overwrite=self.overwrite, name="saving"),
             blocks.Video(self.gif_path, name="video", from_fits=True)
-        ], self.files, telescope=self.fits_manager.telescope, name="Reduction")
+        ], self.files, telescope=self.telescope, name="Reduction")
 
         self.reduction_unit.run()
+
+    @property
+    def stack_path(self):
+        prepend = "stack.fits"
+        if self.fits_manager is not None:
+            return f"{path.join(self.destination, self.fits_manager.products_denominator)}_{prepend}"
+        else:
+            return path.join(self.destination, prepend)
+    
+    @property
+    def gif_path(self):
+        prepend = "movie.gif"
+        if self.fits_manager is not None:
+            return f"{path.join(self.destination, self.fits_manager.products_denominator)}_{prepend}"
+        else:
+            return path.join(self.destination, prepend)
+
+    def make_destination(self):
+        if not path.exists(self.destination):
+            os.mkdir(self.destination)
 
     def prepare(self):
         """
@@ -124,24 +159,9 @@ class Reduction:
             if self.destination is None:
                 self.destination = path.join(self.fits_manager.folder, self.fits_manager.products_denominator)
 
-            self.stack_path = f"{path.join(self.destination, self.fits_manager.products_denominator)}_stack.fits"
-            self.gif_path = f"{path.join(self.destination, self.fits_manager.products_denominator)}_movie.gif"
-
-            self.files = self.fits_manager.images
             self.darks = self.fits_manager.darks
             self.flats = self.fits_manager.flats
             self.bias = self.fits_manager.bias
-        else:
-            self.stack_path = path.join(self.destination, "stack.fits")
-            self.gif_path = path.join(self.destination, "movie.gif")
-
-        if path.exists(self.stack_path) and not self.overwrite:
-            raise AssertionError("stack {} already exists, consider using the 'overwrite' kwargs".format(self.stack_path))
-
-        if not path.exists(self.destination):
-            os.mkdir(self.destination)
-
-        self.files = self.fits_manager.images
 
     def __repr__(self):
         return f"{self.reference_unit}\n{self.reduction_unit}"

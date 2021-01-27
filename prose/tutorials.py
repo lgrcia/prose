@@ -31,7 +31,6 @@ def disorganised_folder(destination):
 
     os.mkdir(destination)
 
-
     # Telescope A with filter a
     for i in range(5):
         data = np.random.random((10, 10))
