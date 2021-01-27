@@ -10,7 +10,9 @@ import os
 import sys
 import jupytext
 
-sys.path.insert(0, os.path.abspath("../.."))
+sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
+
+# sys.path.insert(0, os.path.abspath("../.."))
 
 # -- Project information -----------------------------------------------------
 
@@ -22,30 +24,25 @@ extensions = [
     "sphinx.ext.autodoc", 
     "sphinx.ext.napoleon", 
     'sphinx.ext.autosummary', 
+    'nbsphinx'
     ]
 
 master_doc = 'index'
-
-exclude_patterns = []
+nbsphinx_execute = 'never'
+exclude_patterns = ["**.ipynb_checkpoints"]
 source_suffix = {'.rst': 'restructuredtext'}
 
 # -- Options for HTML output -------------------------------------------------
 
 html_theme = "sphinx_rtd_theme"
-
+html_theme_options = {"display_version": True}
 html_static_path = ["_static"]
 html_css_files = ["css/style.css"]
 html_style = "css/style.css"
-
 pygments_style = "friendly"
-
-html_theme_options = {
-}
 
 napoleon_numpy_docstring = True
 napoleon_use_param = False
-
-# html_favicon = "_static/specphot logo small.png"
 
 autodoc_member_order = 'bysource'
 
@@ -69,6 +66,3 @@ for name, obj in inspect.getmembers(blocks):
                     f.write("{}\n{}".format(name, "-"*len(name)))
                     f.write("\n\n{}".format(block_doc))
                     f.write("\n\n.. autoclass:: prose.blocks.{}\n\t:members:".format(name))
-
-
-exec(open('./convert_notebooks.py').read())

@@ -23,9 +23,11 @@ class FilesDataFrame:
 
         assert len(self._original_files_df) != 0, "No data found"
         self.telescope = None
+        self.sort_by_date()
 
     def restore(self):
         self.files_df = self._original_files_df.copy()
+        self.sort_by_date()
 
     #     def __getattribute__(self)
 
@@ -47,7 +49,7 @@ class FilesDataFrame:
             return files_df.reset_index(drop=True).loc[conditions]
 
     def get(self, return_conditions=False, **kwargs):
-        """Filter the current dataframe by values its columns
+        """Filter the current dataframe by values of its columns
 
         Parameters
         ----------
@@ -202,6 +204,8 @@ class FitsManager(FilesDataFrame):
 
     @property
     def observations(self):
+        """Print a table of observations (observation is defined as a unique combinaison of date, telescope, target and filter)
+        """
         headers = ["date", "telescope", "target", "filter"]
         self.describe(*headers, index=True, type=self.image_kw, hide=["type"])
         return None
@@ -223,11 +227,21 @@ class FitsManager(FilesDataFrame):
 
     @property
     def calib(self):
+        """Print a table of observations and calibration files (observation is defined as a unique combinaison of date, telescope, target and filter)
+
+        """
         headers = ["date", "telescope", "target", "filter", "type"]
         self.describe(*headers, index=False)
         return None
 
     def set_observation(self, i, **kwargs):
+        """Set the unique observation to use by its id. Observation indexes are specified in `self.observations`
+
+        Parameters
+        ----------
+        i : int
+            index of the observation as displayed in `self.observations`
+        """
         self.files_df = self.get_observation(i, **kwargs)
         assert self.unique_obs, "observation should be unique, please use set_observation"
         obs = self._observations.loc[0]
@@ -285,26 +299,62 @@ class FitsManager(FilesDataFrame):
 
     @property
     def unique_obs(self):
+        """Return wether the object contains a unique observation (observation is defined as a unique combinaison of date, telescope, target and filter).
+
+        Returns
+        -------
+        bool
+        """
         return len(self._observations) == 1
 
     @property
     def images(self):
+        """fits paths of the observation science images
+
+        Returns
+        -------
+        list of str
+        """
         return self.get(type=self.image_kw).path.values.astype(str)
 
     @property
     def darks(self):
+        """fits paths of the observation dark images
+
+        Returns
+        -------
+        list of str
+        """
         return self.get(type="dark").path.values.astype(str)
 
     @property
     def bias(self):
+        """fits paths of the observation bias images
+
+        Returns
+        -------
+        list of str
+        """
         return self.get(type="bias").path.values.astype(str)
 
     @property
     def flats(self):
+        """fits paths of the observation flats images
+
+        Returns
+        -------
+        list of str
+        """
         return self.get(type="flat").path.values.astype(str)
 
     @property
     def stack(self):
+        """fits paths of the observation stack image if present
+
+        Returns
+        -------
+        list of str
+        """
         return self.get(type="stack").path.values.astype(str)
 
     @property
