@@ -133,6 +133,10 @@ div.nbinput.container div.input_area pre {
     padding: 0px !important;
 }
 
+.rst-content code.literal {
+    color: #575757
+}
+
 .xr-attrs dt {
     background: inherit !important;
     color: inherit !important;

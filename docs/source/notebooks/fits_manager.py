@@ -23,7 +23,7 @@ from prose import tutorials
 # %% [markdown]
 # Astronomical observations often generate highly disorganised fits images folders. To know the content of these files, file names can be used but have their limitations. At the end it is not rare to start opening these files to acces the information in their headers.
 #
-# To solve this organisation problem, prose features the `~prose.FitsManager`{.interpreted-text role="class"} object, a conveniant tool to ease the sorting process.
+# To solve this organisation problem, prose features the `FitsManager` object, a conveniant tool to ease the sorting process.
 
 # %% [markdown]
 # ## Generating fake fits
@@ -45,14 +45,14 @@ tutorials.disorganised_folder(destination)
 # ## The Fits Manager object
 
 # %% [markdown]
-# To dig into these disorganised data, we instantiate a `~prose.FitsManager`{.interpreted-text role="class"} on the folder and see its content
+# To dig into these disorganised data, we instantiate a `FitsManager` on the folder and see its content
 
 # %%
 fm = FitsManager(destination)
 fm.observations
 
 # %% [markdown]
-# As we can see the `~prose.FitsManager`{.interpreted-text role="class"} object does a great job in splitting our fits into convient categories. We created some calibration files as well that can be seen with
+# As we can see the `FitsManager` object does a great job in splitting our fits into convient categories. We created some calibration files as well that can be seen with
 
 # %%
 fm.calib
@@ -81,7 +81,7 @@ fm.darks, fm.flats, fm.images
 # ### Restoring original state 
 
 # %% [markdown]
-# When using `set_observation` the `~prose.FitsManager`{.interpreted-text role="class"} object has been replaced inplace. However, the original information is not lost and can be restored whith
+# When using `set_observation` the `FitsManager` object has been replaced inplace. However, the original information is not lost and can be restored whith
 
 # %%
 fm.restore()
@@ -91,11 +91,11 @@ fm.observations
 # ### Telescope specific keywords
 
 # %% [markdown]
-# The information retained by `~prose.FitsManager`{.interpreted-text role="class"} was taken from images headers. To know which keywords to use, we had to register telescopes `A` and `B` with a dictionary. Whenever their names appear in a fits header, their disctionary is loaded to read their header keywords.
+# The information retained by `FitsManager` was taken from images headers. To know which keywords to use, we had to register telescopes `A` and `B` with a dictionary. Whenever their names appear in a fits header, their disctionary is loaded to read their header keywords.
 #
 # Since we just specified the telescope names all the rest is default. For example the filter is taken from the keyword `FILTER` and the image type from `IMAGETYP`, knowing that `IMAGETYP=light` is a light (a.k.a science) frame. All this can be set in more details when registering the telescope and make prose work with any instrument.
 #
-# for more details, chcek the `~prose.Telescope`{.interpreted-text role="class"} object
+# for more details, chcek the `Telescope` object
 
 # %%
 # hidden
