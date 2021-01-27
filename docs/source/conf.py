@@ -25,7 +25,6 @@ extensions = [
     ]
 
 master_doc = 'index'
-nbsphinx_execute = 'never'
 exclude_patterns = ["**.ipynb_checkpoints"]
 source_suffix = {'.rst': 'restructuredtext'}
 
@@ -40,6 +39,9 @@ pygments_style = "friendly"
 
 napoleon_numpy_docstring = True
 napoleon_use_param = False
+
+
+nbsphinx_execute = 'never'
 
 autodoc_member_order = 'bysource'
 
