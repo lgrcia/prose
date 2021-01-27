@@ -17,9 +17,9 @@ A python framework to process FITS images. Built for Astronomy, |prose| features
    :caption: References
    :maxdepth: 1
 
-   guide/installation
-   guide/citing
-   guide/api
+   installation
+   citing
+   api
 
 .. toctree::
    :caption: Tutorials
@@ -34,4 +34,4 @@ A python framework to process FITS images. Built for Astronomy, |prose| features
    :caption: Notes
    :maxdepth: 1
 
-   tutorials/phot/phot.rst
+   notebooks/phot.ipynb
