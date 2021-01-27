@@ -74,6 +74,7 @@ def cutouts(image, stars, size=15):
     
     return np.argwhere(stars_in).flatten(), stars
 
+
 def moments(data):
     """Returns (height, x, y, width_x, width_y)
     the gaussian parameters of a 2D distribution by calculating its

@@ -11,6 +11,9 @@ from .io import get_files, fits_to_df
 
 
 class FilesDataFrame:
+    """
+    TODO: should use https://pandas.pydata.org/pandas-docs/stable/development/extending.html
+    """
     def __init__(self, files_df, verbose=True):
         self.files_df = None
         self.verbose = verbose
@@ -20,9 +23,11 @@ class FilesDataFrame:
 
         assert len(self._original_files_df) != 0, "No data found"
         self.telescope = None
+        self.sort_by_date()
 
-    def reset(self):
+    def restore(self):
         self.files_df = self._original_files_df.copy()
+        self.sort_by_date()
 
     #     def __getattribute__(self)
 
@@ -39,14 +44,34 @@ class FilesDataFrame:
                 conditions = conditions & (files_df[field] == value).reset_index(drop=True)
 
         if return_conditions:
-            return conditions
+            return conditions.reset_index(drop=True)
         else:
             return files_df.reset_index(drop=True).loc[conditions]
 
     def get(self, return_conditions=False, **kwargs):
-        return self._get(self.files_df, return_conditions=False, **kwargs)
+        """Filter the current dataframe by values of its columns
+
+        Parameters
+        ----------
+        return_conditions : bool, optional
+            Wether to return a bool DataArray matching the filters, by default False
+        **kwargs: dict
+            dict of column-value filters to be applied. Example: telescope="A", filter="I" ... etc
+
+        Returns
+        -------
+        dataframe
+        """
+        return self._get(self.files_df, return_conditions=return_conditions, **kwargs)
 
     def keep(self, inplace=True, **kwargs):
+        """Same as get but can replace the inplace dataframe with filtered values and sort by date
+
+        Parameters
+        ----------
+        inplace : bool, optional
+            weather to replace dataframe inplace, by default True
+        """
 
         new_df = self.get(**kwargs)
         if inplace:
@@ -61,6 +86,16 @@ class FilesDataFrame:
             self.sort_by("jd")
 
     def sort_by(self, field, inplace=True):
+        """Sort dataframe with a specific keyword
+
+        Parameters
+        ----------
+        field : string
+            keyword to sort by
+        inplace : bool, optional
+            weather to replace current datframe by a the filtered one, by default True. If False, filtered will be returned
+
+        """
         if field in self.files_df:
             new_df = self.files_df.sort_values([field]).reset_index(drop=True)
             if inplace:
@@ -71,6 +106,28 @@ class FilesDataFrame:
             raise KeyError("'{}' is not in files_df".format(field))
 
     def describe(self, *fields, return_string=False, original=False, unique=True, index=False, return_df=False, **kwargs):
+        """Print a table description of dataframe
+
+        Parameters
+        ----------
+        return_string : bool, optional
+            weather to return str of the table, by default False. If False table is printed.
+        original : bool, optional
+            weather to describe the original dataframe, by default False. If false, this is applied on current.
+        unique : bool, optional
+            wether to show rows of unique values, by default True
+        index : bool, optional
+            wether to show indexes as first table header, by default False
+        hide : [type], optional
+            fields to hide, by default None. If one is specified, dataframe will be filtered for this values but they will not be shown
+        **kwargs: dict
+            filters to be applied. Example: telescope="A", filter="I" ... etc
+
+        Returns
+        -------
+        [type]
+            [description]
+        """
 
         if original:
             files_df = self._original_files_df.copy()
@@ -85,6 +142,11 @@ class FilesDataFrame:
 
         else:
             headers = list(fields)
+
+        if hide is not None:
+            assert isinstance(hide, list), "hide must be a list of string"
+            for h in hide:
+                headers.remove(h)
 
         if unique:
             multi_index_obs = files_df.pivot_table(index=headers, aggfunc="size")
@@ -145,8 +207,10 @@ class FitsManager(FilesDataFrame):
 
     @property
     def observations(self):
+        """Print a table of observations (observation is defined as a unique combinaison of date, telescope, target and filter)
+        """
         headers = ["date", "telescope", "target", "filter"]
-        self.describe(*headers, index=True)
+        self.describe(*headers, index=True, type=self.image_kw, hide=["type"])
         return None
 
     @property
@@ -166,11 +230,21 @@ class FitsManager(FilesDataFrame):
 
     @property
     def calib(self):
+        """Print a table of observations and calibration files (observation is defined as a unique combinaison of date, telescope, target and filter)
+
+        """
         headers = ["date", "telescope", "target", "filter", "type"]
         self.describe(*headers, index=False)
         return None
 
     def set_observation(self, i, **kwargs):
+        """Set the unique observation to use by its id. Observation indexes are specified in `self.observations`
+
+        Parameters
+        ----------
+        i : int
+            index of the observation as displayed in `self.observations`
+        """
         self.files_df = self.get_observation(i, **kwargs)
         assert self.unique_obs, "observation should be unique, please use set_observation"
         obs = self._observations.loc[0]
@@ -219,7 +293,8 @@ class FitsManager(FilesDataFrame):
             date=obs.date)
 
         for _type in ["dark", "flat", "bias"]:
-            others = others.drop(np.argwhere(FilesDataFrame._get(others, type=_type, return_conditions=True).values))
+            others = others.reset_index(drop=True)
+            others = others.drop(np.argwhere(FilesDataFrame._get(others, type=_type, return_conditions=True).values).flatten())
 
         dfs.append(others)
 
@@ -227,26 +302,62 @@ class FitsManager(FilesDataFrame):
 
     @property
     def unique_obs(self):
+        """Return wether the object contains a unique observation (observation is defined as a unique combinaison of date, telescope, target and filter).
+
+        Returns
+        -------
+        bool
+        """
         return len(self._observations) == 1
 
     @property
     def images(self):
+        """fits paths of the observation science images
+
+        Returns
+        -------
+        list of str
+        """
         return self.get(type=self.image_kw).path.values.astype(str)
 
     @property
     def darks(self):
+        """fits paths of the observation dark images
+
+        Returns
+        -------
+        list of str
+        """
         return self.get(type="dark").path.values.astype(str)
 
     @property
     def bias(self):
+        """fits paths of the observation bias images
+
+        Returns
+        -------
+        list of str
+        """
         return self.get(type="bias").path.values.astype(str)
 
     @property
     def flats(self):
+        """fits paths of the observation flats images
+
+        Returns
+        -------
+        list of str
+        """
         return self.get(type="flat").path.values.astype(str)
 
     @property
     def stack(self):
+        """fits paths of the observation stack image if present
+
+        Returns
+        -------
+        list of str
+        """
         return self.get(type="stack").path.values.astype(str)
 
     @property

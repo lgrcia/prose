@@ -53,7 +53,7 @@ trappist.update({
     "name": "Trappist-South",
     "trimming": [40, 40],
     "pixel_scale": 0.66,
-    "ra_unit": "hourangle",
+    "ra_unit": "deg",
     "latlong": [29.2563, 70.7380]})
 
 trappistN = trappist.copy()

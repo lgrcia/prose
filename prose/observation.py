@@ -583,10 +583,10 @@ class Observation(Fluxes):
             fields = ["dx", "dy", "fwhm", "airmass", "sky"]
 
         flux = self.flux.copy()
-        flux /= np.mean(flux)
+        flux /= np.nanmean(flux)
 
         if ylim is None:
-            ylim = (flux.min() * 0.99, flux.max() * 1.01)
+            ylim = (flux.nanmin() * 0.99, flux.nanmax() * 1.01)
 
         offset = ylim[1] - ylim[0]
 
@@ -597,7 +597,9 @@ class Observation(Fluxes):
 
         for i, field in enumerate(fields):
             if field in self:
-                scaled_data = sigma_clip(self.xarray[field].values)
+                scaled_data = self.xarray[field].values.copy()
+                scaled_data = np.nan_to_num(scaled_data, -1)
+                scaled_data[scaled_data - np.nanmean(scaled_data) > 5*np.nanstd(scaled_data)] = -1
                 scaled_data = scaled_data - np.median(scaled_data)
                 scaled_data = scaled_data / np.std(scaled_data)
                 scaled_data *= np.std(flux)

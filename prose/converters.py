@@ -11,7 +11,8 @@ from astropy.table import Table
 import numpy as np
 from astropy.time import Time
 import xarray as xr
-
+from prose.blocks.registration import xyshift, closeness
+from prose.blocks import SegmentedPeaks
 
 def get_phot_stack(folder, phot_extension, stack_extension="stack.fits"):
     return io.get_files(phot_extension, folder), io.get_files(stack_extension, folder)
@@ -322,3 +323,95 @@ def old_to_new(folder_path, destination=None, keyword_observatory="OBSERVAT"):
         destination = f"{folder_path}.phot"
 
     x.to_netcdf(destination)
+
+
+def AIJ_to_phot(aij_file, telescope, destination, stack):
+    """Convert an AIJ data file to a phot file
+
+    Parameters
+    ----------
+    aij_file : str
+        path of the AIJ file
+    telescope : str
+        telescope name
+    destination : str
+        path of the destination .phot file (must include filename)
+    stack : str
+        path of the corresponding stack image
+    """
+    df = pd.read_csv(aij_file, sep="\t")
+
+    # getting values
+    stars_ids = [eval(key.split('rel_flux_T')[-1].split("_")[0]) for key in df.keys() if
+                 re.match('rel_flux_T[1-9]*$', key) is not None]
+    bjd_tdb = df["BJD_TDB"]
+    fluxes = np.zeros((1, len(stars_ids), len(bjd_tdb)))
+    errors = np.zeros_like(fluxes)
+    sky = np.zeros((len(stars_ids), len(bjd_tdb)))
+    fwhm = np.zeros_like(sky)
+    x = np.zeros_like(sky)
+    y = np.zeros_like(sky)
+
+    for i, j in enumerate(stars_ids):
+        fluxes[0, i, :] = df[f"rel_flux_T{j}"]
+        errors[0, i, :] = df[f"rel_flux_err_T{j}"]
+        x[i, :] = df[f"X(IJ)_T{j}"]
+        y[i, :] = df[f"Y(IJ)_T{j}"]
+        fwhm[i, :] = df[f"FWHM_T{j}"]
+        sky[i, :] = df[f"Sky/Pixel_T{j}"]
+
+    stars = np.vstack([np.median(x, 1), np.median(y, 1)]).T
+
+    if stack is not None:
+        # detecting stars and figuring out the rotation to apply to stack
+        sp = SegmentedPeaks()
+        stack = fits.getdata(stack)
+
+        rotated_stack = [
+            stack[:, :],
+            stack[::-1, :],
+            stack[:, ::-1],
+            stack[::-1, ::-1],
+        ]
+        reference_stars = sp.single_detection(stack)[0]
+
+        close = []
+
+        for rstack in rotated_stack:
+            rstars = sp.single_detection(rstack)[0][0:30]
+            close.append(closeness(stars, rstars, tolerance=500))
+
+        stack = rotated_stack[np.argmax(close)]
+        rstars = sp.single_detection(stack)[0][0:30]
+        stars += xyshift(stars[0:30], rstars)
+
+    # Defining the xarray
+    obsx = xr.Dataset(dict(
+        fluxes=xr.DataArray(fluxes / fluxes.mean((0, 2))[None, :, None], dims=("apertures", "star", "time")),
+        errors=xr.DataArray(errors, dims=("apertures", "star", "time")),
+        fwhm=xr.DataArray(np.nanmedian(fwhm, 0), dims="time"),
+        dy=xr.DataArray(np.nanmedian(y, 0) - y.mean(), dims=("time")),
+        dx=xr.DataArray(np.nanmedian(x, 0) - x.mean(), dims=("time")),
+        sky=xr.DataArray(np.nanmedian(sky, 0), dims="time"),
+        airmass=xr.DataArray(df["AIRMASS"].values, dims="time"),
+        bjd_tdb=xr.DataArray(df["BJD_TDB"].values, dims=("time")),
+        jd_utc=xr.DataArray(df["JD_UTC"].values, dims=("time")),
+        exptime=xr.DataArray(df["EXPTIME"].values, dims=("time")),
+    ), attrs=dict(
+        target=0,
+        aperture=-1,
+        telescope=telescope,
+        exptime=np.unique(df["EXPTIME"].values)[0],
+        time_format='bjd_tdb'
+    ), coords=dict(
+        time=("time", bjd_tdb),
+        stars=(("star", "n"), stars)
+    ))
+
+    if stack is not None:
+        obsx.coords["stack"] = (("w", "h"), stack)
+
+    if not destination.endswith(".phot"):
+        destination = f"{destination}.phot"
+
+    obsx.to_netcdf(destination)

@@ -25,13 +25,13 @@ A python framework to process FITS images. Built for Astronomy, |prose| features
    :caption: Tutorials
    :maxdepth: 1
 
-   tutorials/reduction/reduction.ipynb
-   tutorials/modular-reduction/custom_pipeline.ipynb
-   tutorials/NEB/neb_diagnostic.ipynb
-
-
+   notebooks/fits_manager.ipynb
+   notebooks/reduction.ipynb
+   notebooks/custom_pipeline.ipynb
+   notebooks/neb_diagnostic.ipynb
+   
 .. toctree::
    :caption: Notes
    :maxdepth: 1
 
-   notes/phot.ipynb
+   tutorials/phot/phot.rst
