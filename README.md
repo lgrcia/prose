@@ -1,6 +1,8 @@
+> Currently **under development** (checkout the `dev` branch)
+
 # prose
 
-A python framework to process FITS images. Built for Astronomy, *prose* features pipelines to perform common tasks (such as automated calibration, reduction and photometry) and make building custom ones easy. Documentation at [prose.readthedocs.io](https://prose.readthedocs.io)
+A python framework to process FITS images. Built for Astronomy, *prose* features pipelines to perform common tasks (such as automated calibration, reduction and photometry) and make building custom ones easy. Documentation at [prose.readthedocs.io](https://prose.readthedocs.io/en/dev)
 
 <p align="center">
   <img width="400" src="docs/source/prose.png">
