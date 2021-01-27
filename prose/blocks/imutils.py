@@ -49,7 +49,7 @@ class Stack(Block):
 
     def terminate(self):
 
-        self.stack /= self.n_images
+        self.stack = self.stack/self.n_images
 
         if self.destination is not None:
             self.stack_header[self.telescope.keyword_image_type] = "Stack image"
