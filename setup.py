@@ -23,7 +23,6 @@ setup(
         "tqdm",
         "astroalign",
         "photutils",
-        "click",
         "astroquery",
         "pyyaml",
         "sphinx",
@@ -37,7 +36,6 @@ setup(
         "xarray",
         "numba",
         "netcdf4",
-        "jupytext",
         "nbsphinx"
     ],
     zip_safe=True,
