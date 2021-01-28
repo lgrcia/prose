@@ -157,7 +157,7 @@ class Reduction:
                 raise AssertionError("Multiple observations found")
 
             if self.destination is None:
-                self.destination = path.join(self.fits_manager.folder, self.fits_manager.products_denominator)
+                self.destination = path.join(path.dirname(self.fits_manager.folder), self.fits_manager.products_denominator)
 
             self.darks = self.fits_manager.darks
             self.flats = self.fits_manager.flats

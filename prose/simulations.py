@@ -1,337 +1,209 @@
 import numpy as np
-from scipy import interpolate
-
-try:
-    import celerite
-except ModuleNotFoundError:
-    ModuleNotFoundError("prose.simulations requires celerite (pip install celerite)")
-
-from datetime import datetime
-import uuid
-from prose import LightCurve, LightCurves
 import matplotlib.pyplot as plt
+from prose import viz, utils, Telescope
+from photutils.psf import extract_stars
+from astropy.table import Table
+from astropy.nddata import NDData
+import celerite2 as celerite
+from prose.blocks.registration import distances
+from os import path
+from astropy.time import Time
+import os
+from datetime import datetime
+from tqdm import tqdm
+from astropy.io import fits
+from datetime import datetime
+
+
+def fits_image(data, header, destination):
+
+    header = dict(
+        TELESCOP=header.get("TELESCOP", "fake"),
+        EXPTIME=header.get("EXPTIME", 1),
+        FILTER=header.get("FILTER", ""),
+        OBJECT=header.get("OBJECT", "prose"),
+        IMAGETYP=header.get("IMAGETYP", "light"),
+        AIRMASS=header.get("AIRMASS", 1),
+        JD=header.get("JD", 0),
+        RA=header.get("RA", 12.84412),
+        DEC=header.get("DEC", -22.85886),
+    )
+    header['DATE-OBS'] = header.get("DATE-OBS", Time(datetime.now()).to_value("fits"))
+    hdu = fits.PrimaryHDU(data, header=fits.Header(header))
+    hdu.writeto(destination, overwrite=True)
+
+
+def cutouts(image, stars, size):
+    stars_tbl = Table(stars.T, names=["x", "y"])
+    stars = extract_stars(NDData(data=image), stars_tbl, size=size)
+    return stars
+
+
+def sim_diffflux(time, amp=1e-3, w=10):
+    kernel = celerite.terms.SHOTerm(S0=1, Q=1, w0=2 * np.pi / w)
+    gp = celerite.GaussianProcess(kernel)
+    gp.compute(time)
+    return 1 + utils.rescale(gp.sample()) * amp / 2
+
+
+def random_stars(k, shape, sort=True):
+    positions = np.random.rand(k, 2) * shape
+    return positions
+
+
+def random_fluxes(k, time, peak=65000, max_amp=1e-2, sort=True):
+    fluxes = np.random.beta(1e-2, 100, size=k)
+    diff_amplitudes = np.random.beta(1, 8, size=k)
+
+    if sort:
+        idxs = np.argsort(fluxes)[::-1]
+        fluxes = fluxes[idxs]
+        diff_amplitudes = diff_amplitudes[idxs]
+
+    diff_amplitudes /= diff_amplitudes.max()
+    diff_amplitudes *= max_amp
+
+    fluxes /= fluxes.max()
+    fluxes *= peak
+    fluxes += 15
+
+    fluxes = np.repeat(fluxes[:, np.newaxis], len(time), axis=1)
+    fluxes *= np.array([sim_diffflux(time, amp=a) for a in diff_amplitudes])
+
+    return fluxes
 
 
 def protopapas2005(t, t0, duration, depth, c=20, period=1):
     _t = period * np.sin(np.pi * (t - t0) / period) / (np.pi * duration)
     return (1 - depth) + (depth / 2) * (
-            2 - np.tanh(c * (_t + 1 / 2)) + np.tanh(c * (_t - 1 / 2))
-    )
+            2 - np.tanh(c * (_t + 1 / 2)) + np.tanh(c * (_t - 1 / 2)))
 
 
-def variability(time, period, amplitude=None, log_S0=np.log(10), log_Q=np.log(100)):
-    kernel = celerite.terms.SHOTerm(log_S0=log_S0, log_Q=log_Q, log_omega0=np.log(2 * np.pi / period))
-    gp = celerite.GP(kernel)
-    gp.compute(time)
-    if amplitude is not None:
-        return rescale(gp.sample()) * amplitude / 2
-    else:
-        return gp.sample()
+class ObservationSimulation:
 
-
-def slice_observation(time, y=None, min_sep=0.01, y_only=False):
-    split_idx = np.where(np.diff(time) > min_sep)[0] + 1
-
-    sliced_time = np.split(time, split_idx)
-
-    if y is None:
-        return sliced_time
-
-    else:
-        sliced_y = np.split(y, split_idx)
-        if not y_only:
-            return [np.array([sliced_time[i], sliced_y[i]]) for i in range(len(sliced_time))]
+    def __init__(self, shape, telescope, n=51):
+        if isinstance(shape, (tuple, list)):
+            self.shape = shape
         else:
-            return sliced_y
+            self.shape = (shape, shape)
+        self.telescope = telescope
+        self.n = n
+        self.x, self.y = np.indices((n, n))
 
+    def set_psf(self, fwhm, theta, beta, model="moffat"):
+        self.beta = beta
+        self.theta = theta * np.pi / 180
+        self.sigma = np.array(fwhm) / self.sigma_to_fwhm
+        if model is "moffat":
+            self.psf_model = self.moffat_psf
+        elif model is "gaussian":
+            self.psf_model = self.gaussian_psf
 
-def generate_time(duration, sampling, origin=0):
-    """
-    Return a 1D array representing observation time
+    def moffat_psf(self, a, x, y):
+        # https://pixinsight.com/doc/tools/DynamicPSF/DynamicPSF.html
+        dx_ = self.x - x
+        dy_ = self.y - y
+        dx = dx_ * np.cos(self.theta) + dy_ * np.sin(self.theta)
+        dy = -dx_ * np.sin(self.theta) + dy_ * np.cos(self.theta)
+        sx, sy = self.sigma
 
-    Parameters
-    ----------
-    duration: float
-        duration in hours`
-    sampling: float
-        exposure time in seconds
-    origin: float
-        time origin
+        return a / np.power(1 + (dx / sx) ** 2 + (dy / sy) ** 2, self.beta)
 
-    Returns
-    -------
-    1D array
+    def gaussian_psf(self, a, x, y):
+        dx = self.x - x
+        dy = self.y - y
+        sx, sy = self.sigma
+        a = (np.cos(self.theta) ** 2) / (2 * sx ** 2) + (np.sin(self.theta) ** 2) / (2 * sy ** 2)
+        b = -(np.sin(2 * self.theta)) / (4 * sx ** 2) + (np.sin(2 * self.theta)) / (4 * sy ** 2)
+        c = (np.sin(self.theta) ** 2) / (2 * sx ** 2) + (np.cos(self.theta) ** 2) / (2 * sy ** 2)
+        im = a * np.exp(-(a * dx ** 2 + 2 * b * dx * dy + c * dy ** 2))
+        return im
 
-    """
-    return np.arange(origin, origin + duration / 24, sampling / (60 * 60 * 24))
+    def field(self, i):
+        image = np.zeros(self.shape)
+        cuts = cutouts(image, self.positions[:, :, i].T, self.n)
+        fluxes = self.fluxes * self.atmosphere[np.newaxis, :]
+        for c, f in zip(cuts, fluxes[:, i]):
+            image[c.slices[0], c.slices[1]] += self.psf_model(f, *c.cutout_center)
 
+        return image
 
-def rescale(f):
-    return (f - np.mean(f)) / np.std(f)
+    def remove_stars(self, idxs):
+        k = self.positions.shape[0]
+        self.positions = self.positions[np.setdiff1d(np.arange(k), idxs), :, :]
+        self.fluxes = self.fluxes[np.setdiff1d(np.arange(k), idxs), :]
 
+    @property
+    def sigma_to_fwhm(self):
+        return 2 * np.sqrt(np.power(2, 1 / self.beta) - 1)
 
-def generate_systematics(
-        time,
-        sigma_r,
-        measure_hyperparam,
-        model_hyperparam,
-        measurement_error):
-    model_range = np.linspace(-1, 1, 100)
-    model_kernel = celerite.terms.SHOTerm(log_omega0=np.log(2 * np.pi / model_hyperparam), log_S0=np.log(1), log_Q=np.log(1e3))
-    gp_model = celerite.GP(model_kernel)
-    gp_model.compute(model_range)
-    model = sigma_r * rescale(gp_model.sample(len(model_range))[0])
+    def add_stars(self, k, time, atmosphere=6e-2, peak=65000):
+        # Generating time series
+        self.time = time
+        self.positions = np.repeat(random_stars(k, np.min(self.shape))[:, :, np.newaxis], len(time), axis=2)
+        self.fluxes = random_fluxes(k, time, peak=peak)
 
-    func_model = interpolate.interp1d(model_range, model, fill_value="extrapolate")
-
-    measure_kernel = celerite.terms.SHOTerm(log_omega0=np.log(2 * np.pi / 100), log_S0=np.log(1), log_Q=np.log(measure_hyperparam))
-    gp = celerite.GP(measure_kernel)
-    gp.compute(time)
-    measure = rescale(gp.sample(len(time))[0])
-    noisy_measure = measure + np.random.normal(scale=measurement_error, size=len(measure))
-
-    lc = func_model(measure)
-
-    return lc, noisy_measure, model, model_range
-
-
-def simulate_lcs(
-        time,
-        sigma_w=3e-3,
-        sigma_r=0,
-        variability_amplitude=0,
-        variability_period=None,
-        variability_S0 = 10,
-        variability_Q =  100,
-        transits_params=[],
-        systematics_names=["dx", "dy", "sky", "airmass", "fwhm"],
-        systematics_models_kernel_params=2.5,
-        systematics_measures_kernel_params=5e-3,
-        systematics_measures_std=0.05,
-        return_models=False,
-        return_LightCurve=False):
-
-    times = slice_observation(time)
-
-    # White noise
-    white_noise = np.random.normal(loc=0, scale=sigma_w, size=len(time))
-
-    # Red Noise
-    if isinstance(sigma_r, (int, float)):
-        sigma_r = np.ones(len(systematics_names)) * sigma_r
-
-    systematics = [{name: generate_systematics(
-        time,
-        s_r,
-        systematics_models_kernel_params,
-        systematics_measures_kernel_params,
-        systematics_measures_std
-    ) for name, s_r in zip(systematics_names, sigma_r)} for time in times]
-
-    red_noises = [np.sum([s[0] for s in systematic.values()], axis=0) for systematic in systematics]
-    red_noise = np.hstack(red_noises)
-
-    # Variability
-    if variability_period is not None:
-        variability_ = variability(time, variability_period, variability_amplitude, log_S0=np.log(variability_S0), log_Q=np.log(variability_Q))
-    else:
-        variability_ = np.zeros_like(time)
-
-    variabilities = slice_observation(time, variability_, y_only=True)
-
-    # Transit
-    if transits_params:
-        transits = [protopapas2005(time, t["T0"], t["duration"], t["depth"], period=t["period"]) - 1 for t in
-                    transits_params]
-        all_transit = np.sum(transits, axis=0)
-
-    else:
-        all_transit = np.zeros_like(time)
-
-    all_transits = slice_observation(time, all_transit, y_only=True)
-
-    lc = 1 + red_noise + white_noise + variability_ + all_transit
-    lcs = slice_observation(time, lc, y_only=True)
-
-    # min_depth = np.min([t["depth"] for t in transits_params]) if transits else None
-    # min_duration = np.min([t["duration"] for t in transits_params]) if transits else None
-    #
-    # # Red Noise
-    # dt = np.median(np.diff(time))
-    # transit_snr_r = []
-    # for transit in transits:
-    #     n = len(np.argwhere(transit))
-    #     Ntr =
-    #
-    #     transit["depth"] / (np.mean(sigma_w))
-    #
-    # red_noise_snr = sigma_r / np.mean(sigma_w)
-    # red_noise_relative_amplitude = sigma_r / min_depth
-    # red_noise_relative_timescale = sigma_r / min_depth
-    #
-    # # Variability
-    # variability_snr = variability_amplitude / np.mean(sigma_w) if variability_amplitude else None
-    # variability_relative_amplitude = variability_amplitude / min_depth if variability_amplitude else None
-    # variability_relative_timescale = variability_period / ((2 / 3) * min_duration) if variability_amplitude else None
-    #
-    # # Transit
-    # transit_snr_w = [transit["depth"] / np.mean(sigma_w) for transit in transits] if transits else None
-    # transit_snr_r = [transit["depth"] / np.mean(sigma_w) for transit in transits] if transits else None
-    # transit_global_snr = [transit["depth"] / (np.mean(sigma_w) + sigma_r) for transit in
-    #                       transits] if transits else None
-
-    systematics_dict_list = [{name: value[0] for name, value in sys.items()} for sys in systematics]
-    errors = [np.ones_like(time) * sigma_w for time in times]
-
-    dataset = {
-        "data": {
-            "times": times,
-            "lcs": lcs,
-            "systematics": systematics_dict_list,
-            "error": errors,
-        },
-        "models": {
-            "variabilities": variabilities,
-            "transits": transits,
-            "red_noises": red_noises,
-            "systematics": systematics,
-            "white_noise": white_noise,
-        },
-        "info": {
-            "observations": len(times),
-            "total_duration": time.max() - time.min(),
-            "sampling": np.median(np.diff(times[0])),
-            "transits_params": transits_params,
-            "mean_sigma_w": np.mean(sigma_w),
-            "sigma_w": sigma_w,
-            "sigma_r": sigma_r,
-            "variability_amplitude": variability_amplitude,
-            "variability_period": variability_period,
-            # "red_noise_snr": red_noise_snr,
-            # "red_noise_relative_amplitude": red_noise_relative_amplitude,
-            # "variability_snr": variability_snr,
-            # "variability_relative_amplitude": variability_relative_amplitude,
-            # "variability_relative_timescale": variability_relative_timescale,
-            # "transit_snr": transit_snr,
-            # "transit_global_snr": transit_global_snr,
-        }
-    }
-
-    if return_LightCurve:
-        lightcurves = []
-        for i in range(len(times)):
-            lc = LightCurve(times[i], [lcs[i]], [errors[i]], data=systematics_dict_list[i])
-            lc.info = dataset['info']
-            lc.models = {
-                "variabilities": variabilities[i],
-                "transits": all_transit[i],
-                "red_noises": red_noises[i],
-                "systematics": systematics[i],
-                "white_noise": white_noise[i],
-            }
-            lightcurves.append(lc)
-
-        lightcurves = LightCurves(lightcurves)
-        lightcurves.info = dataset['info']
-        lightcurves.models = {
-                "variabilities": np.hstack(variabilities),
-                "transits": transits,
-                "red_noises": np.hstack(red_noises),
-                "systematics": np.hstack(systematics),
-                "white_noise": np.hstack(white_noise),
-            }
-
-        return lightcurves
-
-    else:
-        return dataset
-
-
-def load_observations(dataset, blind=True):
-    return dataset
-
-
-def save_dataset(dataset, version=0):
-    obsid = "simlc_v{}_{}_{}.npy".format(version, datetime.now().strftime('%Y%m%d%H%M%S'), str(uuid.uuid4()))
-    np.save(obsid, [dataset])
-    return obsid
-
-
-def get_model(dataset, i=None):
-    models = dataset["models"]
-
-    if i is not None:
-        return {
-            "variability": models["variabilities"][i],
-            "red_noise": models["red_noises"][i],
-            "transit": models["transits"][i],
-            "red_noises": "",
-            "systematics": models["systematics"][i],
-        }
-    else:
-        return {
-            "variability": np.hstack(models["variabilities"]),
-            "red_noise": np.hstack(models["red_noises"]),
-            "transit": np.hstack(models["transits"]),
-            "red_noises": "",
-        }
-
-
-def get_data(dataset, i=None):
-    data = dataset["data"]
-
-    if i is not None:
-        return {
-            "lc": data["lcs"][i],
-            "time": data["times"][i],
-            "systematics": data["systematics"][i],
-            "error": np.ones_like(data["times"][i]) * data["error"] if isinstance(data["error"], float) else data[
-                "error"]
-        }
-    else:
-        return {
-            "lc": np.hstack(data["lcs"]),
-            "time": np.hstack(data["times"]),
-            "systematics": np.hstack(data["systematics"]),
-            "error": np.ones_like(np.hstack(data["times"])) * data["error"] if isinstance(data["error"], float) else
-            data["error"]
-        }
-
-
-def get_info(dataset):
-    return dataset["info"]
-
-
-def get_observations(dataset, asarray=False):
-    observations = []
-    for i in range(dataset["info"]["observations"]):
-        if asarray:
-            d = get_data(dataset, i)
-            observations.append([d["time"], d["lc"], d["error"], d["systematics"]])
+        if atmosphere is not None:
+            # Atmosphere signal
+            self.atmosphere = sim_diffflux(time, w=0.5, amp=atmosphere)
         else:
-            observations.append(get_data(dataset, i))
-    return observations
+            self.atmosphere = np.ones_like(self.time)
 
+    def image(self, i, sky, noise=True):
+        image = self.field(i)
 
-def plot_model(time, lc, measure, model, model_range, name="systematic"):
-    plt.figure(figsize=(14,3))
+        background = sky + np.random.normal(scale=np.sqrt(sky), size=self.shape)
+        read_noise = np.random.normal(scale=self.telescope.read_noise, size=self.shape)
+        photon_noise = np.random.normal(scale=np.sqrt(image), size=self.shape)
 
-    # plotting simulated measurements
-    plt.subplot(131)
-    plt.plot(time, measure, c="k")
-    plt.xlabel("time"), plt.ylabel(name)
+        if noise:
+            image += background + read_noise + photon_noise
 
-    # plotting light curve
-    plt.subplot(132)
-    plt.plot(measure, lc, ".", alpha=0.3)
-    plt.plot(model_range, model, c="k")
-    plt.xlim(np.percentile(measure, 5), np.percentile(measure, 95))
-    plt.xlabel(name), plt.ylabel("red noise flux")
+        return image
 
-    # plotting light curve
-    plt.subplot(133)
-    plt.plot(time, 1 + lc, c="k")
-    plt.ylim([0.98, 1.02])
-    plt.ylabel("ligth curve") ,plt.xlabel("time")
+    def set_star(self, i, position, diff_flux=None):
+        self.target = i
+        self.positions[i, :, :] = np.repeat(np.array(position)[:, np.newaxis], len(self.time), axis=1)
+        if diff_flux is not None:
+            peak = self.fluxes[i, :].mean()
+            self.fluxes[i, :] = peak * diff_flux
 
-    plt.tight_layout()
+    def set_target(self, i, diff_flux=None):
+        self.target = i
+        self.set_star(i, np.array(self.shape) / 2, diff_flux)
+
+    def plot(self, n, photon_noise=True, atmosphere=True, **kwargs):
+        fluxes = self.fluxes * (self.atmosphere[np.newaxis, :] if atmosphere else 1)
+        viz.plot_lcs([(self.time, np.random.normal(f, np.sqrt(f) if photon_noise else 0, size=len(self.time))) for f in
+                      fluxes[0:n]], **kwargs)
+
+    def clean_around_target(self, radius):
+        close_by = np.setdiff1d(np.argwhere(
+            np.array(distances(self.positions[:, :, 0].T, self.positions[self.target, :, 0])) < radius).flatten(),
+                                self.target)
+        self.remove_stars(close_by)
+
+    def save_fits(self, destination, calibration=False):
+        if not path.exists(destination):
+            os.makedirs(destination)
+
+        for i, time in enumerate(tqdm(self.time)):
+            date = Time(datetime(2020, 3, 1, int(i / 60), i % 60)).to_value("fits")
+            im = self.image(i, 300)
+            fits_image(im,
+                       {'TELESCOP': self.telescope.name, 'JD': time, 'DATE-OBS': date, "FILTER": "a"},
+                       path.join(destination, f"fake-im-{i}.fits"))
+
+        if calibration:
+            fits_image(np.zeros_like(im),
+                       {'TELESCOP': self.telescope.name, 'JD': time, 'DATE-OBS': date, "IMAGETYP": "dark"},
+                       path.join(destination, f"fake-dark.fits"))
+
+            fits_image(np.zeros_like(im),
+                       {'TELESCOP': self.telescope.name, 'JD': time, 'DATE-OBS': date, "IMAGETYP": "bias"},
+                       path.join(destination, f"fake-C001-bias.fits"))
+
+            for i in range(0, 4):
+                fits_image(np.ones_like(im),
+                           {'TELESCOP': self.telescope.name, 'JD': time, 'DATE-OBS': date, "IMAGETYP": "flat", "FILTER": "a"},
+                           path.join(destination, f"fake-flat-{i}.fits"))

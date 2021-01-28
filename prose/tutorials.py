@@ -5,23 +5,24 @@ import datetime
 import os
 from os import path
 import shutil
+from . import Telescope
+from .simulations import fits_image, ObservationSimulation
 
 
-def fits_image(data, header, destination):
-    header = dict(
-        TELESCOP=header.get("TELESCOP", "fake"),
-        EXPTIME=header.get("EXPTIME", 1),
-        FILTER=header.get("FILTER", ""),
-        OBJECT=header.get("OBJECT", "prose"),
-        IMAGETYP=header.get("IMAGETYP", "light"),
-        AIRMASS=header.get("AIRMASS", 1),
-        JD=header.get("JD", 0),
-        RA=header.get("RA", 12.84412),
-        DEC=header.get("DEC", -22.85886),
-    )
-    header['DATE-OBS'] = header.get("DATE-OBS", Time(datetime.datetime.now()).to_value("fits"))
-    hdu = fits.PrimaryHDU(data, header=Header(header))
-    hdu.writeto(destination, overwrite=True)
+def simulate_observation(time, dflux, destination):
+    n = len(time)
+
+    # Creating the observation
+    obs = ObservationSimulation(600, Telescope.from_name("A"))
+    obs.set_psf((3.5, 3.5), 45, 4)
+    obs.add_stars(300, time)
+    obs.set_target(0, dflux)
+    obs.positions += (np.random.rand(n) * 4)[np.newaxis, np.newaxis, :]
+
+    # Cleaning the field
+    obs.remove_stars(np.argwhere(obs.fluxes.mean(1) < 20).flatten())
+    obs.clean_around_target(50)
+    obs.save_fits(destination, calibration=True)
 
 
 def disorganised_folder(destination):
