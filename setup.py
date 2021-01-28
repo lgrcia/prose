@@ -36,7 +36,8 @@ setup(
         "xarray",
         "numba",
         "netcdf4",
-        "nbsphinx"
+        "nbsphinx",
+        "celerite2"
     ],
     zip_safe=True,
     classifiers=[
