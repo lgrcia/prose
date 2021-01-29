@@ -29,7 +29,6 @@ A python framework to process FITS images. Built for Astronomy, |prose| features
    notebooks/reduction.ipynb
    notebooks/custom_pipeline.ipynb
    notebooks/neb_diagnostic.ipynb
-   notebooks/modeling.ipynb
    
 .. toctree::
    :caption: Notes
