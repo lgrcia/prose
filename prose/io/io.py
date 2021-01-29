@@ -77,14 +77,17 @@ def set_hdu(hdu_list, value):
         hdu_list.append(value)
 
 
-def fits_to_df(files, telescope_kw="TELESCOP"):
+def fits_to_df(files, telescope_kw="TELESCOP", verbose=True):
     assert len(files) > 0, "Files not provided"
 
     last_telescope = "_"
     telescope = None
     df_list = []
 
-    for i in tqdm(files):
+    def progress(x):
+        return tqdm(x) if verbose else x
+
+    for i in progress(files):
         header = fits.getheader(i)
         telescope_name = header.get(telescope_kw, "")
         if telescope_name != last_telescope:

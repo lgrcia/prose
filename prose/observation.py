@@ -22,6 +22,7 @@ from astropy.stats import sigma_clipped_stats
 from astropy.io.fits.verify import VerifyWarning
 from datetime import datetime, timedelta
 import warnings
+from . import models
 
 warnings.simplefilter('ignore', category=VerifyWarning)
 
@@ -62,6 +63,11 @@ class Observation(Fluxes):
     def __copy__(self):
         copied = Observation(self.xarray.copy())
         copied.phot = self.phot
+        copied.telescope = self.telescope
+        copied.gaia_data = self.gaia_data
+        copied.tic_data = self.tic_data
+        copied.wcs = self.wcs
+
         return copied
 
     def copy(self):
@@ -839,3 +845,33 @@ class Observation(Fluxes):
         plt.xlabel("log(ADU)")
         plt.ylabel("$SNR^{-1}$")
         plt.title("Photometric precision (raw fluxes)", loc="left")
+
+    def where(self, condition):
+        new_obs = self.copy()
+        new_obs.xarray = new_obs.xarray.sel(time=self.time[condition])
+        return new_obs
+
+    def keep_good_stars(self, threshold):
+        """Return a new `Observation` where stars with a fluxes higher than `threshold`*sky
+
+        Parameters
+        ----------
+        threshold : float
+            threshold for wich stars with flux/sky > threshold are selected
+        """
+
+    def trend(self, dm, transit=False):
+        w, dw, _, _ = np.linalg.lstsq(dm, self.flux, rcond=None)
+        if transit:
+            return dm[:, -1] * w[-1] + 1, dm.T[0:-1].T @ w.T[0:-1].T
+        else:
+            return dm @ w
+
+    def polynomial(self, **orders):
+        return models.design_matrix([
+            models.constant(self.time),
+            *[models.polynomial(self.xarray[name].values, order) for name, order in orders.items()]
+        ])
+
+    def transit(self, t0, duration, depth=1):
+        return models.transit(self.time, t0, duration)

@@ -194,7 +194,7 @@ class FitsManager(FilesDataFrame):
         elif isinstance(files_df_or_folder, str):
             assert path.exists(files_df_or_folder), "Folder does not exist"
             files = get_files("*.f*ts", files_df_or_folder, depth=kwargs.get("depth", 1))
-            files_df = fits_to_df(files)
+            files_df = fits_to_df(files, verbose=verbose)
             self.folder = files_df_or_folder
         else:
             raise AssertionError("input must be pd.DataFrame or folder path")

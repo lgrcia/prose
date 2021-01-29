@@ -323,6 +323,11 @@ class Fluxes:
         return self.xarray.fluxes.isel(apertures=self.aperture, star=self.target).values
 
     @property
+    def raw_flux(self):
+        return self.xarray.raw_fluxes.isel(apertures=self.aperture, star=self.target).values
+
+
+    @property
     def error(self):
         return self.xarray.errors.isel(apertures=self.aperture, star=self.target).values
 
@@ -442,6 +447,10 @@ class Fluxes:
         binned = self.binn(bins, std=std)
         plt.plot(self.time, self.flux, ".", c="gainsboro", zorder=0, alpha=0.6)
         plt.errorbar(binned.time, binned.flux, yerr=binned.error, fmt=".", zorder=1, color=color, alpha=0.8)
+
+    def sigma_clip(self, sigma=3.):
+        return self.__class__(
+            self.xarray.sel(time=self.time[self.flux - np.median(self.flux) < sigma * np.std(self.flux)]))
 
 
 class LightCurves:

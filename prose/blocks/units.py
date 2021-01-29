@@ -243,7 +243,6 @@ class Photometry:
             self.phot_path = destination.replace(".phot", "") + ".phot"
 
         self._check_phot_path()
-
         self.run_reference_detection()
         self.photometry_unit.run()
 
@@ -278,8 +277,6 @@ class Photometry:
             self.stack_path = self.fits_manager.stack
 
             self.telescope = self.fits_manager.telescope
-
-            self._check_phot_path()
 
         elif files is not None:
             assert stack is not None, "'stack' should be specified if 'files' is specified"
