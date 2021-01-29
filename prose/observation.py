@@ -38,7 +38,7 @@ class Observation(Fluxes):
 
     """
 
-    def __init__(self, photfile):
+    def __init__(self, photfile, ignore_time=False):
         super().__init__(photfile)
 
         self.phot = photfile
@@ -51,9 +51,11 @@ class Observation(Fluxes):
         if "bjd_tdb" not in self:
             try:
                 self.compute_bjd()
-                print(f"{INFO_LABEL} Time converted to BJD TDB")
+                if not ignore_time:
+                    print(f"{INFO_LABEL} Time converted to BJD TDB")
             except:
-                print(f"{INFO_LABEL} Could not convert time to BJD TDB")
+                if not ignore_time:
+                    print(f"{INFO_LABEL} Could not convert time to BJD TDB")
 
     def _check_stack(self):
         assert 'stack' in self.xarray is not None, "No stack found"
@@ -61,7 +63,7 @@ class Observation(Fluxes):
     # Loaders and savers (files and data)
     # ------------------------------------
     def __copy__(self):
-        copied = Observation(self.xarray.copy())
+        copied = Observation(self.xarray.copy(), ignore_time=True)
         copied.phot = self.phot
         copied.telescope = self.telescope
         copied.gaia_data = self.gaia_data
@@ -860,18 +862,38 @@ class Observation(Fluxes):
             threshold for wich stars with flux/sky > threshold are selected
         """
 
-    def trend(self, dm, transit=False):
+    def trend(self, dm, split=None):
         w, dw, _, _ = np.linalg.lstsq(dm, self.flux, rcond=None)
-        if transit:
-            return dm[:, -1] * w[-1] + 1, dm.T[0:-1].T @ w.T[0:-1].T
+        if split is not None:
+            if not isinstance(split, list):
+                split = [split]
+            split_w = np.split(w, [-1])
+            split_dm_T = np.split(dm.T, [-1])
+            return [_w@_dm for _w, _dm in zip(split_w, split_dm_T)]
         else:
             return dm @ w
+
 
     def polynomial(self, **orders):
         return models.design_matrix([
             models.constant(self.time),
-            *[models.polynomial(self.xarray[name].values, order) for name, order in orders.items()]
+            *[models.polynomial(self.xarray[name].values, order+1) for name, order in orders.items()]
         ])
 
     def transit(self, t0, duration, depth=1):
         return models.transit(self.time, t0, duration)
+
+    
+    @property
+    def meridian_flip(self):
+        flip = self.xarray[self.telescope.keyword_flip.lower()]
+        flip[flip == "WEST"] = 0
+        flip[flip == "EAST"] = 1
+        mflip = self.time[np.argwhere(np.diff(flip) == 1).flatten()]
+        if len(flip) != 1:
+            return None
+        else:
+            return mflip[0]
+
+    def plot_flip(self):
+        plt.axvline(self.meridian_flip, ls="--", c="k", alpha=0.5)

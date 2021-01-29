@@ -10,7 +10,7 @@ CONFIG = config.ConfigManager()
 from . import visualisation as viz
 
 from .io.fitsmanager import FitsManager
-from .fluxes import Fluxes, LightCurves
+from .fluxes import Fluxes
 from .telescope import Telescope
 from .blocks.base import Block, Unit, Image
 from .blocks.units import Reduction, AperturePhotometry

@@ -1,6 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from prose import viz, utils, Telescope
+from . import viz, utils, Observation, models
 from photutils.psf import extract_stars
 from astropy.table import Table
 from astropy.nddata import NDData
@@ -9,10 +8,10 @@ from prose.blocks.registration import distances
 from os import path
 from astropy.time import Time
 import os
-from datetime import datetime
 from tqdm import tqdm
 from astropy.io import fits
 from datetime import datetime
+import xarray as xr
 
 
 def fits_image(data, header, destination):
@@ -39,7 +38,7 @@ def cutouts(image, stars, size):
     return stars
 
 
-def sim_diffflux(time, amp=1e-3, w=10):
+def sim_signal(time, amp=1e-3, w=10):
     kernel = celerite.terms.SHOTerm(S0=1, Q=1, w0=2 * np.pi / w)
     gp = celerite.GaussianProcess(kernel)
     gp.compute(time)
@@ -68,7 +67,7 @@ def random_fluxes(k, time, peak=65000, max_amp=1e-2, sort=True):
     fluxes += 15
 
     fluxes = np.repeat(fluxes[:, np.newaxis], len(time), axis=1)
-    fluxes *= np.array([sim_diffflux(time, amp=a) for a in diff_amplitudes])
+    fluxes *= np.array([sim_signal(time, amp=a) for a in diff_amplitudes])
 
     return fluxes
 
@@ -145,7 +144,7 @@ class ObservationSimulation:
 
         if atmosphere is not None:
             # Atmosphere signal
-            self.atmosphere = sim_diffflux(time, w=0.5, amp=atmosphere)
+            self.atmosphere = sim_signal(time, w=0.5, amp=atmosphere)
         else:
             self.atmosphere = np.ones_like(self.time)
 
@@ -207,3 +206,33 @@ class ObservationSimulation:
                 fits_image(np.ones_like(im),
                            {'TELESCOP': self.telescope.name, 'JD': time, 'DATE-OBS': date, "IMAGETYP": "flat", "FILTER": "a"},
                            path.join(destination, f"fake-flat-{i}.fits"))
+
+
+def observation_to_model(time):
+    # transit signal
+    flux = models.transit(time, 0.1, 0.03, 5e-3).flatten() + 1
+    flux += 2e-3*np.random.randn(len(time))
+
+    # Sky correlated signal
+    sky = sim_signal(time, w=0.2)
+    sky_flux = 5*sky + 0.35*sky**2
+    sky_flux -= sky_flux.mean()
+
+    # dy correlated signal
+    dy = sim_signal(time, w=0.1)
+    dy_flux = 2*dy + 0.35*dy**2
+    dy_flux -= dy_flux.mean()
+
+    flux += dy_flux + sky_flux
+    
+    return Observation(xr.Dataset(dict(
+        fluxes = xr.DataArray(flux[None, None, :], dims=("apertures", "star", "time")),
+        sky = xr.DataArray(sky, dims="time"),
+        dy = xr.DataArray(dy, dims="time")
+    ), attrs=dict(
+        telescope = "Saint-Ex",
+        aperture = 0,
+        target = 0,
+    ), coords=dict(
+        time = time
+    )))
