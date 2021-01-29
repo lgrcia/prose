@@ -95,6 +95,10 @@ h1 {
     color: #575757
 }
 
+.docutils.literal.notranslate pre {
+    color: #575757
+}
+
 .xr-attrs dt {
     background: inherit !important;
     color: inherit !important;
@@ -112,5 +116,6 @@ div.nboutput.container div.output_area {
 
 h2 {
     text-decoration: underline;
-    font-size: 21px;
+    font-size: 22px;
+    margin-top: 50px;
 }
