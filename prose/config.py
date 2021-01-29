@@ -142,5 +142,6 @@ class ConfigManager:
             [t in name.lower() for t in available_telescopes_names]
         )[0]
         if len(has_telescope) > 0:
-            return self.telescopes_dict[available_telescopes_names[has_telescope[0]]]
+            i = np.argmax([len(name) for name in np.array(available_telescopes_names)[has_telescope]])
+            return self.telescopes_dict[available_telescopes_names[has_telescope[i]]]
 
