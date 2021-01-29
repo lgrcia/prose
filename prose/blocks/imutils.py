@@ -205,6 +205,9 @@ class CleanCosmics(Block):
 
 
 class Pass(Block):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        
     """A Block that does nothing"""
     def run(self, image):
         pass

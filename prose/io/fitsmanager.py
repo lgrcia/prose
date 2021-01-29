@@ -212,7 +212,7 @@ class FitsManager(FilesDataFrame):
 
     @property
     def _observations(self):
-        light_rows = self.files_df.loc[self.files_df["type"].str.contains(self.image_kw).fillna(False)]
+        light_rows = self.files_df.loc[self.files_df["type"].str.contains(self.image_kw)].fillna("")
         observations = (
             light_rows.pivot_table(
                 index=["date", "telescope", "target", "dimensions", "filter"],

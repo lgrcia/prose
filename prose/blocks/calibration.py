@@ -36,7 +36,7 @@ class Calibration(Block):
         _master = []
         kw_exp_time = self.telescope.keyword_exposure_time
         images = self.images[image_type]
-        assert len(images) > 0, "No {} images found".format(image_type)
+        assert len(images) > 0, f"No {image_type} images found (see Reduction `calibration` kwargs)"
         for i, fits_path in enumerate(images):
             hdu = fits.open(fits_path)
             primary_hdu = hdu[0]
