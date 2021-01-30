@@ -22,7 +22,6 @@ from astropy.stats import sigma_clipped_stats
 from astropy.io.fits.verify import VerifyWarning
 from datetime import datetime, timedelta
 import warnings
-from . import models
 
 warnings.simplefilter('ignore', category=VerifyWarning)
 
@@ -861,28 +860,6 @@ class Observation(Fluxes):
         threshold : float
             threshold for wich stars with flux/sky > threshold are selected
         """
-
-    def trend(self, dm, split=None):
-        w, dw, _, _ = np.linalg.lstsq(dm, self.flux, rcond=None)
-        if split is not None:
-            if not isinstance(split, list):
-                split = [split]
-            split_w = np.split(w, [-1])
-            split_dm_T = np.split(dm.T, [-1])
-            return [_w@_dm for _w, _dm in zip(split_w, split_dm_T)]
-        else:
-            return dm @ w
-
-
-    def polynomial(self, **orders):
-        return models.design_matrix([
-            models.constant(self.time),
-            *[models.polynomial(self.xarray[name].values, order+1) for name, order in orders.items()]
-        ])
-
-    def transit(self, t0, duration, depth=1):
-        return models.transit(self.time, t0, duration)
-
     
     @property
     def meridian_flip(self):

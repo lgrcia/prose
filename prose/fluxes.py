@@ -5,6 +5,9 @@ from . import visualisation as viz
 from scipy.optimize import curve_fit
 import xarray as xr
 from astropy.stats import sigma_clip
+from itertools import product
+from tqdm import tqdm
+from . import models
 
 # TODO: check if working properly with a single aperture/lc
 # TODO: a rms reject method and a sigma clip method in LightCurves
@@ -453,3 +456,49 @@ class Fluxes:
         new_self.xarray = new_self.xarray.sel(
             time=self.time[self.flux - np.median(self.flux) < sigma * np.std(self.flux)])
         return new_self
+
+    # modeling
+
+    def trend(self, dm, split=None):
+        w, dw, _, _ = np.linalg.lstsq(dm, self.flux, rcond=None)
+        if split is not None:
+            if not isinstance(split, list):
+                split = [split]
+            split_w = np.split(w, [-1])
+            split_dm_T = np.split(dm.T, [-1])
+            return [_w@_dm for _w, _dm in zip(split_w, split_dm_T)]
+        else:
+            return dm @ w
+
+    def polynomial(self, **orders):
+        return models.design_matrix([
+            models.constant(self.time),
+            *[models.polynomial(self.xarray[name].values, order+1) for name, order in orders.items() if order>0]
+        ])
+
+    def transit(self, t0, duration, depth=1):
+        return models.transit(self.time, t0, duration)
+
+    def dm_ll(self, dm):
+        n = len(self.time)
+        chi2 = (self.flux - self.trend(dm)) ** 2
+        return np.sum(-(n / 2) * np.log(2 * np.pi * self.error ** 2) - (1 / (2 * (self.error ** 2))) * chi2)
+
+    def dm_bic(self, dm):
+        return np.log(len(self.time)) * dm.shape[1] - 2 * self.dm_ll(dm)
+
+    def best_polynomial(self, add=None, verbose=False, **orders):
+        def progress(x):
+            return tqdm(x) if verbose else x
+
+        orders_ranges = [(key, np.arange(order)) for key, order in orders.items()]
+        keys = [o[0] for o in orders_ranges]
+        orders = [o[1] for o in orders_ranges]
+        combs = list(product(*orders))
+        dms_dicts = [dict(zip(keys, comb)) for comb in combs]
+        if add is None:
+            dms = [self.polynomial(**d) for d in dms_dicts]
+        else:
+            dms = [np.hstack([self.polynomial(**d), add]) for d in dms_dicts]
+        bics = [self.dm_bic(dm) for dm in progress(dms)]
+        return dms_dicts[np.argmin(bics)]
