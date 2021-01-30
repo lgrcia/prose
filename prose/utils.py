@@ -4,7 +4,9 @@ import numpy as np
 from astropy.visualization import ZScaleInterval
 from astropy.io import fits
 import numba
+import astropy.constants as c
 
+earth2sun = (c.R_earth / c.R_sun).value
 
 def format_iso_date(date, night_date=True):
     """

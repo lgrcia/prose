@@ -12,6 +12,7 @@ from tqdm import tqdm
 from astropy.io import fits
 from datetime import datetime
 import xarray as xr
+import matplotlib.pyplot as plt
 
 
 def fits_image(data, header, destination):
@@ -38,7 +39,7 @@ def cutouts(image, stars, size):
     return stars
 
 
-def sim_signal(time, amp=1e-3, w=10):
+def sim_signal(time, amp=1e-3, w=10.):
     kernel = celerite.terms.SHOTerm(S0=1, Q=1, w0=2 * np.pi / w)
     gp = celerite.GaussianProcess(kernel)
     gp.compute(time)
@@ -210,8 +211,10 @@ class ObservationSimulation:
 
 def observation_to_model(time):
     # transit signal
-    flux = models.transit(time, 0.1, 0.03, 5e-3).flatten() + 1
-    flux += 2e-3*np.random.randn(len(time))
+    # lc = xo_lightcurve(time, period=0.7, r=7e-2, t0=0.1, plot=True)
+    flux = models.transit(time, 0.1, 0.06417, 5.2e-3, c=20).flatten() + 1 
+    error = 2e-3
+    flux += error*np.random.randn(len(time))
 
     # Sky correlated signal
     sky = sim_signal(time, w=0.2)
@@ -224,15 +227,36 @@ def observation_to_model(time):
     dy_flux -= dy_flux.mean()
 
     flux += dy_flux + sky_flux
-    
-    return Observation(xr.Dataset(dict(
-        fluxes = xr.DataArray(flux[None, None, :], dims=("apertures", "star", "time")),
-        sky = xr.DataArray(sky, dims="time"),
-        dy = xr.DataArray(dy, dims="time")
+
+    x = xr.Dataset(dict(
+        fluxes=xr.DataArray(flux[None, None, :], dims=("apertures", "star", "time")),
+        errors=xr.DataArray(error*np.ones_like(time)[None, None, :], dims=("apertures", "star", "time")),
+        sky=xr.DataArray(sky, dims="time"),
+        dy=xr.DataArray(dy, dims="time")
     ), attrs=dict(
-        telescope = "Saint-Ex",
-        aperture = 0,
-        target = 0,
+        telescope="Saint-Ex",
+        aperture=0,
+        target=0,
     ), coords=dict(
-        time = time
-    )))
+        time=time
+    ))
+    
+    return Observation(x)
+
+
+try:
+    import exoplanet as xo
+except ModuleNotFoundError:
+    pass
+
+
+def xo_lightcurve(time, period=3, r=0.1, t0=0, plot=False):
+    orbit = xo.orbits.KeplerianOrbit(period=0.7, t0=0.1)
+    light_curve = xo.LimbDarkLightCurve([0.1, 0.4]).get_light_curve(orbit=orbit, r=r, t=time).eval() + 1
+
+    if plot:
+        plt.plot(time, light_curve, color="C0", lw=2)
+        plt.ylabel("relative flux")
+        plt.xlabel("time [days]")
+
+    return light_curve.flatten()
