@@ -32,7 +32,10 @@ class LinearModel:
     def __init__(self, design_matrix):
         X = np.array(design_matrix).transpose()
 
-        self.tX = tt.as_tensor(X)
+        try:
+            self.tX = tt.as_tensor(X)
+        except NameError:
+            print("exoplanet must be installed")
 
         svd = tt.nlinalg.SVD(full_matrices=False)
 
