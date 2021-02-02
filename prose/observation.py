@@ -852,14 +852,32 @@ class Observation(Fluxes):
         new_obs.xarray = new_obs.xarray.sel(time=self.time[condition])
         return new_obs
 
-    def keep_good_stars(self, threshold):
-        """Return a new `Observation` where stars with a fluxes higher than `threshold`*sky
+    def keep_good_stars(self, threshold=5, inplace=True):
+        """Keep only  stars with a median flux higher than `threshold`*sky. This action will
+        reorganize stars indexes (target id will be recomputed) and reset the differential fluxes to raw.
 
         Parameters
         ----------
         threshold : float
-            threshold for wich stars with flux/sky > threshold are selected
+            threshold for which stars with flux/sky > threshold are kept, default is 5
+        inplace: bool
+            whether to replace current object or return a new one
         """
+        good_stars = np.argwhere(np.median(self.fluxes, (0, 2))/self.sky.mean() > threshold).flatten()
+
+        if inplace:
+            new_self = self
+        else:
+            new_self = self.copy()
+
+        new_self.xarray = new_self.xarray.isel(star=good_stars)
+
+        if self.target != -1:
+            new_self.target = np.argwhere(good_stars == new_self.target).flatten()[0]
+
+        if not inplace:
+            return new_self
+
     
     @property
     def meridian_flip(self):
