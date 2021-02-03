@@ -800,8 +800,8 @@ def gif_image_array(image, factor=0.25):
     return (utils.z_scale(
         resize(
             image,
-            np.array(np.shape(image)).astype(int) * factor,
-            anti_aliasing=True,
+            (np.array(np.shape(image)) * factor).astype(int),
+            anti_aliasing=False,
         )) * 255).astype("uint8")
 
 
