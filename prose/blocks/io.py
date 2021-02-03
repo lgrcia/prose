@@ -66,6 +66,7 @@ class SavePhot(Block):
             "airmass",
             self.telescope.keyword_exposure_time,
             self.telescope.keyword_jd,
+            self.telescope.keyword_mjd,
             self.telescope.keyword_bjd,
             self.telescope.keyword_seeing,
             self.telescope.keyword_ra,
@@ -77,11 +78,21 @@ class SavePhot(Block):
                 for image in self.images:
                     _data.append(image.header[key])
 
-                if key == self.telescope.keyword_jd or key == self.telescope.keyword_jd:
+                if key in [
+                    self.telescope.keyword_jd,
+                    self.telescope.keyword_mjd,
+                    self.telescope.keyword_bjd
+                ]:
                     if key == self.telescope.keyword_jd:
                         x["jd_utc"] = ('time', Time(_data, format="jd", scale=self.telescope.jd_scale,
                                                     location=self.telescope.earth_location).utc)
                         key = "jd_utc"
+
+                    elif key == self.telescope.keyword_mjd:
+                        x["jd_utc"] = ('time', Time(_data, format="mjd", scale=self.telescope.jd_scale,
+                                                    location=self.telescope.earth_location).jd)
+                        key = "jd_utc"
+
                     elif key == self.telescope.keyword_bjd:
                         x["bjd_tdb"] = Time(_data, format="jd", scale=self.telescope.jd_scale,
                                             location=self.telescope.earth_location).tdb

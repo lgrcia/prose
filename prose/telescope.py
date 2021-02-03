@@ -42,6 +42,7 @@ class Telescope:
         self.jd_scale = "utc"
         self.bjd_scale = "utc"
         self.keyword_jd = "JD"
+        self.keyword_mjd = "MJD"
         self.keyword_bjd = "BJD"
         self.keyword_flip = "PIERSIDE"
 

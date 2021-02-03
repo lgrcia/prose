@@ -122,12 +122,6 @@ class Image:
     def wcs(self):
         return WCS(self.header)
 
-    def get_other_data(self, image):
-        for key, value in image.__dict__.items():
-            if key not in self.__dict__:
-                self.__dict__[key] = value.copy()
-
-
 class Block:
 
     def __init__(self, name=None):
