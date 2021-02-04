@@ -22,7 +22,9 @@ def design_matrix(model_list):
 
 
 try:
+    import theano
     import theano.tensor as tt
+    theano.config.compute_test_value = "warn"
 except ModuleNotFoundError:
     pass
 
