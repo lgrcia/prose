@@ -452,6 +452,14 @@ class Fluxes:
         plt.errorbar(binned.time, binned.flux, yerr=binned.error, fmt=".", zorder=1, color=color, alpha=0.8)
 
     def sigma_clip(self, sigma=3.):
+        """Sigma clipping
+
+        Parameters
+        ----------
+        sigma : float, optional
+            sigma clipping threshold, by default 3.
+
+        """
         new_self = self.copy()
         new_self.xarray = new_self.xarray.sel(
             time=self.time[self.flux - np.median(self.flux) < sigma * np.std(self.flux)])
@@ -460,6 +468,20 @@ class Fluxes:
     # modeling
 
     def trend(self, dm, split=None):
+        """Given a design matrix return the fitted trend
+
+        Parameters
+        ----------
+        dm : np.ndarray
+            design matrix of shape (time, n), n being the number of regressors.
+        split : int or array, optional
+            splitting indexes of the design matrix, passed to np.split and used to retrieve splitted models, by default None
+
+        Returns
+        -------
+        [type]
+            [description]
+        """
         w, dw, _, _ = np.linalg.lstsq(dm, self.flux, rcond=None)
         if split is not None:
             if not isinstance(split, list):
@@ -471,12 +493,35 @@ class Fluxes:
             return dm @ w
 
     def polynomial(self, **orders):
+        """Return a design matrix representing a polynomial model
+
+        Parameters
+        ----------
+        orders: dict
+            dict which keys are the model variables and values are the polynomial orders use in their model against flux
+
+        Returns
+        -------
+        [type]
+            [description]
+        """
         return models.design_matrix([
             models.constant(self.time),
             *[models.polynomial(self.xarray[name].values, order+1) for name, order in orders.items() if order>0]
         ])
 
     def transit(self, t0, duration, depth=1):
+        """A simple transit model
+
+        Parameters
+        ----------
+        t0 : float
+            transit midtime (in unit of time)
+        duration : float
+            transit duration (in unit of time)
+        depth : int, optional
+            transit depth, by default 1
+        """
         return models.transit(self.time, t0, duration)
 
     def dm_ll(self, dm):
@@ -488,6 +533,17 @@ class Fluxes:
         return np.log(len(self.time)) * dm.shape[1] - 2 * self.dm_ll(dm)
 
     def best_polynomial(self, add=None, verbose=False, **orders):
+        """Return the best orders to use to model the flux as a polynomial of systematics (sepcified as `orders` keys) 
+
+        Parameters
+        ----------
+        orders: dict
+            dict with keys being the systematic to consider and values are the maximum polynomial order to test
+        add : np.ndarray, optional
+            additional regressor to add to the design matrix, by default None
+        verbose : bool, optional
+            wether to show the progress bar, by default False
+        """
         def progress(x):
             return tqdm(x) if verbose else x
 
