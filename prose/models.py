@@ -1,6 +1,13 @@
 import numpy as np
 from functools import reduce
 
+
+def harmonics(time, p, n):
+    coss = [np.cos(time*2*np.pi/(p/i))[:, None] for i in range(1, n+1)]
+    sins = [np.sin(time*2*np.pi/(p/i))[:, None] for i in range(1, n+1)]
+    return np.array([*coss, *sins])
+
+
 def transit(t, t0, duration, depth=1, c=20, period=1):
     _t = period * np.sin(np.pi * (t - t0) / period) / (np.pi * duration)
     return ((1 - depth) + (depth / 2) * (
@@ -10,6 +17,7 @@ def transit(t, t0, duration, depth=1, c=20, period=1):
 
 def constant(x):
     return np.ones_like(x)[:, None]
+
 
 def polynomial(x, order):
     return x[:, None]**np.arange(1, order+1)
