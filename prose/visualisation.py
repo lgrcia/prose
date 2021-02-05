@@ -1,12 +1,10 @@
 import matplotlib
-import matplotlib.pyplot as plt
 from .utils import binning
 import numpy as np
 from . import utils
 import matplotlib.offsetbox
 from matplotlib.lines import Line2D
 from matplotlib import patches
-from astropy.visualization import ZScaleInterval
 from astropy.io import fits
 from mpl_toolkits import axes_grid1
 from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes,  inset_axes
@@ -799,7 +797,7 @@ def plot_rms(fluxes_lcs, diff_lcs, target=None, highlights=None, bins=0.005):
 def gif_image_array(image, factor=0.25):
     return (utils.z_scale(
         resize(
-            image,
+            image.astype(float),
             (np.array(np.shape(image)) * factor).astype(int),
             anti_aliasing=False,
         )) * 255).astype("uint8")
