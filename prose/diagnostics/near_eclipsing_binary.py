@@ -83,8 +83,8 @@ class NEB(Observation):
         self.period = value["period"]
 
         self.X = np.hstack([
-            utils.rescale(self.time)[:, None] ** np.arange(0, 2),
-            transit(self.time, self.epoch, self.duration, 1, c=50, period=self.period)[:, None]
+            utils.rescale(self.time)[:, None] ** np.arange(0, 1 + 1),
+            transit(self.time, self.epoch, self.duration, 1, c=50, period=self.period)
         ])
         self.XXT_inv = np.linalg.inv(self.X.T @ self.X)
         self.ws = np.ones((len(self.nearby_ids), self.X.shape[1]))

@@ -1105,8 +1105,8 @@ def plot_expected_transit(time, epoch, period, duration, depth=None, color="gain
     plt.axvline(egress, color=color, alpha=0.3, zorder=-1)
 
     if depth is not None:
-        model = transit(time, epoch, duration, depth, period=period)
-        plt.plot(time, model, c="grey")
+        model = transit(time, epoch, duration, depth, period=period).flatten()
+        plt.plot(time, model + 1., c="grey")
 
 
 class prose_FPDF(FPDF):
