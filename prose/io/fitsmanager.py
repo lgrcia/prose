@@ -39,7 +39,7 @@ class FilesDataFrame:
             #             if "*" not in value: value += "*"
             if isinstance(value, str):
                 conditions = conditions & (
-                    files_df[field].astype(str).str.lower().str.match(value.lower())).reset_index(drop=True)
+                    files_df[field].astype(str).str.lower().str.contains(value.lower())).reset_index(drop=True)
             else:
                 conditions = conditions & (files_df[field] == value).reset_index(drop=True)
 
@@ -242,13 +242,13 @@ class FitsManager(FilesDataFrame):
         i : int
             index of the observation as displayed in `self.observations`
         """
-        self.files_df = self.get_observation(i, **kwargs)
+        self.files_df = self.get_observation(i, return_df=True, **kwargs)
         assert self.unique_obs, "observation should be unique, please use set_observation"
         obs = self._observations.loc[0]
         self.telescope = Telescope.from_name(obs.telescope)
         self.sort_by_date()
 
-    def get_observation(self, i, future=0, past=None, same_telescope=False):
+    def get_observation(self, i, future=0, past=None, same_telescope=False, return_df=False):
 
         original_fm = FitsManager(self._original_files_df.fillna(""))
         obs = self._observations.loc[i]
@@ -295,7 +295,12 @@ class FitsManager(FilesDataFrame):
 
         dfs.append(others)
 
-        return pd.concat([pd.concat(dfs)])
+        new_df = pd.concat([pd.concat(dfs)])
+
+        if return_df:
+            return new_df
+        else:
+            return self.__class__(new_df)
 
     @property
     def unique_obs(self):
