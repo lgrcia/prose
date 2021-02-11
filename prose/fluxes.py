@@ -224,7 +224,7 @@ def broeg2005(
     return lcs, lcs_errors, info
 
 
-class Fluxes:
+class ApertureFluxes:
 
     def __init__(self, xarray):
         if isinstance(xarray, str):
@@ -335,10 +335,10 @@ class Fluxes:
         return self.xarray.errors.isel(apertures=self.aperture, star=self.target).values
 
     def __copy__(self):
-        return Fluxes(self.xarray.copy())
+        return self.__class__(self.xarray.copy())
 
     def copy(self):
-        return Fluxes(self.xarray.copy())
+        return self.__class__(self.xarray.copy())
 
     def _pick_best_aperture(self, method="stddiff", return_criterion=False):
         if len(self.apertures) > 1:
@@ -404,8 +404,11 @@ class Fluxes:
         new_self.xarray = new_self.xarray.drop_vars(
             [name for name, value in new_self.xarray.items() if 'ncomps' in value.dims])
 
-        new_self.xarray['comps'] = (("ncomps"), comps)
-        new_self.xarray['alc'] = (('apertures', 'time'), alc)
+        comps = np.repeat(np.atleast_2d(comps), len(self.apertures), axis=0)
+
+        new_self.xarray['comps'] = (("apertures", "ncomps"), comps)
+        new_self.xarray['weights'] = (("apertures", "ncomps"), np.ones_like(comps))
+        new_self.xarray['alc'] = (("apertures", 'time'), alc)
         new_self._pick_best_aperture()
 
         return new_self
@@ -438,7 +441,7 @@ class Fluxes:
 
     @staticmethod
     def load(filepath):
-        return Fluxes(xr.load_dataset(filepath))
+        return self.__class__(xr.load_dataset(filepath))
 
     def save(self, filepath):
         self.xarray.to_netcdf(filepath)
