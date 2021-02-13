@@ -5,7 +5,7 @@ from os import path
 from astropy.time import Time
 from astropy import units as u
 from astropy.coordinates import SkyCoord
-from .fluxes import Fluxes
+from .fluxes import ApertureFluxes
 from . import visualisation as viz
 from astropy.io import fits
 from .telescope import Telescope
@@ -26,7 +26,7 @@ import warnings
 warnings.simplefilter('ignore', category=VerifyWarning)
 
 
-class Observation(Fluxes):
+class Observation(ApertureFluxes):
     """
     Class to load and analyze photometry products
 
@@ -876,7 +876,6 @@ class Observation(Fluxes):
 
         if not inplace:
             return new_self
-
     
     @property
     def meridian_flip(self):
