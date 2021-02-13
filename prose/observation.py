@@ -336,7 +336,6 @@ class Observation(Fluxes):
             ax = fig.add_subplot(111)
 
         _ = ax.imshow(utils.z_scale(image), cmap=cmap, origin="lower")
-        _ = plt.title("Stack image", loc="left")
 
         if wcs:
             ax.coords.grid(True, color='white', ls='solid', alpha=0.3)
