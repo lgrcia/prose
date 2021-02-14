@@ -16,6 +16,4 @@ docs/source/_build
 test_data
 paper
 *.ipynb_checkpoints
-*/docs/*.ipynb
-docs/source/tutorials/reduction/*.ipynb
 hst_dev
