@@ -7,6 +7,7 @@ from collections import OrderedDict
 from ..telescope import Telescope
 from datetime import timedelta
 import os
+from tqdm import tqdm
 from .io import get_files, fits_to_df
 
 
@@ -175,7 +176,7 @@ class FilesDataFrame:
         if not path.exists(dirname):
             os.mkdir(dirname)
 
-        for file in self.files_df["path"].values:
+        for file in tqdm(self.files_df["path"].values):
             shutil.copy(file, dirname)
 
     def __repr__(self):
@@ -273,14 +274,15 @@ class FitsManager(FilesDataFrame):
         bias = original_fm.get(telescope=telescope + "*", type="bias", dimensions=dimensions).loc[dates_before]
         dfs = []
 
+        # To keep only calibration from a single day (the most recent possible)
         if len(flats) > 0:
-            flats = flats.loc[flats.date == flats.date.values[pd.to_datetime(flats.date).argmax()]]
+            flats = flats.loc[flats.date == flats.date.max()]
             dfs.append(flats)
         if len(darks) > 0:
-            darks = darks.loc[darks.date == darks.date.values[pd.to_datetime(darks.date).argmax()]]
+            darks = darks.loc[darks.date == darks.date.max()]
             dfs.append(darks)
         if len(bias) > 0:
-            bias = bias.loc[bias.date == bias.date.values[pd.to_datetime(bias.date).argmax()]]
+            bias = bias.loc[bias.date == bias.date.max()]
             dfs.append(bias)
 
         others = original_fm.get(
