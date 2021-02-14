@@ -19,7 +19,7 @@ Pipeline tools
 .. toctree::
    :titlesonly:
 
-   api/blocks
+   blocks
    api/aperturephotometry
    api/reduction
 

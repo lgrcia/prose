@@ -507,7 +507,8 @@ class Observation(ApertureFluxes):
             plt.figure(figsize=(5, 10))
 
         for i, lc in enumerate(lcs):
-            viz.plot_lc(self.time, lc - i * offset, errorbar_kwargs=dict(c="grey", ecolor="grey"))
+            color = "grey" if i != 0 else "black"
+            viz.plot_lc(self.time, lc - i * offset, errorbar_kwargs=dict(c=color, ecolor="grey"))
             plt.annotate(idxs[i], (self.time.min() + 0.005, 1 - i * offset + offset / 3))
 
         plt.ylim(1 - (i + 0.5) * offset, ylim[1])
@@ -599,7 +600,7 @@ class Observation(ApertureFluxes):
         if len(plt.gcf().axes) == 0:
             plt.figure(figsize=(5 ,10))
 
-        viz.plot_lc(self.time, flux, errorbar_kwargs=dict(c="C0", ecolor="C0"))
+        viz.plot_lc(self.time, flux, errorbar_kwargs=dict(c="black", ecolor="black"))
 
         for i, field in enumerate(fields):
             if field in self:
@@ -640,152 +641,6 @@ class Observation(ApertureFluxes):
         plt.grid(color="whitesmoke")
         plt.xlim([np.min(self.time), np.max(self.time)])
         plt.tight_layout()
-
-    def save_report(self, destination, fields=None, std=None, ylim=(0.98, 1.02), remove_temp=True):
-        """Save a complete report of the observation
-
-        Parameters
-        ----------
-        destination : str
-            path of the pdf report (must include extension .pdf)
-        fields : [type], optional
-            list of systematic to include (must be in self), by default None
-        std : bool, optional
-            weather to show bins error as std (otherwise computed from theoretical error), by default None
-        ylim : tuple, optional
-            main diff. flux plot ylim, by default (0.98, 1.02)
-        remove_temp : bool, optional
-            remove temporary files folder created to build report, by default True
-        """
-
-        if fields is None:
-            fields = ["dx", "dy", "fwhm", "airmass", "sky"]
-
-        file_name = destination
-
-        temp_folder = path.join(path.dirname(destination), "temp")
-
-        if path.isdir("temp"):
-            shutil.rmtree(temp_folder)
-
-        if os.path.exists(temp_folder):
-            shutil.rmtree(temp_folder)
-
-        os.mkdir(temp_folder)
-
-        self.show_stars(10, view="reference")
-        star_plot = path.join(temp_folder, "starplot.png")
-        fig = plt.gcf()
-        fig.patch.set_alpha(0)
-        plt.savefig(star_plot)
-        plt.close()
-
-        plt.figure(figsize=(6, 10))
-        self.plot_raw_diff()
-        if ylim is not None:
-            plt.gcf().axes[0].set_ylim(ylim)
-        lc_report_plot = path.join(temp_folder, "lcreport.png")
-        fig = plt.gcf()
-        fig.patch.set_alpha(0)
-        plt.savefig(lc_report_plot)
-        plt.close()
-
-        plt.figure(figsize=(6, 10))
-        self.plot_systematics(fields=fields)
-        syst_plot = path.join(temp_folder, "systplot.png")
-        fig = plt.gcf()
-        fig.patch.set_alpha(0)
-        plt.savefig(syst_plot)
-        plt.close()
-
-        if 'comps' in self:
-            plt.figure(figsize=(6, 10))
-            self.plot_comps_lcs()
-            lc_comps_plot = path.join(temp_folder, "lccompreport.png")
-            fig = plt.gcf()
-            fig.patch.set_alpha(0)
-            plt.savefig(lc_comps_plot)
-            plt.close()
-
-        plt.figure(figsize=(10, 3.5))
-        psf_p = self.plot_psf_fit()
-
-        psf_fit = path.join(temp_folder, "psf_fit.png")
-        plt.savefig(psf_fit, dpi=60)
-        plt.close()
-        theta = psf_p["theta"]
-        std_x = psf_p["std_x"]
-        std_y = psf_p["std_y"]
-
-        marg_x = 10
-        marg_y = 8
-
-        pdf = viz.prose_FPDF(orientation='L', unit='mm', format='A4')
-        pdf.add_page()
-
-        pdf.set_draw_color(200, 200, 200)
-
-        pdf.set_font("helvetica", size=12)
-        pdf.set_text_color(50, 50, 50)
-        pdf.text(marg_x, 10, txt="{}".format(self.name))
-
-        pdf.set_font("helvetica", size=6)
-        pdf.set_text_color(74, 144, 255)
-        pdf.text(marg_x, 17, txt="simbad")
-        pdf.link(marg_x, 15, 8, 3, self.simbad)
-
-        pdf.set_text_color(150, 150, 150)
-        pdf.set_font("Helvetica", size=7)
-        pdf.text(marg_x, 14, txt="{} · {} · {}".format(
-            self.date, self.telescope.name, self.filter))
-
-        pdf.image(star_plot, x=78, y=17, h=93.5)
-        pdf.image(lc_report_plot, x=172, y=17, h=95)
-        pdf.image(syst_plot, x=227, y=17, h=95)
-
-        if 'comps' in self:
-            pdf.image(lc_comps_plot, x=227, y=110, h=95)
-
-        datetimes = Time(self.time, format='jd', scale='utc').to_datetime()
-        min_datetime = datetimes.min()
-        max_datetime = datetimes.max()
-
-        obs_duration_hours = (max_datetime - min_datetime).seconds // 3600
-        obs_duration_mins = ((max_datetime - min_datetime).seconds // 60) % 60
-
-        obs_duration = f"{min_datetime.strftime('%H:%M')} - {max_datetime.strftime('%H:%M')} " \
-            f"[{obs_duration_hours}h{obs_duration_mins if obs_duration_mins!=0 else ''}]"
-
-        max_psf = np.max([std_x, std_y])
-        min_psf = np.min([std_x, std_y])
-        ellipticity = (max_psf ** 2 - min_psf ** 2) / max_psf ** 2
-
-        viz.draw_table(pdf, [
-            ["Time", obs_duration],
-            ["RA - DEC", f"{self.RA} {self.DEC}"],
-            ["images", len(self.time)],
-            ["GAIA id", None],
-            ["mean std · fwhm",
-             f"{np.mean(self.fwhm) / (2 * np.sqrt(2 * np.log(2))):.2f} · {np.mean(self.fwhm):.2f} pixels"],
-            ["Telescope", self.telescope.name],
-            ["Filter", self.filter],
-            ["exposure", f"{np.mean(self.exptime)} s"],
-        ], (5, 20))
-
-        viz.draw_table(pdf, [
-            ["PSF std · fwhm (x)", f"{std_x:.2f} · {2 * np.sqrt(2 * np.log(2)) * std_x:.2f} pixels"],
-            ["PSF std · fwhm (y)", f"{std_y:.2f} · {2 * np.sqrt(2 * np.log(2)) * std_y:.2f} pixels"],
-            ["PSF ellipicity", f"{ellipticity:.2f}"],
-        ], (5, 78))
-
-        pdf.image(psf_fit, x=5.5, y=55, w=65)
-
-        pdf.output(file_name)
-
-        if path.isdir("temp") and remove_temp:
-            shutil.rmtree(temp_folder)
-
-        print("report saved at {}".format(path.abspath(file_name)))
 
     def plot_precision(self, bins=0.005, aperture=None):
         """Plot observation precision estimate against theorethical error (background noise, photon noise and CCD equation)

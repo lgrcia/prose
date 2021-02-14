@@ -12,11 +12,6 @@ import matplotlib.pyplot as plt
 from skimage.transform import resize
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.ticker import AutoMinorLocator
-import os 
-from os import path
-from fpdf import FPDF
-import shutil
-from astropy.time import Time
 import matplotlib.patches as mpatches
 from .models import transit
 
@@ -962,137 +957,6 @@ def draw_table(pdf, table, table_start, marg=5, table_cell=(20,4)):
             table_start[0] + marg + 2 + table_cell[0],
             table_start[1] + marg + i*table_cell[1] - 1.2, value)
 
-
-def save_report(self, destination, fields, remove_temp=True, std=False, ylim=None):
-
-    if path.isdir(destination):
-        file_name = "{}_report.pdf".format(self.products_denominator)
-    else:
-        file_name = path.basename(destination.strip(".html").strip(".pdf"))
-
-    temp_folder = path.join(path.dirname(destination), "temp")
-
-    if path.isdir("temp"):
-        shutil.rmtree(temp_folder)
-
-    if os.path.exists(temp_folder):
-        shutil.rmtree(temp_folder)
-
-    os.mkdir(temp_folder)
-
-    self.show_stars(10, view="reference")
-    star_plot = path.join(temp_folder, "starplot.png")
-    fig = plt.gcf()
-    fig.patch.set_alpha(0)
-    plt.savefig(star_plot)
-    plt.close()
-    
-    plt.figure(figsize=(6,10))
-    self.plot_raw_diff(std=std)
-    lc_report_plot = path.join(temp_folder, "lcreport.png")
-    fig = plt.gcf()
-    fig.patch.set_alpha(0)
-    plt.savefig(lc_report_plot)
-    plt.close()
-    
-    plt.figure(figsize=(6,10))
-    self.plot_systematics(fields=fields)
-    syst_plot = path.join(temp_folder, "systplot.png")
-    fig = plt.gcf()
-    fig.patch.set_alpha(0)
-    plt.savefig(syst_plot)
-    plt.close()
-
-    if self.comparison_stars is not None:
-        plt.figure(figsize=(6,10))
-        self.plot_comps_lcs(std=std)
-        lc_comps_plot = path.join(temp_folder, "lccompreport.png")
-        fig = plt.gcf()
-        fig.patch.set_alpha(0)
-        plt.savefig(lc_comps_plot)
-        plt.close()
-        
-    plt.figure(figsize=(10,3.5))
-    psf_p = self.plot_psf_fit()
-    
-    psf_fit = path.join(temp_folder, "psf_fit.png")
-    plt.savefig(psf_fit, dpi=60)
-    plt.close()
-    theta = psf_p["theta"]
-    std_x = psf_p["std_x"]
-    std_y = psf_p["std_y"]
-
-    marg_x = 10
-    marg_y = 8
-
-    pdf = prose_FPDF(orientation='L', unit='mm', format='A4')
-    pdf.add_page()
-
-    pdf.set_draw_color(200,200,200)
-
-    pdf.set_font("helvetica", size=12)
-    pdf.set_text_color(50,50,50)
-    pdf.text(marg_x, 10, txt="{}".format(self.target["name"]))
-
-    pdf.set_font("helvetica", size=6)
-    pdf.set_text_color(74,144,255)
-    pdf.text(marg_x, 17, txt="simbad")
-    pdf.link(marg_x, 15, 8, 3, self.simbad)
-
-    pdf.set_text_color(150,150,150)
-    pdf.set_font("Helvetica", size=7)
-    pdf.text(marg_x, 14, txt="{} · {} · {}".format(
-        self.observation_date, self.telescope.name, self.filter))
-
-    pdf.image(star_plot, x=78, y=17, h=93.5)
-    pdf.image(lc_report_plot, x=172, y=17, h=95)
-    pdf.image(syst_plot, x=227, y=17, h=95)
-
-    if self.comparison_stars is not None:
-        pdf.image(lc_comps_plot, x=227, y=110, h=95)
-        
-    datetimes = Time(self.jd, format='jd', scale='utc').to_datetime()
-    min_datetime = datetimes.min()
-    max_datetime = datetimes.max()
-
-    obs_duration = "{} - {} [{}h{}]".format(
-    min_datetime.strftime("%H:%M"), 
-    max_datetime.strftime("%H:%M"), 
-    (max_datetime-min_datetime).seconds//3600,
-    ((max_datetime-min_datetime).seconds//60)%60)
-    
-    max_psf = np.max([std_x, std_y])
-    min_psf = np.min([std_x, std_y])
-    ellipticity = (max_psf**2 - min_psf**2)/max_psf**2
-
-    draw_table([
-        ["Time", obs_duration],
-        ["RA - DEC", "{} - {}".format(*self.target["radec"])],
-        ["images", len(self.time)],
-        ["GAIA id", None],
-        ["mean std · fwhm", "{:.2f} · {:.2f} pixels".format(np.mean(self.fwhm)/(2*np.sqrt(2*np.log(2))), np.mean(self.fwhm))],
-        ["Telescope", self.telescope.name],
-        ["Filter", self.filter],
-        ["exposure", "{} s".format(np.mean(self.data.exptime))],
-    ], (5, 20))
-
-    draw_table([
-        ["PSF std · fwhm (x)", "{:.2f} · {:.2f} pixels".format(std_x, 2*np.sqrt(2*np.log(2))*std_x)],
-        ["PSF std · fwhm (y)", "{:.2f} · {:.2f} pixels".format(std_y, 2*np.sqrt(2*np.log(2))*std_y)],
-        ["PSF ellipicity", "{:.2f}".format(ellipticity)],
-    ], (5, 78))
-
-    pdf.image(psf_fit, x=5.5, y=55, w=65)
-
-    pdf_path = path.join(destination, "{}.pdf".format(file_name.strip(".html").strip(".pdf")))
-    pdf.output(pdf_path)
-
-    if path.isdir("temp") and remove_temp:
-        shutil.rmtree(temp_folder)
-
-    print("report saved at {}".format(pdf_path))
-
-
 def plot_expected_transit(time, epoch, period, duration, depth=None, color="gainsboro"):
     tmax = time.max()
     t_epoch = tmax - epoch
@@ -1107,24 +971,6 @@ def plot_expected_transit(time, epoch, period, duration, depth=None, color="gain
     if depth is not None:
         model = transit(time, epoch, duration, depth, period=period).flatten()
         plt.plot(time, model + 1., c="grey")
-
-
-class prose_FPDF(FPDF):
-    def footer(self):
-
-        self.set_font("helvetica", size=6)
-        self.set_xy(-36, -15)
-        self.cell(w=0, txt="made with ", ln=1,
-                  align='L', fill=False, link='', border=0)
-        self.set_xy(-26, -15)
-        self.set_font("helvetica", size=6, style="UIB")
-        self.cell(w=0, txt="prose", ln=1,
-                  align='L', fill=False, link="https://github.com/lgrcia/prose", border=0)
-        self.set_xy(-20, -15)
-        self.set_font("helvetica", size=6)
-        self.cell(w=0, txt=" · page {}".format(self.page_no()), ln=1,
-                  align='L', fill=False, link='', border=0)
-
 
 def rename_tab(name):
     """Rename a notebook tab
