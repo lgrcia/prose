@@ -209,7 +209,7 @@ class ObservationSimulation:
                            path.join(destination, f"fake-flat-{i}.fits"))
 
 
-def observation_to_model(time):
+def observation_to_model(time, t0=0.1, r=0.06417):
     # transit signal
     # lc = xo_lightcurve(time, period=0.7, r=7e-2, t0=0.1, plot=True)
     flux = models.transit(time, 0.1, 0.06417, 5.2e-3, c=20).flatten() + 1 
