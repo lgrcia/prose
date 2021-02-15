@@ -137,11 +137,15 @@ class ObservationSimulation:
     def sigma_to_fwhm(self):
         return 2 * np.sqrt(np.power(2, 1 / self.beta) - 1)
 
-    def add_stars(self, k, time, atmosphere=6e-2, peak=65000):
+    def add_stars(self, k, time, atmosphere=6e-2, peak=65000, positions=None, fluxes=None):
         # Generating time series
         self.time = time
-        self.positions = np.repeat(random_stars(k, np.min(self.shape))[:, :, np.newaxis], len(time), axis=2)
-        self.fluxes = random_fluxes(k, time, peak=peak)
+        if positions is None:
+            positions = np.repeat(random_stars(k, np.min(self.shape))[:, :, np.newaxis], len(time), axis=2)
+        self.positions = positions
+        if fluxes is None:
+            fluxes = random_fluxes(k, time, peak=peak)
+        self.fluxes = fluxes
 
         if atmosphere is not None:
             # Atmosphere signal
