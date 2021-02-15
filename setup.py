@@ -31,13 +31,13 @@ setup(
         "tabulate",
         "sphinx_rtd_theme",
         "imageio",
-        "fpdf",
         "sep",
         "xarray",
         "numba",
         "netcdf4",
         "nbsphinx",
-        "celerite2"
+        "celerite2",
+        "jinja2"
     ],
     zip_safe=True,
     classifiers=[
