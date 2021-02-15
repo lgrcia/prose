@@ -51,6 +51,12 @@ class ObservationReport(Observation):
         self._transit = None
         self.dpi = 100
 
+        # Some paths
+        # ----------
+        self.destination = None
+        self.report_name = None
+        self.figure_destination = None
+
     def load_template(self):
         latex_jinja_env = jinja2.Environment(
             block_start_string='\BLOCK{',
@@ -164,35 +170,45 @@ class ObservationReport(Observation):
         plt.ylabel("norm. flux")
         self.style()
 
-    def make(self, destination):
+    def make_report_folder(self, destination):
         if not path.exists(destination):
             os.mkdir(destination)
-        figdest = path.join(destination, "figures")
-        if not path.exists(figdest):
-            os.mkdir(figdest)
 
-        self.plot_psf();
-        plt.savefig(path.join(figdest, "psf.png"), dpi=self.dpi);
+        self.destination = destination
+        self.report_name = path.split(path.abspath(self.destination))[-1]
+
+        self.figure_destination = path.join(destination, "figures")
+        if not path.exists(self.figure_destination):
+            os.mkdir(self.figure_destination)
+
+    def make_figures(self, destination):
+        self.plot_psf()
+        plt.savefig(path.join(destination, "psf.png"), dpi=self.dpi)
         plt.close()
-        self.plot_comps();
-        plt.savefig(path.join(figdest, "comparison.png"), dpi=self.dpi);
+        self.plot_comps()
+        plt.savefig(path.join(destination, "comparison.png"), dpi=self.dpi)
         plt.close()
-        self.plot_raw();
-        plt.savefig(path.join(figdest, "raw.png"), dpi=self.dpi);
+        self.plot_raw()
+        plt.savefig(path.join(destination, "raw.png"), dpi=self.dpi)
         plt.close()
-        self.plot_syst();
-        plt.savefig(path.join(figdest, "systematics.png"), dpi=self.dpi);
+        self.plot_syst()
+        plt.savefig(path.join(destination, "systematics.png"), dpi=self.dpi)
         plt.close()
-        self.plot_stars();
-        plt.savefig(path.join(figdest, "stars.png"), dpi=self.dpi);
+        self.plot_stars()
+        plt.savefig(path.join(destination, "stars.png"), dpi=self.dpi)
         plt.close()
-        self.plot_lc();
-        plt.savefig(path.join(figdest, "lightcurve.png"), dpi=self.dpi);
+        self.plot_lc()
+        plt.savefig(path.join(destination, "lightcurve.png"), dpi=self.dpi)
         plt.close()
+
+    def make(self, destination):
+
+        self.make_report_folder(destination)
+        self.make_figures(self.figure_destination)
 
         shutil.copyfile(path.join(template_folder, "prose-report.cls"), path.join(destination, "prose-report.cls"))
-        repdest = path.join(destination, "report.tex")
-        open(repdest, "w").write(self.template.render(
+        tex_destination = path.join(self.destination, f"{self.report_name}.tex")
+        open(tex_destination, "w").write(self.template.render(
             obstable=self.obstable,
             target=self.name,
             description=self.description,
@@ -221,3 +237,9 @@ class ObservationReport(Observation):
         plt.ylabel("diff. flux")
         plt.tight_layout()
         self.style()
+
+    def compile(self):
+        cwd = os.getcwd()
+        os.chdir(self.destination)
+        os.system(f"pdflatex {self.report_name}")
+        os.chdir(cwd)
