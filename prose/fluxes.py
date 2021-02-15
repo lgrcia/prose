@@ -62,7 +62,6 @@ def pont2006(x, y, n=30, plot=True, return_error=False):
     else:
         return sw, sr
 
-
 def broeg2005(
     fluxes,
     errors,
@@ -73,6 +72,32 @@ def broeg2005(
     n_comps=500,
     exclude=None,
 ):
+    """[summary]
+
+    Parameters
+    ----------
+    fluxes : np.ndarray
+        fluxes with shape (apertures, stars, images)
+    errors : np.ndarray
+        fluxes errors with shape (apertures, stars, images)
+    target : int
+        target index
+    keep : str, optional
+        - if None: use a weighted artificial comparison star based on all stars (weighted mean)
+        - if float: use a weighted artificial comparison star based on `keep` stars (weighted mean)
+        - if int: use a simple artificial comparison star based on `keep` stars (mean)
+        - if 'float': use a weighted artificial comparison star based on an optimal number of stars (weighted mean)
+        - if 'int': use a simple artificial comparison star based on an optimal number of stars (mean)
+        by default "float"
+    max_iteration : int, optional
+        maximum number of iteration to adjust weights, by default 50
+    tolerance : float, optional
+        mean difference between weights to reach, by default 1e-8
+    n_comps : int, optional
+        limit on the number of stars to keep, by default 500
+    exclude : list, optional
+        indexes of stars to exclude, by default None
+    """
 
     np.seterr(divide="ignore")  # Ignore divide by 0 warnings here
 
@@ -388,6 +413,22 @@ class ApertureFluxes:
     # Differential photometry methods
     # ===============================
     def diff(self, comps, keep_raw=True):
+        """Differential photometry based on a set of comparison stars
+
+        The artificial light-curve is taken as the mean of comparison stars
+
+        Parameters
+        ----------
+        comps : list
+            indexes of the comparison stars (as shown in `show_stars`, same indexes as `stars`)
+        keep_raw : bool, optional
+            whether to keep the raw flux measurements in the observation object (advised!), by default True
+
+        Returns
+        -------
+        [type]
+            [description]
+        """
         new_self = self.copy()
         self._reset_raw(new_self)
         diff_fluxes, diff_errors, alc = differential_photometry(new_self.fluxes, new_self.errors, comps,
@@ -414,6 +455,25 @@ class ApertureFluxes:
         return new_self
 
     def broeg2005(self, keep='float', keep_raw=True, exclude=None):
+        """The Broeg et al. 2005 differential photometry algorithm
+
+        Compute an optimum weighted artificial light curve
+
+        Parameters
+        ----------
+        keep : str, optional
+            - if `None`: use a weighted artificial comparison star based on all stars (weighted mean)
+            - if `float`: use a weighted artificial comparison star based on `keep` stars (weighted mean)
+            - if `int`: use a simple artificial comparison star based on `keep` stars (mean)
+            - if `'float'`: use a weighted artificial comparison star based on an optimal number of stars (weighted mean)
+            - if `'int'`: use a simple artificial comparison star based on an optimal number of stars (mean)
+            by default "float"
+        keep_raw : bool, optional
+            whether to keep the raw flux measurements in the observation object (advised!), by default True
+        exclude : list, optional
+            indexes of stars to exclude, by default None
+
+        """
         new_self = self.copy()
         self._reset_raw(new_self)
         diff_fluxes, diff_errors, info = broeg2005(new_self.fluxes, new_self.errors, self.target, keep=keep, exclude=exclude)
@@ -441,7 +501,7 @@ class ApertureFluxes:
 
     @staticmethod
     def load(filepath):
-        return self.__class__(xr.load_dataset(filepath))
+        return ApertureFluxes(xr.load_dataset(filepath))
 
     def save(self, filepath):
         self.xarray.to_netcdf(filepath)
@@ -536,7 +596,7 @@ class ApertureFluxes:
         return np.log(len(self.time)) * dm.shape[1] - 2 * self.dm_ll(dm)
 
     def best_polynomial(self, add=None, verbose=False, **orders):
-        """Return the best orders to use to model the flux as a polynomial of systematics (sepcified as `orders` keys) 
+        """Return the best systematics polynomial model orders. 
 
         Parameters
         ----------

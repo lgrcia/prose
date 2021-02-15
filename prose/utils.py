@@ -5,6 +5,7 @@ from astropy.visualization import ZScaleInterval
 from astropy.io import fits
 import numba
 import astropy.constants as c
+import urllib
 
 earth2sun = (c.R_earth / c.R_sun).value
 
@@ -249,3 +250,27 @@ def datetime_to_years(adatetime):
     boy = datetime(year, 1, 1)
     eoy = datetime(year + 1, 1, 1)
     return year + ((adatetime - boy).total_seconds() / ((eoy - boy).total_seconds()))
+
+
+def split(x, dt, fill=None):
+    splits = np.argwhere(np.diff(x) > dt).flatten() + 1
+    xs = np.split(x, splits)
+    if fill is None:
+        return xs
+    else:
+        ones = np.ones_like(x)
+        filled_xs = [np.split(ones * fill, splits) for _ in xs]
+        for i in range(len(xs)):
+            filled_xs[i][i] = xs[i]
+        for i in range(len(xs)):
+            filled_xs[i] = np.hstack(filled_xs[i])
+        return [np.hstack(fx) for fx in filled_xs]
+
+
+def jd_to_bjd(jd, ra, dec):
+    """
+    Convert JD to BJD using http://astroutils.astronomy.ohio-state.edu (Eastman et al. 2010)
+    """
+    bjd = urllib.request.urlopen(f"http://astroutils.astronomy.ohio-state.edu/time/convert.php?JDS={','.join(jd.astype(str))}&RA={ra}&DEC={dec}&FUNCTION=utc2bjd").read()
+    bjd = bjd.decode("utf-8")
+    return np.array(bjd.split("\n"))[0:-1].astype(float)

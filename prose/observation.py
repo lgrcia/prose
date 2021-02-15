@@ -1,7 +1,6 @@
 from . import Image
 import matplotlib.pyplot as plt
 import numpy as np
-from os import path
 from astropy.time import Time
 from astropy import units as u
 from astropy.coordinates import SkyCoord
@@ -14,13 +13,10 @@ from astropy.wcs import WCS, utils as wcsutils
 import pandas as pd
 from scipy.stats import binned_statistic
 from .blocks.psf import Gaussian2D
-import os
-import shutil
-from astropy.stats import sigma_clip
 from .console_utils import INFO_LABEL
 from astropy.stats import sigma_clipped_stats
 from astropy.io.fits.verify import VerifyWarning
-from datetime import datetime, timedelta
+from datetime import datetime
 import warnings
 
 warnings.simplefilter('ignore', category=VerifyWarning)
@@ -182,16 +178,26 @@ class Observation(ApertureFluxes):
     # Methods
     # -------
 
-    def compute_bjd(self):
+    def compute_bjd(self, version="prose"):
         """Compute BJD_tdb based on current time
 
-        Once this is done self.time is BJD tdb and time format can be checked in self.time_format
+        Once this is done self.time is BJD tdb and time format can be checked in self.time_format. Note that half the
+        exposure time is added to the JD times before conversion. The precision of the returned time is not
+        guaranteed, especially with "prose" method (~30ms). "eastman" option accuracy is 20ms. See
+        http://astroutils.astronomy.ohio-state.edu/time/utc2bjd.html for more details.
+
+        Parameters
+        ----------
+        version : str, optiona
+            - "prose": uses an astropy method
+            - "eastman": uses the web applet http://astroutils.astronomy.ohio-state.edu (Eastman et al. 2010) [requires
+            an  internet connection]
+            by default "prose"
         """
         assert self.telescope is not None
         assert self.skycoord is not None
 
         exposure_kw = self.telescope.keyword_exposure_time.lower()
-
         exposure_days = self.xarray.variables[exposure_kw].values/60/60/24
 
         # For backward compatibility
@@ -204,10 +210,16 @@ class Observation(ApertureFluxes):
             self.xarray.drop("jd")
         # -------------------------
 
-        time = Time(self.jd_utc + exposure_days/2, format="jd", scale="utc", location=self.telescope.earth_location).tdb
-        light_travel_tbd = time.light_travel_time(self.skycoord, location=self.telescope.earth_location)
-        self.xarray = self.xarray.assign_coords(time=(time + light_travel_tbd).value)
-        self.xarray["bjd_tdb"] = ("time", (time + light_travel_tbd).value)
+        if version == "prose":
+            time = Time(self.jd_utc + exposure_days/2, format="jd", scale="utc", location=self.telescope.earth_location).tdb
+            light_travel_tbd = time.light_travel_time(self.skycoord, location=self.telescope.earth_location)
+            bjd_time = (time + light_travel_tbd).value
+
+        elif version == "eastman":
+            bjd_time = utils.jd_to_bjd(self.jd_utc + exposure_days/2, self.skycoord.ra.deg, self.skycoord.dec.deg)
+
+        self.xarray = self.xarray.assign_coords(time=bjd_time)
+        self.xarray["bjd_tdb"] = ("time", bjd_time)
         self.xarray.attrs["time_format"] = "bjd_tdb"
 
         # Catalog queries
@@ -702,13 +714,26 @@ class Observation(ApertureFluxes):
         plt.title("Photometric precision (raw fluxes)", loc="left")
 
     def where(self, condition):
+        """return filtered observation given a boolean mask of time
+
+        Parameters
+        ----------
+        condition : [type]
+            [description]
+
+        Returns
+        -------
+        [type]
+            [description]
+        """
         new_obs = self.copy()
         new_obs.xarray = new_obs.xarray.sel(time=self.time[condition])
         return new_obs
 
     def keep_good_stars(self, threshold=5, inplace=True):
-        """Keep only  stars with a median flux higher than `threshold`*sky. This action will
-        reorganize stars indexes (target id will be recomputed) and reset the differential fluxes to raw.
+        """Keep only  stars with a median flux higher than `threshold`*sky. 
+        
+        This action will reorganize stars indexes (target id will be recomputed) and reset the differential fluxes to raw.
 
         Parameters
         ----------
