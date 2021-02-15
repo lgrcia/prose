@@ -1,15 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from prose.utils import fast_binning
-from prose.console_utils import INFO_LABEL
-from prose import Observation
+from ..utils import fast_binning, z_scale
+from ..console_utils import INFO_LABEL
+from .. import Observation
 import os
 from os import path
 import shutil
 from astropy.time import Time
 import jinja2
-import sys
-from prose import viz
+from .. import viz
 
 
 template_folder = path.abspath(path.join(path.dirname(__file__), "..", "..", "latex"))
@@ -73,7 +72,7 @@ class ObservationReport(Observation):
         elif self._style == "bokeh":
             viz.bokeh_style()
 
-    def plot_psf(self, n=40):
+    def plot_psf(self, n=40, zscale=False):
         n /= np.sqrt(2)
         x, y = self.stars[self.target]
         Y, X = np.indices(self.stack.shape)
@@ -118,12 +117,14 @@ class ObservationReport(Observation):
         _ = plt.text(rout, ylim, "ANNULUS", ha="right", rotation="vertical", va="top")
 
         ax2 = plt.subplot(1, 5, (4, 5))
-        N = rout + 2
-        plt.imshow(self.stack[int(y - N):int(y + N), int(x - N):int(x + N)], cmap="Greys_r", aspect="auto")
+        im = self.stack[int(y - n):int(y + n), int(x - n):int(x + n)]
+        if zscale:
+            im = z_scale(im)
+        plt.imshow(im, cmap="Greys_r", aspect="auto", origin="lower")
         plt.axis("off")
-        ax2.add_patch(plt.Circle((N, N), apertures[a], ec='grey', fill=False, lw=2))
-        ax2.add_patch(plt.Circle((N, N), rin, ec='grey', fill=False, lw=2))
-        ax2.add_patch(plt.Circle((N, N), rout, ec='grey', fill=False, lw=2))
+        ax2.add_patch(plt.Circle((n, n), apertures[a], ec='grey', fill=False, lw=2))
+        ax2.add_patch(plt.Circle((n, n), rin, ec='grey', fill=False, lw=2))
+        ax2.add_patch(plt.Circle((n, n), rout, ec='grey', fill=False, lw=2))
         plt.tight_layout()
         self.style()
 
