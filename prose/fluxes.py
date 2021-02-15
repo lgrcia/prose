@@ -412,7 +412,7 @@ class ApertureFluxes:
 
     # Differential photometry methods
     # ===============================
-    def diff(self, comps, keep_raw=True):
+    def diff(self, comps, keep_raw=True, inplace=True):
         """Differential photometry based on a set of comparison stars
 
         The artificial light-curve is taken as the mean of comparison stars
@@ -423,13 +423,19 @@ class ApertureFluxes:
             indexes of the comparison stars (as shown in `show_stars`, same indexes as `stars`)
         keep_raw : bool, optional
             whether to keep the raw flux measurements in the observation object (advised!), by default True
+        inplace: bool, optional
+            whether to perform the changes on current Observation or to return a new one, default True
 
         Returns
         -------
         [type]
             [description]
         """
-        new_self = self.copy()
+        if inplace:
+            new_self = self
+        else:
+            new_self = self.copy()
+
         self._reset_raw(new_self)
         diff_fluxes, diff_errors, alc = differential_photometry(new_self.fluxes, new_self.errors, comps,
                                                                 return_alc=True)
@@ -452,9 +458,10 @@ class ApertureFluxes:
         new_self.xarray['alc'] = (("apertures", 'time'), alc)
         new_self._pick_best_aperture()
 
-        return new_self
+        if not inplace:
+            return new_self
 
-    def broeg2005(self, keep='float', keep_raw=True, exclude=None):
+    def broeg2005(self, keep='float', keep_raw=True, exclude=None, inplace=True):
         """The Broeg et al. 2005 differential photometry algorithm
 
         Compute an optimum weighted artificial light curve
@@ -471,10 +478,16 @@ class ApertureFluxes:
         keep_raw : bool, optional
             whether to keep the raw flux measurements in the observation object (advised!), by default True
         exclude : list, optional
-            indexes of stars to exclude, by default None
+            indexes of stars to exclude, by default None,
+        inplace: bool, optional
+            whether to perform the changes on current Observation or to return a new one, default True
 
         """
-        new_self = self.copy()
+        if inplace:
+            new_self = self
+        else:
+            new_self = self.copy()
+
         self._reset_raw(new_self)
         diff_fluxes, diff_errors, info = broeg2005(new_self.fluxes, new_self.errors, self.target, keep=keep, exclude=exclude)
         dims = self.xarray.fluxes.dims
@@ -494,7 +507,8 @@ class ApertureFluxes:
         new_self.xarray['alc'] = (('apertures', 'time'), info['alc'])
         new_self._pick_best_aperture()
 
-        return new_self
+        if not inplace:
+            return new_self
 
     # io
     # ==
