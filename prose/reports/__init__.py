@@ -17,7 +17,7 @@ template_folder = path.abspath(path.join(path.dirname(__file__), "..", "..", "la
 
 class ObservationReport(Observation):
 
-    def __init__(self, obs, style=None):
+    def __init__(self, obs, style="paper", template_name="ObservationReport.tex"):
         super().__init__(obs.xarray)
         self._style = style
 
@@ -44,6 +44,7 @@ class ObservationReport(Observation):
         ]
 
         self.description = f"{self.date[0:4]} {self.date[4:6]} {self.date[6::]} $\cdot$ {self.telescope.name} $\cdot$ {self.filter}"
+        self.template_name = template_name
         self.template = None
         self.load_template()
         self._trend = None
@@ -64,7 +65,7 @@ class ObservationReport(Observation):
             autoescape=False,
             loader=jinja2.FileSystemLoader(template_folder)
         )
-        self.template = latex_jinja_env.get_template("ObservationReport.tex")
+        self.template = latex_jinja_env.get_template(self.template_name)
 
     def style(self):
         if self._style == "paper":
