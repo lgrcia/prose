@@ -787,7 +787,7 @@ class Observation(ApertureFluxes):
                 w = np.linalg.lstsq(X, diff_flux)[0]
                 new_diff_fluxes[i, j] = diff_flux - X @ w + 1.
 
-        new_self.xarray['diff_fluxes'] = (new_self.diff_fluxes.dims, new_diff_fluxes)
+        new_self.xarray['diff_fluxes'] = (new_self.xarray.diff_fluxes.dims, new_diff_fluxes)
 
         if not inplace:
             return new_self
