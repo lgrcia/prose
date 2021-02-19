@@ -42,6 +42,7 @@ class Observation(ApertureFluxes):
         self.gaia_data = None
         self.tic_data = None
         self.wcs = WCS(self.xarray.attrs)
+        self._meridian_flip = None
 
         if "bjd_tdb" not in self:
             try:
@@ -84,7 +85,7 @@ class Observation(ApertureFluxes):
         df = pd.DataFrame(
             {
                 "BJD-TDB" if self.time_format == "bjd_tdb" else "JD-UTC": self.time,
-                "DIFF_FLUX": self.flux,
+                "DIFF_FLUX": self.diff_flux,
                 "ERROR": self.error,
                 "dx_MOVE": self.dx,
                 "dy_MOVE": self.dy,
@@ -174,6 +175,15 @@ class Observation(ApertureFluxes):
             [description]
         """
         return f"{self.telescope.name}_{self.date}_{self.name}_{self.filter}"
+
+    @property
+    def meridian_flip(self):
+        if "pierside" not in self:
+            return None
+        elif self._meridian_flip is None:
+            ps = self.pierside.copy() == "WEST"
+            self._meridian_flip = self.time[np.argmax(np.abs(np.diff(ps))).flatten()]
+        return self._meridian_flip
         
     # Methods
     # -------
@@ -225,10 +235,12 @@ class Observation(ApertureFluxes):
         # Catalog queries
         # ---------------
 
-    def query_gaia(self):
+    def query_gaia(self, limit=1000):
         """Query gaia catalog for stars in the field
         """
         from astroquery.gaia import Gaia
+
+        Gaia.ROW_LIMIT = limit
 
         header = self.xarray.attrs
         shape = self.stack.shape
@@ -425,7 +437,7 @@ class Observation(ApertureFluxes):
             _ = viz.plot_marks(*stars[comps].T, comps, color=comp_color)
             _ = viz.plot_marks(*stars[others].T, alpha=0.4, color=color)
 
-    def show_gaia(self, color="lightblue", alpha=1, n=None, idxs=True):
+    def show_gaia(self, color="lightblue", alpha=1, n=None, idxs=True, limit=1000):
         """Overlay Gaia objects on stack image
 
 
@@ -444,7 +456,7 @@ class Observation(ApertureFluxes):
         self._check_show()
 
         if self.gaia_data is None:
-            self.query_gaia()
+            self.query_gaia(limit=limit)
 
         x = self.gaia_data["x"].data
         y = self.gaia_data["y"].data
@@ -508,10 +520,10 @@ class Observation(ApertureFluxes):
             ylim of the plot, by default (0.98, 1.02)
         """
         idxs = [self.target, *self.xarray.comps.isel(apertures=self.aperture).values[0:n]]
-        lcs = [self.xarray.fluxes.isel(star=i, apertures=self.aperture).values for i in idxs]
+        lcs = [self.xarray.diff_fluxes.isel(star=i, apertures=self.aperture).values for i in idxs]
 
         if ylim is None:
-            ylim = (self.flux.min() * 0.99, self.flux.max() * 1.01)
+            ylim = (self.diff_flux.min() * 0.99, self.diff_flux.max() * 1.01)
 
         offset = ylim[1] - ylim[0]
 
@@ -531,7 +543,7 @@ class Observation(ApertureFluxes):
     def plot_data(self, key):
 
         self.plot()
-        amp = (np.percentile(self.flux, 95) - np.percentile(self.flux, 5)) / 2
+        amp = (np.percentile(self.diff_flux, 95) - np.percentile(self.diff_flux, 5)) / 2
         plt.plot(self.time, amp * utils.rescale(self.xarray[key]) + 1,
                  label="normalized {}".format(key),
                  color="k"
@@ -582,7 +594,7 @@ class Observation(ApertureFluxes):
         """
         self._check_diff()
         viz.plot_rms(
-            self.fluxes,
+            self.diff_fluxes,
             self.lcs,
             bins=bins,
             target=self.target["id"],
@@ -601,7 +613,7 @@ class Observation(ApertureFluxes):
         if fields is None:
             fields = ["dx", "dy", "fwhm", "airmass", "sky"]
 
-        flux = self.flux.copy()
+        flux = self.diff_flux.copy()
         flux /= np.nanmean(flux)
 
         if ylim is None:
@@ -742,7 +754,7 @@ class Observation(ApertureFluxes):
         inplace: bool
             whether to replace current object or return a new one
         """
-        good_stars = np.argwhere(np.median(self.fluxes, (0, 2))/self.sky.mean() > threshold).flatten()
+        good_stars = np.argwhere(np.median(self.raw_fluxes, (0, 2))/self.sky.mean() > threshold).flatten()
 
         if inplace:
             new_self = self
@@ -756,17 +768,28 @@ class Observation(ApertureFluxes):
 
         if not inplace:
             return new_self
-    
-    @property
-    def meridian_flip(self):
-        flip = self.xarray[self.telescope.keyword_flip.lower()]
-        flip[flip == "WEST"] = 0
-        flip[flip == "EAST"] = 1
-        mflip = self.time[np.argwhere(np.diff(flip) == 1).flatten()]
-        if len(flip) != 1:
-            return None
-        else:
-            return mflip[0]
 
     def plot_flip(self):
         plt.axvline(self.meridian_flip, ls="--", c="k", alpha=0.5)
+
+    def flip_correction(self, inplace=True):
+        if inplace:
+            new_self = self
+        else:
+            new_self = self.copy()
+
+        new_diff_fluxes = np.zeros_like(self.diff_fluxes)
+        X = self.step()
+
+        for i in range(len(self.apertures)):
+            for j in range(len(self.stars)):
+                diff_flux = self.diff_fluxes[i, j]
+                w = np.linalg.lstsq(X, diff_flux)[0]
+                new_diff_fluxes[i, j] = diff_flux - X @ w + 1.
+
+        new_self.xarray['diff_fluxes'] = (new_self.diff_fluxes.dims, new_diff_fluxes)
+
+        if not inplace:
+            return new_self
+
+

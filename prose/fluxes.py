@@ -62,15 +62,18 @@ def pont2006(x, y, n=30, plot=True, return_error=False):
     else:
         return sw, sr
 
+
 def broeg2005(
-    fluxes,
-    errors,
-    target,
-    keep="float",
-    max_iteration=50,
-    tolerance=1e-8,
-    n_comps=500,
-    exclude=None,
+        fluxes,
+        errors,
+        target,
+        keep="float",
+        max_iteration=50,
+        tolerance=1e-8,
+        n_comps=500,
+        exclude=None,
+        mask=None,
+        sigclip=5,
 ):
     """[summary]
 
@@ -97,6 +100,12 @@ def broeg2005(
         limit on the number of stars to keep, by default 500
     exclude : list, optional
         indexes of stars to exclude, by default None
+    mask : boolean ndarray, optional
+        a boolean mask of time length. Only points for which mask is True are considered when
+        evaluating the comparison stars (then applied to all points), by default None
+    sigclip: int, optional
+        if a float is given, a sigma clipping of factor sigclip is temporarly applied to all
+        fluxes before being used to choose the comparison stars, by default 5
     """
 
     np.seterr(divide="ignore")  # Ignore divide by 0 warnings here
@@ -107,33 +116,47 @@ def broeg2005(
         _exclude = []
 
     original_fluxes = fluxes.copy()
-    initial_n_stars = np.shape(original_fluxes)[1]
+    mean_fluxes = np.nanmean(fluxes, 2)[:, :, None]
+
+    # Sigma clipping
+    # --------------
+    if sigclip is not None:
+        f = fluxes.copy()
+
+        for i in range(f.shape[0]):
+            for j in range(f.shape[0]):
+                _f = f[i, j]
+                f[i, j, np.abs(_f - np.mean(_f)) > 5 * np.nanstd(_f)] = np.mean(_f)
+
+        fluxes = f
 
     # Normalization
     # -------------
-
-    mean_fluxes = np.nanmean(fluxes, 2)[:, :, None]
     fluxes = fluxes.copy() / mean_fluxes
     errors = errors.copy() / mean_fluxes
 
     # Cleaning
     # --------
     # To keep track of which stars are clean and get a light curve (if not containing infs, nans or zeros)
-    clean_stars = np.arange(0, initial_n_stars)
+    bads = np.any(~np.isfinite(fluxes) | ~np.isfinite(errors), axis=(0, 2))
+    fluxes = fluxes[:, ~bads, :]
+    errors = errors[:, ~bads, :]
 
-    # Data cleaning, excluding stars with no finite flux (0, nan or inf)
-    if not np.all(np.isfinite(fluxes)):
-        idxs = np.unique(np.where(np.logical_not(np.isfinite(fluxes)))[1])
-        fluxes = np.delete(fluxes, idxs, axis=1)
-        errors = np.delete(errors, idxs, axis=1)
-        clean_stars = np.delete(clean_stars, idxs)
-    if not np.all(np.isfinite(errors)):
-        idxs = np.unique(np.where(np.logical_not(np.isfinite(errors)))[1])
-        fluxes = np.delete(fluxes, idxs, axis=1)
-        errors = np.delete(errors, idxs, axis=1)
-        clean_stars = np.delete(clean_stars, idxs)
+    clean_stars = np.arange(original_fluxes.shape[1])[~bads]
+    target = np.argwhere(clean_stars == target).flatten()
+    _exclude = [np.argwhere(clean_stars == ex).flatten() for ex in _exclude]
 
     n_apertures, n_stars, n_points = np.shape(fluxes)
+
+    # Masking
+    # -------
+    if mask is None:
+        mask = np.ones(fluxes.shape[-1]).astype(bool)
+
+    unmasked_fluxes = fluxes.copy()
+    unmasked_errors = errors.copy()
+    fluxes = fluxes[:, :, mask]
+    errors = errors[:, :, mask]
 
     i = 0
     evolution = 1e25
@@ -220,10 +243,11 @@ def broeg2005(
 
     keep = int(_keep)
 
-    ordered_fluxes = np.array([fluxes[a, ordered_stars[a], :] for a in range(n_apertures)])
-    ordered_errors = np.array([errors[a, ordered_stars[a], :] for a in range(n_apertures)])
+    ordered_fluxes = np.array([unmasked_fluxes[a, ordered_stars[a], :] for a in range(n_apertures)])
+    ordered_errors = np.array([unmasked_errors[a, ordered_stars[a], :] for a in range(n_apertures)])
 
-    best_art_lc = (ordered_fluxes[:, 0:keep, :] * ordered_weights[:, 0:keep, None]).sum(1) / ordered_weights[:, 0:keep].sum(1)[:, None]
+    best_art_lc = (ordered_fluxes[:, 0:keep, :] * ordered_weights[:, 0:keep, None]).sum(1) / ordered_weights[:,
+                                                                                             0:keep].sum(1)[:, None]
     best_art_error = (ordered_errors[:, 0:keep, :] ** 2 * ordered_weights[:, 0:keep, None] ** 2).sum(
         1) / ordered_weights[:, 0:keep].sum(1)[:, None]
 
@@ -232,16 +256,16 @@ def broeg2005(
 
     for a in range(n_apertures):
         for s, cs in enumerate(clean_stars):
-            lcs[a, cs, :] = fluxes[a, s] / best_art_lc[a, :]
+            lcs[a, cs, :] = unmasked_fluxes[a, s] / best_art_lc[a, :]
             lcs_errors[a, cs, :] = np.sqrt(
-                errors[a, s] ** 2 + best_art_error[a, :] ** 2
+                unmasked_errors[a, s] ** 2 + best_art_error[a, :] ** 2
             )
 
     # Return
     # ------------------------------
     np.seterr(divide="warn")  # Set warnings back
     info = {
-        "comps": np.array(ordered_stars[:, 0:keep]),
+        "comps": clean_stars[ordered_stars[:, 0:keep]],
         "weights": np.array(ordered_weights[:, 0:keep]),
         "alc": best_art_lc
     }
@@ -257,13 +281,16 @@ class ApertureFluxes:
         else:
             self.xarray = xarray
 
+        # backward compatibility
+        self._fix_fluxes()
+
     def __getattr__(self, name):
-        if name in self.xarray:
-            return self.xarray[name].values
+        if name in self.xarray or name in self.xarray.dims:
+            return self.xarray.get(name).values
         elif name in self.xarray.attrs:
             return self.xarray.attrs[name]
         else:
-            return self.xarray.__getattr__(name)
+            raise AttributeError(f"{self.__class__.__name__} object has no attribute '{name}'")
 
     @property
     def target(self):
@@ -272,7 +299,8 @@ class ApertureFluxes:
     @target.setter
     def target(self, value):
         self.xarray.attrs['target'] = value
-        self._pick_best_aperture()
+        if "diff_fluxes" in self:
+            self._pick_best_aperture()
 
     @property
     def aperture(self):
@@ -284,9 +312,6 @@ class ApertureFluxes:
 
     def _repr_html_(self):
         return self.xarray._repr_html_()
-
-    def __repr__(self):
-        return self.xarray.__repr__()
 
     def __str__(self):
         return self.xarray.__str__()
@@ -323,9 +348,9 @@ class ApertureFluxes:
         x = x.map(self._binn, args=(bins), keep_attrs=True)
 
         if std:
-            if "fluxes" in self.xarray:
-                flu = self.xarray.fluxes.copy()
-                x['errors'] = xr.concat(
+            if "diff_fluxes" in self.xarray:
+                flu = self.xarray.diff_fluxes.copy()
+                x['diff_errors'] = xr.concat(
                     [(flu.isel(time=b).std(dim="time") / np.sqrt(len(b))).expand_dims('time', -1) for b in bins],
                     dim="time")
             if "raw_fluxes" in self.xarray:
@@ -347,17 +372,28 @@ class ApertureFluxes:
         return new_self
 
     @property
-    def flux(self):
-        return self.xarray.fluxes.isel(apertures=self.aperture, star=self.target).values
+    def x(self):
+        return self.xarray
+
+    @property
+    def diff_flux(self):
+        return self.xarray.diff_fluxes.isel(apertures=self.aperture, star=self.target).values
 
     @property
     def raw_flux(self):
         return self.xarray.raw_fluxes.isel(apertures=self.aperture, star=self.target).values
 
+    @property
+    def diff_error(self):
+        return self.xarray.diff_errors.isel(apertures=self.aperture, star=self.target).values
 
     @property
-    def error(self):
-        return self.xarray.errors.isel(apertures=self.aperture, star=self.target).values
+    def raw_error(self):
+        return self.xarray.raw_errors.isel(apertures=self.aperture, star=self.target).values
+
+    @property
+    def comparison_raw_fluxes(self):
+        return self.raw_fluxes[self.aperture, self.comps[self.aperture]]
 
     def __copy__(self):
         return self.__class__(self.xarray.copy())
@@ -368,9 +404,9 @@ class ApertureFluxes:
     def _pick_best_aperture(self, method="stddiff", return_criterion=False):
         if len(self.apertures) > 1:
             if method == "stddiff":
-                criterion = utils.std_diff_metric(self.xarray.fluxes.sel(star=self.target))
+                criterion = utils.std_diff_metric(self.xarray.diff_fluxes.sel(star=self.target))
             elif method == "stability":
-                criterion = utils.stability_aperture(self.xarray.fluxes.sel(star=self.target))
+                criterion = utils.stability_aperture(self.xarray.diff_fluxes.sel(star=self.target))
             elif method == "pont2006":
                 criterion = []
                 for a in range(len(self.apertures)):
@@ -392,27 +428,23 @@ class ApertureFluxes:
         return new_self
 
     def pont2006(self, plot=True):
-        return pont2006(self.time, self.xarray.fluxes.isel(apertures=self.aperture, star=self.target).values, plot=plot)
+        return pont2006(self.time, self.xarray.diff_fluxes.isel(apertures=self.aperture, star=self.target).values, plot=plot)
 
-    @staticmethod
-    def _rename_raw(obj):
-        obj.xarray = obj.xarray.rename({
-            "fluxes": "raw_fluxes",
-            "errors": "raw_errors"
-        })
-
-    @staticmethod
-    def _reset_raw(obj):
-        if "raw_fluxes" in obj:
-            obj.xarray = obj.xarray.drop_vars(("fluxes", "errors"))
-            obj.xarray = obj.xarray.rename({
-                "raw_fluxes": "fluxes",
-                "raw_errors": "errors"
+    def _fix_fluxes(self):
+        if "raw_fluxes" not in self:
+            self.xarray = self.xarray.rename({
+                "fluxes": "raw_fluxes",
+                "errors": "raw_errors"
+            })
+        elif "fluxes" in self:
+            self.xarray = self.xarray.rename({
+                "fluxes": "diff_fluxes",
+                "errors": "diff_errors"
             })
 
     # Differential photometry methods
     # ===============================
-    def diff(self, comps, keep_raw=True, inplace=True):
+    def diff(self, comps, inplace=True):
         """Differential photometry based on a set of comparison stars
 
         The artificial light-curve is taken as the mean of comparison stars
@@ -421,8 +453,6 @@ class ApertureFluxes:
         ----------
         comps : list
             indexes of the comparison stars (as shown in `show_stars`, same indexes as `stars`)
-        keep_raw : bool, optional
-            whether to keep the raw flux measurements in the observation object (advised!), by default True
         inplace: bool, optional
             whether to perform the changes on current Observation or to return a new one, default True
 
@@ -436,16 +466,12 @@ class ApertureFluxes:
         else:
             new_self = self.copy()
 
-        self._reset_raw(new_self)
-        diff_fluxes, diff_errors, alc = differential_photometry(new_self.fluxes, new_self.errors, comps,
+        diff_fluxes, diff_errors, alc = differential_photometry(new_self.raw_fluxes, new_self.raw_errors, comps,
                                                                 return_alc=True)
-        dims = self.xarray.fluxes.dims
+        dims = self.xarray.raw_fluxes.dims
 
-        if keep_raw:
-            self._rename_raw(new_self)
-
-        new_self.xarray['fluxes'] = (dims, diff_fluxes)
-        new_self.xarray['errors'] = (dims, diff_errors)
+        new_self.xarray["diff_fluxes"] = (dims, diff_fluxes)
+        new_self.xarray["diff_errors"] = (dims, diff_errors)
 
         # Since we reset ncomps, older vars with ncomp in dims are removed
         new_self.xarray = new_self.xarray.drop_vars(
@@ -461,7 +487,7 @@ class ApertureFluxes:
         if not inplace:
             return new_self
 
-    def broeg2005(self, keep='float', keep_raw=True, exclude=None, inplace=True):
+    def broeg2005(self, keep='float', exclude=None, inplace=True, mask=None, sigclip=5):
         """The Broeg et al. 2005 differential photometry algorithm
 
         Compute an optimum weighted artificial light curve
@@ -475,12 +501,16 @@ class ApertureFluxes:
             - if `'float'`: use a weighted artificial comparison star based on an optimal number of stars (weighted mean)
             - if `'int'`: use a simple artificial comparison star based on an optimal number of stars (mean)
             by default "float"
-        keep_raw : bool, optional
-            whether to keep the raw flux measurements in the observation object (advised!), by default True
         exclude : list, optional
             indexes of stars to exclude, by default None,
         inplace: bool, optional
             whether to perform the changes on current Observation or to return a new one, default True
+        mask : boolean ndarray, optional
+            a boolean mask of time length. Only points for which mask is True are considered when
+            evaluating the comparison stars (then applied to all points), by default None
+        sigclip: int, optional
+            if a float is given, a sigma clipping of factor sigclip is temporarly applied to all
+            fluxes before being used to choose the comparison stars, by default 5
 
         """
         if inplace:
@@ -488,15 +518,13 @@ class ApertureFluxes:
         else:
             new_self = self.copy()
 
-        self._reset_raw(new_self)
-        diff_fluxes, diff_errors, info = broeg2005(new_self.fluxes, new_self.errors, self.target, keep=keep, exclude=exclude)
-        dims = self.xarray.fluxes.dims
+        diff_fluxes, diff_errors, info = broeg2005(
+            new_self.raw_fluxes, new_self.raw_errors, self.target,
+            keep=keep, exclude=exclude,mask=mask, sigclip=sigclip)
+        dims = self.xarray.raw_fluxes.dims
 
-        if keep_raw:
-            self._rename_raw(new_self)
-
-        new_self.xarray['fluxes'] = (dims, diff_fluxes)
-        new_self.xarray['errors'] = (dims, diff_errors)
+        new_self.xarray['diff_fluxes'] = (dims, diff_fluxes)
+        new_self.xarray['diff_errors'] = (dims, diff_errors)
 
         # Since we reset ncomps, older vars with ncomp in dims are removed
         new_self.xarray = new_self.xarray.drop_vars(
@@ -525,8 +553,8 @@ class ApertureFluxes:
 
     def plot(self, which="None", bins=0.005, color="k", std=True):
         binned = self.binn(bins, std=std)
-        plt.plot(self.time, self.flux, ".", c="gainsboro", zorder=0, alpha=0.6)
-        plt.errorbar(binned.time, binned.flux, yerr=binned.error, fmt=".", zorder=1, color=color, alpha=0.8)
+        plt.plot(self.time, self.diff_flux, ".", c="gainsboro", zorder=0, alpha=0.6)
+        plt.errorbar(binned.time, binned.diff_flux, yerr=binned.diff_error, fmt=".", zorder=1, color=color, alpha=0.8)
 
     def sigma_clip(self, sigma=3.):
         """Sigma clipping
@@ -539,7 +567,7 @@ class ApertureFluxes:
         """
         new_self = self.copy()
         new_self.xarray = new_self.xarray.sel(
-            time=self.time[self.flux - np.median(self.flux) < sigma * np.std(self.flux)])
+            time=self.time[self.diff_flux - np.median(self.diff_flux) < sigma * np.std(self.diff_flux)])
         return new_self
 
     # modeling
@@ -559,7 +587,7 @@ class ApertureFluxes:
         [type]
             [description]
         """
-        w, dw, _, _ = np.linalg.lstsq(dm, self.flux, rcond=None)
+        w, dw, _, _ = np.linalg.lstsq(dm, self.diff_flux, rcond=None)
         if split is not None:
             if not isinstance(split, list):
                 split = [split]
@@ -601,10 +629,25 @@ class ApertureFluxes:
         """
         return models.transit(self.time, t0, duration)
 
+    def step(self, t0=None):
+        """
+        Two parameter step model model. f = a if time < t0 else b
+
+        Parameters
+        ----------
+        t0: float, optional
+            time when the step occur, default is None and corresponds to meridian flip
+        """
+        if t0 is None:
+            assert self.meridian_flip, "please specify t0"
+            t0 = self.meridian_flip
+
+        return models.step(self.time, t0)
+
     def dm_ll(self, dm):
         n = len(self.time)
-        chi2 = (self.flux - self.trend(dm)) ** 2
-        return np.sum(-(n / 2) * np.log(2 * np.pi * self.error ** 2) - (1 / (2 * (self.error ** 2))) * chi2)
+        chi2 = (self.diff_flux - self.trend(dm)) ** 2
+        return np.sum(-(n / 2) * np.log(2 * np.pi * self.diff_error ** 2) - (1 / (2 * (self.diff_error ** 2))) * chi2)
 
     def dm_bic(self, dm):
         return np.log(len(self.time)) * dm.shape[1] - 2 * self.dm_ll(dm)

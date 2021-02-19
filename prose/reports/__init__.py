@@ -78,6 +78,12 @@ class ObservationReport(Observation):
         elif self._style == "bokeh":
             viz.bokeh_style()
 
+    def plot_meridian_flip(self):
+        if self.meridian_flip is not None:
+            plt.axvline(self.meridian_flip, c="k", alpha=0.15)
+            _, ylim = plt.ylim()
+            plt.text(self.meridian_flip, ylim, "meridian flip ", ha="right", rotation="vertical", va="top", color="0.7")
+
     def plot_psf(self, n=40, zscale=False):
         n /= np.sqrt(2)
         x, y = self.stars[self.target]
@@ -143,6 +149,7 @@ class ObservationReport(Observation):
         ax = fig.add_subplot(111)
 
         self.plot_systematics()
+        self.plot_meridian_flip()
         _ = plt.gcf().axes[0].set_title("", loc="left")
         plt.xlabel(f"BJD")
         plt.ylabel("diff. flux")
@@ -155,6 +162,7 @@ class ObservationReport(Observation):
 
         self.plot_comps_lcs()
         _ = plt.gcf().axes[0].set_title("", loc="left")
+        self.plot_meridian_flip()
         plt.xlabel(f"BJD")
         plt.ylabel("diff. flux")
         plt.tight_layout()
@@ -165,6 +173,7 @@ class ObservationReport(Observation):
         raw_f = self.raw_fluxes[self.aperture, self.target]
         plt.plot(self.time, raw_f / np.mean(raw_f), c="k", label="target")
         plt.plot(self.time, self.alc[self.aperture], c="C0", label="artificial")
+        self.plot_meridian_flip()
         plt.legend()
         plt.tight_layout()
         plt.xlabel(f"BJD")
@@ -224,15 +233,16 @@ class ObservationReport(Observation):
     def plot_lc(self):
         plt.figure(figsize=(6, 7 if self._trend is not None else 4))
         if self._trend is not None:
-            plt.plot(self.time, self.flux - 0.03, ".", color="gainsboro", alpha=0.3)
+            plt.plot(self.time, self.diff_flux - 0.03, ".", color="gainsboro", alpha=0.3)
             plt.plot(self.time, self._trend - 0.03, c="k", alpha=0.2, label="systematics model")
-            viz.plot_lc(self.time, self.flux - self._trend + 1.)
+            viz.plot_lc(self.time, self.diff_flux - self._trend + 1.)
             plt.ylim(0.95, 1.02)
         else:
             self.plot()
             plt.ylim(0.98, 1.02)
         if self._transit is not None:
             plt.plot(self.time, self._transit + 1., label="transit", c="k")
+        self.plot_meridian_flip()
         plt.legend()
         plt.xlabel(f"BJD")
         plt.ylabel("diff. flux")

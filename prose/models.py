@@ -23,6 +23,13 @@ def polynomial(x, order):
     return x[:, None]**np.arange(1, order+1)
 
 
+def step(x, x0):
+    return np.hstack([
+        (x <= x0).astype(float)[:, None],
+        (x > x0).astype(float)[:, None]
+    ])
+
+
 def design_matrix(model_list):
     dm = np.hstack(model_list)
     dm /= np.mean(dm, 0)

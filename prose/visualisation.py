@@ -727,7 +727,7 @@ def plot_comparison_lcs(lcs, idxs, bins=0.005, offset_factor=2.5, std=False):
     ax = plt.subplot(111)
     plt.title("Comparison diff. light curves", loc="left")
     plt.grid(color="whitesmoke")
-    amp = np.percentile(lcs[0].flux, 95) - np.percentile(lcs[0].flux, 5)
+    amp = np.percentile(lcs[0].diff_flux, 95) - np.percentile(lcs[0].diff_flux, 5)
     for i, lc in enumerate(lcs):
         lc.plot(offset=-offset_factor * amp * i, std=std)
         plt.annotate(
@@ -907,7 +907,7 @@ def plot_lc_raw_diff(self, binning=0.005, detrended=False, options={}, std=False
     kernel_size = 2*int(binning/np.median(np.diff(self.jd)))
     kernel_size = kernel_size - kernel_size%2 + 1
     
-    amp = np.percentile(self.lc.flux, 95) - np.percentile(self.lc.flux, 5)
+    amp = np.percentile(self.lc.diff_flux, 95) - np.percentile(self.lc.diff_flux, 5)
     
     plt.subplot(211)
     plt.title("Differential lightcurve", loc="left")
@@ -918,7 +918,7 @@ def plot_lc_raw_diff(self, binning=0.005, detrended=False, options={}, std=False
 
     plt.subplot(212)
     plt.title("Normalized flux", loc="left")
-    flux = self.fluxes[self.target["id"]].flux
+    flux = self.fluxes[self.target["id"]].diff_flux
     flux /= np.median(flux)
     plt.plot(self.time, flux, options["flux_style"], ms=options["flux_ms"], label="target", c=options["flux_color"])
     if self.artificial_lcs is not None:
