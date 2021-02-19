@@ -773,6 +773,13 @@ class Observation(ApertureFluxes):
         plt.axvline(self.meridian_flip, ls="--", c="k", alpha=0.5)
 
     def flip_correction(self, inplace=True):
+        """Align all differential fluxes using a step model of the meridian flip
+
+        Parameters
+        ----------
+        inplace : bool, optional
+            wheter to replace the current Observation or return a new one, by default True
+        """
         if inplace:
             new_self = self
         else:
