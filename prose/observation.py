@@ -768,7 +768,7 @@ class Observation(ApertureFluxes):
 
         if not inplace:
             return new_self
-
+        print('hello')
     def plot_flip(self):
         plt.axvline(self.meridian_flip, ls="--", c="k", alpha=0.5)
 
