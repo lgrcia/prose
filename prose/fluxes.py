@@ -392,6 +392,20 @@ class ApertureFluxes:
         return self.xarray.raw_errors.isel(apertures=self.aperture, star=self.target).values
 
     @property
+    def corrected_diff_flux(self):
+        if "corrected_diff_flux" in self:
+            return self.xarray["corrected_diff_flux"].values
+        else:
+            return None
+
+    @corrected_diff_flux.setter
+    def corrected_diff_flux(self, value):
+        if value is not None:
+            self.xarray["corrected_diff_flux"] = ("time", value)
+        elif "corrected_diff_flux" in self:
+            self.xarray.drop("corrected_diff_flux")
+
+    @property
     def comparison_raw_fluxes(self):
         return self.raw_fluxes[self.aperture, self.comps[self.aperture]]
 
