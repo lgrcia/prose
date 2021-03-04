@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
+import collections
 from ..utils import fast_binning, z_scale
 from ..console_utils import INFO_LABEL
 from .. import Observation
@@ -33,13 +35,14 @@ class ObservationReport(Observation):
         self.obstable = [
             ["Time", obs_duration],
             ["RA - DEC", f"{self.RA} {self.DEC}"],
-            ["images", len(self.time)],
+            ["Number of images", len(self.time)],
             ["GAIA id", None],
-            ["mean std · fwhm",
+            ["Mean std · fwhm",
              f"{np.mean(self.fwhm) / (2 * np.sqrt(2 * np.log(2))):.2f} · {np.mean(self.fwhm):.2f} pixels"],
+            ["Best aperture radius", self.apertures_raddi[0,self.aperture],
             ["Telescope", self.telescope.name],
             ["Filter", self.filter],
-            ["exposure", f"{np.mean(self.exptime)} s"],
+            ["Exposure time", f"{np.mean(self.exptime)} s"],
         ]
 
         self.description = f"{self.date[0:4]} {self.date[4:6]} {self.date[6::]} $\cdot$ {self.telescope.name} $\cdot$ {self.filter}"
@@ -55,6 +58,7 @@ class ObservationReport(Observation):
         self.destination = None
         self.report_name = None
         self.figure_destination = None
+        self.measurement_destination = None
 
     def load_template(self):
         latex_jinja_env = jinja2.Environment(
@@ -186,7 +190,7 @@ class ObservationReport(Observation):
 
         self.destination = destination
         self.report_name = path.split(path.abspath(self.destination))[-1]
-
+        self.measurement_destination = path.join(self.destination, f"{self.report_name}.txt")
         self.figure_destination = path.join(destination, "figures")
         if not path.exists(self.figure_destination):
             os.mkdir(self.figure_destination)
@@ -211,10 +215,49 @@ class ObservationReport(Observation):
         plt.savefig(path.join(destination, "lightcurve.png"), dpi=self.dpi)
         plt.close()
 
+    def to_csv_report(self, destination, sep=" "):
+        """Export a typical csv of the observation's data
+
+        Parameters
+        ----------
+        destination : str
+            Path of the csv file to save
+        sep : str, optional
+            separation string within csv, by default " "
+        """
+        comparison_stars = self.comps[self.aperture]
+        list_diff = ["DIFF_FLUX_C%s" % i for i in comparison_stars]
+        list_err = ["DIFF_ERROR_C%s" % i for i in comparison_stars]
+        list_columns = [None] * (len(list_diff) + len(list_err))
+        list_columns[::2] = list_diff
+        list_columns[1::2] = list_err
+        list_diff_array = [self.diff_fluxes[self.aperture, i] for i in comparison_stars]
+        list_err_array = [self.diff_errors[self.aperture, i] for i in comparison_stars]
+        list_columns_array = [None] * (len(list_diff_array) + len(list_err_array))
+        list_columns_array[::2] = list_diff_array
+        list_columns_array[1::2] = list_err_array
+
+        df = pd.DataFrame(collections.OrderedDict(
+            {
+                "BJD-TDB" if self.time_format == "bjd_tdb" else "JD-UTC": self.time,
+                "DIFF_FLUX_T1": self.diff_flux,
+                "DIFF_ERROR_T1": self.diff_error,
+                **dict(zip(list_columns, list_columns_array)),
+                "dx": self.dx,
+                "dy": self.dy,
+                "FWHM": self.fwhm,
+                "SKYLEVEL": self.sky,
+                "AIRMASS": self.airmass,
+                "EXPOSURE": self.exptime,
+            })
+        )
+        df.to_csv(destination, sep=sep, index=False)
+
     def make(self, destination):
 
         self.make_report_folder(destination)
         self.make_figures(self.figure_destination)
+        self.to_csv_report(self.measurement_destination)
 
         shutil.copyfile(path.join(template_folder, "prose-report.cls"), path.join(destination, "prose-report.cls"))
         tex_destination = path.join(self.destination, f"{self.report_name}.tex")

@@ -52,13 +52,14 @@ trappist = speculoos_south.copy()
 trappist.update({
     "name": "Trappist-South",
     "trimming": [40, 40],
-    "pixel_scale": 0.66,
+    "pixel_scale": 0.64,
     "ra_unit": "deg",
-    "latlong": [29.2563, 70.7380]})
+    "latlong": [-29.2563, 70.7380]})
 
 trappistN = trappist.copy()
 trappistN.update({
     "name": "Trappist-North",  
+    "pixel_scale": 0.60,
     "ra_unit": "hourangle",
     "latlong": [31.2027, 7.8586]})
 

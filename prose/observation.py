@@ -81,12 +81,11 @@ class Observation(ApertureFluxes):
         sep : str, optional
             separation string within csv, by default " "
         """
-
         df = pd.DataFrame(
             {
                 "BJD-TDB" if self.time_format == "bjd_tdb" else "JD-UTC": self.time,
                 "DIFF_FLUX": self.diff_flux,
-                "ERROR": self.error,
+                "ERROR": self.diff_error,
                 "dx_MOVE": self.dx,
                 "dy_MOVE": self.dy,
                 "FWHM": self.fwhm,
@@ -601,7 +600,7 @@ class Observation(ApertureFluxes):
             highlights=self.comparison_stars)
 
     def plot_systematics(self, fields=None, ylim=(0.98, 1.02)):
-        """Plot ystematics measurements along target light curve
+        """Plot systematics measurements along target light curve
 
         Parameters
         ----------
@@ -742,7 +741,7 @@ class Observation(ApertureFluxes):
         new_obs.xarray = new_obs.xarray.sel(time=self.time[condition])
         return new_obs
 
-    def keep_good_stars(self, threshold=5, inplace=True):
+    def keep_good_stars(self, threshold=5, trim=10, inplace=True):
         """Keep only  stars with a median flux higher than `threshold`*sky. 
         
         This action will reorganize stars indexes (target id will be recomputed) and reset the differential fluxes to raw.
@@ -751,24 +750,30 @@ class Observation(ApertureFluxes):
         ----------
         threshold : float
             threshold for which stars with flux/sky > threshold are kept, default is 5
+        trim : float
+            value in pixels above which stars are kept, default is 10 to avoid stars too close to the edge
         inplace: bool
             whether to replace current object or return a new one
         """
         good_stars = np.argwhere(np.median(self.raw_fluxes, (0, 2))/self.sky.mean() > threshold).flatten()
+        mask = np.any(np.abs(self.stars[good_stars] - max(self.stack.shape) / 2) > (max(self.stack.shape) - 2 * trim) / 2, axis=1)
+        bad_stars = np.argwhere(mask == True).flatten()
+
+        final_stars = np.delete(good_stars, bad_stars)
 
         if inplace:
             new_self = self
         else:
             new_self = self.copy()
 
-        new_self.xarray = new_self.xarray.isel(star=good_stars)
+        new_self.xarray = new_self.xarray.isel(star=final_stars)
 
         if self.target != -1:
-            new_self.target = np.argwhere(good_stars == new_self.target).flatten()[0]
+            new_self.target = np.argwhere(final_stars == new_self.target).flatten()[0]
 
         if not inplace:
             return new_self
-        print('hello')
+
     def plot_flip(self):
         plt.axvline(self.meridian_flip, ls="--", c="k", alpha=0.5)
 
