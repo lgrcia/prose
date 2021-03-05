@@ -216,7 +216,7 @@ class XYShift(Registration):
         Merge coordinates if too close, by default False
     """
 
-    def __init__(self, reference, tolerance=1.5, clean=False, **kwargs):
+    def __init__(self, reference, tolerance=20, clean=False, **kwargs):
 
         super().__init__(**kwargs)
         self.tolerance = tolerance
@@ -229,6 +229,7 @@ class XYShift(Registration):
         image.header["DX"] = shift[0]
         image.header["DY"] = shift[1],
         image.header["ALIGNALG"] = self.__class__.__name__
+
 
 class AstroAlignShift(Registration):
     """
