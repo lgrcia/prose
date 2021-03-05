@@ -5,12 +5,10 @@ from astropy.time import Time
 from os import path
 import imageio
 from .. import visualisation as viz
-from astropy.table import Table
-import pandas as pd
-from .. import utils, io
 from astropy.stats import SigmaClip
-from photutils import Background2D, MedianBackground
+from photutils import MedianBackground
 from .psf import cutouts
+import os
 
 
 class Stack(Block):
@@ -105,6 +103,8 @@ class SaveReduced(Block):
 
         super().__init__(**kwargs)
         self.destination = destination
+        if not path.exists(self.destination):
+            os.mkdir(self.destination)
         self.overwrite = overwrite
 
     def run(self, image, **kwargs):
