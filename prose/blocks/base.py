@@ -8,7 +8,7 @@ from tabulate import tabulate
 from time import time
 
 
-class Unit:
+class Sequence:
     # TODO: add index self.i in image within unit loop
 
     def __init__(self, blocks, files, name="default", telescope=None, **kwargs):
