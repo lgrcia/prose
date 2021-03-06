@@ -94,9 +94,9 @@ class Reduction:
             blocks.Trim(name="trimming"),
             blocks.SegmentedPeaks(n_stars=50, name="detection"),
             blocks.ImageBuffer(name="buffer")
-        ], self.reference_fits, telescope=self.telescope, show_progress=False)
+        ], self.reference_fits, telescope=self.telescope)
 
-        self.reference_unit.run()
+        self.reference_unit.run(show_progress=False)
 
         ref_image = self.reference_unit.buffer.image
         calibration_block = self.reference_unit.calibration
@@ -224,7 +224,7 @@ class Photometry:
             blocks.ImageBuffer(name="buffer"),
         ], self.stack_path, telescope=self.fits_manager.telescope, show_progress=False)
 
-        self.reference_detection_unit.run()
+        self.reference_detection_unit.run(show_progress=False)
         stack_image = self.reference_detection_unit.buffer.image
         ref_stars = stack_image.stars_coords
         fwhm = stack_image.fwhm
