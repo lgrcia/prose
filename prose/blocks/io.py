@@ -18,7 +18,6 @@ class SavePhot(Block):
     def __init__(self, destination, header=None, stack=None, **kwargs):
         super().__init__(**kwargs)
         self.destination = destination
-        self.telescope = None
         self.images = []
         self.stack_path = None
         self.telescope = None
@@ -66,7 +65,6 @@ class SavePhot(Block):
             "airmass",
             self.telescope.keyword_exposure_time,
             self.telescope.keyword_jd,
-            self.telescope.keyword_mjd,
             self.telescope.keyword_bjd,
             self.telescope.keyword_seeing,
             self.telescope.keyword_ra,
@@ -80,24 +78,19 @@ class SavePhot(Block):
 
                 if key in [
                     self.telescope.keyword_jd,
-                    self.telescope.keyword_mjd,
                     self.telescope.keyword_bjd
                 ]:
                     if key == self.telescope.keyword_jd:
-                        x["jd_utc"] = ('time', Time(_data, format="jd", scale=self.telescope.jd_scale,
-                                                    location=self.telescope.earth_location).utc)
-                        key = "jd_utc"
-
-                    elif key == self.telescope.keyword_mjd:
-                        x["jd_utc"] = ('time', Time(_data, format="mjd", scale=self.telescope.jd_scale,
-                                                    location=self.telescope.earth_location).jd)
-                        key = "jd_utc"
+                        x["jd_utc"] = ('time', Time(np.array(_data) + self.telescope.mjd,
+                                                    format="jd", scale=self.telescope.jd_scale,
+                                                    location=self.telescope.earth_location).utc.value)
 
                     elif key == self.telescope.keyword_bjd:
-                        x["bjd_tdb"] = Time(_data, format="jd", scale=self.telescope.jd_scale,
-                                            location=self.telescope.earth_location).tdb
-
-                x[key.lower()] = ('time', _data)
+                        x["bjd_tdb"] = ('time', Time(np.array(_data) + self.telescope.mjd,
+                                                     format="jd", scale=self.telescope.jd_scale,
+                                            location=self.telescope.earth_location).tdb.value)
+                else:
+                    x[key.lower()] = ('time', _data)
 
         for key in [
             "apertures_area",

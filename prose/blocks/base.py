@@ -35,7 +35,7 @@ class Sequence:
 
     @property
     def blocks(self):
-        return self.blocks_dict.values()
+        return list(self.blocks_dict.values())
 
     @blocks.setter
     def blocks(self, blocks):
