@@ -42,7 +42,7 @@ class Telescope:
         self.jd_scale = "utc"
         self.bjd_scale = "utc"
         self.keyword_jd = "JD"
-        self.keyword_mjd = "MJD"
+        self.mjd = 0
         self.keyword_bjd = "BJD"
         self.keyword_flip = "PIERSIDE"
 
@@ -61,6 +61,7 @@ class Telescope:
             success = self.load(telescope_file)
             if success:
                 CONFIG.save_telescope_file(telescope_file)
+                CONFIG.build_telescopes_dict()
 
     def __getattribute__(self, name):
         if name == "ra_unit":

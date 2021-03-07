@@ -1,4 +1,4 @@
-from . import Block, Unit
+from . import Block, Sequence
 
 
 def get_citations(*args):
@@ -15,7 +15,7 @@ def get_citations(*args):
     """
     citations = {}
     for block_or_unit in args:
-        assert isinstance(block_or_unit, (Block, Unit)), "args should be units or blocks"
+        assert isinstance(block_or_unit, (Block, Sequence)), "args should be units or blocks"
         block_or_unit_citations = block_or_unit.citations()
         if block_or_unit_citations is not None:
             for citation in block_or_unit_citations:

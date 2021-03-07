@@ -27,6 +27,7 @@ class Align(Alignment):
 
     def run(self, image):
         shift = np.array([image.header["DX"], image.header["DY"]])
+
         aligned_image = Cutout2D(
                         image.data,
                         self.ref_center-shift.astype("int"),
@@ -37,6 +38,8 @@ class Align(Alignment):
                     )
         image.data = aligned_image.data
         image.stars_coords += shift
+
+
 
     def citations(self, image):
         return "astropy", "numpy"

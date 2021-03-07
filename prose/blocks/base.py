@@ -8,25 +8,13 @@ from tabulate import tabulate
 from time import time
 
 
-class Unit:
+class Sequence:
     # TODO: add index self.i in image within unit loop
 
-    def __init__(self, blocks, files, name="default", show_progress=True, telescope=None, **kwargs):
+    def __init__(self, blocks, files, name="default", telescope=None, **kwargs):
         self.name = name
         self.files = files if not isinstance(files, str) else [files]
         self.blocks = blocks
-
-        if show_progress:
-            self.progress = lambda x: tqdm(
-            x,
-            desc=self.name,
-            unit="files",
-            ncols=80,
-            bar_format=TQDM_BAR_FORMAT,
-        )
-
-        else:
-            self.progress = lambda x: x
 
         self.data = {}
         self._telescope = None
@@ -47,7 +35,7 @@ class Unit:
 
     @property
     def blocks(self):
-        return self.blocks_dict.values()
+        return list(self.blocks_dict.values())
 
     @blocks.setter
     def blocks(self, blocks):
@@ -56,7 +44,19 @@ class Unit:
             for i, block in enumerate(blocks)
         })
 
-    def run(self):
+    def run(self, show_progress=True):
+        if show_progress:
+            progress = lambda x: tqdm(
+                x,
+                desc=self.name,
+                unit="files",
+                ncols=80,
+                bar_format=TQDM_BAR_FORMAT,
+            )
+
+        else:
+            progress = lambda x: x
+
         if isinstance(self.files, list):
             if len(self.files) == 0:
                 raise ValueError("No files to process")
@@ -70,7 +70,7 @@ class Unit:
             block.initialize()
 
         # run
-        for i, file_path in enumerate(self.progress(self.files)):
+        for i, file_path in enumerate(progress(self.files)):
             image = Image(file_path)
             discard_message = False
             for block in self.blocks:
@@ -84,8 +84,6 @@ class Unit:
         # terminate
         for block in self.blocks:
             block.terminate()
-
-        return self
 
     def __str__(self):
         rows = [[block.name, block.__class__.__name__, f"{block.processing_time:.4f} s"] for block in self.blocks]
@@ -105,7 +103,7 @@ class Image:
 
     def __init__(self, fitspath=None, data=None, header=None, **kwargs):
         if fitspath is not None:
-            self.data = fits.getdata(fitspath)
+            self.data = fits.getdata(fitspath).astype(float)
             self.header = fits.getheader(fitspath)
             self.path = fitspath
         else:

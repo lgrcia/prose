@@ -276,7 +276,7 @@ class FitsManager(FilesDataFrame):
         bias = original_fm.get(telescope=telescope + "*", type="bias", dimensions=dimensions).loc[dates_before]
         dfs = []
 
-        # To keep only calibration from a single day (the most recent possible)
+        # To keep only calibration from a single day (the rmost recent possible)
         if len(flats) > 0:
             flats = flats.loc[flats.date == flats.date.max()]
             dfs.append(flats)

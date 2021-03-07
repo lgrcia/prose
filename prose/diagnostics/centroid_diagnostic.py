@@ -1,7 +1,7 @@
 import numpy as np
 from prose import FitsManager, Block
 from prose.blocks.psf import moments
-from prose import Unit
+from prose import Sequence
 from prose.blocks import DAOFindStars
 import warnings
 from scipy.optimize import minimize
@@ -85,7 +85,7 @@ class CentroidCheck(Block):
         plt.legend()
 
 
-class CentroidDiagnostic(Unit):
+class CentroidDiagnostic(Sequence):
     """
     This tools performs accurate centroid estimate of a star against positions given in its stars_coords
     """

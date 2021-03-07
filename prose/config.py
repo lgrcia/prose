@@ -133,6 +133,7 @@ class ConfigManager:
             print("Telescope '{}' saved".format(name))
         else:
             raise AssertionError("input type not understood")
+        self.telescopes_dict = self.build_telescopes_dict()
 
     def match_telescope_name(self, name):
         if not isinstance(name, str):

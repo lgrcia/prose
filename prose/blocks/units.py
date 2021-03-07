@@ -1,4 +1,4 @@
-from .. import Unit, blocks, io, Block, Telescope
+from .. import Sequence, blocks, io, Block, Telescope
 from . import io as bio
 import os
 from os import path
@@ -89,19 +89,19 @@ class Reduction:
 
         self.make_destination()
 
-        self.reference_unit = Unit([
+        self.reference_unit = Sequence([
             blocks.Pass(name="calibration") if not self.calibration else blocks.Calibration(self.darks, self.flats, self.bias, name="calibration"),
             blocks.Trim(name="trimming"),
             blocks.SegmentedPeaks(n_stars=50, name="detection"),
             blocks.ImageBuffer(name="buffer")
-        ], self.reference_fits, telescope=self.telescope, show_progress=False)
+        ], self.reference_fits, telescope=self.telescope)
 
-        self.reference_unit.run()
+        self.reference_unit.run(show_progress=False)
 
         ref_image = self.reference_unit.buffer.image
         calibration_block = self.reference_unit.calibration
 
-        self.reduction_unit = Unit([
+        self.reduction_unit = Sequence([
             blocks.Pass(name="calibration") if not self.calibration else calibration_block,
             blocks.Trim(name="trimming", skip_wcs=True),
             blocks.Flip(ref_image, name="flip"),
@@ -218,13 +218,13 @@ class Photometry:
         self.psf = psf
 
     def run_reference_detection(self):
-        self.reference_detection_unit = Unit([
+        self.reference_detection_unit = Sequence([
             blocks.DAOFindStars(n_stars=self.n_stars, name="detection"),
             self.psf(name="fwhm"),
             blocks.ImageBuffer(name="buffer"),
         ], self.stack_path, telescope=self.fits_manager.telescope, show_progress=False)
 
-        self.reference_detection_unit.run()
+        self.reference_detection_unit.run(show_progress=False)
         stack_image = self.reference_detection_unit.buffer.image
         ref_stars = stack_image.stars_coords
         fwhm = stack_image.fwhm
@@ -371,7 +371,7 @@ class AperturePhotometry(Photometry):
     def run_reference_detection(self):
         stack_image, ref_stars, fwhm = super().run_reference_detection()
 
-        self.photometry_unit = Unit([
+        self.photometry_unit = Sequence([
             blocks.Set(stars_coords=ref_stars, name="set stars"),
             blocks.Set(fwhm=fwhm, name="set fwhm"),
             blocks.Pass() if not isinstance(self.centroid, Block) else self.centroid,
@@ -430,7 +430,7 @@ class PSFPhotometry(Photometry):
     def run_reference_detection(self):
         stack_image, ref_stars, fwhm = super().run_reference_detection()
 
-        self.photometry_unit = Unit([
+        self.photometry_unit = Sequence([
             blocks.Set(stars_coords=ref_stars, name="set stars"),
             blocks.Set(fwhm=fwhm, name="set fwhm"),
             self.photometry(fwhm),

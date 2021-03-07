@@ -3,7 +3,7 @@ from .alignment import Align
 from .detection import SegmentedPeaks, DAOFindStars, SEDetection
 from .calibration import Calibration, Trim
 from .psf import Gaussian2D, Moffat2D, FastGaussian
-from .base import Unit, Block
+from .base import Sequence, Block
 from .photometry import PhotutilsAperturePhotometry, SEAperturePhotometry, PhotutilsPSFPhotometry
 from .imutils import *
 from .io import SavePhot

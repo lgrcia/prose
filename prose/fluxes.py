@@ -300,7 +300,7 @@ class ApertureFluxes:
     def target(self, value):
         self.xarray.attrs['target'] = value
         if "diff_fluxes" in self:
-            self._pick_best_aperture()
+            self.pick_best_aperture()
 
     @property
     def aperture(self):
@@ -418,7 +418,7 @@ class ApertureFluxes:
     def copy(self):
         return self.__class__(self.xarray.copy())
 
-    def _pick_best_aperture(self, method="stddiff", return_criterion=False):
+    def pick_best_aperture(self, method="stddiff", return_criterion=False):
         if len(self.apertures) > 1:
             if method == "stddiff":
                 criterion = utils.std_diff_metric(self.xarray.diff_fluxes.sel(star=self.target))
@@ -499,7 +499,7 @@ class ApertureFluxes:
         new_self.xarray['comps'] = (("apertures", "ncomps"), comps)
         new_self.xarray['weights'] = (("apertures", "ncomps"), np.ones_like(comps))
         new_self.xarray['alc'] = (("apertures", 'time'), alc)
-        new_self._pick_best_aperture()
+        new_self.pick_best_aperture()
 
         if not inplace:
             return new_self
@@ -550,7 +550,7 @@ class ApertureFluxes:
         new_self.xarray['comps'] = (("apertures", "ncomps"), info['comps'])
         new_self.xarray['weights'] = (("apertures", "ncomps"), info['weights'])
         new_self.xarray['alc'] = (('apertures', 'time'), info['alc'])
-        new_self._pick_best_aperture()
+        new_self.pick_best_aperture()
 
         if not inplace:
             return new_self

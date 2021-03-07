@@ -153,7 +153,7 @@ class FastGaussian(PSFModel):
     Fit the height, mean sigma of a symetric 2D Gaussian model to an image effective PSF
     """
     def __init__(self, cutout_size=21, **kwargs):
-        super().__init__(cutout_size=21, **kwargs)
+        super().__init__(cutout_size=cutout_size, **kwargs)
 
     def model(self, height, s, m):
         dx = self.x - self.cutout_size/2
@@ -185,7 +185,7 @@ class Gaussian2D(PSFModel):
     Fit an elliptical 2D Gaussian model to an image effective PSF
     """
     def __init__(self, cutout_size=21, **kwargs):
-        super().__init__(cutout_size=21, **kwargs)
+        super().__init__(cutout_size=cutout_size, **kwargs)
 
     def model(self, height, xo, yo, sx, sy, theta, m):
         dx = self.x - xo
@@ -225,7 +225,7 @@ class Moffat2D(PSFModel):
     Fit an elliptical 2D Moffat model to an image effective PSF
     """
     def __init__(self, cutout_size=21, **kwargs):
-        super().__init__(cutout_size=21, **kwargs)
+        super().__init__(cutout_size=cutout_size, **kwargs)
         self.cutout_size = cutout_size
         self.x, self.y = None, None
 

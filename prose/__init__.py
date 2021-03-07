@@ -1,5 +1,6 @@
 import warnings
 from astropy.wcs import FITSFixedWarning
+
 warnings.simplefilter("ignore", FITSFixedWarning)
 
 from . import config
@@ -12,7 +13,7 @@ from . import visualisation as viz
 from .io.fitsmanager import FitsManager
 from .fluxes import ApertureFluxes
 from .telescope import Telescope
-from .blocks.base import Block, Unit, Image
+from .blocks.base import Block, Sequence, Image
 from .blocks.units import Reduction, AperturePhotometry
 from .observation import Observation
 
