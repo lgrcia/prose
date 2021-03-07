@@ -39,7 +39,7 @@ class ObservationReport(Observation):
             ["GAIA id", None],
             ["Mean std · fwhm",
              f"{np.mean(self.fwhm) / (2 * np.sqrt(2 * np.log(2))):.2f} · {np.mean(self.fwhm):.2f} pixels"],
-            ["Best aperture radius", self.apertures_raddi[0,self.aperture],
+            ["Best aperture radius", self.apertures_radii[0,self.aperture]],
             ["Telescope", self.telescope.name],
             ["Filter", self.filter],
             ["Exposure time", f"{np.mean(self.exptime)} s"],
