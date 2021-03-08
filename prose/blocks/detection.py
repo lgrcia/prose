@@ -3,12 +3,11 @@ import numpy as np
 from photutils import DAOStarFinder
 from astropy.stats import sigma_clipped_stats
 from .registration import clean_stars_positions
-from .base import Block
+from ..core import Block
 try:
     from sep import extract
 except:
     raise AssertionError("Please install sep")
-from astropy.io import fits
 
 
 class StarsDetection(Block):

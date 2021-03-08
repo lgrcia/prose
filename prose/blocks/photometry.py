@@ -1,6 +1,4 @@
 import numpy as np
-from tqdm import tqdm
-from astropy.io import fits
 from astropy.table import Table
 from photutils import aperture_photometry
 from astropy.stats import sigma_clipped_stats
@@ -8,11 +6,9 @@ from photutils.background import MMMBackground
 from astropy.stats import gaussian_sigma_to_fwhm
 from astropy.modeling.fitting import LevMarLSQFitter
 from photutils import CircularAperture, CircularAnnulus
-from .. import io, FitsManager
+from .. import FitsManager
 from photutils.psf import IntegratedGaussianPRF, DAOGroup, BasicPSFPhotometry
-from ..console_utils import TQDM_BAR_FORMAT, INFO_LABEL
-from .psf import Gaussian2D
-from .base import Block
+from ..core import Block
 try:
     import sep
 except:

@@ -34,10 +34,10 @@ A ``Block`` is a single unit of processing acting on the ``Image`` object, readi
 
 .. image:: _static/sequence.png
    :align: center
-   :height: 300px
+   :height: 330px
 
 
-A ``Sequence`` is a succesion of ``Block`` intended to sequentially process a set of ``Image``. ``Sequence`` follow three steps:
+A ``Sequence`` is a succesion of ``Block`` intended to sequentially process a set of ``Image``. It follows three steps:
 
 1. All *Blocks* have their :py:meth:`~prose.Block.initialize` method called
 2. *Images* go succesively and sequentially through the *Blocks* :py:meth:`~prose.run` methods

@@ -1,8 +1,8 @@
 from tqdm import tqdm
 from astropy.io import fits
-from ..console_utils import TQDM_BAR_FORMAT
+from prose.console_utils import TQDM_BAR_FORMAT
 from astropy.wcs import WCS
-from .. import visualisation as viz
+from prose import visualisation as viz
 from collections import OrderedDict
 from tabulate import tabulate
 from time import time
