@@ -20,7 +20,7 @@ A python framework to process FITS images. Built for Astronomy, |prose| features
    installation
    citing
    api
-   blocks
+   core
 
 .. toctree::
    :caption: Tutorials
