@@ -1,7 +1,7 @@
 import numpy as np
-from .base import Block
+from ..core import Block
 from astropy.io import fits
-from .. import utils, io
+from .. import utils
 import matplotlib.pyplot as plt
 from .. import visualisation as viz
 from astropy.nddata import Cutout2D

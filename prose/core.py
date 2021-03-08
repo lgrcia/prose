@@ -1,8 +1,8 @@
 from tqdm import tqdm
 from astropy.io import fits
-from ..console_utils import TQDM_BAR_FORMAT
+from prose.console_utils import TQDM_BAR_FORMAT
 from astropy.wcs import WCS
-from .. import visualisation as viz
+from prose import visualisation as viz
 from collections import OrderedDict
 from tabulate import tabulate
 from time import time
@@ -13,7 +13,7 @@ class Sequence:
 
     def __init__(self, blocks, files, name="default", telescope=None, **kwargs):
         self.name = name
-        self.files = files if not isinstance(files, str) else [files]
+        self.files_or_images = files if not isinstance(files, str) else [files]
         self.blocks = blocks
 
         self.data = {}
@@ -49,7 +49,7 @@ class Sequence:
             progress = lambda x: tqdm(
                 x,
                 desc=self.name,
-                unit="files",
+                unit="images",
                 ncols=80,
                 bar_format=TQDM_BAR_FORMAT,
             )
@@ -57,11 +57,11 @@ class Sequence:
         else:
             progress = lambda x: x
 
-        if isinstance(self.files, list):
-            if len(self.files) == 0:
-                raise ValueError("No files to process")
-        elif self.files is None:
-            raise ValueError("No files to process")
+        if isinstance(self.files_or_images, list):
+            if len(self.files_or_images) == 0:
+                raise ValueError("No images to process")
+        elif self.files_or_images is None:
+            raise ValueError("No images to process")
 
         # initialization
         for block in self.blocks:
@@ -70,8 +70,11 @@ class Sequence:
             block.initialize()
 
         # run
-        for i, file_path in enumerate(progress(self.files)):
-            image = Image(file_path)
+        for i, file_or_image in enumerate(progress(self.files_or_images)):
+            if isinstance(file_or_image, str):
+                image = Image(file_or_image)
+            else:
+                image = file_or_image
             discard_message = False
             for block in self.blocks:
                 # This allows to discard image in any blocks
@@ -79,7 +82,10 @@ class Sequence:
                     block._run(image)
                 elif not discard_message:
                     discard_message = True
-                    print(f"Warning: image {i} (...{file_path[-12::]}) discarded in {type(block).__name__}")
+                    if isinstance(file_or_image, str):
+                        print(f"Warning: image {i} (...{file_or_image[i]}) discarded in {type(block).__name__}")
+                    else:
+                        print(f"Warning: image {i} discarded in {type(block).__name__}")
 
         # terminate
         for block in self.blocks:

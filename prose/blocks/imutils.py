@@ -1,4 +1,4 @@
-from .base import Block
+from ..core import Block
 from astropy.io import fits
 import numpy as np
 from astropy.time import Time

@@ -25,7 +25,7 @@ extensions = [
     ]
 
 master_doc = 'index'
-exclude_patterns = ["**.ipynb_checkpoints"]
+exclude_patterns = ['_build', '**.ipynb_checkpoints']
 source_suffix = {'.rst': 'restructuredtext'}
 
 # -- Options for HTML output -------------------------------------------------

@@ -1,4 +1,4 @@
-from prose.blocks.base import Block
+from ..core import Block
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -9,7 +9,7 @@ try:
 except ModuleNotFoundError:
     raise ModuleNotFoundError("prose.neural requires tensorflow (pip install tensorflow)")
 
-from photutils.centroids import centroid_com, centroid_epsf, centroid_2dg
+from photutils.centroids import centroid_2dg
 import time
 from prose.blocks.psf import cutouts
 from os import path

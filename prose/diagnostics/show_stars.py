@@ -1,4 +1,4 @@
-from prose.blocks.base import Block
+from ..core import Block
 import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import matplotlib.pyplot as plt
