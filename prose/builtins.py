@@ -69,6 +69,28 @@ saintex.update({
     "ra_unit": "hourangle",
     "latlong": [31.0439, -115.4637]})
 
+liverpool = speculoos_south.copy()
+liverpool.update ({
+    "name": "Liverpool Telescope",
+    "trimming": [8, 22], # pixels
+    "read_noise": 12, # ADU
+    "gain": 2.4, # ADU/e-
+    "altitude": 2363, # m
+    "diameter": 200, # cm
+    "pixel_scale": 1.0752, # arcsec
+    "latlong": [28.7624, 17.8792], # deg
+    "keyword_object": "OBJECT",
+    "keyword_image_type": "OBSTYPE",
+    "keyword_light_images": "expose",
+    "keyword_observation_date": "DATE-OBS",
+    "keyword_exposure_time": "EXPTIME",
+    "keyword_filter": "FILTER1",
+    "keyword_observatory": "TELESCOP",
+    "keyword_jd": "JD_UTC",
+    "keyword_ra": "RA",
+    "keyword_dec": "DEC"
+})
+
 built_in_telescopes = {
     "trappist": trappist,
     "artemis": artemis,
@@ -78,7 +100,8 @@ built_in_telescopes = {
     "io": io,
     "callisto": callisto,
     "ntm": trappistN,
-    "saint-ex": saintex
+    "saint-ex": saintex,
+    "liverpool": liverpool
 }
 
 TESS_pixel = 2.5 # arcmin
