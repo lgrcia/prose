@@ -20,7 +20,7 @@ class Calibration(Block):
     bias : list
         list of bias files paths
     """
-    def __init__(self, dark, flat, bias, **kwargs):
+    def __init__(self, dark=None, flat=None, bias=None, **kwargs):
 
         super().__init__(**kwargs)
         self.images = {"dark": dark, "flat": flat, "bias": bias}
@@ -36,7 +36,8 @@ class Calibration(Block):
         _master = []
         kw_exp_time = self.telescope.keyword_exposure_time
         images = self.images[image_type]
-        assert len(images) > 0, f"No {image_type} images found (see Reduction `calibration` kwargs)"
+        if len(images) == 0:
+            print(f"No {image_type} images found")
         for i, fits_path in enumerate(images):
             hdu = fits.open(fits_path)
             primary_hdu = hdu[0]
@@ -71,6 +72,15 @@ class Calibration(Block):
             n = shape_divisors[np.argmin(np.abs(50 - shape_divisors))]
             self.master_flat = np.concatenate([np.median(im, axis=0) for im in np.split(_master, n, axis=1)])
             del _master
+
+        if self.master_dark is None:
+            self.master_dark = 0
+
+        if self.master_bias is None:
+            self.master_bias = 0
+
+        if self.master_flat is None:
+            self.master_flat = 1
 
     def initialize(self):
         assert self.telescope is not None, "Calibration block needs telescope to be set (in Unit)"
