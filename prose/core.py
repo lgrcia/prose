@@ -87,6 +87,8 @@ class Sequence:
                     else:
                         print(f"Warning: image {i} discarded in {type(block).__name__}")
 
+            del image
+
         # terminate
         for block in self.blocks:
             block.terminate()
@@ -113,7 +115,6 @@ class Image:
             self.header = fits.getheader(fitspath)
             self.path = fitspath
         else:
-            assert data is not None, "If FITS path is not provided, data kwarg should be set"
             self.data = data
             self.header = header if header is not None else {}
             self.path = None
@@ -122,9 +123,18 @@ class Image:
 
         self.__dict__.update(kwargs)
 
+    def copy(self, data=True):
+        new_self = Image()
+        new_self.__dict__.update(self.__dict__)
+        if not data:
+            del new_self.__dict__["data"]
+
+        return new_self
+
     @property
     def wcs(self):
         return WCS(self.header)
+
 
 class Block:
 

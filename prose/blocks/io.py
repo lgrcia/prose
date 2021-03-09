@@ -26,7 +26,7 @@ class SavePhot(Block):
         self.stack = stack
 
     def run(self, image, **kwargs):
-        self.images.append(image)
+        self.images.append(image.copy(data=False))
 
     def terminate(self):
         if self.header is not None:
