@@ -39,3 +39,4 @@ A python framework to process FITS images. Built for Astronomy, |prose| features
    :maxdepth: 1
 
    notebooks/phot.ipynb
+   notebooks/extra.ipynb

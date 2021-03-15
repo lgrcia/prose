@@ -9,6 +9,8 @@ from astropy.stats import SigmaClip
 from photutils import MedianBackground
 from .psf import cutouts
 import os
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_agg import FigureCanvasAgg
 
 
 class Stack(Block):
@@ -67,7 +69,7 @@ class Stack(Block):
 
 
 class StackStd(Block):
-
+    
     def __init__(self, destination=None, overwrite=False, **kwargs):
         super(StackStd, self).__init__(**kwargs)
         self.images = []
@@ -205,10 +207,10 @@ class CleanCosmics(Block):
 
 
 class Pass(Block):
+    """A Block that does nothing"""
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        
-    """A Block that does nothing"""
+    
     def run(self, image):
         pass
 
@@ -249,7 +251,15 @@ class Set(Block):
 
 
 class Cutouts(Block):
+    """Record all cutouts centered on Image.stars_coords
 
+    Cutouts are sometimes called "imagette" and represent small portions of the image centered on cpecific points.
+
+    Parameters
+    ----------
+    size : int, optional
+        width and height of the cutout, by default 21
+    """
     def __init__(self, size=21, **kwargs):
         super().__init__(**kwargs)
         self.size = size
@@ -259,7 +269,23 @@ class Cutouts(Block):
 
 
 class Flip(Block):
+    """Flip an image according to a reference
+
+    Telescope.keyword_flip is used. The image is fliped if its flip value differs from the reference
+
+    Parameters
+    ----------
+    reference_image : `Image`
+        Image serving as a reference
+    """
     def __init__(self, reference_image, **kwargs):
+        """[summary]
+
+        Parameters
+        ----------
+        reference_image : [type]
+            [description]
+        """
         super().__init__(**kwargs)
         self.reference_image = reference_image
         self.reference_flip_value = None
@@ -271,3 +297,48 @@ class Flip(Block):
         flip_value = image.header.get(self.telescope.keyword_flip, None)
         if flip_value != self.reference_flip_value:
             image.data = image.data[::-1, ::-1]
+
+
+class Plot(Block):
+    """Generate a video/gif given a plotting function
+
+    Parameters
+    ----------
+    plot_function : functio,
+        A plotting function taking an `Image` as argument and using pyplot
+    destination : str path
+        path of the image to be saved
+    fps : int, optional
+        frame per seconds, by default 10
+    """
+
+    def __init__(self, plot_function, destination, fps=10, **kwargs):
+        super().__init__(**kwargs)
+        self.plot_function = plot_function
+        self.plots = []
+        self.destination = destination
+        self.fps = fps
+        self._init_alias = plt.rcParams['text.antialiased']
+        plt.rcParams['text.antialiased'] = False
+
+    def initialize(self, *args):
+        # Check if writer is available (sometimes require extra packages)
+        _ = imageio.get_writer(self.destination, mode="I")
+
+    def to_rbg(self):
+        fig = plt.gcf()
+        canvas = FigureCanvasAgg(fig)
+        canvas.draw()
+        width, height = fig.canvas.get_width_height()
+        returned = np.fromstring(canvas.tostring_rgb(), dtype='uint8').reshape(height, width, 3)
+        plt.imshow(returned)
+        plt.close()
+        return returned
+
+    def run(self, image):
+        self.plot_function(image)
+        self.plots.append(self.to_rbg())
+
+    def terminate(self):
+        imageio.mimsave(self.destination, self.plots, fps=self.fps)
+        plt.rcParams['text.antialiased'] = self._init_alias
