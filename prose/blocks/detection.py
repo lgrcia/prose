@@ -117,7 +117,7 @@ class SegmentedPeaks(StarsDetection):
         self.min_separation = min_separation
 
     def single_detection(self, data):
-        threshold = self.threshold*np.nanmedian(data)
+        threshold = self.threshold*np.nanstd(data.flatten()) + np.median(data.flatten())
         regions = regionprops(label(data > threshold), data)
         coordinates = np.array([region.weighted_centroid[::-1] for region in regions])
         fluxes = np.array([np.sum(region.intensity_image) for region in regions])
