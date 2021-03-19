@@ -3,7 +3,7 @@ from . import io as bio
 import os
 from os import path
 from astropy.io import fits
-from ..console_utils import INFO_LABEL
+from ..console_utils import info
 import numpy as np
 import time
 
@@ -229,8 +229,8 @@ class Photometry:
         ref_stars = stack_image.stars_coords
         fwhm = stack_image.fwhm
 
-        print("{} detected stars: {}".format(INFO_LABEL, len(ref_stars)))
-        print("{} global psf FWHM: {:.2f} (pixels)".format(INFO_LABEL, np.mean(fwhm)))
+        info(f"detected stars: {len(ref_stars)}")
+        info(f"global psf FWHM: {np.mean(fwhm):.2f} (pixels)")
 
         time.sleep(0.5)
 

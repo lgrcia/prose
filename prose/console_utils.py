@@ -128,3 +128,7 @@ def _get_terminal_size_linux():
             return None
 
     return int(cr[1]), int(cr[0])
+
+
+def info(s):
+    print(f"{INFO_LABEL} {s}")
