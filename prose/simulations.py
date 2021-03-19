@@ -233,8 +233,10 @@ def observation_to_model(time, t0=0.1, r=0.06417):
     flux += dy_flux + sky_flux
 
     x = xr.Dataset(dict(
-        fluxes=xr.DataArray(flux[None, None, :], dims=("apertures", "star", "time")),
-        errors=xr.DataArray(error*np.ones_like(time)[None, None, :], dims=("apertures", "star", "time")),
+        diff_fluxes=xr.DataArray(flux[None, None, :], dims=("apertures", "star", "time")),
+        diff_errors=xr.DataArray(error*np.ones_like(time)[None, None, :], dims=("apertures", "star", "time")),
+        fluxes=xr.DataArray(np.ones_like(time)[None, None, :], dims=("apertures", "star", "time")),
+        errors=xr.DataArray(np.ones_like(time)[None, None, :], dims=("apertures", "star", "time")),
         sky=xr.DataArray(sky, dims="time"),
         dy=xr.DataArray(dy, dims="time")
     ), attrs=dict(
