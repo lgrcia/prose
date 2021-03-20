@@ -355,7 +355,10 @@ class AperturePhotometry(Photometry):
 
         # Blocks
         assert centroid is None or issubclass(centroid, Block), "centroid must be a subclass of Block"
-        self.centroid = centroid
+        if centroid is None:
+            self.centroid = None
+        else:
+            self.centroid = centroid()
         # ==
         assert photometry is None or issubclass(photometry, Block), "photometry must be a subclass of Block"
         self.photometry = photometry(
@@ -371,10 +374,12 @@ class AperturePhotometry(Photometry):
     def run_reference_detection(self):
         stack_image, ref_stars, fwhm = super().run_reference_detection()
 
+        centroid = blocks.Pass() if not isinstance(self.centroid, Block) else self.centroid
+
         self.photometry_unit = Sequence([
             blocks.Set(stars_coords=ref_stars, name="set stars"),
             blocks.Set(fwhm=fwhm, name="set fwhm"),
-            blocks.Pass() if not isinstance(self.centroid, Block) else self.centroid,
+            centroid,
             self.photometry,
             bio.SavePhot(self.phot_path, header=stack_image.header, stack=stack_image.data, name="saving")
         ], self.files, telescope=self.telescope, name="Photometry")
