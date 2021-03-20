@@ -86,7 +86,7 @@ class Observation(ApertureFluxes):
             {
                 "BJD-TDB" if self.time_format == "bjd_tdb" else "JD-UTC": self.time,
                 "DIFF_FLUX": self.diff_flux,
-                "ERROR": self.error,
+                "ERROR": self.diff_error,
                 "dx_MOVE": self.dx,
                 "dy_MOVE": self.dy,
                 "FWHM": self.fwhm,
