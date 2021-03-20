@@ -60,18 +60,14 @@ def cutouts(image, stars, size=15):
     if isinstance(image, str):
         image = fits.getdata(image)
 
-    stars_in = np.logical_and(
-        np.all(stars < np.array(image.shape) - size - 2, axis=1),
-        np.all(stars > np.ones(2) * size + 2, axis=1)
-    )
-    stars = stars[stars_in]
-
-    # with warnings.catch_warnings():
     warnings.simplefilter("ignore")
-    stars_tbl = Table([stars[:, 0], stars[:, 1]], names=["x", "y"])
+    stars_tbl = Table(
+        [stars[:, 0], stars[:, 1], np.arange(len(stars))],
+        names=["x", "y", "id"])
     stars = extract_stars(NDData(data=image), stars_tbl, size=size)
+    idxs = np.array([s.id_label for s in stars])
     
-    return np.argwhere(stars_in).flatten(), stars
+    return idxs, stars
 
 
 def moments(data):
