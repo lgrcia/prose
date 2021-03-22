@@ -20,11 +20,11 @@ class Reduction:
     reference : float, optional
         Reference image to use for alignment from 0 (first image) to 1 (last image), by default 1/2
     overwrite : bool, optional
-        wether to overwrtie existing products, by default False
+        whether to overwrite existing products, by default False
     n_images : int, optional
         number of images to process, by default None for all images
     calibration : bool, optional
-        weather to perform calibration, by default True (if False images are still trimmed)
+        whether to perform calibration, by default True (if False images are still trimmed)
     ignore_telescope: bool, optional
         whether to load a default telescope if telescope not recognised, by default False
     """

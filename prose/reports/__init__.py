@@ -39,7 +39,7 @@ class ObservationReport(Observation):
             ["GAIA id", None],
             ["Mean std · fwhm",
              f"{np.mean(self.fwhm) / (2 * np.sqrt(2 * np.log(2))):.2f} · {np.mean(self.fwhm):.2f} pixels"],
-            ["Best aperture radius", self.apertures_radii[0,self.aperture]],
+            ["Best aperture radius", f"{round((self.apertures_radii[0,self.aperture]),2)} pixels"],
             ["Telescope", self.telescope.name],
             ["Filter", self.filter],
             ["Exposure time", f"{np.mean(self.exptime)} s"],
@@ -88,6 +88,16 @@ class ObservationReport(Observation):
             _, ylim = plt.ylim()
             plt.text(self.meridian_flip, ylim, "meridian flip ", ha="right", rotation="vertical", va="top", color="0.7")
 
+    def plot_ingress_egress(self, t0, duration):
+        if self.transit_model is not None:
+            plt.axvline(t0 + duration/2, c='red', alpha=0.4,label='observed ingress/egress')
+            plt.axvline(t0 - duration/2, c='red', alpha=0.4)
+            self._ingress = self.time[np.nonzero(self.transit_model)[0][0]]
+            self._egress = self.time[np.nonzero(self.transit_model)[0][-1]]
+            plt.axvline(self._ingress, ls='--', c='red', alpha=0.4,label='predicted ingress/egress')
+            plt.axvline(self._egress, ls='--', c='red', alpha=0.4)
+            _, ylim = plt.ylim()
+
     def plot_psf(self, n=40, zscale=False):
         n /= np.sqrt(2)
         x, y = self.stars[self.target]
@@ -102,7 +112,8 @@ class ObservationReport(Observation):
 
         binned_radii, binned_pixels, _ = fast_binning(radii, pixels, bins=1)
 
-        plt.figure(figsize=(9.5, 4))
+        fig = plt.figure(figsize=(9.5, 4))
+        fig.patch.set_facecolor('xkcd:white')
         ax = plt.subplot(1, 5, (1, 3))
 
         plt.plot(radii, pixels, "o", fillstyle='none', c="0.7", ms=4)
@@ -150,37 +161,40 @@ class ObservationReport(Observation):
 
     def plot_syst(self, size=(6, 8)):
         fig = plt.figure(figsize=size)
+        fig.patch.set_facecolor('xkcd:white')
         ax = fig.add_subplot(111)
 
         self.plot_systematics()
         self.plot_meridian_flip()
         _ = plt.gcf().axes[0].set_title("", loc="left")
-        plt.xlabel(f"BJD")
+        plt.xlabel(f"BJD-TDB")
         plt.ylabel("diff. flux")
         plt.tight_layout()
         self.style()
 
     def plot_comps(self, size=(6, 8)):
         fig = plt.figure(figsize=size)
+        fig.patch.set_facecolor('xkcd:white')
         ax = fig.add_subplot(111)
 
         self.plot_comps_lcs()
         _ = plt.gcf().axes[0].set_title("", loc="left")
         self.plot_meridian_flip()
-        plt.xlabel(f"BJD")
+        plt.xlabel(f"BJD-TDB")
         plt.ylabel("diff. flux")
         plt.tight_layout()
         self.style()
 
     def plot_raw(self, size=(6, 4)):
-        plt.figure(figsize=size)
+        fig = plt.figure(figsize=size)
+        fig.patch.set_facecolor('xkcd:white')
         raw_f = self.raw_fluxes[self.aperture, self.target]
         plt.plot(self.time, raw_f / np.mean(raw_f), c="k", label="target")
         plt.plot(self.time, self.alc[self.aperture], c="C0", label="artificial")
         self.plot_meridian_flip()
         plt.legend()
         plt.tight_layout()
-        plt.xlabel(f"BJD")
+        plt.xlabel(f"BJD-TDB")
         plt.ylabel("norm. flux")
         self.style()
 
@@ -274,7 +288,8 @@ class ObservationReport(Observation):
         self._transit = transit
 
     def plot_lc(self):
-        plt.figure(figsize=(6, 7 if self._trend is not None else 4))
+        fig = plt.figure(figsize=(6, 7 if self._trend is not None else 4))
+        fig.patch.set_facecolor('xkcd:white')
         if self._trend is not None:
             plt.plot(self.time, self.diff_flux - 0.03, ".", color="gainsboro", alpha=0.3)
             plt.plot(self.time, self._trend - 0.03, c="k", alpha=0.2, label="systematics model")
@@ -287,7 +302,35 @@ class ObservationReport(Observation):
             plt.plot(self.time, self._transit + 1., label="transit", c="k")
         self.plot_meridian_flip()
         plt.legend()
-        plt.xlabel(f"BJD")
+        plt.xlabel(f"BJD-TDB")
+        plt.ylabel("diff. flux")
+        plt.tight_layout()
+        self.style()
+
+    def plot_lc_model(self, t0, duration):
+        fig = plt.figure(figsize=(6, 7 if self.trend_model is not None else 4))
+        fig.patch.set_facecolor('xkcd:white')
+        if self.trend_model is not None:
+            viz.plot_lc(self.time, self.diff_flux, plot_kwargs=dict(label=None))
+            plt.plot(self.time, self.trend_model + self.transit_model, c="C0", alpha=0.5,
+                     label="systematics + transit model")
+            viz.plot_lc(self.time, self.diff_flux - self.trend_model + 1. - 0.03, plot_kwargs=dict(label=None),
+                        errorbar_kwargs=dict(label=None))
+            plt.ylim(0.95, 1.03)
+            self.plot_ingress_egress(t0, duration)
+            ax = plt.gca()
+            plt.text(0.95, 0.05, "detrended", fontsize=12, horizontalalignment='right', verticalalignment='bottom',
+                     transform=ax.transAxes)
+            plt.text(0.95, 0.85, "raw", fontsize=12, horizontalalignment='right', verticalalignment='top',
+                     transform=ax.transAxes, color="grey")
+        else:
+            self.plot()
+            plt.ylim(0.98, 1.02)
+        if self.transit_model is not None:
+            plt.plot(self.time, self.transit_model + 1. - 0.03, label="transit model", c="k")
+        self.plot_meridian_flip()
+        plt.legend()
+        plt.xlabel(f"BJD-TDB")
         plt.ylabel("diff. flux")
         plt.tight_layout()
         self.style()

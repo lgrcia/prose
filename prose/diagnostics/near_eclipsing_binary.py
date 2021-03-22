@@ -99,8 +99,8 @@ class NEB(Observation):
         target_score = None
         for i, i_star in enumerate(self.nearby_ids):
             x = self.xarray.isel(star=i_star, apertures=self.aperture)
-            flux = x.fluxes.values
-            error = x.errors.values
+            flux = x.diff_fluxes.values
+            error = x.diff_errors.values
             w, dw = self.evaluate_transit(flux, error)
             self.ws[i] = w
             self.depths[i], self.score[i] = w[-1], np.abs(w[-1]/np.sqrt(np.diag(dw))[-1])
@@ -114,7 +114,7 @@ class NEB(Observation):
         self.potentials = self.score > 3.5 * np.std(self.score)
 
     def plot_lc(self, i):
-        viz.plot_lc(self.time, self.fluxes[self.aperture, self.nearby_ids[i]].flux, std=True)
+        viz.plot_lc(self.time, self.diff_fluxes[self.aperture, self.nearby_ids[i]].flux, std=True)
         plt.plot(self.time, self.X @ self.ws[i], label="model")
         plt.legend()
 
@@ -199,7 +199,7 @@ class NEB(Observation):
 
         nearby_ids = self.nearby_ids[idxs]
         viz.plot_lcs(
-            [(self.time, self.fluxes[self.aperture, i]) for i in nearby_ids],
+            [(self.time, self.diff_fluxes[self.aperture, i]) for i in nearby_ids],
             indexes=nearby_ids,
             colors=[self.color(idxs[i], white=True) for i in range(len(nearby_ids))],
             **kwargs
