@@ -33,6 +33,7 @@ class ObservationReport(Observation):
             f"[{obs_duration_hours}h{obs_duration_mins if obs_duration_mins != 0 else ''}]"
 
         self.obstable = [
+            ["TIC ID", None],
             ["Time", obs_duration],
             ["RA - DEC", f"{self.RA} {self.DEC}"],
             ["Number of images", len(self.time)],
@@ -209,7 +210,7 @@ class ObservationReport(Observation):
         if not path.exists(self.figure_destination):
             os.mkdir(self.figure_destination)
 
-    def make_figures(self, destination):
+    def make_figures(self, destination, t0=None, duration=None):
         self.plot_psf()
         plt.savefig(path.join(destination, "psf.png"), dpi=self.dpi)
         plt.close()
@@ -228,6 +229,10 @@ class ObservationReport(Observation):
         self.plot_lc()
         plt.savefig(path.join(destination, "lightcurve.png"), dpi=self.dpi)
         plt.close()
+        if t0 and duration is not None :
+            self.plot_lc_model(t0,duration)
+            plt.savefig(path.join(destination, "model.png"), dpi=self.dpi)
+            plt.close()
 
     def to_csv_report(self, destination, sep=" "):
         """Export a typical csv of the observation's data
@@ -267,10 +272,10 @@ class ObservationReport(Observation):
         )
         df.to_csv(destination, sep=sep, index=False)
 
-    def make(self, destination):
+    def make(self, destination,t0=None,duration=None):
 
         self.make_report_folder(destination)
-        self.make_figures(self.figure_destination)
+        self.make_figures(self.figure_destination,t0,duration)
         self.to_csv_report(self.measurement_destination)
 
         shutil.copyfile(path.join(template_folder, "prose-report.cls"), path.join(destination, "prose-report.cls"))
@@ -310,10 +315,11 @@ class ObservationReport(Observation):
     def plot_lc_model(self, t0, duration):
         fig = plt.figure(figsize=(6, 7 if self.trend_model is not None else 4))
         fig.patch.set_facecolor('xkcd:white')
-        if self.trend_model is not None:
+        if (self.trend_model - self.transit_model).any() is not None:
             viz.plot_lc(self.time, self.diff_flux, plot_kwargs=dict(label=None))
             plt.plot(self.time, self.trend_model + self.transit_model, c="C0", alpha=0.5,
                      label="systematics + transit model")
+            plt.plot(self.time, self.transit_model + 1. - 0.03, label="transit model", c="k")
             viz.plot_lc(self.time, self.diff_flux - self.trend_model + 1. - 0.03, plot_kwargs=dict(label=None),
                         errorbar_kwargs=dict(label=None))
             plt.ylim(0.95, 1.03)
@@ -326,8 +332,6 @@ class ObservationReport(Observation):
         else:
             self.plot()
             plt.ylim(0.98, 1.02)
-        if self.transit_model is not None:
-            plt.plot(self.time, self.transit_model + 1. - 0.03, label="transit model", c="k")
         self.plot_meridian_flip()
         plt.legend()
         plt.xlabel(f"BJD-TDB")
