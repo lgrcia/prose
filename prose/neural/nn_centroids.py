@@ -120,10 +120,10 @@ class NNCentroid(Block):
         self.train_history = self.model.fit(train_dataset, epochs=epochs,
                                             validation_data=test_dataset)
 
-    def custom_train_model(self, batch=10000, epochs=300, epochprint=10):
+    def custom_train_model(self, n_batch=10, batch=1000, epochs_per_batch=20):
 
         # Setting loss, grads and optimizers
-        loss_object = tf.keras.losses.Huber()
+        loss_object = tf.keras.losses.MeanSquaredError()
 
         def loss(model, x, y, training):
             y_ = model(x, training=training)
@@ -143,36 +143,33 @@ class NNCentroid(Block):
         train_loss_results = []
         train_accuracy_results = []
 
-        num_epochs = epochs
+        for nb in range(n_batch):
+            for epoch in range(epochs_per_batch):
+                train_dataset = self.random_model_label(N=batch)
+                train_dataset = tf.data.Dataset.from_tensor_slices(train_dataset)
 
-        for epoch in range(num_epochs):
-            train_dataset = self.random_model_label(N=batch)
-            train_dataset = tf.data.Dataset.from_tensor_slices(train_dataset)
+                BATCH_SIZE = 100
+                SHUFFLE_BUFFER_SIZE = 100
 
-            BATCH_SIZE = 100
-            SHUFFLE_BUFFER_SIZE = 100
+                train_dataset = train_dataset.shuffle(SHUFFLE_BUFFER_SIZE).batch(BATCH_SIZE)
 
-            train_dataset = train_dataset.shuffle(SHUFFLE_BUFFER_SIZE).batch(BATCH_SIZE)
+                epoch_loss_avg = tf.keras.metrics.Mean()
+                epoch_accuracy = tf.keras.metrics.RootMeanSquaredError()
 
-            epoch_loss_avg = tf.keras.metrics.Mean()
-            epoch_accuracy = tf.keras.metrics.RootMeanSquaredError()
+                for x, y in train_dataset:
+                    # Optimize the model
+                    loss_value, grads = grad(self.model, x, y)
+                    optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
 
-            for x, y in train_dataset:
-                # Optimize the model
-                loss_value, grads = grad(self.model, x, y)
-                optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
+                    # Track progress
+                    epoch_loss_avg.update_state(loss_value)  # Add current batch loss
+                    epoch_accuracy.update_state(y, self.model(x, training=True))
 
-                # Track progress
-                epoch_loss_avg.update_state(loss_value)  # Add current batch loss
-                epoch_accuracy.update_state(y, self.model(x, training=True))
+                # End epoch
+                train_loss_results.append(epoch_loss_avg.result())
+                train_accuracy_results.append(epoch_accuracy.result())
 
-            # End epoch
-            train_loss_results.append(epoch_loss_avg.result())
-            train_accuracy_results.append(epoch_accuracy.result())
-
-            if epoch % epochprint == 0:
-                print(
-                    f"Epoch {epoch:03d}: Loss: {epoch_loss_avg.result():.3f}, Accuracy: {epoch_accuracy.result():.3e}")
+            print(f"NBatch {nb:03d}: Loss: {epoch_loss_avg.result():.3f}, Accuracy: {epoch_accuracy.result():.3e}")
 
         self.train_history = np.array([train_loss_results, train_accuracy_results])
 
