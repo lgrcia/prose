@@ -120,7 +120,7 @@ class NNCentroid(Block):
         self.train_history = self.model.fit(train_dataset, epochs=epochs,
                                             validation_data=test_dataset)
 
-    def custom_train_model(self, train=10000, epochs=300, epochprint=10):
+    def custom_train_model(self, batch=10000, epochs=300, epochprint=10):
 
         # Setting loss, grads and optimizers
         loss_object = tf.keras.losses.Huber()
@@ -144,7 +144,6 @@ class NNCentroid(Block):
         train_accuracy_results = []
 
         num_epochs = epochs
-        batch = int(train / epochs)
 
         for epoch in range(num_epochs):
             train_dataset = self.random_model_label(N=batch)
@@ -176,7 +175,7 @@ class NNCentroid(Block):
                     f"Epoch {epoch:03d}: Loss: {epoch_loss_avg.result():.3f}, Accuracy: {epoch_accuracy.result():.3e}")
 
         self.train_history = np.array([train_loss_results, train_accuracy_results])
-        
+
     def show_example(self, method=centroid_2dg):
         data, label = self.random_model_label(1)
         label = label.flatten()
