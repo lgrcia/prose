@@ -13,6 +13,7 @@ from photutils.centroids import centroid_2dg
 import time
 from prose.blocks.psf import cutouts
 from os import path
+from tqdm import tqdm
 
 
 # TODO: create NNBlock
@@ -50,11 +51,15 @@ class NNCentroid(Block):
                            loss=tf.keras.losses.Huber(),
                            metrics=['accuracy'])
 
-    def load_model(self):
-        self.model = tf.keras.models.load_model(path.join(__file__, '../trained_models/model_NNcentroid_prose'))
+    def load_model(self, folder=None):
+        if folder is None:
+            folder = path.join(__file__, '../trained_models/model_NNcentroid_prose')
+        self.model = tf.keras.models.load_model(folder)
 
-    def save_model(self):
-        self.model.save_weights(path.join(__file__, '../trained_models/model_NNcentroid_prose'))
+    def save_model(self, destination=None):
+        if destination is None:
+            destination = path.join(__file__, '../trained_models/model_NNcentroid_prose')
+        self.model.save_weights(destination)
 
     def moffat2D_model(self, a, x0, y0, sx, sy, theta, b, beta):
         # https://pixinsight.com/doc/tools/DynamicPSF/DynamicPSF.html
@@ -68,12 +73,17 @@ class NNCentroid(Block):
     def sigma_to_fwhm(self, beta):
         return 2 * np.sqrt(np.power(2, 1 / beta) - 1)
 
-    def random_model_label(self, N=10000, flatten=False):
+    def random_model_label(self, N=10000, flatten=False, progress=False):
 
         images = []
         labels = []
 
-        for i in range(N):
+        if not progress:
+            def progress(x): return x
+        else:
+            def progress(x): return tqdm(x)
+
+        for _ in progress(range(N)):
             a = np.random.uniform(800, 10000)
             x0, y0 = np.random.normal(self.cutout_size / 2, 3, 2)
             theta = np.random.normal(0, np.pi / 8)
@@ -110,7 +120,64 @@ class NNCentroid(Block):
         self.train_history = self.model.fit(train_dataset, epochs=epochs,
                                             validation_data=test_dataset)
 
-    def show_example(self):
+    def custom_train_model(self, train=10000, epochs=300, epochprint=10):
+
+        # Setting loss, grads and optimizers
+        loss_object = tf.keras.losses.Huber()
+
+        def loss(model, x, y, training):
+            y_ = model(x, training=training)
+            return loss_object(y_true=y, y_pred=y_)
+
+        def grad(model, inputs, targets):
+            with tf.GradientTape() as tape:
+                loss_value = loss(model, inputs, targets, True)
+
+            return loss_value, tape.gradient(loss_value, model.trainable_variables)
+
+        optimizer = tf.keras.optimizers.Adam()
+
+        self.build_model()
+
+        # Keep results for plotting
+        train_loss_results = []
+        train_accuracy_results = []
+
+        num_epochs = epochs
+        batch = int(train / epochs)
+
+        for epoch in range(num_epochs):
+            train_dataset = self.random_model_label(N=batch)
+            train_dataset = tf.data.Dataset.from_tensor_slices(train_dataset)
+
+            BATCH_SIZE = 100
+            SHUFFLE_BUFFER_SIZE = 100
+
+            train_dataset = train_dataset.shuffle(SHUFFLE_BUFFER_SIZE).batch(BATCH_SIZE)
+
+            epoch_loss_avg = tf.keras.metrics.Mean()
+            epoch_accuracy = tf.keras.metrics.RootMeanSquaredError()
+
+            for x, y in train_dataset:
+                # Optimize the model
+                loss_value, grads = grad(self.model, x, y)
+                optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
+
+                # Track progress
+                epoch_loss_avg.update_state(loss_value)  # Add current batch loss
+                epoch_accuracy.update_state(y, self.model(x, training=True))
+
+            # End epoch
+            train_loss_results.append(epoch_loss_avg.result())
+            train_accuracy_results.append(epoch_accuracy.result())
+
+            if epoch % epochprint == 0:
+                print(
+                    f"Epoch {epoch:03d}: Loss: {epoch_loss_avg.result():.3f}, Accuracy: {epoch_accuracy.result():.3e}")
+
+        self.train_history = np.array([train_loss_results, train_accuracy_results])
+        
+    def show_example(self, method=centroid_2dg):
         data, label = self.random_model_label(1)
         label = label.flatten()
         _data = data[0].reshape(21, 21)
@@ -124,7 +191,7 @@ class NNCentroid(Block):
         plt.plot(*label[::-1], "x", c="k", label="true")
         plt.plot(*pred.T[::-1], "x", label="NNCentroid")
         t0_c2dg = time.time()
-        c2dg = centroid_2dg(_data)
+        c2dg = method(_data)
         tf_c2dg = time.time() - t0_c2dg
         plt.plot(*c2dg, "x", label="centroid_2dg")
         plt.legend()
