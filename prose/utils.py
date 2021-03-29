@@ -9,6 +9,7 @@ import urllib
 
 earth2sun = (c.R_earth / c.R_sun).value
 
+
 def format_iso_date(date, night_date=True):
     """
     Return a datetime.date corresponding to the day 12 hours before given datetime.

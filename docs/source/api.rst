@@ -9,7 +9,7 @@ API
    api/fitsmanager
    api/observation
    api/telescope
-   api/blocks
+   blocks
    api/aperturephotometry
    api/reduction
    api/neb

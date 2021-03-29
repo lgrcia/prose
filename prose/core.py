@@ -75,6 +75,7 @@ class Sequence:
                 image = Image(file_or_image)
             else:
                 image = file_or_image
+            image.i = i
             discard_message = False
             for block in self.blocks:
                 # This allows to discard image in any blocks

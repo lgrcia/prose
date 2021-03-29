@@ -30,7 +30,6 @@ A python framework to process FITS images. Built for Astronomy, |prose| features
    notebooks/reduction.ipynb
    notebooks/manual_reduction.ipynb
    notebooks/custom_pipeline.ipynb
-   notebooks/neb_diagnostic.ipynb
    notebooks/modeling.ipynb
    notebooks/reports.ipynb
    
@@ -39,3 +38,4 @@ A python framework to process FITS images. Built for Astronomy, |prose| features
    :maxdepth: 1
 
    notebooks/phot.ipynb
+   notebooks/extra.ipynb

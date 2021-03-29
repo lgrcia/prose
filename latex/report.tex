@@ -1,0 +1,34 @@
+\documentclass{prose-report}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage[table]{xcolor}
+\usepackage{roboto}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+
+% This report has been auto generate by prose
+% For mor details see https://prose.readthedocs.io/en/dev
+
+
+\arrayrulecolor{gray!50}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=gray!50,
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rfoot{\thepage}
+%================
+
+\begin{document}
+{\fontfamily{cmss}\selectfont
+
+\BLOCK{for path in paths}
+      \newpage
+      \include{\VAR{path}}
+\BLOCK{endfor}
+
+\end{document}

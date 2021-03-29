@@ -684,7 +684,7 @@ class ApertureFluxes:
         def progress(x):
             return tqdm(x) if verbose else x
 
-        orders_ranges = [(key, np.arange(order)) for key, order in orders.items()]
+        orders_ranges = [(key, np.arange(order+1)) for key, order in orders.items()]
         keys = [o[0] for o in orders_ranges]
         orders = [o[1] for o in orders_ranges]
         combs = list(product(*orders))

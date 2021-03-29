@@ -1,6 +1,7 @@
 from . import Image
 import matplotlib.pyplot as plt
 import numpy as np
+import re
 from astropy.time import Time
 from astropy import units as u
 from astropy.coordinates import SkyCoord
@@ -183,7 +184,15 @@ class Observation(ApertureFluxes):
             ps = self.pierside.copy() == "WEST"
             self._meridian_flip = self.time[np.argmax(np.abs(np.diff(ps))).flatten()]
         return self._meridian_flip
-        
+
+    @property
+    def tic_id(self):
+        nb = re.findall('\d*\.?\d+', self.name)
+        df = pd.read_csv("https://exofop.ipac.caltech.edu/tess/download_toi?toi=%s&output=csv" % nb[0])
+        tic = df["TIC ID"][0]
+        return f"{tic}"
+
+
     # Methods
     # -------
 

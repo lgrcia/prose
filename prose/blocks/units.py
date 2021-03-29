@@ -3,7 +3,7 @@ from . import io as bio
 import os
 from os import path
 from astropy.io import fits
-from ..console_utils import INFO_LABEL
+from ..console_utils import info
 import numpy as np
 import time
 
@@ -229,8 +229,8 @@ class Photometry:
         ref_stars = stack_image.stars_coords
         fwhm = stack_image.fwhm
 
-        print("{} detected stars: {}".format(INFO_LABEL, len(ref_stars)))
-        print("{} global psf FWHM: {:.2f} (pixels)".format(INFO_LABEL, np.mean(fwhm)))
+        info(f"detected stars: {len(ref_stars)}")
+        info(f"global psf FWHM: {np.mean(fwhm):.2f} (pixels)")
 
         time.sleep(0.5)
 
@@ -355,7 +355,10 @@ class AperturePhotometry(Photometry):
 
         # Blocks
         assert centroid is None or issubclass(centroid, Block), "centroid must be a subclass of Block"
-        self.centroid = centroid
+        if centroid is None:
+            self.centroid = None
+        else:
+            self.centroid = centroid()
         # ==
         assert photometry is None or issubclass(photometry, Block), "photometry must be a subclass of Block"
         self.photometry = photometry(
@@ -371,10 +374,12 @@ class AperturePhotometry(Photometry):
     def run_reference_detection(self):
         stack_image, ref_stars, fwhm = super().run_reference_detection()
 
+        centroid = blocks.Pass() if not isinstance(self.centroid, Block) else self.centroid
+
         self.photometry_unit = Sequence([
             blocks.Set(stars_coords=ref_stars, name="set stars"),
             blocks.Set(fwhm=fwhm, name="set fwhm"),
-            blocks.Pass() if not isinstance(self.centroid, Block) else self.centroid,
+            centroid,
             self.photometry,
             bio.SavePhot(self.phot_path, header=stack_image.header, stack=stack_image.data, name="saving")
         ], self.files, telescope=self.telescope, name="Photometry")
