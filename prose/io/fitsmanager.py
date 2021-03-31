@@ -5,6 +5,7 @@ import numpy as np
 from tabulate import tabulate
 from collections import OrderedDict
 from ..telescope import Telescope
+from .. import CONFIG
 from datetime import timedelta
 import os
 from tqdm import tqdm
@@ -246,7 +247,8 @@ class FitsManager(FilesDataFrame):
         self.files_df = self.get_observation(i, return_df=True, **kwargs)
         assert self.unique_obs, "observation should be unique, please use set_observation"
         obs = self._observations.loc[0]
-        self.telescope = Telescope.from_name(obs.telescope)
+        ids_dict = {value["name"]: key for key, value in CONFIG.telescopes_dict.items()}
+        self.telescope = Telescope.from_name(ids_dict[obs.telescope])
         self.sort_by_date()
 
     def get_observation(self, i, future=0, past=None, same_telescope=False, return_df=False):

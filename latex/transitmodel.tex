@@ -1,0 +1,35 @@
+{\fontfamily{cmss}\selectfont
+
+\begin{tabular}{m{0.45\linewidth}m{0.5\linewidth}}
+
+\parbox{\linewidth}{
+  \boxtitle{MODELING THE TRANSIT}
+  \mbox{\hspace{-0.7cm}\includegraphics[width=\linewidth + 1cm]{transitmodel/figures/model.png}}
+  \vspace{-1cm}\newline
+
+} 
+& \hspace{0.7cm}\parbox{\linewidth}{
+  \boxtitle{CORNER PLOT}
+  \mbox{\hspace{-1cm}\includegraphics[width=\linewidth + 1cm]{transitmodel/figures/Corner_plot.png}}
+  % To be added in future
+  % {\centering{\footnotesize model: $f = c + fwhm^2 + sky^2 + T + \epsilon$}}
+} 
+\\
+\end{tabular}
+
+\centering
+    {\bgroup
+      \def\arraystretch{1.2}% 
+      \tiny
+      \rowcolors{1}{white}{gray!8}
+      \roboto
+      \roboto
+      \begin{tabular}{|m{0.45\linewidth}|m{0.45\linewidth}|}
+          \BLOCK{for name, value in obstable}
+              \hline
+              \textcolor{black!50}{\VAR{name}} & \VAR{value}\\
+          \BLOCK{endfor}
+         \hline
+      \end{tabular}
+      \egroup}
+}

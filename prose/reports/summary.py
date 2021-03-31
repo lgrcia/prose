@@ -1,5 +1,9 @@
 import numpy as np
+import pandas as pd
+import collections
 import matplotlib.pyplot as plt
+from astroquery.mast import Catalogs
+from astropy.wcs import WCS, utils as wcsutils
 from ..utils import fast_binning, z_scale
 from ..console_utils import INFO_LABEL
 from .. import Observation
@@ -27,6 +31,7 @@ class Summary(Observation, LatexTemplate):
             f"[{obs_duration_hours}h{obs_duration_mins if obs_duration_mins != 0 else ''}]"
 
         self.obstable = [
+            ["TIC ID", self.tic_id], # TODO: keep only if tic_id is not None
             ["Time", obs_duration],
             ["RA - DEC", f"{self.RA} {self.DEC}"],
             ["images", len(self.time)],
@@ -48,6 +53,7 @@ class Summary(Observation, LatexTemplate):
         self.destination = None
         self.report_name = None
         self.figure_destination = None
+        self.measurement_destination = None
 
     def plot_meridian_flip(self):
         if self.meridian_flip is not None:
@@ -69,7 +75,8 @@ class Summary(Observation, LatexTemplate):
 
         binned_radii, binned_pixels, _ = fast_binning(radii, pixels, bins=1)
 
-        plt.figure(figsize=(9.5, 4))
+        fig = plt.figure(figsize=(9.5, 4))
+        fig.patch.set_facecolor('xkcd:white')
         ax = plt.subplot(1, 5, (1, 3))
 
         plt.plot(radii, pixels, "o", fillstyle='none', c="0.7", ms=4)
@@ -117,6 +124,7 @@ class Summary(Observation, LatexTemplate):
 
     def plot_syst(self, size=(6, 8)):
         fig = plt.figure(figsize=size)
+        fig.patch.set_facecolor('xkcd:white')
         ax = fig.add_subplot(111)
 
         self.plot_systematics()
@@ -129,6 +137,7 @@ class Summary(Observation, LatexTemplate):
 
     def plot_comps(self, size=(6, 8)):
         fig = plt.figure(figsize=size)
+        fig.patch.set_facecolor('xkcd:white')
         ax = fig.add_subplot(111)
 
         self.plot_comps_lcs()
@@ -140,7 +149,8 @@ class Summary(Observation, LatexTemplate):
         self.style()
 
     def plot_raw(self, size=(6, 4)):
-        plt.figure(figsize=size)
+        fig = plt.figure(figsize=size)
+        fig.patch.set_facecolor('xkcd:white')
         raw_f = self.raw_fluxes[self.aperture, self.target]
         plt.plot(self.time, raw_f / np.mean(raw_f), c="k", label="target")
         plt.plot(self.time, self.alc[self.aperture], c="C0", label="artificial")
@@ -150,6 +160,44 @@ class Summary(Observation, LatexTemplate):
         plt.xlabel(f"BJD")
         plt.ylabel("norm. flux")
         self.style()
+
+    def to_csv_report(self, destination, sep=" "):
+        """Export a typical csv of the observation's data
+
+        Parameters
+        ----------
+        destination : str
+            Path of the csv file to save
+        sep : str, optional
+            separation string within csv, by default " "
+        """
+        comparison_stars = self.comps[self.aperture]
+        list_diff = ["DIFF_FLUX_C%s" % i for i in comparison_stars]
+        list_err = ["DIFF_ERROR_C%s" % i for i in comparison_stars]
+        list_columns = [None] * (len(list_diff) + len(list_err))
+        list_columns[::2] = list_diff
+        list_columns[1::2] = list_err
+        list_diff_array = [self.diff_fluxes[self.aperture, i] for i in comparison_stars]
+        list_err_array = [self.diff_errors[self.aperture, i] for i in comparison_stars]
+        list_columns_array = [None] * (len(list_diff_array) + len(list_err_array))
+        list_columns_array[::2] = list_diff_array
+        list_columns_array[1::2] = list_err_array
+
+        df = pd.DataFrame(collections.OrderedDict(
+            {
+                "BJD-TDB" if self.time_format == "bjd_tdb" else "JD-UTC": self.time,
+                "DIFF_FLUX_T1": self.diff_flux,
+                "DIFF_ERROR_T1": self.diff_error,
+                **dict(zip(list_columns, list_columns_array)),
+                "dx": self.dx,
+                "dy": self.dy,
+                "FWHM": self.fwhm,
+                "SKYLEVEL": self.sky,
+                "AIRMASS": self.airmass,
+                "EXPOSURE": self.exptime,
+            })
+        )
+        df.to_csv(destination, sep=sep, index=False)
 
     def make_figures(self, destination):
         self.plot_psf()
@@ -175,6 +223,7 @@ class Summary(Observation, LatexTemplate):
 
         self.make_report_folder(destination)
         self.make_figures(self.figure_destination)
+        self.to_csv_report(self.measurement_destination)
 
         shutil.copyfile(path.join(template_folder, "prose-report.cls"), path.join(destination, "prose-report.cls"))
         tex_destination = path.join(self.destination, f"{self.report_name}.tex")
@@ -191,7 +240,8 @@ class Summary(Observation, LatexTemplate):
         self._transit = transit
 
     def plot_lc(self):
-        plt.figure(figsize=(6, 7 if self._trend is not None else 4))
+        fig = plt.figure(figsize=(6, 7 if self._trend is not None else 4))
+        fig.patch.set_facecolor('xkcd:white')
         if self._trend is not None:
             plt.plot(self.time, self.diff_flux - 0.03, ".", color="gainsboro", alpha=0.3)
             plt.plot(self.time, self._trend - 0.03, c="k", alpha=0.2, label="systematics model")

@@ -47,7 +47,7 @@ class LatexTemplate:
 
         self.destination = destination
         self.report_name = path.split(path.abspath(self.destination))[-1]
-
+        self.measurement_destination = path.join(self.destination, f"{self.report_name}.txt")
         self.figure_destination = path.join(destination, "figures")
         if not path.exists(self.figure_destination):
             os.mkdir(self.figure_destination)
