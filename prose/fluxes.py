@@ -9,36 +9,6 @@ from itertools import product
 from tqdm import tqdm
 from . import models
 
-# TODO: check if working properly with a single aperture/lc
-# TODO: a rms reject method and a sigma clip method in LightCurves
-# TODO: test old broeg2005 method and see if returns same results (or simlar)
-
-
-def differential_photometry(fluxes, errors, comps, return_alc=False):
-    np.seterr(divide="ignore")  # Ignore divide by 0 warnings here
-
-    comps = np.array(comps)
-
-    # Normalization
-    # ==============
-    mean_fluxes = np.nanmean(fluxes, 2)[:, :, None]
-    fluxes = fluxes.copy() / mean_fluxes
-    errors = errors.copy() / mean_fluxes
-
-    n_apertures, n_stars, n_points = np.shape(fluxes)
-
-    # Compute the final light-curves
-    # ==============================
-    art_lc = np.array([fluxes[a, comps].mean(0) for a in range(n_apertures)])
-    art_error = np.array([np.sqrt(errors[a, comps] ** 2).sum(0) / len(comps) for a in range(n_apertures)])
-    lcs = fluxes / art_lc[:, None]
-    lcs /= np.median(lcs, 2)[:, :, None]
-    lcs_errors = np.sqrt(errors ** 2 + art_error[:, None, :] ** 2)
-
-    np.seterr(divide="warn")  # Set warnings back
-
-    return [lcs, lcs_errors, art_lc] if return_alc else [lcs, lcs_errors]
-
 
 def nu(n, sw, sr):
     return (sw ** 2) / n + sr ** 2
@@ -63,214 +33,108 @@ def pont2006(x, y, n=30, plot=True, return_error=False):
         return sw, sr
 
 
-def broeg2005(
-        fluxes,
-        errors,
-        target,
-        keep="float",
-        max_iteration=50,
-        tolerance=1e-8,
-        n_comps=500,
-        exclude=None,
-        mask=None,
-        sigclip=5,
-):
-    """[summary]
+def binned_std(fluxes, bins=12):
+    bins = np.min([fluxes.shape[-1], bins])
+    n = fluxes.shape[-1] // bins
+    idxs = np.arange(n * bins)
+    return np.array(np.split(fluxes.take(idxs, axis=-1), n, axis=-1)).std(-1).mean(0)
 
-    Parameters
-    ----------
-    fluxes : np.ndarray
-        fluxes with shape (apertures, stars, images)
-    errors : np.ndarray
-        fluxes errors with shape (apertures, stars, images)
-    target : int
-        target index
-    keep : str, optional
-        - if None: use a weighted artificial comparison star based on all stars (weighted mean)
-        - if float: use a weighted artificial comparison star based on `keep` stars (weighted mean)
-        - if int: use a simple artificial comparison star based on `keep` stars (mean)
-        - if 'float': use a weighted artificial comparison star based on an optimal number of stars (weighted mean)
-        - if 'int': use a simple artificial comparison star based on an optimal number of stars (mean)
-        by default "float"
-    max_iteration : int, optional
-        maximum number of iteration to adjust weights, by default 50
-    tolerance : float, optional
-        mean difference between weights to reach, by default 1e-8
-    n_comps : int, optional
-        limit on the number of stars to keep, by default 500
-    exclude : list, optional
-        indexes of stars to exclude, by default None
-    mask : boolean ndarray, optional
-        a boolean mask of time length. Only points for which mask is True are considered when
-        evaluating the comparison stars (then applied to all points), by default None
-    sigclip: int, optional
-        if a float is given, a sigma clipping of factor sigclip is temporarly applied to all
-        fluxes before being used to choose the comparison stars, by default 5
-    """
 
-    np.seterr(divide="ignore")  # Ignore divide by 0 warnings here
+def diff(fluxes, errors=None, weights=None, comps=None, alc=False):
+    # not to divide flux by itself
+    sub = np.expand_dims((~np.eye(fluxes.shape[-2]).astype(bool)).astype(int), 0)
 
-    if exclude is not None:
-        _exclude = np.array(exclude)
-    else:
-        _exclude = []
+    assert (weights is None) ^ (comps is None), "either weights or comps must be specified"
+    if comps is not None:
+        weights = np.zeros(fluxes.shape[0:-1])
+        weights[np.arange(fluxes.shape[0]), comps.T] = 1.
 
-    original_fluxes = fluxes.copy()
-    mean_fluxes = np.nanmean(fluxes, 2)[:, :, None]
+    weighted_fluxes = fluxes * np.expand_dims(weights, -1)
+    art_lc = (sub @ weighted_fluxes) / np.expand_dims(weights @ sub[0], -1)
+    lcs = fluxes / art_lc
 
-    # Sigma clipping
-    # --------------
-    if sigclip is not None:
-        f = fluxes.copy()
+    returns = lcs
 
-        for i in range(f.shape[0]):
-            for j in range(f.shape[0]):
-                _f = f[i, j]
-                f[i, j, np.abs(_f - np.mean(_f)) > 5 * np.nanstd(_f)] = np.mean(_f)
+    if errors is not None:
+        weighted_errors = errors * np.expand_dims(weights, -1)
+        squarred_art_error = (sub @ weighted_errors) ** 2 / np.expand_dims(weights @ sub[0], -1)
+        lcs_errors = np.sqrt(errors ** 2 + squarred_art_error)
+        returns = [lcs, lcs_errors]
 
-        fluxes = f
+    if alc:
+        returns.append(art_lc)
 
-    # Normalization
-    # -------------
-    fluxes = fluxes.copy() / mean_fluxes
-    errors = errors.copy() / mean_fluxes
+    return returns
 
-    # Cleaning
-    # --------
-    # To keep track of which stars are clean and get a light curve (if not containing infs, nans or zeros)
-    bads = np.any(~np.isfinite(fluxes) | ~np.isfinite(errors), axis=(0, 2))
-    fluxes = fluxes[:, ~bads, :]
-    errors = errors[:, ~bads, :]
 
-    clean_stars = np.arange(original_fluxes.shape[1])[~bads]
-    target = np.argwhere(clean_stars == target).flatten()
-    _exclude = [np.argwhere(clean_stars == ex).flatten() for ex in _exclude]
+def broeg(fluxes, tolerance=1e-2, max_iteration=200, bins=12):
 
-    n_apertures, n_stars, n_points = np.shape(fluxes)
+    bins = np.min([fluxes.shape[-1], bins])
+    n = fluxes.shape[-1] // bins
+    idxs = np.arange(n * bins)
 
-    # Masking
-    # -------
-    if mask is None:
-        mask = np.ones(fluxes.shape[-1]).astype(bool)
-
-    unmasked_fluxes = fluxes.copy()
-    unmasked_errors = errors.copy()
-    fluxes = fluxes[:, :, mask]
-    errors = errors[:, :, mask]
+    def error_estimate(f):
+        return np.array(np.split(f.take(idxs, axis=-1), n, axis=-1)).std(-1).mean(0)
 
     i = 0
     evolution = 1e25
     lcs = None
     weights = None
-    last_weights = np.zeros((n_apertures, n_stars))
-    # record = []
+    last_weights = np.zeros(fluxes.shape[0:len(fluxes.shape) - 1])
 
     # Broeg 2004 algorithm to find weights of comp stars
     # --------------------------------------------------
     while evolution > tolerance and i < max_iteration:
         if i == 0:
-            weights = 1 / np.mean(errors ** 2, axis=2)
+            weights = 1 / error_estimate(fluxes)
         else:
             # This metric is preferred from std to optimize over white noise and not red noise
-            std = utils.std_diff_metric(lcs)
+            std = error_estimate(lcs)
             weights = 1 / std
 
         # Keep track of weights
-        evolution = np.std(
-            np.abs(np.mean(weights, axis=1) - np.mean(last_weights, axis=1))
-        )
-        # record.append(evolution)
+        evolution = np.std(np.abs(np.mean(weights, axis=-1) - np.mean(last_weights, axis=-1)))
+
         last_weights = weights
-
-        weighted_fluxes = fluxes * weights[:, :, None]
-        art_lc = np.sum(weighted_fluxes, 1) / weights.sum(1)[:, None]
-        lcs = fluxes / art_lc[:, None, :]
-
+        lcs = diff(fluxes, weights=weights)
         i += 1
 
-    # Setting target weight to 0
-    weights[:, target] = 0
-    # Setting weights of stars to exclude to 0
-    if exclude is not None:
-        weights[:, _exclude] = 0
+    return weights
 
-    ordered_stars = np.argsort(weights, axis=1)[:, ::-1]
-    # Remove target and excluded stars (at the end of ordered since weight = 0
-    ordered_stars = ordered_stars[:, 0:-(1 + len(_exclude))]
 
-    # Find the best number of comp stars to keep if None
-    # --------------------------------------------------
-    if isinstance(keep, str):
+def best_stars(fluxes, weights, target, return_idxs=True, bins=12):
 
-        k_range = np.arange(1, np.min([np.shape(fluxes)[1], n_comps]))
+    bins = np.min([fluxes.shape[-1], bins])
+    b = fluxes.shape[-1] // bins
+    idxs = np.arange(b * bins)
 
-        weighted_fluxes = fluxes * weights[:, :, None]
-        ordered_weighted_fluxes = np.array([weighted_fluxes[a, ordered_stars[a], :] for a in range(n_apertures)])
-        ordered_summed_weighted_fluxes = np.array([ordered_weighted_fluxes[:, 0:k, :].sum(1) for k in k_range])
-        ordered_summed_weights = np.array([weights[:, 0:k].sum(1) for k in k_range])
+    def error_estimate(f):
+        return np.array(np.split(f.take(idxs, axis=-1), b, axis=-1)).std(-1).mean(0)
 
-        metric = 1e18
-        last_metric = np.inf
-        i = 0
-        _keep = None
+    whites = []
+    white = 1e12
 
-        while metric < last_metric:
-            _keep = k_range[i]
-            last_metric = metric
-            _art_lc = ordered_summed_weighted_fluxes[i] / ordered_summed_weights[i][:, None]
-            _lcs = fluxes / _art_lc[:, None, :]
-            metric = np.std([utils.std_diff_metric(f) for f in _lcs[:, target, :]])
+    _weights = weights.copy()
+    _weights[:, target] = 0
+    sorted_weights = np.argsort(_weights)[:, ::-1]
 
-            i += 1
+    for n in np.arange(1, fluxes.shape[-2]):
+        w = np.zeros(fluxes.shape[-2])
+        w[sorted_weights[:, 0:n][::-1]] = 1
+        _white = error_estimate(diff(fluxes.copy(), weights=w)[:, target]).min()
+        if _white < white:
+            white = _white
+        else:
+            break
 
-    elif keep is None:
-        _keep = np.min([np.shape(fluxes)[1], n_comps])
-        keep = "float"
+    if return_idxs:
+        return sorted_weights[:, 0:n]
     else:
-        _keep = keep
-        keep = "float" if isinstance(keep, float) else "int"
-
-    # Compute the final lightcurves
-    # -----------------------------
-    if keep == "float":
-        # Using the weighted sum
-        ordered_weights = np.array([weights[a, ordered_stars[a, :]] for a in range(n_apertures)])
-    elif keep == "int":
-        # Using a simple mean
-        ordered_weights = np.ones((n_apertures, _keep))
-    else:
-        raise AssertionError(f"Unknown issue: keep has value {keep}")
-
-    keep = int(_keep)
-
-    ordered_fluxes = np.array([unmasked_fluxes[a, ordered_stars[a], :] for a in range(n_apertures)])
-    ordered_errors = np.array([unmasked_errors[a, ordered_stars[a], :] for a in range(n_apertures)])
-
-    best_art_lc = (ordered_fluxes[:, 0:keep, :] * ordered_weights[:, 0:keep, None]).sum(1) / ordered_weights[:,
-                                                                                             0:keep].sum(1)[:, None]
-    best_art_error = (ordered_errors[:, 0:keep, :] ** 2 * ordered_weights[:, 0:keep, None] ** 2).sum(
-        1) / ordered_weights[:, 0:keep].sum(1)[:, None]
-
-    lcs = np.zeros(np.shape(original_fluxes))
-    lcs_errors = np.zeros(np.shape(original_fluxes))
-
-    for a in range(n_apertures):
-        for s, cs in enumerate(clean_stars):
-            lcs[a, cs, :] = unmasked_fluxes[a, s] / best_art_lc[a, :]
-            lcs_errors[a, cs, :] = np.sqrt(
-                unmasked_errors[a, s] ** 2 + best_art_error[a, :] ** 2
-            )
-
-    # Return
-    # ------------------------------
-    np.seterr(divide="warn")  # Set warnings back
-    info = {
-        "comps": clean_stars[ordered_stars[:, 0:keep]],
-        "weights": np.array(ordered_weights[:, 0:keep]),
-        "alc": best_art_lc
-    }
-
-    return lcs, lcs_errors, info
+        sub = np.zeros(fluxes.shape[0:len(fluxes.shape) - 1])
+        for i, j in enumerate(sorted_weights[:, 0:n][::-1]):
+            sub[i, j] = 1.
+        _weights *= sub
+        return _weights
 
 
 class ApertureFluxes:
@@ -418,12 +282,17 @@ class ApertureFluxes:
     def copy(self):
         return self.__class__(self.xarray.copy())
 
-    def pick_best_aperture(self, method="stddiff", return_criterion=False):
+    def pick_best_aperture(self, method="binned", return_criterion=False):
+
+        diff_fluxes = self.xarray.sel(star=self.target).diff_fluxes.values
+
         if len(self.apertures) > 1:
-            if method == "stddiff":
-                criterion = utils.std_diff_metric(self.xarray.diff_fluxes.sel(star=self.target))
+            if method == "binned":
+                criterion = binned_std(diff_fluxes)
+            elif method == "stddiff":
+                criterion = utils.std_diff_metric(diff_fluxes)
             elif method == "stability":
-                criterion = utils.stability_aperture(self.xarray.diff_fluxes.sel(star=self.target))
+                criterion = utils.stability_aperture(diff_fluxes)
             elif method == "pont2006":
                 criterion = []
                 for a in range(len(self.apertures)):
@@ -483,8 +352,8 @@ class ApertureFluxes:
         else:
             new_self = self.copy()
 
-        diff_fluxes, diff_errors, alc = differential_photometry(new_self.raw_fluxes, new_self.raw_errors, comps,
-                                                                return_alc=True)
+        diff_fluxes, diff_errors, alcs = diff(new_self.raw_fluxes, new_self.raw_errors, comps=comps, alc=True)
+
         dims = self.xarray.raw_fluxes.dims
 
         new_self.xarray["diff_fluxes"] = (dims, diff_fluxes)
@@ -498,46 +367,52 @@ class ApertureFluxes:
 
         new_self.xarray['comps'] = (("apertures", "ncomps"), comps)
         new_self.xarray['weights'] = (("apertures", "ncomps"), np.ones_like(comps))
-        new_self.xarray['alc'] = (("apertures", 'time'), alc)
-        new_self.pick_best_aperture()
+        new_self.xarray['alc'] = (('apertures', 'time'), alcs[:, self.target])
+        self.pick_best_aperture()
 
         if not inplace:
             return new_self
 
-    def broeg2005(self, keep='float', exclude=None, inplace=True, mask=None, sigclip=5):
-        """The Broeg et al. 2005 differential photometry algorithm
+    def broeg2005(self, inplace=True, cut=True):
+        """
+        The Broeg et al. 2005 differential photometry algorithm
 
         Compute an optimum weighted artificial light curve
 
         Parameters
         ----------
-        keep : str, optional
-            - if `None`: use a weighted artificial comparison star based on all stars (weighted mean)
-            - if `float`: use a weighted artificial comparison star based on `keep` stars (weighted mean)
-            - if `int`: use a simple artificial comparison star based on `keep` stars (mean)
-            - if `'float'`: use a weighted artificial comparison star based on an optimal number of stars (weighted mean)
-            - if `'int'`: use a simple artificial comparison star based on an optimal number of stars (mean)
-            by default "float"
-        exclude : list, optional
-            indexes of stars to exclude, by default None,
         inplace: bool, optional
             whether to perform the changes on current Observation or to return a new one, default True
-        mask : boolean ndarray, optional
-            a boolean mask of time length. Only points for which mask is True are considered when
-            evaluating the comparison stars (then applied to all points), by default None
-        sigclip: int, optional
-            if a float is given, a sigma clipping of factor sigclip is temporarly applied to all
-            fluxes before being used to choose the comparison stars, by default 5
-
+        cut: bool, optional
+            whether to pick the best comparison stars and apply unitary weights, default True
         """
+
         if inplace:
             new_self = self
         else:
             new_self = self.copy()
 
-        diff_fluxes, diff_errors, info = broeg2005(
-            new_self.raw_fluxes, new_self.raw_errors, self.target,
-            keep=keep, exclude=exclude,mask=mask, sigclip=sigclip)
+        # getting differential values
+        raw_fluxes = self.raw_fluxes.copy()
+        raw_errors = self.raw_errors.copy()
+
+        mean_raw_fluxes = np.expand_dims(raw_fluxes.mean(-1), -1)
+        raw_errors /= mean_raw_fluxes
+        raw_fluxes /= mean_raw_fluxes
+
+        # finding weights
+        weights = broeg(raw_fluxes)
+        # best comparisons
+        if cut:
+            comparisons = best_stars(raw_fluxes, weights, self.target)
+            weights = np.ones_like(comparisons)
+            diff_fluxes, diff_errors, alcs = diff(raw_fluxes, raw_errors, comps=comparisons, alc=True)
+        else:
+            # this only works for 3D fluxes (with apertures)
+            comparisons = np.repeat(np.expand_dims(np.arange(raw_fluxes.shape[-2]), -1).T, raw_fluxes.shape[0], axis=0)
+            diff_fluxes, diff_errors, alcs = diff(raw_fluxes, raw_errors, weights=weights, alc=True)
+
+        # setting xarray
         dims = self.xarray.raw_fluxes.dims
 
         new_self.xarray['diff_fluxes'] = (dims, diff_fluxes)
@@ -547,10 +422,10 @@ class ApertureFluxes:
         new_self.xarray = new_self.xarray.drop_vars(
             [name for name, value in new_self.xarray.items() if 'ncomps' in value.dims])
 
-        new_self.xarray['comps'] = (("apertures", "ncomps"), info['comps'])
-        new_self.xarray['weights'] = (("apertures", "ncomps"), info['weights'])
-        new_self.xarray['alc'] = (('apertures', 'time'), info['alc'])
-        new_self.pick_best_aperture()
+        new_self.xarray['comps'] = (("apertures", "ncomps"), comparisons)
+        new_self.xarray['weights'] = (("apertures", "ncomps"), weights)
+        new_self.xarray['alc'] = (('apertures', 'time'), alcs[:, self.target])
+        self.pick_best_aperture()
 
         if not inplace:
             return new_self
@@ -695,3 +570,12 @@ class ApertureFluxes:
             dms = [np.hstack([self.polynomial(**d), add]) for d in dms_dicts]
         bics = [self.dm_bic(dm) for dm in progress(dms)]
         return dms_dicts[np.argmin(bics)]
+
+    def noise_stats(self, bins=0.005, verbose=True):
+        pont_w, pont_r = self.pont2006(plot=False)
+        binned = self.binn(bins, std=True)
+        binned_w = np.median(binned.diff_error)
+        if verbose:
+            print(f"white (pont2006)\t{pont_w:.3e}\nred   (pont2006)\t{pont_r:.3e}\nwhite (binned)\t\t{binned_w:.3e}\n")
+        else:
+            return {"binned_white": binned_w, "pont_white": pont_w, "pont_red": pont_r}
