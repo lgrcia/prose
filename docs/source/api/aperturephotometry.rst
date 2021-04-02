@@ -1,5 +1,5 @@
 AperturePhotometry
 ------------------
 
-.. autoclass:: prose.AperturePhotometry
+.. autoclass:: prose.pipeline.AperturePhotometry
     :members:

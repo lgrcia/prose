@@ -14,3 +14,4 @@ API
    api/reduction
    api/neb
    api/converters
+   core

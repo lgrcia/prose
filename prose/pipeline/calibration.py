@@ -7,6 +7,9 @@ from astropy.io import fits
 class Calibration:
     """A calibration unit producing a reduced FITS folder
 
+    The calibration encompass more than simple flat, dark and bias calibration. It contains two sequences whose ...
+    TODO
+
     Parameters
     ----------
     destination : str, optional
@@ -15,13 +18,21 @@ class Calibration:
         Reference image to use for alignment from 0 (first image) to 1 (last image), by default 1/2
     overwrite : bool, optional
         whether to overwrite existing products, by default False
-    ignore_telescope: bool, optional
-        whether to load a default telescope if telescope not recognised, by default False
+    flats : list, optional
+        list of flats images paths, by default None
+    bias : list, optional
+        list of bias images paths, by default None
+    darks : list, optional
+        list of darks images paths, by default None
+    images : list, optional
+        list of images paths to be calibrated, by default None
+    psf : `Block`, optional
+        a `Block` to be used to characterise the effective psf, by default blocks.Moffat2D
     """
 
     def __init__(
             self,
-            reference=1 / 2,
+            reference=1/2,
             overwrite=False,
             flats=None,
             bias=None,
@@ -53,6 +64,13 @@ class Calibration:
         self.calibration_block = blocks.Calibration(self.darks, self.flats, self.bias, name="calibration")
 
     def run(self, destination):
+        """Run the calibration pipeline
+
+        Parameters
+        ----------
+        destination : str
+            Destination where to save the calibrated images folder
+        """
         self.destination = destination
 
         self.make_destination()
