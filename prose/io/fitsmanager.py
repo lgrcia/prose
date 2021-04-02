@@ -371,3 +371,19 @@ class FitsManager(FilesDataFrame):
         assert self.unique_obs, "observation should be unique, please use set_observation"
         obs = self._observations.loc[0]
         return f"{obs.telescope}_{obs.date.replace('-', '')}_{obs.target}_{obs['filter']}"
+
+    @property
+    def images_dict(self):
+        return {
+            "flats": self.flats,
+            "darks": self.darks,
+            "bias": self.bias,
+            "images": self.images,
+        }
+
+    @property
+    def obs_name(self):
+        if self.unique_obs:
+            return self.products_denominator
+        else:
+            raise AssertionError("obs_name property is only available for FitsManager containing a unique observation")

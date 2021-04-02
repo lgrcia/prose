@@ -11,12 +11,14 @@ A python framework to process FITS images. Built for Astronomy, *prose* features
 
 ```python
 
-from prose import Reduction, AperturePhotometry
+from prose.pipeline import Calibration, AperturePhotometry
 
-reduction = Reduction(fits_folder)
-reduction.run()
+destination = "reduced_folder"
 
-photometry = AperturePhotometry(reduction.destination)
+reduction = Calibration(images=[...], flats=[...])
+reduction.run(destination)
+
+photometry = AperturePhotometry(destination)
 photometry.run()
 
 ```

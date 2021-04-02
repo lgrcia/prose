@@ -1,170 +1,12 @@
-from .. import Sequence, blocks, io, Block, Telescope
-from . import io as bio
-import os
+from .. import Sequence, blocks, io, Block, Telescope, viz
 from os import path
 from astropy.io import fits
 from ..console_utils import info
+from .. import utils
+from ..blocks.imutils import LivePlot
+import matplotlib.pyplot as plt
 import numpy as np
 import time
-
-
-class Reduction:
-    """A reduction unit producing a reduced FITS folder
-
-    Parameters
-    ----------
-    fits_manager : prose.FitsManager
-        Fits manager of the observation. Should contain a single obs
-    destination : str, optional
-        Destination of the newly created folder, by default beside the folder given to FitsManager
-    reference : float, optional
-        Reference image to use for alignment from 0 (first image) to 1 (last image), by default 1/2
-    overwrite : bool, optional
-        whether to overwrite existing products, by default False
-    n_images : int, optional
-        number of images to process, by default None for all images
-    calibration : bool, optional
-        whether to perform calibration, by default True (if False images are still trimmed)
-    ignore_telescope: bool, optional
-        whether to load a default telescope if telescope not recognised, by default False
-    """
-
-    def __init__(
-            self,
-            fits_manager=None,
-            destination=None,
-            reference=1 / 2,
-            overwrite=False,
-            calibration=True,
-            flats=None,
-            bias=None,
-            darks=None,
-            psf=blocks.FastGaussian,
-            ignore_telescope=False):
-
-        self.fits_manager = fits_manager
-        self.destination = destination
-        self.overwrite = overwrite
-        self.calibration = calibration
-        self._reference = reference
-
-        # set on prepare
-        self.flats = flats
-        self.bias = bias
-        self.darks = darks
-        self.prepare()
-
-        self.files = None
-
-        if not ignore_telescope and self.fits_manager is not None:
-            assert self.fits_manager.telescope.name != "Unknown", \
-                "Telescope has not been recognised, to load a default one set ignore_telescope=True (kwargs)"
-            self.telescope = self.fits_manager.telescope
-
-        self.reference_unit = None
-        self.reduction_unit = None
-
-        assert psf is None or issubclass(psf, Block), "psf must be a subclass of Block"
-        self.psf = psf
-
-    def run(self, images=None, destination=None):
-
-        if destination is not None:
-            self.destination = destination
-        
-        if images is not None:
-            assert isinstance(images, (list, np.ndarray)), "images must be a list of path"
-            assert isinstance(images[0], str), "images must be a list of path"
-            self.files = images
-        else:
-            assert self.fits_manager is not None, "if images kwargs is not set, a FitsManager must be provided"
-            self.files = self.fits_manager.images
-
-        if self.fits_manager is None:
-            self.telescope = Telescope.from_name(fits.getheader(self.files[0])["TELESCOP"])
-
-        # set reference file
-        reference_id = int(self._reference * len(self.files))
-        self.reference_fits = self.files[reference_id]
-
-        self.make_destination()
-
-        self.reference_unit = Sequence([
-            blocks.Pass(name="calibration") if not self.calibration else blocks.Calibration(self.darks, self.flats, self.bias, name="calibration"),
-            blocks.Trim(name="trimming"),
-            blocks.SegmentedPeaks(n_stars=50, name="detection"),
-            blocks.ImageBuffer(name="buffer")
-        ], self.reference_fits, telescope=self.telescope)
-
-        self.reference_unit.run(show_progress=False)
-
-        ref_image = self.reference_unit.buffer.image
-        calibration_block = self.reference_unit.calibration
-
-        self.reduction_unit = Sequence([
-            blocks.Pass(name="calibration") if not self.calibration else calibration_block,
-            blocks.Trim(name="trimming", skip_wcs=True),
-            blocks.Flip(ref_image, name="flip"),
-            blocks.SegmentedPeaks(n_stars=50, name="detection"),
-            blocks.XYShift(ref_image.stars_coords, name="shift"),
-            blocks.Align(ref_image.data, name="alignment"),
-            self.psf(name="fwhm"),
-            blocks.Stack(self.stack_path, header=ref_image.header, overwrite=self.overwrite, name="stack"),
-            blocks.SaveReduced(self.destination if destination is None else destination, overwrite=self.overwrite, name="saving"),
-            blocks.Video(self.gif_path, name="video", from_fits=True)
-        ], self.files, telescope=self.telescope, name="Reduction")
-
-        self.reduction_unit.run()
-
-    @property
-    def stack_path(self):
-        prepend = "stack.fits"
-        if self.fits_manager is not None:
-            return f"{path.join(self.destination, self.fits_manager.products_denominator)}_{prepend}"
-        else:
-            return path.join(self.destination, prepend)
-    
-    @property
-    def gif_path(self):
-        prepend = "movie.gif"
-        if self.fits_manager is not None:
-            return f"{path.join(self.destination, self.fits_manager.products_denominator)}_{prepend}"
-        else:
-            return path.join(self.destination, prepend)
-
-    def make_destination(self):
-        if not path.exists(self.destination):
-            os.mkdir(self.destination)
-
-    def prepare(self):
-        """
-        This will prepare the `self.destination` containing the:
-
-        - ``self.stack_path``
-        - ``self.gif_path``
-
-        Returns
-        -------
-
-        """
-
-        # Either the input is a FitsManager and the following append:
-        if self.fits_manager is not None:
-            if self.fits_manager.unique_obs:
-                self.fits_manager.set_observation(0, future=100000)
-            else:
-                _ = self.fits_manager.calib
-                raise AssertionError("Multiple observations found")
-
-            if self.destination is None:
-                self.destination = path.join(path.dirname(self.fits_manager.folder), self.fits_manager.products_denominator)
-
-            self.darks = self.fits_manager.darks
-            self.flats = self.fits_manager.flats
-            self.bias = self.fits_manager.bias
-
-    def __repr__(self):
-        return f"{self.reference_unit}\n{self.reduction_unit}"
 
 
 class Photometry:
@@ -193,7 +35,8 @@ class Photometry:
                  overwrite=False,
                  n_stars=500,
                  psf=blocks.Gaussian2D,
-                 ignore_telescope=False):
+                 ignore_telescope=False,
+                 show=False):
 
         self.fits_manager = fits_manager
         self.overwrite = overwrite
@@ -216,6 +59,7 @@ class Photometry:
 
         assert psf is None or issubclass(psf, Block), "psf must be a subclass of Block"
         self.psf = psf
+        self.show = show
 
     def run_reference_detection(self):
         self.reference_detection_unit = Sequence([
@@ -338,8 +182,9 @@ class AperturePhotometry(Photometry):
                  psf=blocks.Gaussian2D,
                  photometry=blocks.PhotutilsAperturePhotometry,
                  centroid=None,
+                 show=False,
                  ignore_telescope=False):
-                 
+
         if apertures is None:
             apertures = np.arange(0.1, 10, 0.25)
 
@@ -350,7 +195,8 @@ class AperturePhotometry(Photometry):
             overwrite=overwrite,
             n_stars=n_stars,
             psf=psf,
-            ignore_telescope= ignore_telescope
+            show=show,
+            ignore_telescope=ignore_telescope
         )
 
         # Blocks
@@ -371,6 +217,16 @@ class AperturePhotometry(Photometry):
             set_once=True
         )
 
+        if show:
+            def plot_function(im, cmap="Greys_r", color=[0.51, 0.86, 1.]):
+                stars = im.stars_coords
+                plt.imshow(utils.z_scale(im.data), cmap=cmap, origin="lower")
+                viz.plot_marks(*stars.T, np.arange(len(stars)), color=color)
+
+            self.show = LivePlot(plot_function, size=(10, 10))
+        else:
+            self.show = blocks.Pass()
+
     def run_reference_detection(self):
         stack_image, ref_stars, fwhm = super().run_reference_detection()
 
@@ -380,8 +236,9 @@ class AperturePhotometry(Photometry):
             blocks.Set(stars_coords=ref_stars, name="set stars"),
             blocks.Set(fwhm=fwhm, name="set fwhm"),
             centroid,
+            self.show,
             self.photometry,
-            bio.SavePhot(self.phot_path, header=stack_image.header, stack=stack_image.data, name="saving")
+            blocks.io.SavePhot(self.phot_path, header=stack_image.header, stack=stack_image.data, name="saving")
         ], self.files, telescope=self.telescope, name="Photometry")
 
 
@@ -417,7 +274,6 @@ class PSFPhotometry(Photometry):
                  psf=blocks.Gaussian2D,
                  photometry=blocks.PhotutilsPSFPhotometry,
                  ignore_telescope=False):
-
         super().__init__(
             fits_manager=fits_manager,
             files=files,
@@ -439,7 +295,7 @@ class PSFPhotometry(Photometry):
             blocks.Set(stars_coords=ref_stars, name="set stars"),
             blocks.Set(fwhm=fwhm, name="set fwhm"),
             self.photometry(fwhm),
-            bio.SavePhot(
+            blocks.io.SavePhot(
                 self.phot_path,
                 header=fits.getheader(self.stack_path),
                 stack=fits.getdata(self.stack_path),

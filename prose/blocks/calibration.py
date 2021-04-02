@@ -5,6 +5,8 @@ from .. import utils
 import matplotlib.pyplot as plt
 from .. import visualisation as viz
 from astropy.nddata import Cutout2D
+from ..console_utils import info
+from time import sleep
 
 
 class Calibration(Block):
@@ -23,6 +25,12 @@ class Calibration(Block):
     def __init__(self, dark=None, flat=None, bias=None, **kwargs):
 
         super().__init__(**kwargs)
+        if dark is None:
+            dark = []
+        if flat is None:
+            flat = []
+        if bias is None:
+            bias = []
         self.images = {"dark": dark, "flat": flat, "bias": bias}
 
         self.master_dark = None
@@ -37,7 +45,14 @@ class Calibration(Block):
         kw_exp_time = self.telescope.keyword_exposure_time
         images = self.images[image_type]
         if len(images) == 0:
-            print(f"No {image_type} images found")
+            info(f"No {image_type} images set")
+            if image_type == "dark":
+                self.master_dark = 0
+            elif image_type == "bias":
+                self.master_bias = 0
+            elif image_type == "flat":
+                self.master_flat = 1
+
         for i, fits_path in enumerate(images):
             hdu = fits.open(fits_path)
             primary_hdu = hdu[0]
@@ -73,19 +88,16 @@ class Calibration(Block):
                 n = shape_divisors[np.argmin(np.abs(50 - shape_divisors))]
                 self.master_flat = np.concatenate([np.median(im, axis=0) for im in np.split(_master, n, axis=1)])
                 del _master
-        else:
-            if self.master_dark is None:
-                self.master_dark = 0
-            if self.master_bias is None:
-                self.master_bias = 0
-            if self.master_flat is None:
-                self.master_flat = 1
 
     def initialize(self):
         assert self.telescope is not None, "Calibration block needs telescope to be set (in Unit)"
-        self._produce_master("bias")
-        self._produce_master("dark")
-        self._produce_master("flat")
+        if self.master_bias is None:
+            self._produce_master("bias")
+        if self.master_dark is None:
+            self._produce_master("dark")
+        if self.master_flat is None:
+            self._produce_master("flat")
+        sleep(0.1)
 
     def plot_masters(self):
         plt.figure(figsize=(40, 10))

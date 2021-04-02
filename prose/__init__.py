@@ -14,7 +14,6 @@ from .io.fitsmanager import FitsManager
 from .fluxes import ApertureFluxes
 from .telescope import Telescope
 from prose.core import Block, Sequence, Image
-from .blocks.units import Reduction, AperturePhotometry
 from .observation import Observation
 
 
