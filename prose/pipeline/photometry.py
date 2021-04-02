@@ -3,7 +3,6 @@ from os import path
 from astropy.io import fits
 from ..console_utils import info
 from .. import utils
-from ..blocks.imutils import LivePlot
 import matplotlib.pyplot as plt
 import numpy as np
 import time
@@ -223,7 +222,7 @@ class AperturePhotometry(Photometry):
                 plt.imshow(utils.z_scale(im.data), cmap=cmap, origin="lower")
                 viz.plot_marks(*stars.T, np.arange(len(stars)), color=color)
 
-            self.show = LivePlot(plot_function, size=(10, 10))
+            self.show = blocks.LivePlot(plot_function, size=(10, 10))
         else:
             self.show = blocks.Pass()
 
