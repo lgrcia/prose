@@ -24,41 +24,33 @@ class Centroid2dg(Block):
         return "photutils", "numpy"
 
 
-class BalletCentroid(Block):
-
-    def __init__(self, cutout=15, **kwargs):
+class CNNCentroid(Block):
+    def __init__(self, cutout=15, filename=None, **kwargs):
         super().__init__(**kwargs)
+        self.filename = filename
         self.model = None
         self.cutout = cutout
         self.x, self.y = np.indices((cutout, cutout))
-        self.import_and_check_model()
 
     def import_and_check_model(self):
         try:
             import tensorflow as tf
             from tensorflow.keras import models as models, layers
+            self.tf_models = models
+            self.tf_layers = layers
         except ModuleNotFoundError:
-            raise ModuleNotFoundError("BalletCentroid requires tensorflow to be installed")
+            raise ModuleNotFoundError("CNN centroid methods require tensorflow to be installed")
 
-        model_file = path.join(CONFIG.folder_path, "centroid.h5")
+        model_file = path.join(CONFIG.folder_path, self.filename)
 
         if path.exists(model_file):
-            self.model = models.Sequential([
-                layers.Conv2D(64, (3, 3), activation='relu', input_shape=(self.cutout, self.cutout, 1),
-                              use_bias=True, padding="same"),
-                layers.MaxPooling2D((2, 2), padding="same"),
-                layers.Conv2D(128, (3, 3), activation='relu', use_bias=True, padding="same"),
-                layers.MaxPooling2D((2, 2), padding="same"),
-                layers.Conv2D(256, (3, 3), activation='relu', use_bias=True, padding="same"),
-                layers.Flatten(),
-                layers.Dense(2048, activation="sigmoid", use_bias=True),
-                layers.Dense(512, activation="sigmoid", use_bias=True),
-                layers.Dense(2),
-            ])
-
+            self.build_model()
             self.model.load_weights(model_file)
         else:
             raise AssertionError("Still on dev, contact lgrcia")
+
+    def build_model(self):
+        raise NotImplementedError()
 
     def run(self, image, **kwargs):
         initial_positions = image.stars_coords.copy()
@@ -72,3 +64,48 @@ class BalletCentroid(Block):
     @staticmethod
     def citations():
         return "tensorflow", "numpy"
+
+
+class BalletCentroid(CNNCentroid):
+
+    def __init__(self, **kwargs):
+        super().__init__(cutout=15, filename="centroid.h5", **kwargs)
+        self.import_and_check_model()
+
+    def build_model(self):
+        self.model = self.tf_models.Sequential([
+            self.tf_layers.Conv2D(64, (3, 3), activation='relu', input_shape=(self.cutout, self.cutout, 1),
+                                  use_bias=True, padding="same"),
+            self.tf_layers.MaxPooling2D((2, 2), padding="same"),
+            self.tf_layers.Conv2D(128, (3, 3), activation='relu', use_bias=True, padding="same"),
+            self.tf_layers.MaxPooling2D((2, 2), padding="same"),
+            self.tf_layers.Conv2D(256, (3, 3), activation='relu', use_bias=True, padding="same"),
+            self.tf_layers.Flatten(),
+            self.tf_layers.Dense(2048, activation="sigmoid", use_bias=True),
+            self.tf_layers.Dense(512, activation="sigmoid", use_bias=True),
+            self.tf_layers.Dense(2),
+        ])
+
+
+class OldNNCentroid(CNNCentroid):
+
+    def __init__(self, **kwargs):
+        super().__init__(cutout=21, filename="oldcentroid.h5", **kwargs)
+        self.import_and_check_model()
+
+    def build_model(self):
+        self.model = self.tf_models.Sequential([
+            self.tf_layers.Conv2D(self.cutout, (3, 3), activation='relu',
+                          input_shape=(self.cutout, self.cutout, 1)),
+            self.tf_layers.MaxPooling2D((2, 2)),
+            self.tf_layers.Conv2D(64, (3, 3), activation='relu'),
+            self.tf_layers.MaxPooling2D((2, 2)),
+            self.tf_layers.Conv2D(124, (3, 3), activation='relu'),
+            self.tf_layers.Flatten(),
+            self.tf_layers.Dense(2048, activation='relu'),
+            self.tf_layers.Dense(2),
+        ])
+
+
+
+
