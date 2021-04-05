@@ -347,12 +347,25 @@ class ApertureFluxes:
         [type]
             [description]
         """
+
+        comps = np.array(comps)
+
         if inplace:
             new_self = self
         else:
             new_self = self.copy()
 
-        diff_fluxes, diff_errors, alcs = diff(new_self.raw_fluxes, new_self.raw_errors, comps=comps, alc=True)
+        # getting differential values
+        raw_fluxes = self.raw_fluxes.copy()
+        raw_errors = self.raw_errors.copy()
+
+        mean_raw_fluxes = np.expand_dims(raw_fluxes.mean(-1), -1)
+        raw_errors /= mean_raw_fluxes
+        raw_fluxes /= mean_raw_fluxes
+
+        comps = np.repeat(np.atleast_2d(comps), len(self.apertures), axis=0)
+
+        diff_fluxes, diff_errors, alcs = diff(raw_fluxes, raw_errors, comps=comps, alc=True)
 
         dims = self.xarray.raw_fluxes.dims
 
@@ -363,11 +376,10 @@ class ApertureFluxes:
         new_self.xarray = new_self.xarray.drop_vars(
             [name for name, value in new_self.xarray.items() if 'ncomps' in value.dims])
 
-        comps = np.repeat(np.atleast_2d(comps), len(self.apertures), axis=0)
-
         new_self.xarray['comps'] = (("apertures", "ncomps"), comps)
         new_self.xarray['weights'] = (("apertures", "ncomps"), np.ones_like(comps))
         new_self.xarray['alc'] = (('apertures', 'time'), alcs[:, self.target])
+        new_self.xarray.attrs["method_diff"] = "manual"
         self.pick_best_aperture()
 
         if not inplace:
@@ -425,6 +437,7 @@ class ApertureFluxes:
         new_self.xarray['comps'] = (("apertures", "ncomps"), comparisons)
         new_self.xarray['weights'] = (("apertures", "ncomps"), weights)
         new_self.xarray['alc'] = (('apertures', 'time'), alcs[:, self.target])
+        new_self.xarray.attrs["method_diff"] = "broeg"
         self.pick_best_aperture()
 
         if not inplace:
