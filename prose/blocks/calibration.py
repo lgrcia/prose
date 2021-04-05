@@ -9,6 +9,14 @@ from ..console_utils import info
 from time import sleep
 
 
+def easy_median(images):
+    # To avoid memory errors, we split the median computation in 50
+    images = np.array(images)
+    shape_divisors = utils.divisors(images.shape[1])
+    n = shape_divisors[np.argmin(np.abs(50 - shape_divisors))]
+    return np.concatenate([np.median(im, axis=0) for im in np.split(images, n, axis=1)])
+
+
 class Calibration(Block):
     """
     Flat, Bias and Dark calibration
@@ -62,32 +70,29 @@ class Calibration(Block):
             if image_type == "dark":
                 _dark = (image - self.master_bias) / header[kw_exp_time]
                 if i == 0:
-                    _master = _dark
+                    _master.append(easy_median)
                 else:
                     _master += _dark
             elif image_type == "bias":
                 if i == 0:
-                    _master = image
+                    _master.append(easy_median)
                 else:
                     _master += image
             elif image_type == "flat":
-                _flat = image - (self.master_bias + self.master_dark)*header[kw_exp_time]
+                _flat = image - self.master_bias - self.master_dark*header[kw_exp_time]
                 _flat /= np.mean(_flat)
                 _master.append(_flat)
                 del image
-        
+
         if len(_master) > 0:
+            med = easy_median(_master)
             if image_type == "dark":
-                self.master_dark = _master/len(images)
+                self.master_dark = med.copy()
             elif image_type == "bias":
-                self.master_bias = _master/len(images)
+                self.master_bias = med.copy()
             elif image_type == "flat":
-                # To avoid memory errors, we split the median computation in 50
-                _master = np.array(_master)
-                shape_divisors = utils.divisors(_master.shape[1])
-                n = shape_divisors[np.argmin(np.abs(50 - shape_divisors))]
-                self.master_flat = np.concatenate([np.median(im, axis=0) for im in np.split(_master, n, axis=1)])
-                del _master
+                self.master_flat = med.copy()
+            del _master
 
     def initialize(self):
         assert self.telescope is not None, "Calibration block needs telescope to be set (in Unit)"
@@ -120,6 +125,7 @@ class Calibration(Block):
         header = image.header
         exp_time = header[self.telescope.keyword_exposure_time]
         calibrated_image = self.calibration(data, exp_time)
+        calibrated_image[calibrated_image < 0] = 0.
 
         # if flip:
         #     calibrated_image = calibrated_image[::-1, ::-1]
