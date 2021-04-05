@@ -69,15 +69,9 @@ class Calibration(Block):
             hdu.close()
             if image_type == "dark":
                 _dark = (image - self.master_bias) / header[kw_exp_time]
-                if i == 0:
-                    _master.append(easy_median)
-                else:
-                    _master += _dark
+                _master.append(_dark)
             elif image_type == "bias":
-                if i == 0:
-                    _master.append(easy_median)
-                else:
-                    _master += image
+                _master.append(image)
             elif image_type == "flat":
                 _flat = image - self.master_bias - self.master_dark*header[kw_exp_time]
                 _flat /= np.mean(_flat)
