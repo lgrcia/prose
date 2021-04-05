@@ -144,7 +144,10 @@ class PhotutilsAperturePhotometry(Block):
         image.annulus_rout = self.annulus_final_rout
         image.apertures_radii = self.aperture_final_r
 
-        photometry = aperture_photometry(image.data, self.circular_apertures)
+        data = image.data.copy()
+        data[data < 0] = 0
+
+        photometry = aperture_photometry(data, self.circular_apertures)
         image.fluxes = np.array([
             photometry[f"aperture_sum_{a}"] - (bkg_median * self.circular_apertures_area[a])
             for a in range(len(self.apertures))

@@ -8,6 +8,8 @@ from astropy.nddata import Cutout2D
 from ..console_utils import info
 from time import sleep
 
+np.seterr(divide="ignore")
+
 
 def easy_median(images):
     # To avoid memory errors, we split the median computation in 50
@@ -113,16 +115,13 @@ class Calibration(Block):
         im = plt.imshow(utils.z_scale(self.master_flat), cmap="Greys_r")
         viz.add_colorbar(im)
 
-    def run(self, image):
-        # TODO: Investigate flip
+    def run(self, image, **kwargs):
         data = image.data
         header = image.header
         exp_time = header[self.telescope.keyword_exposure_time]
         calibrated_image = self.calibration(data, exp_time)
         calibrated_image[calibrated_image < 0] = 0.
-
-        # if flip:
-        #     calibrated_image = calibrated_image[::-1, ::-1]
+        calibrated_image[~np.isfinite(calibrated_image)] = -1
 
         image.data = calibrated_image
 
