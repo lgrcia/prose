@@ -1,16 +1,18 @@
-from prose import Reduction, AperturePhotometry, Observation, Telescope, FitsManager
+from prose import Observation, Telescope, FitsManager
+from prose.pipeline import Calibration, AperturePhotometry
 import matplotlib.pyplot as plt
 import os
 import shutil
 from os import path
 import unittest
 from prose.datasets import generate_prose_reduction_dataset
+from prose.blocks.centroids import BalletCentroid, OldNNCentroid
 
 RAW = "synthetic_dataset"
 _REDUCED = "_synthetic_dataset"
 REDUCED = "synthetic_dataset"
 
-PHOT = "../docs/source/notes/fake_telescope_20200229_prose_I+z.phot"
+PHOT = "../test.phot"
 
 
 class TestReduction(unittest.TestCase):
@@ -26,11 +28,14 @@ class TestReduction(unittest.TestCase):
         })
 
         fm = FitsManager(RAW, depth=2)
-        reduction = Reduction(fm, overwrite=True)
-        reduction.run()
+        destination = fm.obs_name
+        # reduction = Calibration(images=fm.images, overwrite=True)
+        reduction = Calibration(**fm.images_dict, overwrite=True)
 
-        photometry = AperturePhotometry(reduction.destination, overwrite=True)
-        photometry.run()
+        reduction.run(destination)
+
+        photometry = AperturePhotometry(destination, overwrite=True, centroid=OldNNCentroid)
+        photometry.run(destination=PHOT)
 
         shutil.rmtree(reduction.destination)
         shutil.rmtree(RAW)
@@ -41,7 +46,7 @@ class TestObservation(unittest.TestCase):
     def test_diff(self):
         obs = Observation(PHOT)
         obs.target = 1
-        df = obs.broeg2005()
+        obs.broeg2005()
 
     def test_plot(self):
         obs = Observation(PHOT)
