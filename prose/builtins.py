@@ -24,7 +24,7 @@ speculoos_south = {
     "altitude": 2000,  # in meters
     "diameter": 100,  # in meters
     "pixel_scale": 0.33,  # in arcseconds
-    "latlong": [24.6275, 70.4044]  # [latitude, longitude] in degree
+    "latlong": [-24.6275, -70.4044]  # [latitude, longitude] in degree
 }
 
 callisto = speculoos_south.copy()
@@ -39,14 +39,11 @@ ganymede.update({"name": "Ganymede"})
 europa = speculoos_south.copy()
 europa.update({"name": "Europa"})
 
-saintex = speculoos_south.copy()
-saintex.update({"name": "SaintEx"})
-
 artemis = speculoos_south.copy()
 artemis.update({
     "name": "Artemis",
     "ra_unit": "hourangle",
-    "latlong": [28.4754, 16.3089]})
+    "latlong": [28.4754, -16.3089]})
 
 trappist = speculoos_south.copy()
 trappist.update({
@@ -54,14 +51,14 @@ trappist.update({
     "trimming": [40, 40],
     "pixel_scale": 0.64,
     "ra_unit": "deg",
-    "latlong": [-29.2563, 70.7380]})
+    "latlong": [-29.2563, -70.7380]})
 
 trappistN = trappist.copy()
 trappistN.update({
     "name": "Trappist-North",  
     "pixel_scale": 0.60,
     "ra_unit": "hourangle",
-    "latlong": [31.2027, 7.8586]})
+    "latlong": [31.2027, -7.8586]})
 
 saintex = artemis.copy()
 saintex.update({
@@ -78,7 +75,7 @@ liverpool.update ({
     "altitude": 2363, # m
     "diameter": 200, # cm
     "pixel_scale": 1.0752, # arcsec
-    "latlong": [28.7624, 17.8792], # deg
+    "latlong": [28.7624, -17.8792], # deg
     "keyword_object": "OBJECT",
     "keyword_image_type": "OBSTYPE",
     "keyword_light_images": "expose",
