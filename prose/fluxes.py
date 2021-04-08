@@ -517,7 +517,7 @@ class ApertureFluxes:
         """
         return models.design_matrix([
             models.constant(self.time),
-            *[models.polynomial(self.xarray[name].values, order) for name, order in orders.items() if order>0]
+            *[models.polynomial(self.xarray[name].values - self.xarray[name].values.min(), order) for name, order in orders.items() if order>0]
         ])
 
     def transit(self, t0, duration, depth=1):
