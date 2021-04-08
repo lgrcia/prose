@@ -11,6 +11,7 @@ from .psf import cutouts
 import os
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg
+import time
 
 
 class Stack(Block):
@@ -342,3 +343,28 @@ class Plot(Block):
     def terminate(self):
         imageio.mimsave(self.destination, self.plots, fps=self.fps)
         plt.rcParams['text.antialiased'] = self._init_alias
+
+
+class LivePlot(Block):
+    def __init__(self, plot_function, sleep=0., size=None, **kwargs):
+        super().__init__(**kwargs)
+        self.plot_function = plot_function
+        self.sleep = sleep
+        self.display = None
+        self.size = size
+
+    def initialize(self, *args):
+        from IPython import display as disp
+        self.display = disp
+        if self.size is not None:
+            plt.figure(figsize=self.size)
+
+    def run(self, image):
+        self.plot_function(image)
+        self.display.clear_output(wait=True)
+        self.display.display(plt.gcf())
+        time.sleep(self.sleep)
+        plt.cla()
+
+    def terminate(self):
+        plt.close()

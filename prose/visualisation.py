@@ -16,43 +16,24 @@ import matplotlib.patches as mpatches
 from .models import transit
 
 
-def plot_lc(
+def plot(
     time,
     flux,
     error=None,
     bins=0.005,
     std=True,
-    plot_kwargs={},
-    errorbar_kwargs={}
+    color="gainsboro",
+    bincolor="k",
+    alpha=0.6,
+    binalpha=0.8,
+    label=None,
+    binlabel=None,
 ):
-    _plot_kwargs = dict(
-        c="gainsboro",
-        zorder=0,
-        alpha=0.6,
-        # ms=5,
-        label="raw_data")\
-
-    _plot_kwargs.update(plot_kwargs)
-    plot_kwargs = _plot_kwargs
-
-    _errorbar_kwargs = dict(
-        fmt=".",
-        # capsize=2,
-        # elinewidth=0.75,
-        c="k",
-        zorder=1,
-        alpha=0.8,
-        # ecolor="C0",
-        # markersize=6,
-        label="binned data ({} JD)".format(bins))\
-
-    _errorbar_kwargs.update(errorbar_kwargs)
-    errorbar_kwargs = _errorbar_kwargs
+    plt.plot(time, flux, ".", color=color, alpha=alpha, zorder=0, label=label)
 
     if bins is not None:
         blc = binning(time, flux, bins=bins, error=error, std=std)
-        plt.plot(time, flux, ".", **plot_kwargs)
-        plt.errorbar(*blc, **errorbar_kwargs)
+        plt.errorbar(*blc, fmt=".", zorder=1, color=bincolor, alpha=binalpha, label=binlabel)
 
 
 def plot_lc_report(
@@ -101,7 +82,7 @@ def plot_lc_report(
     fig = plt.figure(figsize=(7, 2*(len(_fields)+1)))
 
     plt.subplot(len(_fields) + 1, 1, 1)
-    plot_lc(time, flux, binned_color=binned_color, std=std, bins=bins)
+    plot(time, flux, binned_color=binned_color, std=std, bins=bins)
     plt.grid(color="whitesmoke")
 
     for i, field in enumerate(_fields):
@@ -298,7 +279,7 @@ def plot_lcs(data, planets={}, W=4, show=None, hide=None, ylim=None, size=[4,3],
                     )
                     ax.add_patch(p1)
 
-            plot_lc(jd, lc, bins=bins)
+            plot(jd, lc, bins=bins)
             if ylim is not None:
                 plt.ylim(ylim)
 
@@ -339,6 +320,7 @@ def bokeh_style(xminor=True, yminor=True, axes=None):
         axes = [axes]
     
     for axe in axes:
+        axe.set_axisbelow(True)
         axe.set_titleweight = 500
         axe.tick_params(gridOn=True, grid_color="whitesmoke")
         if xminor:
@@ -362,6 +344,7 @@ def paper_style(axes=None):
         axes = [axes]
     
     for axe in axes:
+        axe.set_axisbelow(True)
         axe.set_titleweight = 500
         axe.tick_params(gridOn=True, grid_color="whitesmoke")
         axe.xaxis.set_minor_locator(AutoMinorLocator())
@@ -856,7 +839,7 @@ def plot_systematics(time, lc, data, fields=None, bins=0.005, offset_factor=1):
 
     max_amp = np.max([np.percentile(d, 95) - np.percentile(d, 5) for d in rescale_data])
 
-    plot_lc(time, lc)
+    plot(time, lc)
     for i, rd in enumerate(rescale_data):
         plot_data = (rd/max_amp)*amp + 1 - offset_factor * amp * (i+1)
         blc = utils.binning(time, plot_data, bins=bins, std=True)

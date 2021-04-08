@@ -181,8 +181,13 @@ class Observation(ApertureFluxes):
         if "pierside" not in self:
             return None
         elif self._meridian_flip is None:
-            ps = self.pierside.copy() == "WEST"
-            self._meridian_flip = self.time[np.argmax(np.abs(np.diff(ps))).flatten()]
+            ps = (self.pierside.copy() == "WEST").astype(int)
+            diffs = np.abs(np.diff(ps))
+            if np.any(diffs):
+                self._meridian_flip = self.time[np.argmax(diffs).flatten()]
+            else:
+                self._meridian_flip = None
+
         return self._meridian_flip
 
     @property
@@ -515,7 +520,7 @@ class Observation(ApertureFluxes):
         viz.show_stars(self.stack, self.stars, highlight=star, size=6)
         ax = plt.gcf().axes[0]
         ax.set_xlim(np.array([-size / 2, size / 2]) + self.stars[star][0])
-        ax.set_ylim(np.array([size / 2, -size / 2]) + self.stars[star][1])
+        ax.set_ylim(np.array([-size / 2, size / 2]) + self.stars[star][1])
 
     def plot_comps_lcs(self, n=5, ylim=(0.98, 1.02)):
         """Plot comparison stars light curves along target star light curve
@@ -540,7 +545,7 @@ class Observation(ApertureFluxes):
 
         for i, lc in enumerate(lcs):
             color = "grey" if i != 0 else "black"
-            viz.plot_lc(self.time, lc - i * offset, errorbar_kwargs=dict(c=color, ecolor="grey"))
+            viz.plot(self.time, lc - i * offset, errorbar_kwargs=dict(c=color, ecolor="grey"))
             plt.annotate(idxs[i], (self.time.min() + 0.005, 1 - i * offset + offset / 3))
 
         plt.ylim(1 - (i + 0.5) * offset, ylim[1])
@@ -632,7 +637,7 @@ class Observation(ApertureFluxes):
         if len(plt.gcf().axes) == 0:
             plt.figure(figsize=(5 ,10))
 
-        viz.plot_lc(self.time, flux, errorbar_kwargs=dict(c="black", ecolor="black"))
+        viz.plot(self.time, flux, bincolor="black")
 
         for i, field in enumerate(fields):
             if field in self:
@@ -643,7 +648,7 @@ class Observation(ApertureFluxes):
                 scaled_data = scaled_data / np.std(scaled_data)
                 scaled_data *= np.std(flux)
                 scaled_data += 1 - (i + 1) * offset
-                viz.plot_lc(self.time, scaled_data, errorbar_kwargs=dict(c="grey", ecolor="grey"))
+                viz.plot(self.time, scaled_data, bincolor="grey")
                 plt.annotate(field, (self.time.min() + 0.005, 1 - (i + 1) * offset + offset / 3))
             else:
                 i -= 1
@@ -732,6 +737,17 @@ class Observation(ApertureFluxes):
         plt.xlabel("log(ADU)")
         plt.ylabel("$SNR^{-1}$")
         plt.title("Photometric precision (raw fluxes)", loc="left")
+
+    def plot_meridian_flip(self):
+        if self.meridian_flip is not None:
+            plt.axvline(self.meridian_flip, c="k", alpha=0.15)
+            _, ylim = plt.ylim()
+            plt.text(self.meridian_flip, ylim, "meridian flip ", ha="right", rotation="vertical", va="top", color="0.7")
+
+    def plot(self, meridian_flip=True):
+        super().plot()
+        if meridian_flip:
+            self.plot_meridian_flip()
 
     def where(self, condition):
         """return filtered observation given a boolean mask of time
