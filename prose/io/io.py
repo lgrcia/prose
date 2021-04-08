@@ -49,7 +49,7 @@ def get_files(
     files = []
     for depth in range(depth + 1):
         files += glob.iglob(
-            path.join(folder, "*/" * depth + "*{}".format(ext)), recursive=False
+            path.join(folder, "*/" * depth + f"*{ext}"), recursive=False
         )
 
     files = [path.abspath(f) for f in files if path.isfile(f)]
