@@ -128,12 +128,12 @@ class TransitModel(Observation, LatexTemplate):
     def plot_lc_model(self):
         fig = plt.figure(figsize=(6, 7 if self.trend_model is not None else 4))
         fig.patch.set_facecolor('xkcd:white')
-        viz.plot_lc(self.time, self.diff_flux)
+        viz.plot(self.time, self.diff_flux, plot_kwargs=dict(label=None))
         plt.plot(self.time, self.trend_model + self.transit_model, c="C0", alpha=0.5,
                  label="systematics + transit model")
         plt.plot(self.time, self.transit_model + 1. - 0.03, label="transit model", c="k")
-        viz.plot_lc(self.time, self.diff_flux - self.trend_model + 1. - 0.03, plot_kwargs=dict(label=None),
-                    errorbar_kwargs=dict(label=None))
+        viz.plot(self.time, self.diff_flux - self.trend_model + 1. - 0.03, plot_kwargs=dict(label=None),
+                 errorbar_kwargs=dict(label=None))
         plt.ylim(0.95, 1.03)
         self.plot_ingress_egress()
         ax = plt.gca()
