@@ -1,24 +1,23 @@
 {\fontfamily{cmss}\selectfont
+  \hspace{0.8cm}
+  \begin{minipage}{9.2cm}
+    \boxtitle{TRANSIT MODEL}\\
+    
+    \vspace{-1cm}
+    \hspace{-0.8cm}\includegraphics[width=9cm]{transitmodel/figures/model.png}
+  \end{minipage}
+  \begin{minipage}{2cm}
+    \vspace{0.5cm}
+    \mbox{\hspace{-1.2cm}\includegraphics[width=11cm]{transitmodel/figures/Corner_plot.png}} 
+  \end{minipage}
 
-\begin{tabular}{m{0.45\linewidth}m{0.5\linewidth}}
+  \hspace{1cm}
+  \vspace{-0.6cm}
+  \parbox{18cm}{
+    \boxtitle{MODEL PARAMETERS}\\
 
-\parbox{\linewidth}{
-  \boxtitle{MODELING THE TRANSIT}
-  \mbox{\hspace{-0.7cm}\includegraphics[width=\linewidth + 1cm]{transitmodel/figures/model.png}}
-  \vspace{-1cm}\newline
-
-} 
-& \hspace{0.7cm}\parbox{\linewidth}{
-  \boxtitle{CORNER PLOT}
-  \mbox{\hspace{-1cm}\includegraphics[width=\linewidth + 1cm]{transitmodel/figures/Corner_plot.png}}
-  % To be added in future
-  % {\centering{\footnotesize model: $f = c + fwhm^2 + sky^2 + T + \epsilon$}}
-} 
-\\
-\end{tabular}
-
-\centering
-    {\bgroup
+    \vspace{-0.8cm}
+    \mbox{{\bgroup
       \def\arraystretch{1.2}% 
       \tiny
       \rowcolors{1}{white}{gray!8}
@@ -31,5 +30,6 @@
           \BLOCK{endfor}
          \hline
       \end{tabular}
-      \egroup}
+      \egroup}}
+      }
 }
