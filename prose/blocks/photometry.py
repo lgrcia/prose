@@ -44,8 +44,8 @@ class PhotutilsPSFPhotometry(Block):
             image=image.data,
             init_guesses=Table(names=["x_0", "y_0"], data=[image.stars_coords[:, 0], image.stars_coords[:, 1]])
         )
-        image.fluxes = result_tab["flux_fit"]
-        image.fluxes_errors = result_tab['flux_unc']
+        image.fluxes = np.expand_dims(result_tab["flux_fit"].data, 0)
+        image.fluxes_errors = np.sqrt(image.fluxes) #result_tab['flux_unc']
 
 
 class PhotutilsAperturePhotometry(Block):
