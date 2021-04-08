@@ -197,8 +197,9 @@ class Observation(ApertureFluxes):
         df = pd.read_csv("https://exofop.ipac.caltech.edu/tess/download_toi?toi=%s&output=csv" % nb[0])
         tic = df["TIC ID"][0]
         return f"{tic}"
+
     @property
-    def gaia_id(self):
+    def gaia_from_toi(self):
         tic_id = ("TIC " + self.tic_id)
         catalog_data = Catalogs.query_object(tic_id, radius=.001, catalog="TIC")
         return f"{catalog_data['GAIA'][0]}"
@@ -551,7 +552,7 @@ class Observation(ApertureFluxes):
 
         for i, lc in enumerate(lcs):
             color = "grey" if i != 0 else "black"
-            viz.plot(self.time, lc - i * offset, errorbar_kwargs=dict(c=color, ecolor="grey"))
+            viz.plot(self.time, lc - i * offset, bincolor=color)
             plt.annotate(idxs[i], (self.time.min() + 0.005, 1 - i * offset + offset / 3))
 
         plt.ylim(1 - (i + 0.5) * offset, ylim[1])
