@@ -16,7 +16,7 @@ from .core import LatexTemplate, template_folder
 
 
 class Summary(Observation, LatexTemplate):
-    def __init__(self, obs, style="paper", template_name="summary.tex"):
+    def __init__(self, obs, duration=None, t0=None, style="paper", template_name="summary.tex"):
         Observation.__init__(self, obs.xarray)
         LatexTemplate.__init__(self, template_name, style=style)
 
@@ -29,13 +29,15 @@ class Summary(Observation, LatexTemplate):
 
         obs_duration = f"{min_datetime.strftime('%H:%M')} - {max_datetime.strftime('%H:%M')} " \
             f"[{obs_duration_hours}h{obs_duration_mins if obs_duration_mins != 0 else ''}]"
+        self.duration = duration
+        self.t0 = t0
 
         self.obstable = [
             ["TIC ID", self.tic_id], # TODO: keep only if tic_id is not None
             ["Time", obs_duration],
             ["RA - DEC", f"{self.RA} {self.DEC}"],
             ["images", len(self.time)],
-            ["GAIA id", None],
+            ["GAIA ID", self.gaia_id], # TODO: keep only if gaia_id is not None
             ["mean std · fwhm",
              f"{np.mean(self.fwhm) / (2 * np.sqrt(2 * np.log(2))):.2f} · {np.mean(self.fwhm):.2f} pixels"],
             ["Telescope", self.telescope.name],
@@ -60,6 +62,11 @@ class Summary(Observation, LatexTemplate):
             plt.axvline(self.meridian_flip, c="k", alpha=0.15)
             _, ylim = plt.ylim()
             plt.text(self.meridian_flip, ylim, "meridian flip ", ha="right", rotation="vertical", va="top", color="0.7")
+
+    def plot_ingress_egress(self):
+        plt.axvline(self.t0 + self.duration/2, c='C4', alpha=0.4,label='predicted ingress/egress')
+        plt.axvline(self.t0 - self.duration/2, c='C4', alpha=0.4)
+        _, ylim = plt.ylim()
 
     def plot_psf(self, n=40, zscale=False):
         n /= np.sqrt(2)
@@ -252,6 +259,8 @@ class Summary(Observation, LatexTemplate):
             plt.ylim(0.98, 1.02)
         if self._transit is not None:
             plt.plot(self.time, self._transit + 1., label="transit", c="k")
+        if (duration, t0).any() is not None:
+            self.plot_ingress_egress()
         self.plot_meridian_flip()
         plt.legend()
         plt.xlabel(f"BJD")

@@ -5,6 +5,8 @@ import collections
 from ..utils import fast_binning, z_scale
 from ..console_utils import INFO_LABEL
 from .. import Observation
+from ..fluxes import pont2006
+from ..utils import binning
 import os
 from os import path
 import shutil
@@ -13,13 +15,12 @@ import jinja2
 from .. import viz
 from .core import LatexTemplate, template_folder
 
-
 template_folder = path.abspath(path.join(path.dirname(__file__), "..", "..", "latex"))
 
 
-class TransitModel(Observation,LatexTemplate):
+class TransitModel(Observation, LatexTemplate):
 
-    def __init__(self, obs, t0=None, duration=None, style="paper", template_name="transitmodel.tex"):
+    def __init__(self, obs, t0=None, duration=None, rms_bin=0.005, style="paper", template_name="transitmodel.tex"):
         Observation.__init__(self, obs.xarray)
         LatexTemplate.__init__(self, template_name, style=style)
 
@@ -32,25 +33,29 @@ class TransitModel(Observation,LatexTemplate):
 
         self.ingress = self.time[np.nonzero(self.transit_model)[0][0]]
         self.egress = self.time[np.nonzero(self.transit_model)[0][-1]]
-        self.t14 = (self.egress - self.ingress)*24*60
+        self.t14 = (self.egress - self.ingress) * 24 * 60
         self.duration = duration
         self.t0 = t0
+        self.snr = self.SNR()
+        self.rms = self.RMS_binned(rms_bin)
         self.dpi = 100
         self.obstable = [
-            ["[u1,u2]", None],
-            ["[R*]", None],
-            ["[M*]", None],
-            ["P", None],
-            ["Rp", None],
-            ["Tc", None],
-            ["b", None],
-            ["Duration", f"{self.t14:.2f} min"],
-            ["(Rp/R*)²", None ],
-            ["Apparent depth", f"{np.abs(min(self.transit_model)):.2e}"],
-            ["a/R*", None ],
-            ["i", None],
+            ["Parameters", "Model","TESS"]
+            ["[u1,u2]",None,"-"],
+            ["[R*]", None,None],
+            ["[M*]", None,None],
+            ["P", None,None],
+            ["Rp", None, None],
+            ["Tc", None, None],
+            ["b", None, None],
+            ["Duration", f"{self.t14:.2f} min", None],
+            ["(Rp/R*)\u00b2", None,None],
+            ["Apparent depth", f"{np.abs(min(self.transit_model)):.2e}", None],
+            ["a/R*", None, None],
+            ["i", None, None],
+            ["SNR", f"{self.snr:.2f}",None],
+            ["RMS per bin (%s min)" % f"{self.rms[1]:.1f}", f"{self.rms[0]:.2e}",None],
         ]
-
 
     def plot_meridian_flip(self):
         if self.meridian_flip is not None:
@@ -59,10 +64,10 @@ class TransitModel(Observation,LatexTemplate):
             plt.text(self.meridian_flip, ylim, "meridian flip ", ha="right", rotation="vertical", va="top", color="0.7")
 
     def plot_ingress_egress(self):
-        plt.axvline(self.t0 + self.duration/2, c='red', alpha=0.4,label='predicted ingress/egress')
-        plt.axvline(self.t0 - self.duration/2, c='red', alpha=0.4)
-        plt.axvline(self.ingress, ls='--', c='red', alpha=0.4,label='observed ingress/egress')
-        plt.axvline(self.egress, ls='--', c='red', alpha=0.4)
+        plt.axvline(self.t0 + self.duration / 2, c='C4', alpha=0.4, label='predicted ingress/egress')
+        plt.axvline(self.t0 - self.duration / 2, c='C4', alpha=0.4)
+        plt.axvline(self.ingress, ls='--', c='C4', alpha=0.4, label='observed ingress/egress')
+        plt.axvline(self.egress, ls='--', c='C4', alpha=0.4)
         _, ylim = plt.ylim()
 
     def make_figures(self, destination):
@@ -96,7 +101,7 @@ class TransitModel(Observation,LatexTemplate):
             {
                 "BJD-TDB" if self.time_format == "bjd_tdb" else "JD-UTC": self.time,
                 "DIFF_FLUX_T1": self.diff_flux,
-                "DIFF_FLUX_T1_DETRENDED" : self.diff_flux - self.trend_model + 1,
+                "DIFF_FLUX_T1_DETRENDED": self.diff_flux - self.trend_model + 1,
                 "DIFF_ERROR_T1": self.diff_error,
                 **dict(zip(list_columns, list_columns_array)),
                 "dx": self.dx,
@@ -110,7 +115,6 @@ class TransitModel(Observation,LatexTemplate):
         df.to_csv(destination, sep=sep, index=False)
 
     def make(self, destination):
-
         self.make_report_folder(destination)
         self.make_figures(self.figure_destination)
         self.to_csv_report(self.measurement_destination)
@@ -124,7 +128,7 @@ class TransitModel(Observation,LatexTemplate):
     def plot_lc_model(self):
         fig = plt.figure(figsize=(6, 7 if self.trend_model is not None else 4))
         fig.patch.set_facecolor('xkcd:white')
-        viz.plot_lc(self.time, self.diff_flux, plot_kwargs=dict(label=None))
+        viz.plot_lc(self.time, self.diff_flux)
         plt.plot(self.time, self.trend_model + self.transit_model, c="C0", alpha=0.5,
                  label="systematics + transit model")
         plt.plot(self.time, self.transit_model + 1. - 0.03, label="transit model", c="k")
@@ -143,6 +147,19 @@ class TransitModel(Observation,LatexTemplate):
         plt.ylabel("diff. flux")
         plt.tight_layout()
         self.style()
+
+    def SNR(self):
+        lc = self.diff_flux - self.transit_model
+        wn, rn = pont2006(self.time, lc, plot=False)
+        texp = np.mean(self.exptime)
+        _duration = (self.egress - self.ingress) * 24 * 60 * 60
+        n = int(_duration / texp)
+        depth = np.abs(min(self.transit_model))
+        return depth / (np.sqrt(((wn ** 2) / n) + (rn ** 2)))
+
+    def RMS_binned(self, rms_bin):
+        bins, flux, std = binning(self.time, self.diff_flux - self.trend_model + 1, bins=rms_bin, std=True)
+        return np.mean(std), rms_bin * 24 * 60
 
     def compile(self):
         cwd = os.getcwd()

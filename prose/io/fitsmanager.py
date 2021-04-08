@@ -308,7 +308,7 @@ class FitsManager(FilesDataFrame):
 
     @property
     def unique_obs(self):
-        """Return wether the object contains a unique observation (observation is defined as a unique combinaison of date, telescope, target and filter).
+        """Return whether the object contains a unique observation (observation is defined as a unique combinaison of date, telescope, target and filter).
 
         Returns
         -------

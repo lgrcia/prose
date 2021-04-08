@@ -10,6 +10,7 @@ from . import visualisation as viz
 from astropy.io import fits
 from .telescope import Telescope
 from . import utils
+from astroquery.mast import Catalogs
 from astropy.wcs import WCS, utils as wcsutils
 import pandas as pd
 from scipy.stats import binned_statistic
@@ -191,6 +192,11 @@ class Observation(ApertureFluxes):
         df = pd.read_csv("https://exofop.ipac.caltech.edu/tess/download_toi?toi=%s&output=csv" % nb[0])
         tic = df["TIC ID"][0]
         return f"{tic}"
+    @property
+    def gaia_id(self):
+        tic_id = ("TIC " + self.tic_id)
+        catalog_data = Catalogs.query_object(tic_id, radius=.001, catalog="TIC")
+        return f"{catalog_data['GAIA'][0]}"
 
 
     # Methods
