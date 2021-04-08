@@ -252,7 +252,7 @@ class Summary(Observation, LatexTemplate):
         if self._trend is not None:
             plt.plot(self.time, self.diff_flux - 0.03, ".", color="gainsboro", alpha=0.3)
             plt.plot(self.time, self._trend - 0.03, c="k", alpha=0.2, label="systematics model")
-            viz.plot_lc(self.time, self.diff_flux - self._trend + 1.)
+            viz.plot(self.time, self.diff_flux - self._trend + 1.)
             plt.ylim(0.95, 1.02)
         else:
             self.plot()

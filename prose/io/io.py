@@ -52,7 +52,7 @@ def get_files(
             path.join(folder, "*/" * depth + "*{}".format(ext)), recursive=False
         )
 
-    files = [path.abspath(f) for f in files]
+    files = [path.abspath(f) for f in files if path.isfile(f)]
 
     if return_folders:
         folders = [path.dirname(file) for file in files]
