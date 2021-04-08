@@ -30,6 +30,16 @@ class StarsDetection(Block):
 
     def run(self, image, **kwargs):
         data = np.nan_to_num(image.data, 0) if self.check_nans else image.data
+        coordinates, fluxes = self(data)
+
+        if coordinates is not None:
+            image.stars_coords = coordinates
+            self.last_coords = coordinates
+
+        else:
+            image.discarded = True
+
+    def __call__(self, data):
         coordinates, fluxes = self.single_detection(data)
 
         if len(coordinates) > 2:
@@ -40,14 +50,10 @@ class StarsDetection(Block):
             if self.min_separation is not None:
                 coordinates = clean_stars_positions(coordinates, tolerance=self.min_separation)
 
-            image.stars_coords = coordinates
-            self.last_coords = coordinates
+            return coordinates, fluxes
 
         else:
-            image.discarded = True
-
-    def __call__(self, data):
-        return self.single_detection(data)
+            return None, None
 
 
 class DAOFindStars(StarsDetection):
