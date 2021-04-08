@@ -8,6 +8,7 @@ import shutil
 from .builtins import built_in_telescopes
 import glob
 
+info = print
 package_name = "prose"
 
 
@@ -46,7 +47,7 @@ def get_files(
             path.join(folder, "*/" * depth + "*{}".format(ext)), recursive=False
         )
 
-    files = [path.abspath(f) for f in files]
+    files = [path.abspath(f) for f in files if path.isfile(f)]
 
     if return_folders:
         folders = [path.dirname(file) for file in files]
@@ -68,35 +69,29 @@ class ConfigManager:
 
         self.config = None
 
-        home = str(Path.home())
-        self.folder_path = path.abspath("{}/.{}".format(home, package_name))
-        self.config_path = path.abspath("{}/.{}/config".format(str(Path.home()), package_name))
+        self.folder_path = Path.home() / f".{package_name}"
+        self.folder_path.mkdir(exist_ok=True)
+
+        self.config_file = self.folder_path / "config"
 
         self.check_config_file(load=True)
         self.telescopes_dict = self.build_telescopes_dict()
 
-    def check_config_folder(self):
-        if not path.exists(self.folder_path):
-            os.mkdir(self.folder_path)
-            print("{} config folder missing. Has been created!".format(self.folder_path))
-
     def check_config_file(self, load=False):
 
-        self.check_config_folder()
-
-        if path.exists(self.config_path):
-            with open(self.config_path, "r") as file:
+        if self.config_file.exists():
+            with self.config_file.open(mode="r") as file:
                 if load:
                     self.config = yaml.load(file.read(), Loader=Loader)
         else:
-            print("A config file as been created in {}".format(self.folder_path))
+            info(f"A config file as been created in {self.folder_path}")
             self.config = {"color": "blue"}
-            with open(self.config_path, "w") as file:
+            with self.config_file.open(mode="w") as file:
                 yaml.dump(self.config, file, default_flow_style=False)
 
     def save(self):
         self.check_config_file()
-        with open(self.config_path, "w") as file:
+        with self.config_file.open(mode="w") as file:
             yaml.dump(self.config, file, default_flow_style=False)
 
     def get(self, key):
@@ -107,30 +102,28 @@ class ConfigManager:
         self.save()
 
     def build_telescopes_dict(self):
-        id_files = get_files(".id", self.folder_path, single_list_removal=False)
+        id_files = self.folder_path.glob("*id")
 
-        _telescope_dict = {}
+        telescope_dict = {}
 
         for id_file in id_files:
-            with open(id_file, "r") as f:
-                telescope = yaml.load(f, Loader=yaml.FullLoader)
-                _telescope_dict[telescope["name"].lower()] = telescope
+            telescope = yaml.load(id_file.open(mode="r"), Loader=yaml.FullLoader)
+            telescope_dict[telescope["name"].lower()] = telescope
 
-        _telescope_dict.update(built_in_telescopes)
+        telescope_dict.update(built_in_telescopes)
 
-        return _telescope_dict
+        return telescope_dict
 
     def save_telescope_file(self, file):
         if isinstance(file, str):
-            name = path.basename(file).lower().split(".")[0]
-            shutil.copyfile(file, path.join(self.folder_path, "{}.id".format(name)))
-            print("Telescope '{}' saved".format(name))
+            name = Path(file).stem.lower()
+            shutil.copyfile(file, self.folder_path / f"{name}.id")
+            info("Telescope '{}' saved".format(name))
         elif isinstance(file, dict):
             name = file["name"].lower()
-            telescope_file_path = path.join(self.folder_path, "{}.id".format(name))
-            with open(telescope_file_path, "w") as f:
-                yaml.dump(file, f)
-            print("Telescope '{}' saved".format(name))
+            telescope_file_path =  self.folder_path / f"{name}.id"
+            yaml.dump(file, telescope_file_path.open(mode="w"))
+            info("Telescope '{}' saved".format(name))
         else:
             raise AssertionError("input type not understood")
         self.telescopes_dict = self.build_telescopes_dict()
