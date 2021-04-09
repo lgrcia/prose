@@ -686,6 +686,13 @@ def rename_tab(name):
     return Javascript('document.title="{}"'.format(name))
 
 
+def plot_section(y, s, t0, duration, c="C0", y0=1, offset=0.002):
+    plt.hlines(y , t0 - duration/2, t0+duration/2, clip_on=False, zorder=100, lw=2, alpha=0.5, color=c)
+    plt.text(t0, y + offset, s, ha="center", color=c, fontsize=11, alpha=0.8)
+    plt.vlines(t0 - duration/2, y, y0, alpha=0.15, color=c)
+    plt.vlines(t0 + duration/2, y, y0, alpha=0.15, color=c)
+    plt.tight_layout()
+
 # Debugging helpers
 
 from astroquery.mast import Catalogs
@@ -717,3 +724,5 @@ def _show_tics(data, header=None, telescope_kw="TELESCOP", r=12*u.arcminute):
     x, y = np.array(wcsutils.skycoord_to_pixel(skycoords, WCS(header)))
     _ = show_stars(data, contrast=0.5)
     plot_marks(x, y)
+
+
