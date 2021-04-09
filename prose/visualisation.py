@@ -36,100 +36,6 @@ def plot(
         plt.errorbar(*blc, fmt=".", zorder=1, color=bincolor, alpha=binalpha, label=binlabel)
 
 
-def plot_lc_report(
-    time,
-    flux,
-    data,
-    bins=0.005,
-    std=True,
-    error=None,
-    raw_markersize=5,
-    raw_label="raw data",
-    raw_color="gainsboro",
-    binned_markersize=6,
-    binned_color="C0",
-    error_capsize=2,
-    error_elinewidth=0.75,
-    fields=["fwhm", "sky", "airmass", "dx", "dy"]):
-
-    def plot_systematics(x, y, color):
-        if isinstance(y, list):
-            y = np.array(y)
-
-        blc = utils.binning(time, y, bins=bins, error=error, std=True)
-
-        plt.plot(
-            x, y, ".",
-            zorder=0,
-            c=raw_color,
-            markersize=raw_markersize,
-        )
-        plt.errorbar(
-            *blc,
-            c=color,
-            fmt=".",
-            capsize=error_capsize,
-            elinewidth=error_elinewidth,
-            markersize=binned_markersize,
-        )
-
-    _fields = []
-
-    for i, field in enumerate(fields):
-        if field in data:
-            _fields.append(field)
-
-    fig = plt.figure(figsize=(7, 2*(len(_fields)+1)))
-
-    plt.subplot(len(_fields) + 1, 1, 1)
-    plot(time, flux, binned_color=binned_color, std=std, bins=bins)
-    plt.grid(color="whitesmoke")
-
-    for i, field in enumerate(_fields):
-        ax = fig.add_subplot(len(_fields)+1, 1, i+2)
-        plot_systematics(time, data[field], "C0")
-        plt.grid(color="whitesmoke")
-        plt.annotate(
-            field, (0, 1),
-            xycoords="axes fraction", xytext=(-5, -5),
-            textcoords="offset points",
-            ha="left", va="top", fontsize=11,
-        )
-        if i != len(_fields):
-            # Turn off tick labels
-            ax.xaxis.set_visible(False)
-
-    plt.tight_layout()
-    plt.show()
-
-
-def show_residuals(cut, model, imshow_kwargs={}, plot_kwargs={}):
-    imshow_kwargs = dict(cmap = "inferno",**imshow_kwargs)
-    plot_kwargs = dict(color="blueviolet",**plot_kwargs)
-
-    x, y = np.indices(cut.shape)
-    
-    plt.subplot(131)
-    plt.imshow(utils.z_scale(cut), alpha=1, **imshow_kwargs)
-    plt.xlabel("x (pixels)")
-    plt.ylabel("y (pixels)")
-    plt.title("PSF", loc="left")
-
-    plt.subplot(132)
-    plt.imshow(utils.z_scale(model), alpha=1, **imshow_kwargs)
-    plt.xlabel("x (pixels)")
-    plt.ylabel("y (pixels)")
-    plt.title("PSF model", loc="left")
-    
-    residuals = cut-model
-    plt.subplot(133)
-    im =plt.imshow(residuals, alpha=1, **imshow_kwargs)
-    plt.xlabel("x (pixels)")
-    plt.ylabel("y (pixels)")
-    plt.title("Residuals", loc="left")
-    viz.add_colorbar(im)
-
-
 def plot_marginal_model(data, model, cmap="inferno", c="blueviolet"):
     x, y = np.indices(data.shape)
 
@@ -156,6 +62,7 @@ def plot_marginal_model(data, model, cmap="inferno", c="blueviolet"):
     plt.title("PSF y-axis projected", loc="left")
     plt.grid(color="whitesmoke")
     plt.tight_layout()
+
 
 def plot_all_cuts(cuts, W=10, cmap="magma", stars=None, stars_in=None):
     H = np.ceil(len(cuts) / W).astype(int)
@@ -365,34 +272,6 @@ def add_colorbar(im, aspect=20, pad_fraction=0.5, **kwargs):
     return im.axes.figure.colorbar(im, cax=cax, **kwargs)
 
 
-class AnchoredHScaleBar(matplotlib.offsetbox.AnchoredOffsetbox):
-    """ size: length of bar in data units
-        extent : height of bar ends in axes units """
-
-    def __init__(self, size=1, extent=0.03, label="", loc=2, ax=None,
-                 pad=0.4, borderpad=0.5, ppad=0, sep=2, prop=None,
-                 frameon=True, linekw={}, **kwargs):
-
-        if not ax:
-            ax = plt.gca()
-
-        trans = ax.get_xaxis_transform()
-        size_bar = matplotlib.offsetbox.AuxTransformBox(trans)
-        line = Line2D([0, size], [0, 0], **linekw)
-        vline1 = Line2D([0, 0], [-extent / 2., extent / 2.], **linekw)
-        vline2 = Line2D([size, size], [-extent / 2., extent / 2.], **linekw)
-        size_bar.add_artist(line)
-        size_bar.add_artist(vline1)
-        size_bar.add_artist(vline2)
-        txt = matplotlib.offsetbox.TextArea(label, minimumdescent=False, textprops=dict(color=linekw.get("color", "k")))
-        self.vpac = matplotlib.offsetbox.VPacker(children=[size_bar, txt],
-                                                 align="center", pad=ppad, sep=sep)
-        matplotlib.offsetbox.AnchoredOffsetbox.__init__(self, loc, pad=pad,
-                                                        borderpad=borderpad, child=self.vpac, prop=prop,
-                                                        frameon=frameon,
-                                                        **kwargs)
-
-
 def show_stars(image, stars=None, highlight=None, size=15, options={}, flip=None, color=None, contrast=0.05):
 
     if color is None:
@@ -461,33 +340,6 @@ def show_stars(image, stars=None, highlight=None, size=15, options={}, flip=None
         )
 
         plt.tight_layout()
-
-
-class AnchoredHScaleBar(matplotlib.offsetbox.AnchoredOffsetbox):
-    """ size: length of bar in data units
-        extent : height of bar ends in axes units """
-
-    def __init__(self, size=1, extent=0.03, label="", loc=2, ax=None,
-                 pad=0.4, borderpad=0.5, ppad=0, sep=2, prop=None,
-                 frameon=True, linekw={}, **kwargs):
-        if not ax:
-            ax = plt.gca()
-
-        trans = ax.get_xaxis_transform()
-        size_bar = matplotlib.offsetbox.AuxTransformBox(trans)
-        line = Line2D([0, size], [0, 0], **linekw)
-        vline1 = Line2D([0, 0], [-extent / 2., extent / 2.], **linekw)
-        vline2 = Line2D([size, size], [-extent / 2., extent / 2.], **linekw)
-        size_bar.add_artist(line)
-        size_bar.add_artist(vline1)
-        size_bar.add_artist(vline2)
-        txt = matplotlib.offsetbox.TextArea(label, minimumdescent=False, textprops=dict(color=linekw.get("color", "k")))
-        self.vpac = matplotlib.offsetbox.VPacker(children=[size_bar, txt],
-                                                 align="center", pad=ppad, sep=sep)
-        matplotlib.offsetbox.AnchoredOffsetbox.__init__(self, loc, pad=pad,
-                                                        borderpad=borderpad, child=self.vpac, prop=prop,
-                                                        frameon=frameon,
-                                                        **kwargs)
 
 
 def plot_marks(x, y, label=None, position="bottom", offset=7, fontsize=12, color=[0.51, 0.86, 1.], ms=12, n=None, inside=True, alpha=1):
@@ -702,29 +554,6 @@ def fancy_show_stars(
     return fig
 
 
-def plot_comparison_lcs(lcs, idxs, bins=0.005, offset_factor=2.5, std=False):
-    """Plot comparison stars light curves along target star light curve
-    """
-    time = lcs[0].time
-
-    ax = plt.subplot(111)
-    plt.title("Comparison diff. light curves", loc="left")
-    plt.grid(color="whitesmoke")
-    amp = np.percentile(lcs[0].diff_flux, 95) - np.percentile(lcs[0].diff_flux, 5)
-    for i, lc in enumerate(lcs):
-        lc.plot(offset=-offset_factor * amp * i, std=std)
-        plt.annotate(
-            "{}".format(idxs[i]), 
-            (lc.time.min() + 0.005, 1.01 - offset_factor * amp * i)
-            )
-
-    plt.xlim(min(lcs[0].time), max(lcs[0].time))
-    legends = ax.get_legend()
-    if legends:
-        legends.remove()
-    plt.tight_layout()
-
-
 def plot_rms(fluxes_lcs, diff_lcs, target=None, highlights=None, bins=0.005):
     fluxes_lcs.set_best_aperture_id(diff_lcs.best_aperture_id)
     lcs = diff_lcs.fluxes
@@ -801,6 +630,7 @@ def fancy_gif_image_array(image, median_psf, factor=0.25):
     width, height = (fig.get_size_inches() * fig.get_dpi()).astype(int)
     return np.fromstring(canvas.tostring_rgb(), dtype='uint8').reshape(height, width, 3)
 
+
 def TeX(a, fmt='{: 0.3f}', dim=True):
     from IPython.display import display, Math
     if isinstance(a, tuple):
@@ -827,118 +657,6 @@ def TeX(a, fmt='{: 0.3f}', dim=True):
     
     display(Math(r"{}".format(teX_math)))
 
-def plot_systematics(time, lc, data, fields=None, bins=0.005, offset_factor=1):
-    amp = np.percentile(lc, 95) - np.percentile(lc, 5)
-    rescale_data = []
-
-    for field in fields:
-        _data = amp*utils.rescale(data[field])
-        w_std = np.mean(utils.binning(time, _data, 0.005, std=True)[2])
-        _data /= w_std*10
-        rescale_data.append(_data)
-
-    max_amp = np.max([np.percentile(d, 95) - np.percentile(d, 5) for d in rescale_data])
-
-    plot(time, lc)
-    for i, rd in enumerate(rescale_data):
-        plot_data = (rd/max_amp)*amp + 1 - offset_factor * amp * (i+1)
-        blc = utils.binning(time, plot_data, bins=bins, std=True)
-
-        plt.plot(
-                time, plot_data, ".",
-                zorder=0,
-                c="gainsboro",
-                markersize=5,
-            )
-        plt.errorbar(
-                *blc,
-                c="gray",
-                fmt=".",
-                capsize=2,
-                elinewidth=0.75,
-                markersize=6,
-            )
-        plt.annotate(
-            "{}".format(fields[i]), 
-            (time.min() + 0.005, np.median(plot_data)), fontsize=13)
-        
-    plt.title("Systematics", loc="left")
-    plt.grid(color="whitesmoke")
-    plt.tight_layout()
-
-
-def plot_lc_raw_diff(self, binning=0.005, detrended=False, options={}, std=False):
-
-    _options = {
-        "raw_markersize": 5,
-        "raw_label": "raw data",
-        "raw_color": "gainsboro",
-        "binned_markersize": 6,
-        "binned_color": "C0",
-        "binned_capsize": 2,
-        "binned_elinewidth": 0.75,
-        "offset": 2,
-        "flux_color": "C0",
-        "artificial_flux_color": "k",
-        "flux_ms": 3,
-        "flux_style": "."
-    }
-
-    _options.update(options)
-    options = _options
-
-    kernel_size = 2*int(binning/np.median(np.diff(self.jd)))
-    kernel_size = kernel_size - kernel_size%2 + 1
-    
-    amp = np.percentile(self.lc.diff_flux, 95) - np.percentile(self.lc.diff_flux, 5)
-    
-    plt.subplot(211)
-    plt.title("Differential lightcurve", loc="left")
-    self.lc.plot(
-        bins=binning, std=std
-    )
-    plt.grid(color="whitesmoke")
-
-    plt.subplot(212)
-    plt.title("Normalized flux", loc="left")
-    flux = self.fluxes[self.target["id"]].diff_flux
-    flux /= np.median(flux)
-    plt.plot(self.time, flux, options["flux_style"], ms=options["flux_ms"], label="target", c=options["flux_color"])
-    if self.artificial_lcs is not None:
-        plt.plot(self.time, self.artificial_lcs[self.fluxes[0].best_aperture_id], options["flux_style"], ms=options["flux_ms"], c=options["artificial_flux_color"], label="artifical star")
-    plt.legend()
-    plt.grid(color="whitesmoke")
-    plt.xlim([np.min(self.time), np.max(self.time)])
-    plt.tight_layout()
-
-
-def draw_table(pdf, table, table_start, marg=5, table_cell=(20,4)):
-
-    pdf.set_draw_color(200,200,200)
-
-    for i, datum in enumerate(table):
-        pdf.set_font("helvetica", size=6)
-        pdf.set_fill_color(249,249,249)
-
-        pdf.rect(table_start[0] + 5, table_start[1] + 1.2 + i*table_cell[1],
-                table_cell[0]*3, table_cell[1], "FD" if i%2 == 0 else "D")
-
-        pdf.set_text_color(100,100,100)
-
-        value = datum[1]
-        if value is None:
-            value = "--"
-        else:
-            value = str(value)
-
-        pdf.text(
-            table_start[0] + marg + 2,
-            table_start[1] + marg + i*table_cell[1] - 1.2, datum[0])
-
-        pdf.set_text_color(50,50,50)
-        pdf.text(
-            table_start[0] + marg + 2 + table_cell[0],
-            table_start[1] + marg + i*table_cell[1] - 1.2, value)
 
 def plot_expected_transit(time, epoch, period, duration, depth=None, color="gainsboro"):
     tmax = time.max()
@@ -954,6 +672,7 @@ def plot_expected_transit(time, epoch, period, duration, depth=None, color="gain
     if depth is not None:
         model = transit(time, epoch, duration, depth, period=period).flatten()
         plt.plot(time, model + 1., c="grey")
+
 
 def rename_tab(name):
     """Rename a notebook tab
