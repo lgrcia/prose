@@ -1,4 +1,3 @@
-import os
 from os import path
 from pathlib import Path
 import yaml
@@ -7,6 +6,7 @@ import numpy as np
 import shutil
 from .builtins import built_in_telescopes
 import glob
+import requests
 
 info = print
 package_name = "prose"
@@ -76,6 +76,7 @@ class ConfigManager:
 
         self.check_config_file(load=True)
         self.telescopes_dict = self.build_telescopes_dict()
+        self.check_ballet()
 
     def check_config_file(self, load=False):
 
@@ -139,3 +140,10 @@ class ConfigManager:
             i = np.argmax([len(name) for name in np.array(available_telescopes_names)[has_telescope]])
             return self.telescopes_dict[available_telescopes_names[has_telescope[i]]]
 
+    def check_ballet(self):
+        model_path = self.folder_path / "centroid.h5"
+
+        if not model_path.exists():
+            print("downloading ballet model (~30Mb)")
+            model = requests.get("https://github.com/lgrcia/ballet/raw/master/models/centroid.h5").content
+            model_path.open(mode="wb").write(model)
