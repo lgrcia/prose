@@ -191,6 +191,9 @@ class Observation(ApertureFluxes):
 
         return self._meridian_flip
 
+    # TESS specific methods
+    # --------------------
+
     @property
     def tic_id(self):
         nb = re.findall('\d*\.?\d+', self.name)
@@ -204,6 +207,9 @@ class Observation(ApertureFluxes):
         catalog_data = Catalogs.query_object(tic_id, radius=.001, catalog="TIC")
         return f"{catalog_data['GAIA'][0]}"
 
+    @property
+    def tfop_prefix(self):
+        return f"TIC{self.tic_id}_{self.date}_{self.telescope.name}_{self.filter}"
 
     # Methods
     # -------

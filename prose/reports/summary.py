@@ -2,17 +2,14 @@ import numpy as np
 import pandas as pd
 import collections
 import matplotlib.pyplot as plt
-from astroquery.mast import Catalogs
-from astropy.wcs import WCS, utils as wcsutils
 from ..utils import fast_binning, z_scale
 from ..console_utils import INFO_LABEL
 from .. import Observation
 import os
 from os import path
-import shutil
 from astropy.time import Time
 from .. import viz
-from .core import LatexTemplate, template_folder
+from .core import LatexTemplate
 
 
 class Summary(Observation, LatexTemplate):
@@ -48,10 +45,7 @@ class Summary(Observation, LatexTemplate):
 
         # Some paths
         # ----------
-        self.destination = None
-        self.report_name = None
-        self.figure_destination = None
-        self.measurement_destination = None
+        self.header = "Observation report"
 
     def plot_psf(self, n=40, zscale=False):
         n /= np.sqrt(2)
@@ -177,13 +171,11 @@ class Summary(Observation, LatexTemplate):
 
         self.make_report_folder(destination)
         self.make_figures(self.figure_destination)
-
-        shutil.copyfile(path.join(template_folder, "prose-report.cls"), path.join(destination, "prose-report.cls"))
-        tex_destination = path.join(self.destination, f"{self.report_name}.tex")
-        open(tex_destination, "w").write(self.template.render(
+        open(self.tex_destination, "w").write(self.template.render(
             obstable=self.obstable,
             target=self.name,
             description=self.description,
+            header=self.header
         ))
 
     def set_trend(self, trend):
@@ -221,12 +213,14 @@ class Summary(Observation, LatexTemplate):
 
 class TESSSummary(Summary):
 
-    def __init__(self, obs, style="paper", template_name="summary.tex"):
+    def __init__(self, obs, style="paper", expected=None, template_name="summary.tex"):
         Summary.__init__(self, obs, style=style, template_name=template_name)
-        self.obstable.insert(0, self.tic_id)
-        self.obstable.insert(4, self.gaia_from_tic)
+        self.obstable.insert(0, ("TIC id", self.tic_id))
+        self.obstable.insert(4, ("GAIA id", self.gaia_from_toi))
+        self.header = "TESS follow-up"
+        self.expected = expected
 
-    def to_csv_report(self, sep=" "):
+    def to_csv_report(self):
         """Export a typical csv of the observation's data
         """
         destination = path.join(self.destination, "..", self.denominator + ".csv")
@@ -260,6 +254,13 @@ class TESSSummary(Summary):
         df.to_csv(destination, sep=" ", index=False)
 
     def make(self, destination):
-        super(destination)
+        super().make(destination)
         self.to_csv_report()
+
+    def plot_lc(self):
+        super().plot_lc()
+        if self.expected is not None:
+            t0, duration = self.expected
+            std = 2 * np.std(self.diff_flux)
+            viz.plot_section(1 + std, "expected transit", t0, duration, c="k")
 

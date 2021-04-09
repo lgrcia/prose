@@ -3,11 +3,11 @@ import matplotlib.pyplot as plt
 from .. import Observation
 from ..fluxes import pont2006
 from ..utils import binning
-import os
 from os import path
-import shutil
 from .. import viz
-from .core import LatexTemplate, template_folder
+from .core import LatexTemplate
+import pandas as pd
+import collections
 
 
 class TransitModel(Observation, LatexTemplate):
@@ -85,12 +85,10 @@ class TransitModel(Observation, LatexTemplate):
     def make(self, destination):
         self.make_report_folder(destination)
         self.make_figures(self.figure_destination)
-
-        shutil.copyfile(path.join(template_folder, "prose-report.cls"), path.join(destination, "prose-report.cls"))
-        tex_destination = path.join(self.destination, f"{self.report_name}.tex")
-        open(tex_destination, "w").write(self.template.render(
+        open(self.tex_destination, "w").write(self.template.render(
             obstable=self.obstable
         ))
+        self.to_csv_report()
 
     def plot_lc_model(self):
         fig = plt.figure(figsize=(6, 7 if self.trend_model is not None else 4))
@@ -99,23 +97,17 @@ class TransitModel(Observation, LatexTemplate):
         plt.plot(self.time, self.trend_model + self.transit_model, c="C0",
                  label="systematics + transit model")
         plt.plot(self.time, self.transit_model + 1. - 0.03, label="transit model", c="k")
-        plt.text(plt.xlim()[1] + 0.002, 1, "RAW", rotation=270)
+        plt.text(plt.xlim()[1] + 0.002, 1, "RAW", rotation=270, ha="center")
         viz.plot(self.time, self.diff_flux - self.trend_model + 1. - 0.03)
-        plt.text(plt.xlim()[1] + 0.002, 1 - 0.03, "DETRENDED", rotation=270)
+        plt.text(plt.xlim()[1] + 0.002, 1 - 0.03, "DETRENDED", rotation=270, ha="center")
         plt.ylim(0.95, 1.03)
-        ymin = plt.ylim()[0]
 
         # plot expected and observed transits
         std = 2 * np.std(self.diff_flux)
-        a = 0.5
         t0, duration = self.expected
-        viz.plot_section(1 + std, "predicted", t0, duration, c="k")
-        plt.vlines(t0 - duration / 2, ymin, ymin + 0.002, color="k", alpha=a)
-        plt.vlines(t0 + duration / 2, ymin, ymin + 0.002, color="k", alpha=a)
+        viz.plot_section(1 + std, "expected", t0, duration, c="k")
         duration = self.egress - self.ingress
         viz.plot_section(1 + std + 0.005, "observed", self.ingress + duration / 2, duration, c="C0")
-        plt.vlines(self.ingress, ymin, ymin + 0.002, color="C0", alpha=a)
-        plt.vlines(self.egress, ymin, ymin + 0.002, color="C0", alpha=a)
 
         self.plot_meridian_flip()
         plt.legend()
@@ -123,6 +115,41 @@ class TransitModel(Observation, LatexTemplate):
         plt.ylabel("diff. flux")
         plt.tight_layout()
         self.style()
+
+    def to_csv_report(self):
+        """
+        This one adds de-trended light-curve
+        """
+        destination = path.join(self.destination, "..", self.denominator + ".csv")
+
+        comparison_stars = self.comps[self.aperture]
+        list_diff = ["DIFF_FLUX_C%s" % i for i in comparison_stars]
+        list_err = ["DIFF_ERROR_C%s" % i for i in comparison_stars]
+        list_columns = [None] * (len(list_diff) + len(list_err))
+        list_columns[::2] = list_diff
+        list_columns[1::2] = list_err
+        list_diff_array = [self.diff_fluxes[self.aperture, i] for i in comparison_stars]
+        list_err_array = [self.diff_errors[self.aperture, i] for i in comparison_stars]
+        list_columns_array = [None] * (len(list_diff_array) + len(list_err_array))
+        list_columns_array[::2] = list_diff_array
+        list_columns_array[1::2] = list_err_array
+
+        df = pd.DataFrame(collections.OrderedDict(
+            {
+                "BJD-TDB" if self.time_format == "bjd_tdb" else "JD-UTC": self.time,
+                "DIFF_FLUX_T1": self.diff_flux,
+                "DIFF_FLUX_T1_DETRENDED": self.diff_flux - self.trend_model + 1,
+                "DIFF_ERROR_T1": self.diff_error,
+                **dict(zip(list_columns, list_columns_array)),
+                "dx": self.dx,
+                "dy": self.dy,
+                "FWHM": self.fwhm,
+                "SKYLEVEL": self.sky,
+                "AIRMASS": self.airmass,
+                "EXPOSURE": self.exptime,
+            })
+        )
+        df.to_csv(destination, sep=" ", index=False)
 
     def snr(self):
         lc = self.diff_flux - self.transit_model
@@ -136,9 +163,3 @@ class TransitModel(Observation, LatexTemplate):
     def rms_binned(self):
         bins, flux, std = binning(self.time, self.diff_flux - self.trend_model + 1, bins=self.rms_bin, std=True)
         return np.mean(std), self.rms_bin * 24 * 60
-
-    def compile(self):
-        cwd = os.getcwd()
-        os.chdir(self.destination)
-        os.system(f"pdflatex {self.report_name}")
-        os.chdir(cwd)

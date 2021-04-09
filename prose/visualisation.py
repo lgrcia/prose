@@ -691,6 +691,9 @@ def plot_section(y, s, t0, duration, c="C0", y0=1, offset=0.002):
     plt.text(t0, y + offset, s, ha="center", color=c, fontsize=11, alpha=0.8)
     plt.vlines(t0 - duration/2, y, y0, alpha=0.15, color=c)
     plt.vlines(t0 + duration/2, y, y0, alpha=0.15, color=c)
+    ymin = plt.ylim()[0]
+    plt.vlines(t0 - duration / 2, ymin, ymin + 0.002, color=c, alpha=0.6)
+    plt.vlines(t0 + duration / 2, ymin, ymin + 0.002, color=c, alpha=0.6)
     plt.tight_layout()
 
 # Debugging helpers
