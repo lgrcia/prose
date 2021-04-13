@@ -93,7 +93,7 @@ class TransitModel(Observation, LatexTemplate):
     def plot_lc_model(self):
         fig = plt.figure(figsize=(6, 7 if self.trend_model is not None else 4))
         fig.patch.set_facecolor('white')
-        viz.plot(self.time, self.diff_flux)
+        viz.plot(self.time, self.diff_flux,label='data',binlabel='binned data (7.2 min)')
         plt.plot(self.time, self.trend_model + self.transit_model, c="C0",
                  label="systematics + transit model")
         plt.plot(self.time, self.transit_model + 1. - 0.03, label="transit model", c="k")

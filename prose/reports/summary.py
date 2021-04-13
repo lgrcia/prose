@@ -190,11 +190,12 @@ class Summary(Observation, LatexTemplate):
         if self._trend is not None:
             plt.plot(self.time, self.diff_flux - 0.03, ".", color="gainsboro", alpha=0.3)
             plt.plot(self.time, self._trend - 0.03, c="k", alpha=0.2, label="systematics model")
-            viz.plot(self.time, self.diff_flux - self._trend + 1.)
+            viz.plot(self.time, self.diff_flux - self._trend + 1.,label='data',binlabel='binned data (7.2 min)')
             plt.ylim(0.95, 1.02)
         else:
             plt.ylim(0.98, 1.02)
-            self.plot()
+            viz.plot(self.time, self.diff_flux,label='data',binlabel='binned data (7.2 min)')
+            self.plot_meridian_flip()
         if self._transit is not None:
             plt.plot(self.time, self._transit + 1., label="transit", c="k")
 
