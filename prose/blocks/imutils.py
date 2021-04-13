@@ -368,3 +368,23 @@ class LivePlot(Block):
 
     def terminate(self):
         plt.close()
+
+
+class Get(Block):
+
+    def __init__(self, *names, name="get"):
+        super().__init__(name=name)
+        self.names = names
+        self.values = {name: [] for name in names}
+
+    def run(self, image, **kwargs):
+        for name in self.names:
+            self.values[name].append(image.__dict__[name])
+
+    def __call__(self, *names):
+        if len(names) == 0:
+            return self.values
+        elif len(names) == 1:
+            return self.values[names[0]]
+        elif len(names) > 1:
+            return [self.values[name] for name in names]

@@ -38,11 +38,13 @@ class Calibration:
             bias=None,
             darks=None,
             images=None,
-            psf=blocks.Moffat2D
+            psf=blocks.Moffat2D,
+            verbose=True
     ):
         self.destination = None
         self.overwrite = overwrite
         self._reference = reference
+        self.verbose = verbose
 
         # set on prepare
         self.flats = flats
@@ -50,8 +52,8 @@ class Calibration:
         self.darks = darks
         self.images = images
 
-        self.reference_unit = None
-        self.calibration_unit = None
+        self.reference_sequence = None
+        self.calibration_sequence = None
 
         assert psf is None or issubclass(psf, Block), "psf must be a subclass of Block"
         self.psf = psf
@@ -75,18 +77,18 @@ class Calibration:
 
         self.make_destination()
 
-        self.reference_unit = Sequence([
+        self.reference_sequence = Sequence([
             self.calibration_block,
             blocks.Trim(name="trimming"),
             blocks.SegmentedPeaks(n_stars=50, name="detection"),
             blocks.ImageBuffer(name="buffer")
         ], self.reference_fits, telescope=self.telescope)
 
-        self.reference_unit.run(show_progress=False)
+        self.reference_sequence.run(show_progress=False)
 
-        ref_image = self.reference_unit.buffer.image
+        ref_image = self.reference_sequence.buffer.image
 
-        self.calibration_unit = Sequence([
+        self.calibration_sequence = Sequence([
             self.calibration_block,
             blocks.Trim(name="trimming", skip_wcs=True),
             blocks.Flip(ref_image, name="flip"),
@@ -100,7 +102,7 @@ class Calibration:
             blocks.Video(self.gif_path, name="video", from_fits=True)
         ], self.images, telescope=self.telescope, name="Calibration")
 
-        self.calibration_unit.run()
+        self.calibration_sequence.run(show_progress=self.verbose)
 
     @property
     def stack_path(self):
@@ -112,9 +114,13 @@ class Calibration:
         prepend = "movie.gif"
         return path.join(self.destination, prepend)
 
+    @property
+    def processing_time(self):
+        return self.calibration_sequence.processing_time + self.reference_sequence.processing_time
+
     def make_destination(self):
         if not path.exists(self.destination):
             os.mkdir(self.destination)
 
     def __repr__(self):
-        return f"{self.reference_unit}\n{self.calibration_unit}"
+        return f"{self.reference_sequence}\n{self.calibration_sequence}"

@@ -35,14 +35,16 @@ class Photometry:
                  n_stars=500,
                  psf=blocks.Gaussian2D,
                  ignore_telescope=False,
-                 show=False):
+                 show=False,
+                 verbose=True):
 
         self.fits_manager = fits_manager
         self.overwrite = overwrite
         self.n_stars = n_stars
-        self.reference_detection_unit = None
-        self.photometry_unit = None
+        self.reference_detection_sequence = None
+        self.photometry_sequence = None
         self.destination = None
+        self.verbose = verbose
 
         # preparing inputs and outputs
         self.destination = None
@@ -61,14 +63,14 @@ class Photometry:
         self.show = show
 
     def run_reference_detection(self):
-        self.reference_detection_unit = Sequence([
+        self.reference_detection_sequence = Sequence([
             blocks.DAOFindStars(n_stars=self.n_stars, name="detection"),
             self.psf(name="fwhm"),
             blocks.ImageBuffer(name="buffer"),
         ], self.stack_path, telescope=self.fits_manager.telescope, show_progress=False)
 
-        self.reference_detection_unit.run(show_progress=False)
-        stack_image = self.reference_detection_unit.buffer.image
+        self.reference_detection_sequence.run(show_progress=False)
+        stack_image = self.reference_detection_sequence.buffer.image
         ref_stars = stack_image.stars_coords
         fwhm = stack_image.fwhm
 
@@ -87,7 +89,7 @@ class Photometry:
 
         self._check_phot_path()
         self.run_reference_detection()
-        self.photometry_unit.run()
+        self.photometry_sequence.run(show_progress=self.verbose)
 
     def _check_phot_path(self):
         if path.exists(self.phot_path) and not self.overwrite:
@@ -129,7 +131,11 @@ class Photometry:
             self.telescope = Telescope(self.stack_path)
 
     def __repr__(self):
-        return f"{self.reference_detection_unit}\n{self.photometry_unit}"
+        return f"{self.reference_detection_sequence}\n{self.photometry_sequence}"
+
+    @property
+    def processing_time(self):
+        return self.reference_detection_sequence.processing_time + self.photometry_sequence.processing_time
 
 
 class AperturePhotometry(Photometry):
@@ -182,7 +188,8 @@ class AperturePhotometry(Photometry):
                  photometry=blocks.PhotutilsAperturePhotometry,
                  centroid=None,
                  show=False,
-                 ignore_telescope=False):
+                 ignore_telescope=False,
+                 verbose=True):
 
         if apertures is None:
             apertures = np.arange(0.1, 10, 0.25)
@@ -195,7 +202,8 @@ class AperturePhotometry(Photometry):
             n_stars=n_stars,
             psf=psf,
             show=show,
-            ignore_telescope=ignore_telescope
+            ignore_telescope=ignore_telescope,
+            verbose=verbose
         )
 
         # Blocks
@@ -231,7 +239,7 @@ class AperturePhotometry(Photometry):
 
         centroid = blocks.Pass() if not isinstance(self.centroid, Block) else self.centroid
 
-        self.photometry_unit = Sequence([
+        self.photometry_sequence = Sequence([
             blocks.Set(stars_coords=ref_stars, name="set stars"),
             blocks.Set(fwhm=fwhm, name="set fwhm"),
             centroid,

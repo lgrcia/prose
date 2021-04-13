@@ -5,6 +5,7 @@ from astropy.wcs import WCS
 from prose import visualisation as viz
 from collections import OrderedDict
 from tabulate import tabulate
+import numpy as np
 from time import time
 
 
@@ -107,6 +108,10 @@ class Sequence:
     def insert_before(self, before, block):
         pass
 
+    @property
+    def processing_time(self):
+        return np.sum([block.processing_time for block in self.blocks])
+
 
 class Image:
 
@@ -173,7 +178,8 @@ class Block:
     def show_image(self, image):
         viz.show_stars(image)
 
-    def citations(self, image):
+    @staticmethod
+    def citations():
         return None
 
     @staticmethod
