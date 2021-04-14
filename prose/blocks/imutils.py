@@ -36,12 +36,15 @@ class Stack(Block):
         self.destination = destination
         self.fits_manager = None
         self.overwrite = overwrite
+        self.telescope = None
 
         self.reference_image_path = None
 
     def run(self, image):
         if self.stack is None:
             self.stack = image.data
+            # telescope is assumed to be the one of first image
+            self.telescope = image.telescope
 
         else:
             self.stack += image.data
@@ -109,16 +112,17 @@ class SaveReduced(Block):
         if not path.exists(self.destination):
             os.mkdir(self.destination)
         self.overwrite = overwrite
+        self.files = []
 
     def run(self, image, **kwargs):
 
         new_hdu = fits.PrimaryHDU(image.data)
         new_hdu.header = image.header
 
-        image.header["SEEING"] = new_hdu.header.get(self.telescope.keyword_seeing, "")
+        image.header["SEEING"] = image.get(image.telescope.keyword_seeing, "")
         image.header["BZERO"] = 0
         image.header["REDDATE"] = Time.now().to_value("fits")
-        image.header[self.telescope.keyword_image_type] = "reduced"
+        image.header[image.telescope.keyword_image_type] = "reduced"
 
         fits_new_path = path.join(
             self.destination,
@@ -126,6 +130,7 @@ class SaveReduced(Block):
         )
 
         new_hdu.writeto(fits_new_path, overwrite=self.overwrite)
+        self.files.append(fits_new_path)
 
 
 class Video(Block):
@@ -292,10 +297,10 @@ class Flip(Block):
         self.reference_flip_value = None
 
     def initialize(self, *args):
-        self.reference_flip_value = self.reference_image.header.get(self.telescope.keyword_flip, None)
+        self.reference_flip_value = self.reference_image.flip
 
     def run(self, image, **kwargs):
-        flip_value = image.header.get(self.telescope.keyword_flip, None)
+        flip_value = image.flip
         if flip_value != self.reference_flip_value:
             image.data = image.data[::-1, ::-1]
 

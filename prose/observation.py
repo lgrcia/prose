@@ -597,7 +597,7 @@ class Observation(ApertureFluxes):
         """
 
         psf_fit = model()
-        image = Image(data=self.stack, stars_coords=self.stars)
+        image = Image(data=self.stack, stars_coords=self.stars, header=self.xarray.attrs)
         psf_fit.run(image)
 
         if len(plt.gcf().get_axes()) == 0:

@@ -29,15 +29,18 @@ class TestReduction(unittest.TestCase):
 
         fm = FitsManager(RAW, depth=2)
         destination = fm.obs_name
-        # reduction = Calibration(images=fm.images, overwrite=True)
-        reduction = Calibration(**fm.images_dict, overwrite=True)
+        calib = Calibration(**fm.images_dict, overwrite=True)
 
-        reduction.run(destination)
+        calib.run(destination)
 
-        photometry = AperturePhotometry(destination, overwrite=True, centroid=OldNNCentroid)
-        photometry.run(destination=PHOT)
+        photometry = AperturePhotometry(
+            files=calib.images,
+            stack=calib.stack,
+            overwrite=True
+        )
+        photometry.run(PHOT)
 
-        shutil.rmtree(reduction.destination)
+        shutil.rmtree(calib.destination)
         shutil.rmtree(RAW)
 
 

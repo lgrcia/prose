@@ -45,7 +45,7 @@ class PhotutilsPSFPhotometry(Block):
             init_guesses=Table(names=["x_0", "y_0"], data=[image.stars_coords[:, 0], image.stars_coords[:, 1]])
         )
         image.fluxes = np.expand_dims(result_tab["flux_fit"].data, 0)
-        image.fluxes_errors = np.sqrt(image.fluxes) #result_tab['flux_unc']
+        image.fluxes_errors = np.sqrt(image.fluxes)  # result_tab['flux_unc']
 
 
 class PhotutilsAperturePhotometry(Block):
@@ -162,12 +162,12 @@ class PhotutilsAperturePhotometry(Block):
 
         for i, aperture_area in enumerate(self.circular_apertures_area):
             area = aperture_area * (1 + aperture_area / self.annulus_area)
-            image.fluxes_errors[i, :] = self.telescope.error(
+            image.fluxes_errors[i, :] = image.telescope.error(
                 image.fluxes[i],
                 area,
                 image.sky,
-                image.header[self.telescope.keyword_exposure_time],
-                airmass=image.header[self.telescope.keyword_airmass],
+                image.exposure,
+                airmass=image.get("keyword_airmass"),
             )
 
     def citations(self):
@@ -179,7 +179,9 @@ class SEAperturePhotometry(Block):
     Aperture photometry using :code:`sep`.
     For more details check https://sep.readthedocs.io
 
-    SEP is a python wrapping of the C Source Extractor code, hence being 2 times faster that Photutils version. Forced aperture photometry can be done simple by using :code:`stack=True` on the detection Block used, hence using stack sources positions along the photometric extraction.
+    SEP is a python wrapping of the C Source Extractor code, hence being 2 times faster that Photutils version.
+    Forced aperture photometry can be done simple by using :code:`stack=True` on the detection Block used, hence using
+    stack sources positions along the photometric extraction.
 
     Parameters
     ----------
@@ -265,10 +267,10 @@ class SEAperturePhotometry(Block):
 
         for i, aperture_area in enumerate(image.apertures_area):
             area = aperture_area * (1 + aperture_area / image.annulus_area)
-            image.fluxes_errors[i, :] = self.telescope.error(
+            image.fluxes_errors[i, :] = image.telescope.error(
                 image.fluxes[i],
                 area,
                 image.sky,
-                image.header[self.telescope.keyword_exposure_time],
-                airmass=image.header[self.telescope.keyword_airmass],
+                image.exposure,
+                airmass=image.header[image.telescope.keyword_airmass],
             )

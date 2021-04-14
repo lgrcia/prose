@@ -50,19 +50,17 @@ class Calibration:
         self.flats = flats
         self.bias = bias
         self.darks = darks
-        self.images = images
+        self._images = images
 
         self.reference_sequence = None
         self.calibration_sequence = None
 
         assert psf is None or issubclass(psf, Block), "psf must be a subclass of Block"
         self.psf = psf
-
-        # set Telescope
-        self.telescope = Telescope.from_name(fits.getheader(self.images[0])["TELESCOP"])
+        
         # set reference file
-        reference_id = int(self._reference * len(self.images))
-        self.reference_fits = self.images[reference_id]
+        reference_id = int(self._reference * len(self._images))
+        self.reference_fits = self._images[reference_id]
         self.calibration_block = blocks.Calibration(self.darks, self.flats, self.bias, name="calibration")
 
     def run(self, destination):
@@ -82,7 +80,7 @@ class Calibration:
             blocks.Trim(name="trimming"),
             blocks.SegmentedPeaks(n_stars=50, name="detection"),
             blocks.ImageBuffer(name="buffer")
-        ], self.reference_fits, telescope=self.telescope)
+        ], self.reference_fits)
 
         self.reference_sequence.run(show_progress=False)
 
@@ -98,9 +96,9 @@ class Calibration:
             self.psf(name="fwhm"),
             blocks.Stack(self.stack_path, header=ref_image.header, overwrite=self.overwrite, name="stack"),
             blocks.SaveReduced(self.destination if destination is None else destination, overwrite=self.overwrite,
-                               name="saving"),
+                               name="save"),
             blocks.Video(self.gif_path, name="video", from_fits=True)
-        ], self.images, telescope=self.telescope, name="Calibration")
+        ], self._images, name="Calibration")
 
         self.calibration_sequence.run(show_progress=self.verbose)
 
@@ -108,6 +106,14 @@ class Calibration:
     def stack_path(self):
         prepend = "stack.fits"
         return path.join(self.destination, prepend)
+
+    @property
+    def stack(self):
+        return self.stack_path
+
+    @property
+    def images(self):
+        return self.calibration_sequence.save.files
 
     @property
     def gif_path(self):

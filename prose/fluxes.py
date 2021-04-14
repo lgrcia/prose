@@ -1,5 +1,6 @@
 import numpy as np
 from . import utils
+from pathlib import Path
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 import xarray as xr
@@ -138,7 +139,7 @@ def best_stars(fluxes, weights, target, return_idxs=True, bins=12):
 class ApertureFluxes:
 
     def __init__(self, xarray):
-        if isinstance(xarray, str):
+        if isinstance(xarray, (str, Path)):
             self.xarray = xr.load_dataset(xarray)
         else:
             self.xarray = xarray
