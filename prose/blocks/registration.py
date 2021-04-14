@@ -216,7 +216,7 @@ class XYShift(Registration):
         Merge coordinates if too close, by default False
     """
 
-    def __init__(self, reference, tolerance=20, clean=False, **kwargs):
+    def __init__(self, reference, tolerance=2, clean=False, **kwargs):
 
         super().__init__(**kwargs)
         self.tolerance = tolerance
