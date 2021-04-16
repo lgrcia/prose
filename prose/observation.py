@@ -20,6 +20,9 @@ from astropy.stats import sigma_clipped_stats
 from astropy.io.fits.verify import VerifyWarning
 from datetime import datetime
 import warnings
+from .blocks.registration import distances
+import requests
+import io
 
 warnings.simplefilter('ignore', category=VerifyWarning)
 
@@ -841,5 +844,30 @@ class Observation(ApertureFluxes):
 
         if not inplace:
             return new_self
+
+    def set_tic_target(self):
+
+        self.query_tic()
+
+        # TOI to TIC
+        toi = re.split("-|\.", self.name)[1]
+        b = requests.get(f"https://exofop.ipac.caltech.edu/tess/download_toi?toi={toi}&output=csv").content
+        TIC = pd.read_csv(io.BytesIO(b))["TIC ID"][0]
+
+        # getting all TICs
+        tics = self.tic_data["ID"].data
+        tics.fill_value = 0
+        tics = tics.data.astype(int)
+
+        # Finding the one
+        i = np.argwhere(tics == TIC).flatten()
+        if len(i) == 0:
+            raise AssertionError(f"TIC {TIC} not found")
+        else:
+            i = i[0]
+        row = self.tic_data[i]
+
+        # setting the closest to target
+        self.target = np.argmin(distances(self.stars.T, [row['x'], row['y']]))
 
 

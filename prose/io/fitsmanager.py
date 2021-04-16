@@ -367,6 +367,16 @@ class FitsManager(FilesDataFrame):
         return self.get(type="stack").path.values.astype(str)
 
     @property
+    def calibrated(self):
+        """fits paths of the observation calibrated images if present
+
+        Returns
+        -------
+        list of str
+        """
+        return self.get(type="reduced").path.values.astype(str)
+
+    @property
     def products_denominator(self):
         assert self.unique_obs, "observation should be unique, please use set_observation"
         obs = self._observations.loc[0]
