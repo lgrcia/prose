@@ -264,7 +264,7 @@ class Observation(ApertureFluxes):
         # Catalog queries
         # ---------------
 
-    def query_gaia(self, limit=1000):
+    def query_gaia(self, limit=1000, cone_radius=None):
         """Query gaia catalog for stars in the field
         """
         from astroquery.gaia import Gaia
@@ -273,7 +273,8 @@ class Observation(ApertureFluxes):
 
         header = self.xarray.attrs
         shape = self.stack.shape
-        cone_radius = np.sqrt(2) * np.max(shape) * self.telescope.pixel_scale / 120
+        if cone_radius is None:
+            cone_radius = np.sqrt(2) * np.max(shape) * self.telescope.pixel_scale / 120
 
         coord = self.skycoord
         radius = u.Quantity(cone_radius, u.arcminute)

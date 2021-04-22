@@ -117,7 +117,7 @@ liverpool.update ({
 })
 
 built_in_telescopes = {
-    "trappist": trappist,
+    "trappist-south": trappist,
     "artemis": artemis,
     "europa": europa,
     "saintex": saintex,
@@ -125,6 +125,7 @@ built_in_telescopes = {
     "io": io,
     "callisto": callisto,
     "ntm": trappistN,
+    "trappist-north": trappistN,
     "saint-ex": saintex,
     "liverpool": liverpool
 }
