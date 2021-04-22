@@ -117,7 +117,7 @@ liverpool.update ({
 })
 
 built_in_telescopes = {
-    "trappist-south": trappist,
+    "trappist": trappist,
     "artemis": artemis,
     "europa": europa,
     "saintex": saintex,
