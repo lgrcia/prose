@@ -125,6 +125,7 @@ built_in_telescopes = {
     "io": io,
     "callisto": callisto,
     "ntm": trappistN,
+    "trappist-north": trappistN,
     "saint-ex": saintex,
     "liverpool": liverpool
 }
