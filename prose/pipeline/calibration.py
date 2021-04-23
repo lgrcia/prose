@@ -1,6 +1,8 @@
 from .. import Sequence, blocks, Block, Telescope
 import os
 from os import path
+from pathlib import Path
+import xarray as xr
 from astropy.io import fits
 
 
@@ -63,6 +65,18 @@ class Calibration:
         self.reference_fits = self._images[reference_id]
         self.calibration_block = blocks.Calibration(self.darks, self.flats, self.bias, name="calibration")
 
+        self.xarray_block = blocks.XArray(
+            ("time", "jd_utc"),
+            ("time", "bjd_tdb"),
+            ("time", "fwhm"),
+            ("time", "fwhmx"),
+            ("time", "fwhmy"),
+            ("time", "dx"),
+            ("time", "dy"),
+            ("time", "airmass"),
+            ("time", "exposure")
+        )
+
     def run(self, destination):
         """Run the calibration pipeline
 
@@ -95,17 +109,28 @@ class Calibration:
             blocks.Align(ref_image.data, name="alignment"),
             self.psf(name="fwhm"),
             blocks.Stack(self.stack_path, header=ref_image.header, overwrite=self.overwrite, name="stack"),
-            blocks.SaveReduced(self.destination if destination is None else destination, overwrite=self.overwrite,
-                               name="save"),
-            blocks.Video(self.gif_path, name="video", from_fits=True)
+            blocks.SaveReduced(self.destination, overwrite=self.overwrite, name="save_reduced"),
+            blocks.Video(self.gif_path, name="video", from_fits=True),
+            self.xarray_block
         ], self._images, name="Calibration")
 
         self.calibration_sequence.run(show_progress=self.verbose)
 
+        # saving xarray
+        calib_xarray = self.calibration_sequence.xarray.xarray
+        stack_xarray = self.calibration_sequence.stack.xarray
+        xarray = xr.merge([calib_xarray, stack_xarray], combine_attrs="no_conflicts")
+        xarray = xarray.assign_coords(time=xarray.jd_utc)
+        xarray.attrs["time_format"] = "jd_utc"
+        xarray.to_netcdf(self.phot_path)
+
     @property
     def stack_path(self):
-        prepend = "stack.fits"
-        return path.join(self.destination, prepend)
+        return self.destination / "stack.fits"
+
+    @property
+    def phot_path(self):
+        return self.destination / (self.destination.name + ".phot")
 
     @property
     def stack(self):
@@ -113,7 +138,7 @@ class Calibration:
 
     @property
     def images(self):
-        return self.calibration_sequence.save.files
+        return self.calibration_sequence.save_reduced.files
 
     @property
     def gif_path(self):
@@ -125,8 +150,15 @@ class Calibration:
         return self.calibration_sequence.processing_time + self.reference_sequence.processing_time
 
     def make_destination(self):
+        self.destination = Path(self.destination)
+        self.destination.mkdir(exist_ok=True)
         if not path.exists(self.destination):
             os.mkdir(self.destination)
 
     def __repr__(self):
         return f"{self.reference_sequence}\n{self.calibration_sequence}"
+
+    @property
+    def xarray(self):
+        return self.calibration_sequence.xarray()
+

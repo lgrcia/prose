@@ -81,6 +81,9 @@ class PhotutilsAperturePhotometry(Block):
 
         self.annulus_inner_radius = r_in
         self.annulus_outer_radius = r_out
+        self.annulus_final_rin = None
+        self.annulus_final_rout = None
+        self.aperture_final_r = None
 
         self.n_apertures = len(self.apertures)
         self.n_stars = None
@@ -158,11 +161,11 @@ class PhotutilsAperturePhotometry(Block):
 
     def compute_error(self, image):
 
-        image.fluxes_errors = np.zeros((self.n_apertures, self.n_stars))
+        image.errors = np.zeros((self.n_apertures, self.n_stars))
 
         for i, aperture_area in enumerate(self.circular_apertures_area):
             area = aperture_area * (1 + aperture_area / self.annulus_area)
-            image.fluxes_errors[i, :] = image.telescope.error(
+            image.errors[i, :] = image.telescope.error(
                 image.fluxes[i],
                 area,
                 image.sky,
@@ -263,11 +266,11 @@ class SEAperturePhotometry(Block):
 
     def compute_error(self, image):
 
-        image.fluxes_errors = np.zeros((self.n_apertures, self.n_stars))
+        image.errors = np.zeros((self.n_apertures, self.n_stars))
 
         for i, aperture_area in enumerate(image.apertures_area):
             area = aperture_area * (1 + aperture_area / image.annulus_area)
-            image.fluxes_errors[i, :] = image.telescope.error(
+            image.errors[i, :] = image.telescope.error(
                 image.fluxes[i],
                 area,
                 image.sky,

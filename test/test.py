@@ -12,7 +12,7 @@ RAW = "synthetic_dataset"
 _REDUCED = "_synthetic_dataset"
 REDUCED = "synthetic_dataset"
 
-PHOT = "../test.phot"
+PHOT = "../test2.phot"
 
 
 class TestReduction(unittest.TestCase):
@@ -38,9 +38,9 @@ class TestReduction(unittest.TestCase):
             stack=calib.stack,
             overwrite=True
         )
-        photometry.run(PHOT)
+        photometry.run(calib.phot_path)
 
-        shutil.rmtree(calib.destination)
+        # shutil.rmtree(calib.destination)
         shutil.rmtree(RAW)
 
 

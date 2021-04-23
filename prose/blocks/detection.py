@@ -4,6 +4,7 @@ from photutils import DAOStarFinder
 from astropy.stats import sigma_clipped_stats
 from .registration import clean_stars_positions
 from ..core import Block
+from ..blocks.psf import cutouts
 try:
     from sep import extract
 except:
@@ -30,10 +31,11 @@ class StarsDetection(Block):
 
     def run(self, image, **kwargs):
         data = np.nan_to_num(image.data, 0) if self.check_nans else image.data
-        coordinates, fluxes = self(data)
+        coordinates, peaks = self(data)
 
         if coordinates is not None:
             image.stars_coords = coordinates
+            image.peaks = peaks
             self.last_coords = coordinates
 
         else:
@@ -89,9 +91,9 @@ class DAOFindStars(StarsDetection):
         sources = finder(data - median)
 
         coordinates = np.transpose(np.array([sources["xcentroid"].data, sources["ycentroid"].data]))
-        fluxes = sources["flux"]
+        peaks = sources["peak"]
 
-        return coordinates, fluxes
+        return coordinates, peaks
 
     def citations(self):
         return "photutils", "numpy"
@@ -126,9 +128,9 @@ class SegmentedPeaks(StarsDetection):
         threshold = self.threshold*np.nanstd(data.flatten()) + np.median(data.flatten())
         regions = regionprops(label(data > threshold), data)
         coordinates = np.array([region.weighted_centroid[::-1] for region in regions])
-        fluxes = np.array([np.sum(region.intensity_image) for region in regions])
+        peaks = np.array([np.max(region.intensity_image) for region in regions])
 
-        return coordinates, fluxes
+        return coordinates, peaks
 
     def citations(self):
         return "numpy", "skimage"
@@ -165,3 +167,15 @@ class SEDetection(StarsDetection):
     def citations(self):
         return "source extractor", "sep"
 
+
+class Peaks(Block):
+
+    def __init__(self, cutout=21, **kwargs):
+        super().__init__(**kwargs)
+        self.cutout = cutout
+
+    def run(self, image, **kwargs):
+        idxs, cuts = cutouts(image.data, image.stars_coords, size=self.cutout)
+        image.peaks = np.ones(len(image.stars_coords)) * -1
+        for i, cut in zip(idxs, cuts):
+            image.peaks[i] = np.max(cut.data)

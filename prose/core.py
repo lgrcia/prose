@@ -8,14 +8,16 @@ from collections import OrderedDict
 from tabulate import tabulate
 import numpy as np
 from time import time
+from pathlib import Path
+from astropy.time import Time
 
 
 class Sequence:
     # TODO: add index self.i in image within unit loop
 
-    def __init__(self, blocks, files, name="default", telescope=None, **kwargs):
+    def __init__(self, blocks, files, name="default", **kwargs):
         self.name = name
-        self.files_or_images = files if not isinstance(files, str) else [files]
+        self.files_or_images = files if not isinstance(files, (str, Path)) else [files]
         self.blocks = blocks
 
         self.data = {}
@@ -60,7 +62,7 @@ class Sequence:
 
         # run
         for i, file_or_image in enumerate(progress(self.files_or_images)):
-            if isinstance(file_or_image, str):
+            if isinstance(file_or_image, (str, Path)):
                 image = Image(file_or_image)
             else:
                 image = file_or_image
@@ -126,7 +128,7 @@ class Image:
         return new_self
 
     def check_telescope(self):
-        if self.header is not None:
+        if self.header:
             self.telescope = Telescope.from_name(self.header["TELESCOP"])
 
     def get(self, keyword, default=None):
@@ -141,8 +143,52 @@ class Image:
         return self.get(self.telescope.keyword_exposure_time, None)
 
     @property
+    def jd_utc(self):
+        jd = self.get(self.telescope.keyword_jd, None) + self.telescope.mjd
+        return Time(
+            jd,
+            format="jd",
+            scale=self.telescope.jd_scale,
+            location=self.telescope.earth_location).utc.value
+
+    @property
+    def bjd_tdb(self):
+        jd_bjd = self.get(self.telescope.keyword_bjd, None)
+        if jd_bjd is not None:
+            jd_bjd += self.telescope.mjd
+
+            if self.telescope.keyword_jd in self.header:
+                time_format = "bjd"
+            else:
+                time_format = "jd"
+
+            return Time(jd_bjd,
+                        format=time_format,
+                        scale=self.telescope.jd_scale,
+                        location=self.telescope.earth_location).tdb.value
+
+        else:
+            return None
+
+    @property
+    def seeing(self):
+        return self.get(self.telescope.keyword_seeing, None)
+
+    @property
+    def ra(self):
+        return self.get(self.telescope.keyword_ra, None)
+
+    @property
+    def dec(self):
+        return self.get(self.telescope.keyword_dec, None)
+
+    @property
     def flip(self):
         return self.get(self.telescope.keyword_flip, None)
+
+    @property
+    def airmass(self):
+        return self.get(self.telescope.keyword_airmass, None)
 
 
 class Block:

@@ -4,6 +4,7 @@ from astropy.time import Time
 import xarray as xr
 from .. import utils
 
+# TODO remove SavePhot and add SaveReduced and Xarray
 
 class SavePhot(Block):
     """Save photometric products into a FITS :code:`.phots` file. See :ref:`phots-structure` for more info
@@ -114,6 +115,9 @@ class SavePhot(Block):
                     x[key.lower()] = ('time', _data)
                 else:
                     raise AssertionError("")
+
+        if "peaks" in self.images[0].__dict__:
+            x["peaks"] = ("time", "stars", np.array([im.peaks for im in self.images]))
 
         if self.stack is not None:
             x = x.assign_coords(stack=(('w', 'h'), self.stack))

@@ -114,7 +114,7 @@ class NEB(Observation):
         self.potentials = self.score > 3.5 * np.std(self.score)
 
     def plot_lc(self, i):
-        viz.plot_lc(self.time, self.diff_fluxes[self.aperture, self.nearby_ids[i]].flux, std=True)
+        viz.plot(self.time, self.diff_fluxes[self.aperture, self.nearby_ids[i]].flux, std=True)
         plt.plot(self.time, self.X @ self.ws[i], label="model")
         plt.legend()
 

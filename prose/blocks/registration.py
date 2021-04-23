@@ -226,6 +226,7 @@ class XYShift(Registration):
     def run(self, image, **kwargs):
         shift = xyshift(image.stars_coords, self.reference, tolerance=self.tolerance, clean=self.clean)
         image.shift = shift
+        image.dx, image.dy = shift
         image.header["DX"] = shift[0]
         image.header["DY"] = shift[1],
         image.header["ALIGNALG"] = self.__class__.__name__
@@ -257,10 +258,10 @@ class AstroAlignShift(Registration):
                 )
         shift = transform.translation
         image.shift = shift
+        image.dx, image.dy = shift
         image.header["DX"] = shift[0]
         image.header["DY"] = shift[1],
         image.header["ALIGNALG"] = self.__class__.__name__
-
 
     def citations(self):
         return "astroalign"

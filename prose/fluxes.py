@@ -316,7 +316,7 @@ class ApertureFluxes:
         return pont2006(self.time, self.xarray.diff_fluxes.isel(apertures=self.aperture, star=self.target).values, plot=plot)
 
     def _fix_fluxes(self):
-        if "raw_fluxes" not in self:
+        if "raw_fluxes" not in self and "fluxes" in self:
             self.xarray = self.xarray.rename({
                 "fluxes": "raw_fluxes",
                 "errors": "raw_errors"

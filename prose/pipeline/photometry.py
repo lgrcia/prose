@@ -6,10 +6,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
 import time
+import xarray as xr
+
+
+def plot_function(im, cmap="Greys_r", color=[0.51, 0.86, 1.]):
+    stars = im.stars_coords
+    plt.imshow(utils.z_scale(im.data), cmap=cmap, origin="lower")
+    viz.plot_marks(*stars.T, np.arange(len(stars)), color=color)
 
 
 class Photometry:
-    """Base unit for Photometry
+    """Base class for the photometry
 
     Parameters
     ----------
@@ -17,59 +24,124 @@ class Photometry:
         List of files to process
     stack: str, optional
         Path of the stack image
+    stars : (2,n) array, optional
+        stars on which apertures are placed, by default None so that stars are automatically detected
     overwrite : bool, optional
         whether to overwrite existing products, by default False
     n_stars : int, optional
         max number of stars to take into account, by default 500
+    psf : Block, optional
+        PSF modeling Block (mainly used to estimate fwhm and scale aperture if ``fwhm_scale`` is ``True``), by default :class:`~prose.blocks.Gaussian2D`
+    photometry : Block, optional
+        aperture photometry Block, by default :class:`~prose.blocks.PhotutilsAperturePhotometry`
+    centroid : Block, optional
+        centroid computing Block, by default None to keep centroid fixed
+    show : bool, optional
+        Wheter to plot the field while doing the photometry, by default False (plotting slow down the processing)
+    verbose : bool, optional
+        wheter to log progress og the photometric extraction, by default True
     """
 
     def __init__(self,
                  files=None,
                  stack=None,
+                 stars=None,
                  overwrite=False,
                  n_stars=500,
                  psf=blocks.Gaussian2D,
+                 photometry=blocks.PhotutilsAperturePhotometry,
+                 centroid=None,
                  show=False,
-                 verbose=True):
+                 verbose=True,
+                 **kwargs):
 
         self.overwrite = overwrite
         self.n_stars = n_stars
         self.images = files
         self.stack = stack
         self.verbose = verbose
+        self.stars = stars
+        self.centroid = centroid
 
         # sequences
-        self.reference_detection_sequence = None
-        self.photometry_sequence = None
+        self.detection_s = None
+        self.photometry_s = None
 
         # preparing inputs and outputs
         self.destination = None
         self.phot_path = None
 
+        # check blocks
         assert psf is None or issubclass(psf, Block), "psf must be a subclass of Block"
         self.psf = psf
+        self.photometry = photometry(**kwargs)
         self.show = show
 
-    def run_reference_detection(self):
-        self.reference_detection_sequence = Sequence([
+    def run(self, destination):
+        self._check_phot_path(destination)
+
+        # Reference detection
+        # -------------------
+        self.detection_s = Sequence([
             blocks.DAOFindStars(n_stars=self.n_stars, name="detection"),
+            blocks.Set(stars_coords=self.stars) if self.stars is not None else blocks.Pass(),
             self.psf(name="fwhm"),
             blocks.ImageBuffer(name="buffer"),
         ], self.stack, show_progress=False)
 
-        self.reference_detection_sequence.run(show_progress=False)
-        stack_image = self.reference_detection_sequence.buffer.image
-        ref_stars = stack_image.stars_coords
-        fwhm = stack_image.fwhm
+        self.detection_s.run()
+        reference = self.detection_s.buffer.image
+        self.stars = reference.stars_coords
 
-        info(f"detected stars: {len(ref_stars)}")
-        info(f"global psf FWHM: {np.mean(fwhm):.2f} (pixels)")
-
+        # logging
+        info(f"detected stars: {len(reference.stars_coords)}")
+        info(f"global psf FWHM: {np.mean(reference.fwhm):.2f} (pixels)")
         time.sleep(0.5)
 
-        return stack_image, ref_stars, fwhm
+        # Photometry
+        # ----------
+        centroid = blocks.Pass() if not isinstance(self.centroid, Block) else self.centroid
 
-    def run(self, destination):
+        self.photometry_s = Sequence([
+            blocks.Set(
+                stars_coords=reference.stars_coords,
+                fwhm=reference.fwhm
+            ),
+            centroid,
+            self.show,
+            blocks.Peaks(),
+            self.photometry,
+            blocks.ImageBuffer(),
+            blocks.XArray(
+                (("time", "apertures", "star"), "fluxes"),
+                (("time", "apertures", "star"), "errors"),
+                (("time", "apertures", "star"), "apertures_area"),
+                (("time", "apertures", "star"), "apertures_radii"),
+                (("time", "apertures"), "apertures_area"),
+                (("time", "apertures"), "apertures_radii"),
+                ("time", "annulus_rin"),
+                ("time", "annulus_rout"),
+                ("time", "annulus_area"),
+                (("time", "star"), "peaks")
+            ),
+        ], self.images, name="Photometry", show_progress=self.verbose)
+
+        self.photometry_s.run()
+        self.save_xarray()
+
+    def save_xarray(self):
+        if path.exists(self.phot_path):
+            initial_xarray = xr.load_dataset(self.phot_path)
+        else:
+            initial_xarray = xr.Dataset()
+            
+        phot_xarray = self.photometry_s.xarray.xarray
+        xarray = xr.merge([initial_xarray, phot_xarray], combine_attrs="no_conflicts")
+        xarray = xarray.transpose("apertures", "star", "time", ...)
+        xarray = xarray.assign_coords(stars=(("star", "n"), self.stars))
+        xarray.to_netcdf(self.phot_path)
+
+    def _check_phot_path(self, destination):
         destination = Path(destination)
         if destination.is_dir():
             parent = destination
@@ -78,24 +150,16 @@ class Photometry:
 
         self.phot_path = parent / (destination.stem + '.phot')
 
-        self._check_phot_path()
-        self.run_reference_detection()
-        self.photometry_sequence.run(show_progress=self.verbose)
-
-    def _check_phot_path(self):
-        if path.exists(self.phot_path) and not self.overwrite:
-            raise OSError("{} already exists".format(self.phot_path))
-
     def __repr__(self):
-        return f"{self.reference_detection_sequence}\n{self.photometry_sequence}"
+        return f"{self.detection_s}\n{self.photometry_s}"
 
     @property
     def processing_time(self):
-        return self.reference_detection_sequence.processing_time + self.photometry_sequence.processing_time
+        return self.detection_s.processing_time + self.photometry_s.processing_time
 
 
 class AperturePhotometry(Photometry):
-    """Aperture Photometry unit
+    """Aperture Photometry pipeline
 
     Parameters
     ----------
@@ -151,7 +215,15 @@ class AperturePhotometry(Photometry):
             n_stars=n_stars,
             psf=psf,
             show=show,
-            verbose=verbose
+            verbose=verbose,
+            apertures=apertures,
+            r_in=r_in,
+            r_out=r_out,
+            sigclip=sigclip,
+            fwhm_scale=fwhm_scale,
+            name="photometry",
+            set_once=True
+
         )
 
         # Blocks
@@ -173,32 +245,13 @@ class AperturePhotometry(Photometry):
         )
 
         if show:
-            def plot_function(im, cmap="Greys_r", color=[0.51, 0.86, 1.]):
-                stars = im.stars_coords
-                plt.imshow(utils.z_scale(im.data), cmap=cmap, origin="lower")
-                viz.plot_marks(*stars.T, np.arange(len(stars)), color=color)
-
             self.show = blocks.LivePlot(plot_function, size=(10, 10))
         else:
             self.show = blocks.Pass()
 
-    def run_reference_detection(self):
-        stack_image, ref_stars, fwhm = super().run_reference_detection()
-
-        centroid = blocks.Pass() if not isinstance(self.centroid, Block) else self.centroid
-
-        self.photometry_sequence = Sequence([
-            blocks.Set(stars_coords=ref_stars, name="set stars"),
-            blocks.Set(fwhm=fwhm, name="set fwhm"),
-            centroid,
-            self.show,
-            self.photometry,
-            blocks.io.SavePhot(self.phot_path, header=stack_image.header, stack=stack_image.data, name="saving")
-        ], self.images, name="Photometry")
-
 
 class PSFPhotometry(Photometry):
-    """PSF Photometry unit (not tested, use not recommended)
+    """PSF Photometry pipeline (not tested)
 
     Parameters
     ----------
@@ -229,23 +282,6 @@ class PSFPhotometry(Photometry):
             stack=stack,
             overwrite=overwrite,
             n_stars=n_stars,
-            psf=psf
+            psf=psf,
+            photometry=photometry
         )
-
-        # Blocks
-        assert photometry is None or issubclass(photometry, Block), "photometry must be a subclass of Block"
-        self.photometry = photometry
-
-    def run_reference_detection(self):
-        stack_image, ref_stars, fwhm = super().run_reference_detection()
-
-        self.photometry_sequence = Sequence([
-            blocks.Set(stars_coords=ref_stars, name="set stars"),
-            blocks.Set(fwhm=fwhm, name="set fwhm"),
-            self.photometry(fwhm),
-            blocks.io.SavePhot(
-                self.phot_path,
-                header=stack_image.header,
-                stack=stack_image.data,
-                name="saving")
-        ], self.images, name="Photometry")
