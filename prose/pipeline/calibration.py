@@ -54,8 +54,8 @@ class Calibration:
         self.darks = darks
         self._images = images
 
-        self.reference_sequence = None
-        self.calibration_sequence = None
+        self.detection_s = None
+        self.calibration_s = None
 
         assert psf is None or issubclass(psf, Block), "psf must be a subclass of Block"
         self.psf = psf
@@ -64,18 +64,6 @@ class Calibration:
         reference_id = int(self._reference * len(self._images))
         self.reference_fits = self._images[reference_id]
         self.calibration_block = blocks.Calibration(self.darks, self.flats, self.bias, name="calibration")
-
-        self.xarray_block = blocks.XArray(
-            ("time", "jd_utc"),
-            ("time", "bjd_tdb"),
-            ("time", "fwhm"),
-            ("time", "fwhmx"),
-            ("time", "fwhmy"),
-            ("time", "dx"),
-            ("time", "dy"),
-            ("time", "airmass"),
-            ("time", "exposure")
-        )
 
     def run(self, destination):
         """Run the calibration pipeline
@@ -89,18 +77,18 @@ class Calibration:
 
         self.make_destination()
 
-        self.reference_sequence = Sequence([
+        self.detection_s = Sequence([
             self.calibration_block,
             blocks.Trim(name="trimming"),
             blocks.SegmentedPeaks(n_stars=50, name="detection"),
             blocks.ImageBuffer(name="buffer")
         ], self.reference_fits)
 
-        self.reference_sequence.run(show_progress=False)
+        self.detection_s.run(show_progress=False)
 
-        ref_image = self.reference_sequence.buffer.image
+        ref_image = self.detection_s.buffer.image
 
-        self.calibration_sequence = Sequence([
+        self.calibration_s = Sequence([
             self.calibration_block,
             blocks.Trim(name="trimming", skip_wcs=True),
             blocks.Flip(ref_image, name="flip"),
@@ -111,14 +99,25 @@ class Calibration:
             blocks.Stack(self.stack_path, header=ref_image.header, overwrite=self.overwrite, name="stack"),
             blocks.SaveReduced(self.destination, overwrite=self.overwrite, name="save_reduced"),
             blocks.Video(self.gif_path, name="video", from_fits=True),
-            self.xarray_block
+            blocks.XArray(
+                ("time", "jd_utc"),
+                ("time", "bjd_tdb"),
+                ("time", "flip"),
+                ("time", "fwhm"),
+                ("time", "fwhmx"),
+                ("time", "fwhmy"),
+                ("time", "dx"),
+                ("time", "dy"),
+                ("time", "airmass"),
+                ("time", "exposure")
+            )
         ], self._images, name="Calibration")
 
-        self.calibration_sequence.run(show_progress=self.verbose)
+        self.calibration_s.run(show_progress=self.verbose)
 
         # saving xarray
-        calib_xarray = self.calibration_sequence.xarray.xarray
-        stack_xarray = self.calibration_sequence.stack.xarray
+        calib_xarray = self.calibration_s.xarray.xarray
+        stack_xarray = self.calibration_s.stack.xarray
         xarray = xr.merge([calib_xarray, stack_xarray], combine_attrs="no_conflicts")
         xarray = xarray.assign_coords(time=xarray.jd_utc)
         xarray.attrs["time_format"] = "jd_utc"
@@ -138,7 +137,7 @@ class Calibration:
 
     @property
     def images(self):
-        return self.calibration_sequence.save_reduced.files
+        return self.calibration_s.save_reduced.files
 
     @property
     def gif_path(self):
@@ -147,7 +146,7 @@ class Calibration:
 
     @property
     def processing_time(self):
-        return self.calibration_sequence.processing_time + self.reference_sequence.processing_time
+        return self.calibration_s.processing_time + self.detection_s.processing_time
 
     def make_destination(self):
         self.destination = Path(self.destination)
@@ -156,9 +155,9 @@ class Calibration:
             os.mkdir(self.destination)
 
     def __repr__(self):
-        return f"{self.reference_sequence}\n{self.calibration_sequence}"
+        return f"{self.detection_s}\n{self.calibration_s}"
 
     @property
     def xarray(self):
-        return self.calibration_sequence.xarray()
+        return self.calibration_s.xarray()
 

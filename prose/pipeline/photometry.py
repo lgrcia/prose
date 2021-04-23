@@ -87,9 +87,9 @@ class Photometry:
             blocks.Set(stars_coords=self.stars) if self.stars is not None else blocks.Pass(),
             self.psf(name="fwhm"),
             blocks.ImageBuffer(name="buffer"),
-        ], self.stack, show_progress=False)
+        ], self.stack)
 
-        self.detection_s.run()
+        self.detection_s.run(show_progress=False)
         reference = self.detection_s.buffer.image
         self.stars = reference.stars_coords
 
@@ -117,6 +117,7 @@ class Photometry:
                 (("time", "apertures", "star"), "errors"),
                 (("time", "apertures", "star"), "apertures_area"),
                 (("time", "apertures", "star"), "apertures_radii"),
+                (("time", "star"), "sky"),
                 (("time", "apertures"), "apertures_area"),
                 (("time", "apertures"), "apertures_radii"),
                 ("time", "annulus_rin"),
@@ -124,9 +125,9 @@ class Photometry:
                 ("time", "annulus_area"),
                 (("time", "star"), "peaks")
             ),
-        ], self.images, name="Photometry", show_progress=self.verbose)
+        ], self.images, name="Photometry")
 
-        self.photometry_s.run()
+        self.photometry_s.run(show_progress=self.verbose)
         self.save_xarray()
 
     def save_xarray(self):
@@ -134,11 +135,14 @@ class Photometry:
             initial_xarray = xr.load_dataset(self.phot_path)
         else:
             initial_xarray = xr.Dataset()
-            
+
+        #  TODO: align in time? In case calib and phot are only partially overlapping
         phot_xarray = self.photometry_s.xarray.xarray
         xarray = xr.merge([initial_xarray, phot_xarray], combine_attrs="no_conflicts")
         xarray = xarray.transpose("apertures", "star", "time", ...)
         xarray = xarray.assign_coords(stars=(("star", "n"), self.stars))
+        xarray["apertures_sky"] = xarray.sky  # mean over stars
+        xarray["sky"] = ("time", np.mean(xarray.apertures_sky.values, 0))  # mean over stars
         xarray.to_netcdf(self.phot_path)
 
     def _check_phot_path(self, destination):
