@@ -199,16 +199,23 @@ class Observation(ApertureFluxes):
 
     @property
     def tic_id(self):
-        nb = re.findall('\d*\.?\d+', self.name)
-        df = pd.read_csv("https://exofop.ipac.caltech.edu/tess/download_toi?toi=%s&output=csv" % nb[0])
-        tic = df["TIC ID"][0]
-        return f"{tic}"
+        try:
+            nb = re.findall('\d*\.?\d+', self.name)
+            df = pd.read_csv("https://exofop.ipac.caltech.edu/tess/download_toi?toi=%s&output=csv" % nb[0])
+            tic = df["TIC ID"][0]
+            return f"{tic}"
+        except KeyError:
+            print('TIC ID not found')
+            return None
 
     @property
     def gaia_from_toi(self):
-        tic_id = ("TIC " + self.tic_id)
-        catalog_data = Catalogs.query_object(tic_id, radius=.001, catalog="TIC")
-        return f"{catalog_data['GAIA'][0]}"
+        if self.tic_id is not None:
+            tic_id = ("TIC " + self.tic_id)
+            catalog_data = Catalogs.query_object(tic_id, radius=.001, catalog="TIC")
+            return f"{catalog_data['GAIA'][0]}"
+        else:
+            return None
 
     @property
     def tfop_prefix(self):
@@ -849,26 +856,29 @@ class Observation(ApertureFluxes):
     def set_tic_target(self):
 
         self.query_tic()
+        try:
+            # TOI to TIC
+            toi = re.split("-|\.", self.name)[1]
+            b = requests.get(f"https://exofop.ipac.caltech.edu/tess/download_toi?toi={toi}&output=csv").content
+            TIC = pd.read_csv(io.BytesIO(b))["TIC ID"][0]
 
-        # TOI to TIC
-        toi = re.split("-|\.", self.name)[1]
-        b = requests.get(f"https://exofop.ipac.caltech.edu/tess/download_toi?toi={toi}&output=csv").content
-        TIC = pd.read_csv(io.BytesIO(b))["TIC ID"][0]
+            # getting all TICs
+            tics = self.tic_data["ID"].data
+            tics.fill_value = 0
+            tics = tics.data.astype(int)
 
-        # getting all TICs
-        tics = self.tic_data["ID"].data
-        tics.fill_value = 0
-        tics = tics.data.astype(int)
+            # Finding the one
+            i = np.argwhere(tics == TIC).flatten()
+            if len(i) == 0:
+                raise AssertionError(f"TIC {TIC} not found")
+            else:
+                i = i[0]
+            row = self.tic_data[i]
 
-        # Finding the one
-        i = np.argwhere(tics == TIC).flatten()
-        if len(i) == 0:
-            raise AssertionError(f"TIC {TIC} not found")
-        else:
-            i = i[0]
-        row = self.tic_data[i]
+            # setting the closest to target
+            self.target = np.argmin(distances(self.stars.T, [row['x'], row['y']]))
 
-        # setting the closest to target
-        self.target = np.argmin(distances(self.stars.T, [row['x'], row['y']]))
+        except KeyError:
+            print('TIC ID not found')
 
 

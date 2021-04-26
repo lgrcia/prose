@@ -471,7 +471,7 @@ class ApertureFluxes:
         """
         new_self = self.copy()
         new_self.xarray = new_self.xarray.sel(
-            time=self.time[self.diff_flux - np.median(self.diff_flux) < sigma * np.std(self.diff_flux)])
+            time=self.time[np.abs(self.diff_flux - np.median(self.diff_flux)) < sigma * np.std(self.diff_flux)])
         return new_self
 
     # modeling
