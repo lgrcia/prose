@@ -13,6 +13,7 @@ class LatexTemplate:
         self.template_name = template_name
         self._style = style
         self.template = None
+        self.dpi=150
         self.load_template()
 
     def style(self):
