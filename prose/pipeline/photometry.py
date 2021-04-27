@@ -108,7 +108,7 @@ class Photometry:
                 fwhm=reference.fwhm
             ),
             centroid,
-            blocks.AffineTransform(),
+            blocks.AffineTransform(data=False, stars=True, inverse=True),
             self.show,
             blocks.Peaks(),
             self.photometry,

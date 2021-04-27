@@ -4,6 +4,8 @@ from os import path
 from pathlib import Path
 import xarray as xr
 from astropy.io import fits
+from .photometry import plot_function
+
 
 
 class Calibration:
@@ -41,12 +43,19 @@ class Calibration:
             darks=None,
             images=None,
             psf=blocks.Moffat2D,
-            verbose=True
+            verbose=True,
+            show=False,
     ):
         self.destination = None
         self.overwrite = overwrite
         self._reference = reference
         self.verbose = verbose
+        self.show = show
+
+        if show:
+            self.show = blocks.LivePlot(plot_function, size=(10, 10))
+        else:
+            self.show = blocks.Pass()
 
         # set on prepare
         self.flats = flats
@@ -96,7 +105,8 @@ class Calibration:
             blocks.Twirl(ref_image.stars_coords, n=15, name="twirl"),
             self.psf(name="fwhm"),
             blocks.SaveReduced(self.destination, overwrite=self.overwrite, name="save_reduced"),
-            blocks.AffineTransform(),
+            blocks.AffineTransform(stars=True, data=True),
+            self.show,
             blocks.Stack(self.stack_path, header=ref_image.header, overwrite=self.overwrite, name="stack"),
             blocks.Video(self.gif_path, name="video", from_fits=True),
             blocks.XArray(
