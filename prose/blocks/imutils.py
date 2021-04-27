@@ -9,9 +9,12 @@ from astropy.stats import SigmaClip
 from photutils import MedianBackground
 from .psf import cutouts
 import os
+from .. import utils
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 import time
+from pathlib import Path
+import xarray as xr
 
 
 class Stack(Block):
@@ -32,16 +35,20 @@ class Stack(Block):
         super(Stack, self).__init__(**kwargs)
         self.stack = None
         self.n_images = 0
-        self.stack_header = header
+        self.header = header if header else {}
         self.destination = destination
         self.fits_manager = None
         self.overwrite = overwrite
+        self.telescope = None
+        self.xarray = None
 
         self.reference_image_path = None
 
-    def run(self, image):
+    def run(self, image, **kwargs):
         if self.stack is None:
             self.stack = image.data
+            # telescope is assumed to be the one of first image
+            self.telescope = image.telescope
 
         else:
             self.stack += image.data
@@ -52,21 +59,28 @@ class Stack(Block):
 
         self.stack = self.stack/self.n_images
 
+        self.header[self.telescope.keyword_image_type] = "Stack image"
+        self.header["BZERO"] = 0
+        self.header["REDDATE"] = Time.now().to_value("fits")
+        self.header["NIMAGES"] = self.n_images
+
         if self.destination is not None:
-            self.stack_header[self.telescope.keyword_image_type] = "Stack image"
-            self.stack_header["BZERO"] = 0
-            self.stack_header["REDDATE"] = Time.now().to_value("fits")
-            self.stack_header["NIMAGES"] = self.n_images
-
-            # changing_flip_idxs = np.array([
-            #     idx for idx, (i, j) in enumerate(zip(self.fits_manager.files_df["flip"],
-            #                                          self.fits_manager.files_df["flip"][1:]), 1) if i != j])
-            #
-            # if len(changing_flip_idxs) > 0:
-            #     self.stack_header["FLIPTIME"] = self.fits_manager.files_df["jd"].iloc[changing_flip_idxs].values[0]
-
-            stack_hdu = fits.PrimaryHDU(self.stack, header=self.stack_header)
+            stack_hdu = fits.PrimaryHDU(self.stack, header=self.header)
             stack_hdu.writeto(self.destination, overwrite=self.overwrite)
+
+        self.xarray = xr.Dataset()
+
+        self.xarray.attrs.update(utils.header_to_cdf4_dict(self.header))
+        self.xarray.attrs.update(dict(
+            target=-1,
+            aperture=-1,
+            telescope=self.telescope.name,
+            filter=self.header[self.telescope.keyword_filter],
+            exptime=self.header[self.telescope.keyword_exposure_time],
+            name=self.header[self.telescope.keyword_object],
+            date=str(utils.format_iso_date(self.header[self.telescope.keyword_observation_date])).replace("-", ""),
+        ))
+        self.xarray.coords["stack"] = (('w', 'h'), self.stack)
 
 
 class StackStd(Block):
@@ -109,16 +123,17 @@ class SaveReduced(Block):
         if not path.exists(self.destination):
             os.mkdir(self.destination)
         self.overwrite = overwrite
+        self.files = []
 
     def run(self, image, **kwargs):
 
         new_hdu = fits.PrimaryHDU(image.data)
         new_hdu.header = image.header
 
-        image.header["SEEING"] = new_hdu.header.get(self.telescope.keyword_seeing, "")
+        image.header["SEEING"] = image.get(image.telescope.keyword_seeing, "")
         image.header["BZERO"] = 0
         image.header["REDDATE"] = Time.now().to_value("fits")
-        image.header[self.telescope.keyword_image_type] = "reduced"
+        image.header[image.telescope.keyword_image_type] = "reduced"
 
         fits_new_path = path.join(
             self.destination,
@@ -126,6 +141,7 @@ class SaveReduced(Block):
         )
 
         new_hdu.writeto(fits_new_path, overwrite=self.overwrite)
+        self.files.append(fits_new_path)
 
 
 class Video(Block):
@@ -223,8 +239,8 @@ class ImageBuffer(Block):
         super().__init__(**kwargs)
         self.image = None
 
-    def run(self, image):
-        self.image = image
+    def run(self, image, **kwars):
+        self.image = image.copy()
 
 
 class Set(Block):
@@ -292,10 +308,10 @@ class Flip(Block):
         self.reference_flip_value = None
 
     def initialize(self, *args):
-        self.reference_flip_value = self.reference_image.header.get(self.telescope.keyword_flip, None)
+        self.reference_flip_value = self.reference_image.flip
 
     def run(self, image, **kwargs):
-        flip_value = image.header.get(self.telescope.keyword_flip, None)
+        flip_value = image.flip
         if flip_value != self.reference_flip_value:
             image.data = image.data[::-1, ::-1]
 
@@ -368,3 +384,54 @@ class LivePlot(Block):
 
     def terminate(self):
         plt.close()
+
+
+class Get(Block):
+
+    def __init__(self, *names, name="get"):
+        super().__init__(name=name)
+        self.names = names
+        self.values = {name: [] for name in names}
+
+    def run(self, image, **kwargs):
+        for name in self.names:
+            self.values[name].append(image.__dict__[name])
+
+    def __call__(self, *names):
+        if len(names) == 0:
+            return self.values
+        elif len(names) == 1:
+            return self.values[names[0]]
+        elif len(names) > 1:
+            return [self.values[name] for name in names]
+
+
+class XArray(Block):
+
+    def __init__(self, *names, name="xarray", raise_error=False):
+        super().__init__(name=name)
+        self.variables = {name: (dims, []) for dims, name in names}
+        self.raise_error = raise_error
+        self.xarray = xr.Dataset()
+
+    def run(self, image, **kwargs):
+        for name in self.variables:
+            try:
+                self.variables[name][1].append(image.__getattribute__(name))
+            except AttributeError:
+                if self.raise_error:
+                    raise - AttributeError()
+                else:
+                    pass
+
+    def __call__(self):
+        return self.xarray
+
+    def terminate(self):
+        for name, var in self.variables.items():
+            self.xarray[name] = var
+
+    def save(self, destination):
+        self.xarray.to_netcdf(destination)
+
+

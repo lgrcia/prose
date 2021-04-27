@@ -8,6 +8,7 @@ from photutils.psf import extract_stars
 from astropy.stats import gaussian_sigma_to_fwhm
 from ..core import Block
 import matplotlib.pyplot as plt
+from scipy.stats import shapiro
 
 
 def image_psf(image, stars, size=15, normalize=False, return_cutouts=False):
@@ -261,3 +262,11 @@ class Moffat2D(PSFModel):
 
     def citations(self):
         return "scipy", "photutils"
+
+
+class KeepGoodStars(Block):
+
+    def run(self, image):
+        i, stars = cutouts(image.data, image.stars_coords)
+        good = np.array([shapiro(s.data).statistic for s in stars]) > 0.33
+        image.stars_coords = image.stars_coords[i][np.argwhere(good).squeeze()]

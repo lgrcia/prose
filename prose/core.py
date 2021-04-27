@@ -1,37 +1,29 @@
 from tqdm import tqdm
 from astropy.io import fits
-from prose.console_utils import TQDM_BAR_FORMAT
+from .console_utils import TQDM_BAR_FORMAT
 from astropy.wcs import WCS
-from prose import visualisation as viz
+from . import visualisation as viz
+from . import  Telescope
 from collections import OrderedDict
 from tabulate import tabulate
+import numpy as np
 from time import time
+from pathlib import Path
+from astropy.time import Time
 
 
 class Sequence:
     # TODO: add index self.i in image within unit loop
 
-    def __init__(self, blocks, files, name="default", telescope=None, **kwargs):
+    def __init__(self, blocks, files, name="default", **kwargs):
         self.name = name
-        self.files_or_images = files if not isinstance(files, str) else [files]
+        self.files_or_images = files if not isinstance(files, (str, Path)) else [files]
         self.blocks = blocks
 
         self.data = {}
-        self._telescope = None
-        self.telescope = telescope
 
     def __getattr__(self, item):
         return self.blocks_dict[item]
-
-    @property
-    def telescope(self):
-        return self._telescope
-
-    @telescope.setter
-    def telescope(self, telescope):
-        self._telescope = telescope
-        for block in self.blocks:
-            block.set_telescope(telescope)
 
     @property
     def blocks(self):
@@ -65,13 +57,12 @@ class Sequence:
 
         # initialization
         for block in self.blocks:
-            block.set_telescope(self.telescope)
             block.set_unit_data(self.data)
             block.initialize()
 
         # run
         for i, file_or_image in enumerate(progress(self.files_or_images)):
-            if isinstance(file_or_image, str):
+            if isinstance(file_or_image, (str, Path)):
                 image = Image(file_or_image)
             else:
                 image = file_or_image
@@ -107,6 +98,10 @@ class Sequence:
     def insert_before(self, before, block):
         pass
 
+    @property
+    def processing_time(self):
+        return np.sum([block.processing_time for block in self.blocks])
+
 
 class Image:
 
@@ -120,21 +115,80 @@ class Image:
             self.header = header if header is not None else {}
             self.path = None
 
+        self.telescope = None
         self.discarded = False
-
         self.__dict__.update(kwargs)
+        self.check_telescope()
 
     def copy(self, data=True):
-        new_self = Image()
-        new_self.__dict__.update(self.__dict__)
+        new_self = Image(**self.__dict__)
         if not data:
             del new_self.__dict__["data"]
 
         return new_self
 
+    def check_telescope(self):
+        if self.header:
+            self.telescope = Telescope.from_name(self.header["TELESCOP"])
+
+    def get(self, keyword, default=None):
+        return self.header.get(keyword, default)
+
     @property
     def wcs(self):
         return WCS(self.header)
+
+    @property
+    def exposure(self):
+        return self.get(self.telescope.keyword_exposure_time, None)
+
+    @property
+    def jd_utc(self):
+        jd = self.get(self.telescope.keyword_jd, None) + self.telescope.mjd
+        return Time(
+            jd,
+            format="jd",
+            scale=self.telescope.jd_scale,
+            location=self.telescope.earth_location).utc.value
+
+    @property
+    def bjd_tdb(self):
+        jd_bjd = self.get(self.telescope.keyword_bjd, None)
+        if jd_bjd is not None:
+            jd_bjd += self.telescope.mjd
+
+            if self.telescope.keyword_jd in self.header:
+                time_format = "bjd"
+            else:
+                time_format = "jd"
+
+            return Time(jd_bjd,
+                        format=time_format,
+                        scale=self.telescope.jd_scale,
+                        location=self.telescope.earth_location).tdb.value
+
+        else:
+            return None
+
+    @property
+    def seeing(self):
+        return self.get(self.telescope.keyword_seeing, None)
+
+    @property
+    def ra(self):
+        return self.get(self.telescope.keyword_ra, None)
+
+    @property
+    def dec(self):
+        return self.get(self.telescope.keyword_dec, None)
+
+    @property
+    def flip(self):
+        return self.get(self.telescope.keyword_flip, None)
+
+    @property
+    def airmass(self):
+        return self.get(self.telescope.keyword_airmass, None)
 
 
 class Block:
@@ -142,7 +196,6 @@ class Block:
     def __init__(self, name=None):
         self.name = name
         self.unit_data = None
-        self.telescope = None
         self.processing_time = 0
         self.runs = 0
 
@@ -151,9 +204,6 @@ class Block:
 
     def set_unit_data(self, unit_data):
         self.unit_data = unit_data
-
-    def set_telescope(self, telescope):
-        self.telescope = telescope
 
     def _run(self, *args, **kwargs):
         t0 = time()
@@ -173,7 +223,8 @@ class Block:
     def show_image(self, image):
         viz.show_stars(image)
 
-    def citations(self, image):
+    @staticmethod
+    def citations():
         return None
 
     @staticmethod

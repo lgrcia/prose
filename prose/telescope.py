@@ -1,5 +1,4 @@
 from os import path
-from astropy.coordinates import EarthLocation
 import yaml
 import numpy as np
 from . import CONFIG
@@ -99,6 +98,7 @@ class Telescope:
 
     @property
     def earth_location(self):
+        from astropy.coordinates import EarthLocation
         if self.latlong[0] is None or self.latlong[1] is None:
             return None
         else:

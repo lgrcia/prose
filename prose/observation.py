@@ -20,6 +20,9 @@ from astropy.stats import sigma_clipped_stats
 from astropy.io.fits.verify import VerifyWarning
 from datetime import datetime
 import warnings
+from .blocks.registration import distances
+import requests
+import io
 
 warnings.simplefilter('ignore', category=VerifyWarning)
 
@@ -191,6 +194,9 @@ class Observation(ApertureFluxes):
 
         return self._meridian_flip
 
+    # TESS specific methods
+    # --------------------
+
     @property
     def tic_id(self):
         nb = re.findall('\d*\.?\d+', self.name)
@@ -204,6 +210,9 @@ class Observation(ApertureFluxes):
         catalog_data = Catalogs.query_object(tic_id, radius=.001, catalog="TIC")
         return f"{catalog_data['GAIA'][0]}"
 
+    @property
+    def tfop_prefix(self):
+        return f"TIC{self.tic_id}_{self.date}_{self.telescope.name}_{self.filter}"
 
     # Methods
     # -------
@@ -255,7 +264,7 @@ class Observation(ApertureFluxes):
         # Catalog queries
         # ---------------
 
-    def query_gaia(self, limit=1000):
+    def query_gaia(self, limit=1000, cone_radius=None):
         """Query gaia catalog for stars in the field
         """
         from astroquery.gaia import Gaia
@@ -264,7 +273,8 @@ class Observation(ApertureFluxes):
 
         header = self.xarray.attrs
         shape = self.stack.shape
-        cone_radius = np.sqrt(2) * np.max(shape) * self.telescope.pixel_scale / 120
+        if cone_radius is None:
+            cone_radius = np.sqrt(2) * np.max(shape) * self.telescope.pixel_scale / 120
 
         coord = self.skycoord
         radius = u.Quantity(cone_radius, u.arcminute)
@@ -591,7 +601,7 @@ class Observation(ApertureFluxes):
         """
 
         psf_fit = model()
-        image = Image(data=self.stack, stars_coords=self.stars)
+        image = Image(data=self.stack, stars_coords=self.stars, header=self.xarray.attrs)
         psf_fit.run(image)
 
         if len(plt.gcf().get_axes()) == 0:
@@ -835,5 +845,30 @@ class Observation(ApertureFluxes):
 
         if not inplace:
             return new_self
+
+    def set_tic_target(self):
+
+        self.query_tic()
+
+        # TOI to TIC
+        toi = re.split("-|\.", self.name)[1]
+        b = requests.get(f"https://exofop.ipac.caltech.edu/tess/download_toi?toi={toi}&output=csv").content
+        TIC = pd.read_csv(io.BytesIO(b))["TIC ID"][0]
+
+        # getting all TICs
+        tics = self.tic_data["ID"].data
+        tics.fill_value = 0
+        tics = tics.data.astype(int)
+
+        # Finding the one
+        i = np.argwhere(tics == TIC).flatten()
+        if len(i) == 0:
+            raise AssertionError(f"TIC {TIC} not found")
+        else:
+            i = i[0]
+        row = self.tic_data[i]
+
+        # setting the closest to target
+        self.target = np.argmin(distances(self.stars.T, [row['x'], row['y']]))
 
 

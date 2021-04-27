@@ -1,6 +1,8 @@
 from .. import Sequence, blocks, Block, Telescope
 import os
 from os import path
+from pathlib import Path
+import xarray as xr
 from astropy.io import fits
 
 
@@ -38,29 +40,29 @@ class Calibration:
             bias=None,
             darks=None,
             images=None,
-            psf=blocks.Moffat2D
+            psf=blocks.Moffat2D,
+            verbose=True
     ):
         self.destination = None
         self.overwrite = overwrite
         self._reference = reference
+        self.verbose = verbose
 
         # set on prepare
         self.flats = flats
         self.bias = bias
         self.darks = darks
-        self.images = images
+        self._images = images
 
-        self.reference_unit = None
-        self.calibration_unit = None
+        self.detection_s = None
+        self.calibration_s = None
 
         assert psf is None or issubclass(psf, Block), "psf must be a subclass of Block"
         self.psf = psf
-
-        # set Telescope
-        self.telescope = Telescope.from_name(fits.getheader(self.images[0])["TELESCOP"])
+        
         # set reference file
-        reference_id = int(self._reference * len(self.images))
-        self.reference_fits = self.images[reference_id]
+        reference_id = int(self._reference * len(self._images))
+        self.reference_fits = self._images[reference_id]
         self.calibration_block = blocks.Calibration(self.darks, self.flats, self.bias, name="calibration")
 
     def run(self, destination, gif=True):
@@ -76,18 +78,18 @@ class Calibration:
 
         self.make_destination()
 
-        self.reference_unit = Sequence([
+        self.detection_s = Sequence([
             self.calibration_block,
             blocks.Trim(name="trimming"),
             blocks.SegmentedPeaks(n_stars=50, name="detection"),
             blocks.ImageBuffer(name="buffer")
-        ], self.reference_fits, telescope=self.telescope)
+        ], self.reference_fits)
 
-        self.reference_unit.run(show_progress=False)
+        self.detection_s.run(show_progress=False)
 
-        ref_image = self.reference_unit.buffer.image
+        ref_image = self.detection_s.buffer.image
 
-        self.calibration_unit = Sequence([
+        self.calibration_s = Sequence([
             self.calibration_block,
             blocks.Trim(name="trimming", skip_wcs=True),
             blocks.Flip(ref_image, name="flip"),
@@ -96,17 +98,47 @@ class Calibration:
             blocks.Align(ref_image.data, name="alignment"),
             self.psf(name="fwhm"),
             blocks.Stack(self.stack_path, header=ref_image.header, overwrite=self.overwrite, name="stack"),
-            blocks.SaveReduced(self.destination if destination is None else destination, overwrite=self.overwrite,
-                               name="saving"),
-            gif_block
-        ], self.images, telescope=self.telescope, name="Calibration")
+            blocks.SaveReduced(self.destination, overwrite=self.overwrite, name="save_reduced"),
+            blocks.Video(self.gif_path, name="video", from_fits=True),
+            blocks.XArray(
+                ("time", "jd_utc"),
+                ("time", "bjd_tdb"),
+                ("time", "flip"),
+                ("time", "fwhm"),
+                ("time", "fwhmx"),
+                ("time", "fwhmy"),
+                ("time", "dx"),
+                ("time", "dy"),
+                ("time", "airmass"),
+                ("time", "exposure")
+            )
+        ], self._images, name="Calibration")
 
-        self.calibration_unit.run()
+        self.calibration_s.run(show_progress=self.verbose)
+
+        # saving xarray
+        calib_xarray = self.calibration_s.xarray.xarray
+        stack_xarray = self.calibration_s.stack.xarray
+        xarray = xr.merge([calib_xarray, stack_xarray], combine_attrs="no_conflicts")
+        xarray = xarray.assign_coords(time=xarray.jd_utc)
+        xarray.attrs["time_format"] = "jd_utc"
+        xarray.to_netcdf(self.phot_path)
 
     @property
     def stack_path(self):
-        prepend = "stack.fits"
-        return path.join(self.destination, prepend)
+        return self.destination / "stack.fits"
+
+    @property
+    def phot_path(self):
+        return self.destination / (self.destination.name + ".phot")
+
+    @property
+    def stack(self):
+        return self.stack_path
+
+    @property
+    def images(self):
+        return self.calibration_s.save_reduced.files
 
     @property
     def video_path(self):
@@ -117,10 +149,20 @@ class Calibration:
     @property
     def stack(self):
         return self.calibration_unit.stack.stack
+    @property
+    def processing_time(self):
+        return self.calibration_s.processing_time + self.detection_s.processing_time
 
     def make_destination(self):
+        self.destination = Path(self.destination)
+        self.destination.mkdir(exist_ok=True)
         if not path.exists(self.destination):
             os.mkdir(self.destination)
 
     def __repr__(self):
-        return f"{self.reference_unit}\n{self.calibration_unit}"
+        return f"{self.detection_s}\n{self.calibration_s}"
+
+    @property
+    def xarray(self):
+        return self.calibration_s.xarray()
+

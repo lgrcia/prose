@@ -13,6 +13,7 @@ from astropy.io import fits
 from datetime import datetime
 import xarray as xr
 import matplotlib.pyplot as plt
+import warnings
 
 
 def fits_image(data, header, destination):
@@ -121,7 +122,9 @@ class ObservationSimulation:
 
     def field(self, i):
         image = np.zeros(self.shape)
-        cuts = cutouts(image, self.positions[:, :, i].T, self.n)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            cuts = cutouts(image, self.positions[:, :, i].T, self.n)
         fluxes = self.fluxes * self.atmosphere[np.newaxis, :]
         for c, f in zip(cuts, fluxes[:, i]):
             image[c.slices[0], c.slices[1]] += self.psf_model(f, *c.cutout_center)
@@ -187,11 +190,14 @@ class ObservationSimulation:
                                 self.target)
         self.remove_stars(close_by)
 
-    def save_fits(self, destination, calibration=False):
+    def save_fits(self, destination, calibration=False, verbose=True):
+
+        progress = lambda x: tqdm(x) if verbose else x
+
         if not path.exists(destination):
             os.makedirs(destination)
 
-        for i, time in enumerate(tqdm(self.time)):
+        for i, time in enumerate(progress(self.time)):
             date = Time(datetime(2020, 3, 1, int(i / 60), i % 60)).to_value("fits")
             im = self.image(i, 300)
             fits_image(im,

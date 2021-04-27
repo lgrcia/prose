@@ -1,10 +1,9 @@
 import numpy as np
 from . import utils
+from pathlib import Path
 import matplotlib.pyplot as plt
-from . import visualisation as viz
 from scipy.optimize import curve_fit
 import xarray as xr
-from astropy.stats import sigma_clip
 from itertools import product
 from tqdm import tqdm
 from . import models
@@ -140,7 +139,7 @@ def best_stars(fluxes, weights, target, return_idxs=True, bins=12):
 class ApertureFluxes:
 
     def __init__(self, xarray):
-        if isinstance(xarray, str):
+        if isinstance(xarray, (str, Path)):
             self.xarray = xr.load_dataset(xarray)
         else:
             self.xarray = xarray
@@ -317,7 +316,7 @@ class ApertureFluxes:
         return pont2006(self.time, self.xarray.diff_fluxes.isel(apertures=self.aperture, star=self.target).values, plot=plot)
 
     def _fix_fluxes(self):
-        if "raw_fluxes" not in self:
+        if "raw_fluxes" not in self and "fluxes" in self:
             self.xarray = self.xarray.rename({
                 "fluxes": "raw_fluxes",
                 "errors": "raw_errors"
@@ -592,3 +591,10 @@ class ApertureFluxes:
             print(f"white (pont2006)\t{pont_w:.3e}\nred   (pont2006)\t{pont_r:.3e}\nwhite (binned)\t\t{binned_w:.3e}\n")
         else:
             return {"binned_white": binned_w, "pont_white": pont_w, "pont_red": pont_r}
+
+    @staticmethod
+    def set_attribute(file, **kwargs):
+        fluxes = ApertureFluxes(file)
+        for name, value in kwargs.items():
+            fluxes.xarray.attrs[name] = value
+        fluxes.save(file)

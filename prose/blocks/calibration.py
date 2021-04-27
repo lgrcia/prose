@@ -1,6 +1,5 @@
 import numpy as np
-from ..core import Block
-from astropy.io import fits
+from ..core import Block, Image
 from .. import utils
 import matplotlib.pyplot as plt
 from .. import visualisation as viz
@@ -41,7 +40,11 @@ class Calibration(Block):
             flat = []
         if bias is None:
             bias = []
-        self.images = {"dark": dark, "flat": flat, "bias": bias}
+        self.images = {
+            "dark": dark,
+            "flat": flat,
+            "bias": bias
+        }
 
         self.master_dark = None
         self.master_flat = None
@@ -52,8 +55,8 @@ class Calibration(Block):
 
     def _produce_master(self, image_type):
         _master = []
-        kw_exp_time = self.telescope.keyword_exposure_time
         images = self.images[image_type]
+
         if len(images) == 0:
             info(f"No {image_type} images set")
             if image_type == "dark":
@@ -63,19 +66,15 @@ class Calibration(Block):
             elif image_type == "flat":
                 self.master_flat = 1
 
-        for i, fits_path in enumerate(images):
-            hdu = fits.open(fits_path)
-            primary_hdu = hdu[0]
-            image, header = primary_hdu.data, primary_hdu.header
-            image = image.astype("float64")
-            hdu.close()
+        for image_path in images:
+            image = Image(image_path)
             if image_type == "dark":
-                _dark = (image - self.master_bias) / header[kw_exp_time]
+                _dark = (image.data - self.master_bias) / image.exposure
                 _master.append(_dark)
             elif image_type == "bias":
-                _master.append(image)
+                _master.append(image.data)
             elif image_type == "flat":
-                _flat = image - self.master_bias - self.master_dark*header[kw_exp_time]
+                _flat = image.data - self.master_bias - self.master_dark*image.exposure
                 _flat /= np.mean(_flat)
                 _master.append(_flat)
                 del image
@@ -91,7 +90,6 @@ class Calibration(Block):
             del _master
 
     def initialize(self):
-        assert self.telescope is not None, "Calibration block needs telescope to be set (in Unit)"
         if self.master_bias is None:
             self._produce_master("bias")
         if self.master_dark is None:
@@ -117,9 +115,7 @@ class Calibration(Block):
 
     def run(self, image, **kwargs):
         data = image.data
-        header = image.header
-        exp_time = header[self.telescope.keyword_exposure_time]
-        calibrated_image = self.calibration(data, exp_time)
+        calibrated_image = self.calibration(data, image.exposure)
         calibrated_image[calibrated_image < 0] = 0.
         calibrated_image[~np.isfinite(calibrated_image)] = -1
 
@@ -140,7 +136,7 @@ class Trim(Block):
     def run(self, image, **kwargs):
         shape = np.array(image.data.shape)
         center = shape[::-1] / 2
-        dimension = shape - 2 * np.array(self.telescope.trimming[::-1])
+        dimension = shape - 2 * np.array(image.telescope.trimming[::-1])
         trim_image = Cutout2D(image.data, center, dimension, wcs=None if self.skip_wcs else image.wcs)
         image.data = trim_image.data
         if not self.skip_wcs:

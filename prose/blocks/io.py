@@ -4,6 +4,7 @@ from astropy.time import Time
 import xarray as xr
 from .. import utils
 
+# TODO remove SavePhot and add SaveReduced and Xarray
 
 class SavePhot(Block):
     """Save photometric products into a FITS :code:`.phots` file. See :ref:`phots-structure` for more info
@@ -20,7 +21,6 @@ class SavePhot(Block):
         self.destination = destination
         self.images = []
         self.stack_path = None
-        self.telescope = None
         self.fits_manager = None
         self.header = header
         self.stack = stack
@@ -34,7 +34,11 @@ class SavePhot(Block):
 
         x = np.array([im.fluxes for im in self.images])
         errors = np.array([im.fluxes_errors for im in self.images])
-        stars = self.images[0].stars_coords
+
+        imref = self.images[0]
+        telescope = imref.telescope
+
+        stars = imref.stars_coords
 
         dims = ("apertures", "star", "time")
 
@@ -42,11 +46,11 @@ class SavePhot(Block):
         attrs.update(dict(
             target=-1,
             aperture=-1,
-            telescope=self.telescope.name,
-            filter=self.header[self.telescope.keyword_filter],
-            exptime=self.header[self.telescope.keyword_exposure_time],
-            name=self.header[self.telescope.keyword_object],
-            date=str(utils.format_iso_date(self.header[self.telescope.keyword_observation_date])).replace("-", ""),
+            telescope=telescope.name,
+            filter=self.header[telescope.keyword_filter],
+            exptime=self.header[telescope.keyword_exposure_time],
+            name=self.header[telescope.keyword_object],
+            date=str(utils.format_iso_date(self.header[telescope.keyword_observation_date])).replace("-", ""),
         ))
 
         x = xr.Dataset({
@@ -63,13 +67,13 @@ class SavePhot(Block):
             "dx",
             "dy",
             "airmass",
-            self.telescope.keyword_exposure_time,
-            self.telescope.keyword_jd,
-            self.telescope.keyword_bjd,
-            self.telescope.keyword_seeing,
-            self.telescope.keyword_ra,
-            self.telescope.keyword_dec,
-            self.telescope.keyword_flip,
+            telescope.keyword_exposure_time,
+            telescope.keyword_jd,
+            telescope.keyword_bjd,
+            telescope.keyword_seeing,
+            telescope.keyword_ra,
+            telescope.keyword_dec,
+            telescope.keyword_flip,
         ]:
             _data = []
             if key in self.images[0].header:
@@ -77,18 +81,18 @@ class SavePhot(Block):
                     _data.append(image.header[key])
 
                 if key in [
-                    self.telescope.keyword_jd,
-                    self.telescope.keyword_bjd
+                    telescope.keyword_jd,
+                    telescope.keyword_bjd
                 ]:
-                    if key == self.telescope.keyword_jd:
-                        x["jd_utc"] = ('time', Time(np.array(_data) + self.telescope.mjd,
-                                                    format="jd", scale=self.telescope.jd_scale,
-                                                    location=self.telescope.earth_location).utc.value)
+                    if key == telescope.keyword_jd:
+                        x["jd_utc"] = ('time', Time(np.array(_data) + telescope.mjd,
+                                                    format="jd", scale=telescope.jd_scale,
+                                                    location=telescope.earth_location).utc.value)
 
-                    elif key == self.telescope.keyword_bjd:
-                        x["bjd_tdb"] = ('time', Time(np.array(_data) + self.telescope.mjd,
-                                                     format="jd", scale=self.telescope.jd_scale,
-                                            location=self.telescope.earth_location).tdb.value)
+                    elif key == telescope.keyword_bjd:
+                        x["bjd_tdb"] = ('time', Time(np.array(_data) + telescope.mjd,
+                                                     format="jd", scale=telescope.jd_scale,
+                                            location=telescope.earth_location).tdb.value)
                 else:
                     x[key.lower()] = ('time', _data)
 
@@ -112,13 +116,16 @@ class SavePhot(Block):
                 else:
                     raise AssertionError("")
 
+        if "peaks" in self.images[0].__dict__:
+            x["peaks"] = ("time", "stars", np.array([im.peaks for im in self.images]))
+
         if self.stack is not None:
             x = x.assign_coords(stack=(('w', 'h'), self.stack))
 
         x.attrs.update(utils.header_to_cdf4_dict(self.header))
 
-        jd_kw = self.telescope.keyword_jd.lower()
-        bjd_kw = self.telescope.keyword_bjd.lower()
+        jd_kw = telescope.keyword_jd.lower()
+        bjd_kw = telescope.keyword_bjd.lower()
 
         # Dealing with time
         if bjd_kw in x:

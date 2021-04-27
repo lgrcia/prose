@@ -3,6 +3,7 @@ from os import path
 import shutil
 import jinja2
 from .. import viz
+from pathlib import Path
 
 
 template_folder = path.abspath(path.join(path.dirname(__file__), "..", "..", "latex"))
@@ -15,6 +16,12 @@ class LatexTemplate:
         self.template = None
         self.dpi=150
         self.load_template()
+
+        # to be set
+        self.destination = None
+        self.report_name = None
+        self.figure_destination = None
+        self.tex_destination = None
 
     def style(self):
         if self._style == "paper":
@@ -42,16 +49,15 @@ class LatexTemplate:
         )
         self.template = latex_jinja_env.get_template(self.template_name)
 
-    def make_report_folder(self, destination):
-        if not path.exists(destination):
-            os.mkdir(destination)
-
+    def make_report_folder(self, destination, figures=True):
+        destination = Path(destination)
+        destination.mkdir(exist_ok=True)
         self.destination = destination
-        self.report_name = path.split(path.abspath(self.destination))[-1]
-        self.measurement_destination = path.join(self.destination, f"{self.report_name}.txt")
-        self.figure_destination = path.join(destination, "figures")
-        if not path.exists(self.figure_destination):
-            os.mkdir(self.figure_destination)
+        self.report_name = destination.stem
+        if figures:
+            self.figure_destination =  destination / "figures"
+            self.figure_destination.mkdir(exist_ok=True)
+        self.tex_destination = destination / f"{self.report_name}.tex"
 
 
 class Report(LatexTemplate):
@@ -68,7 +74,7 @@ class Report(LatexTemplate):
         os.chdir(cwd)
 
     def make(self, destination):
-        self.make_report_folder(destination)
+        self.make_report_folder(destination, figures=False)
         shutil.copyfile(path.join(template_folder, "prose-report.cls"), path.join(destination, "prose-report.cls"))
         tex_destination = path.join(self.destination, f"{self.report_name}.tex")
 
@@ -82,3 +88,10 @@ class Report(LatexTemplate):
         open(tex_destination, "w").write(self.template.render(
             paths=self.paths
         ))
+
+    def copy_figures(self, prefix, destination="all_figures"):
+        figures = list(self.destination.glob("**/figures/*"))
+        new_folder = Path(self.destination / destination)
+        new_folder.mkdir(exist_ok=True)
+        for fig in figures:
+            shutil.copy(fig, new_folder / (prefix + "_" + fig.name))
