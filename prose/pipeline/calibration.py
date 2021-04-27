@@ -63,7 +63,7 @@ class Calibration:
         self.reference_fits = self.images[reference_id]
         self.calibration_block = blocks.Calibration(self.darks, self.flats, self.bias, name="calibration")
 
-    def run(self, destination):
+    def run(self, destination, gif=True):
         """Run the calibration pipeline
 
         Parameters
@@ -72,6 +72,7 @@ class Calibration:
             Destination where to save the calibrated images folder
         """
         self.destination = destination
+        gif_block = blocks.Video(self.video_path, name="video", from_fits=True) if gif else blocks.Pass()
 
         self.make_destination()
 
@@ -97,7 +98,7 @@ class Calibration:
             blocks.Stack(self.stack_path, header=ref_image.header, overwrite=self.overwrite, name="stack"),
             blocks.SaveReduced(self.destination if destination is None else destination, overwrite=self.overwrite,
                                name="saving"),
-            blocks.Video(self.gif_path, name="video", from_fits=True)
+            gif_block
         ], self.images, telescope=self.telescope, name="Calibration")
 
         self.calibration_unit.run()
@@ -108,9 +109,14 @@ class Calibration:
         return path.join(self.destination, prepend)
 
     @property
-    def gif_path(self):
+    def video_path(self):
         prepend = "movie.gif"
         return path.join(self.destination, prepend)
+
+
+    @property
+    def stack(self):
+        return self.calibration_unit.stack.stack
 
     def make_destination(self):
         if not path.exists(self.destination):
