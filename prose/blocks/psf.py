@@ -97,7 +97,7 @@ class PSFModel(Block):
         super().__init__(**kwargs)
         self.cutout_size = cutout_size
         self.save_cutouts = save_cutouts
-        self.x, self.y = None, None
+        self.x, self.y = np.indices((self.cutout_size, self.cutout_size))
         self.epsf = None
 
     @property
@@ -105,7 +105,6 @@ class PSFModel(Block):
         return self.model(*self.optimized_params)
 
     def build_epsf(self, image, stars):
-        self.x, self.y = np.indices((self.cutout_size, self.cutout_size))
         return image_psf(image, stars.copy(), size=self.cutout_size, return_cutouts=self.save_cutouts)
 
     def model(self):
@@ -142,6 +141,10 @@ class PSFModel(Block):
         ax = plt.gca()
         plt.text(0.05, 0.05, "$\Delta f=$ {:.2f}%".format(100*np.sum(np.abs(self.epsf - self.optimized_model))/np.sum(self.epsf)), 
         fontsize=14, horizontalalignment='left', verticalalignment='bottom', transform=ax.transAxes, c="w")
+
+    def __call__(self, data):
+        self.epsf = data
+        return self.optimize()
 
 
 class FastGaussian(PSFModel):
@@ -222,8 +225,6 @@ class Moffat2D(PSFModel):
     """
     def __init__(self, cutout_size=21, **kwargs):
         super().__init__(cutout_size=cutout_size, **kwargs)
-        self.cutout_size = cutout_size
-        self.x, self.y = None, None
 
     def model(self, a, x0, y0, sx, sy, theta, b, beta):
     # https://pixinsight.com/doc/tools/DynamicPSF/DynamicPSF.html

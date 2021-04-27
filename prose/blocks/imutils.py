@@ -13,7 +13,6 @@ from .. import utils
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 import time
-from pathlib import Path
 import xarray as xr
 
 
@@ -75,11 +74,16 @@ class Stack(Block):
             target=-1,
             aperture=-1,
             telescope=self.telescope.name,
-            filter=self.header[self.telescope.keyword_filter],
-            exptime=self.header[self.telescope.keyword_exposure_time],
-            name=self.header[self.telescope.keyword_object],
-            date=str(utils.format_iso_date(self.header[self.telescope.keyword_observation_date])).replace("-", ""),
+            filter=self.header.get(self.telescope.keyword_filter, ""),
+            exptime=self.header.get(self.telescope.keyword_exposure_time, ""),
+            name=self.header.get(self.telescope.keyword_object, ""),
         ))
+
+        if self.telescope.keyword_observation_date in self.header:
+            self.xarray.attrs.update(
+                dict(date=str(utils.format_iso_date(
+                    self.header[self.telescope.keyword_observation_date])).replace("-", ""),
+                     ))
         self.xarray.coords["stack"] = (('w', 'h'), self.stack)
 
 
@@ -435,3 +439,24 @@ class XArray(Block):
         self.xarray.to_netcdf(destination)
 
 
+from ..twirl import find_transform
+from skimage.transform import AffineTransform as skAT
+
+
+class Twirl(Block):
+
+    def __init__(self, ref, order=0, n=15, **kwargs):
+        super(Twirl, self).__init__(**kwargs)
+        self.ref = ref
+        self.order = order
+        self.n = n
+
+    def run(self, image, **kwargs):
+        x = find_transform(image.stars_coords, self.ref, n=self.n)
+        image.transform = skAT(x)
+        image.dx, image.dy = image.transform.translation
+        image.header["TWROT"] = image.transform.rotation
+        image.header["TWTRANSX"] = image.transform.translation[0]
+        image.header["TWTRANSY"] = image.transform.translation[1]
+        image.header["TWSCALEX"] = image.transform.scale[0]
+        image.header["TWSCALEY"] = image.transform.scale[1]

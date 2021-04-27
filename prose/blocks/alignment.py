@@ -1,45 +1,33 @@
 from ..core import Block
-from astropy.nddata import Cutout2D
-import numpy as np
+from skimage.transform import warp
+from skimage.transform import AffineTransform as skAffineTransform
 
 
-class Alignment(Block):
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-
-class Align(Alignment):
+class AffineTransform(Block):
     """
-    Align an image to a reference image using :code:`astropy.nddata.Cutout2D`
-
-    Parameters
-    ----------
-    reference : np.,darray
-        reference image on which alignment is done
+    Align an image to a reference
 
     """
 
-    def __init__(self, reference_image, **kwargs):
+    def __init__(self, stars_only=False, **kwargs):
         super().__init__(**kwargs)
-        self.ref_shape = np.array(reference_image.shape)
-        self.ref_center = self.ref_shape[::-1] / 2
+        self.stars_only = stars_only
 
-    def run(self, image):
-        shift = np.array([image.header["DX"], image.header["DY"]])
+    def run(self, image, **kwargs):
+        if "transform" not in image.__dict__:
+            if "TWROT" in image.header:
+                image.transform = skAffineTransform(
+                    rotation=image.header["TWROT"],
+                    translation=(image.header["TWTRANSX"], image.header["TWTRANSY"]),
+                    scale=(image.header["TWSCALEX"], image.header["TWSCALEX"])
+                )
+            else:
+                raise AssertionError("Could not find transformation matrix")
 
-        aligned_image = Cutout2D(
-                        image.data,
-                        self.ref_center-shift.astype("int"),
-                        self.ref_shape,
-                        mode="partial",
-                        fill_value=np.mean(image.data),
-                        wcs=image.wcs
-                    )
-        image.data = aligned_image.data
-        image.stars_coords += shift
-
-
+        if not self.stars_only:
+            transform = image.transform.inverse
+            image.data = warp(image.data, transform)
+        image.stars_coords = image.transform(image.stars_coords)
 
     def citations(self, image):
         return "astropy", "numpy"
