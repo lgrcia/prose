@@ -182,10 +182,10 @@ class Observation(ApertureFluxes):
 
     @property
     def meridian_flip(self):
-        if "pierside" not in self:
+        if "flip" not in self:
             return None
         elif self._meridian_flip is None:
-            ps = (self.pierside.copy() == "WEST").astype(int)
+            ps = (self.flip.copy() == "WEST").astype(int)
             diffs = np.abs(np.diff(ps))
             if np.any(diffs):
                 self._meridian_flip = self.time[np.argmax(diffs).flatten()]
