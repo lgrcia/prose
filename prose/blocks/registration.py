@@ -302,12 +302,11 @@ class Twirl2(Block):
         self.n = n
         self.quads_ref, self.stars_ref = tutils._quads_stars(ref, n=n)
         self.kdtree = KDTree(self.quads_ref, )
-        self.ref = tutils.clean(self.ref, 200)
+        #self.ref = tutils.clean(self.ref)
 
     def run(self, image, **kwargs):
         tolerance = 20
-        s1 = image.stars_coords
-        s2 = self.ref
+        s1 = image.stars_coords.copy()
         quads2, stars2 = tutils._quads_stars(image.stars_coords, n=self.n)
         dist, indices = self.kdtree.query(quads2)
 
@@ -316,7 +315,7 @@ class Twirl2(Block):
         for i, m in enumerate(indices):
             M = tutils._find_transform(self.stars_ref[m], stars2[i])
             new_s1 = tutils.affine_transform(M)(s1)
-            closeness.append(tutils._count_cross_match(s2, new_s1, tolerance=tolerance))
+            closeness.append(tutils._count_cross_match(self.ref.copy(), new_s1, tolerance=tolerance))
 
         i = np.argmax(closeness)
         m = indices[i]
@@ -325,8 +324,8 @@ class Twirl2(Block):
         M = tutils._find_transform(S1, S2)
         new_s1 = tutils.affine_transform(M)(s1)
 
-        i, j = tutils.cross_match(new_s1, s2, tolerance=tolerance, return_ixds=True).T
-        x = tutils._find_transform(s1[i], s2[j])
+        i, j = tutils.cross_match(new_s1, self.ref.copy(), tolerance=tolerance, return_ixds=True).T
+        x = tutils._find_transform(s1[i], self.ref[j])
 
         image.transform = skAT(x)
         image.dx, image.dy = image.transform.translation

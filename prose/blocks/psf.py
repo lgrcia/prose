@@ -277,5 +277,6 @@ class KeepGoodStars(Block):
 
     def __call__(self, data, stars):
         i, _stars = cutouts(data, stars, size=21)
-        good = np.array([shapiro(s.data).statistic for s in _stars]) > 0.33
+        #good = np.array([shapiro(s.data).statistic for s in _stars]) > 0.33
+        good = np.array([np.std(s.data) for s in _stars]) > 1000
         return stars[i][np.argwhere(good).squeeze()][0:self.n]

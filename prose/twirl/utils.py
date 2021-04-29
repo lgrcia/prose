@@ -310,7 +310,7 @@ def _quads_stars(xy, n=15):
     xy = xy.copy()
     xy = xy[0:n]
 
-    quads_idxs = list(combinations(np.arange(xy.shape[0]), 4))
+    quads_idxs = np.array(list(combinations(np.arange(xy.shape[0]), 4)))
 
     Q = xy[quads_idxs]
     Q = _reorganize(Q)
