@@ -74,7 +74,7 @@ class Calibration:
             Destination where to save the calibrated images folder
         """
         self.destination = destination
-        gif_block = blocks.Video(self.video_path, name="video", from_fits=True) if gif else blocks.Pass()
+        gif_block = blocks.Video(self.gif_path, name="video", from_fits=True) if gif else blocks.Pass()
 
         self.make_destination()
 
@@ -99,7 +99,7 @@ class Calibration:
             self.psf(name="fwhm"),
             blocks.Stack(self.stack_path, header=ref_image.header, overwrite=self.overwrite, name="stack"),
             blocks.SaveReduced(self.destination, overwrite=self.overwrite, name="save_reduced"),
-            blocks.Video(self.gif_path, name="video", from_fits=True),
+            gif_block,
             blocks.XArray(
                 ("time", "jd_utc"),
                 ("time", "bjd_tdb"),
@@ -141,14 +141,10 @@ class Calibration:
         return self.calibration_s.save_reduced.files
 
     @property
-    def video_path(self):
+    def gif_path(self):
         prepend = "movie.gif"
         return path.join(self.destination, prepend)
 
-
-    @property
-    def stack(self):
-        return self.calibration_unit.stack.stack
     @property
     def processing_time(self):
         return self.calibration_s.processing_time + self.detection_s.processing_time
