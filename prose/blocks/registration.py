@@ -1,6 +1,8 @@
 import astroalign
 import numpy as np
 from scipy.spatial import KDTree
+from ..twirl import find_transform
+from skimage.transform import AffineTransform as skAT
 from ..core import Block
 
 
@@ -269,3 +271,23 @@ class AstroAlignShift(Registration):
     @staticmethod
     def doc():
         return """"""
+
+
+class Twirl(Block):
+
+    def __init__(self, ref, order=0, n=15, **kwargs):
+        super(Twirl, self).__init__(**kwargs)
+        self.ref = ref
+        self.order = order
+        self.n = n
+
+    def run(self, image, **kwargs):
+        x = find_transform(image.stars_coords, self.ref, n=self.n)
+        image.transform = skAT(x)
+        image.dx, image.dy = image.transform.translation
+        image.header["TWROT"] = image.transform.rotation
+        image.header["TWTRANSX"] = image.transform.translation[0]
+        image.header["TWTRANSY"] = image.transform.translation[1]
+        image.header["TWSCALEX"] = image.transform.scale[0]
+        image.header["TWSCALEY"] = image.transform.scale[1]
+        image.header["ALIGNALG"] = self.__class__.__name__
