@@ -13,6 +13,7 @@ import datetime
 import os
 from os import path
 import shutil
+from pathlib import Path
 from prose import viz
 from prose import Telescope, blocks, Sequence
 from prose.simulations import fits_image, ObservationSimulation
@@ -95,32 +96,81 @@ class TestReduction(unittest.TestCase):
         from prose import FitsManager
 
         fm = FitsManager(RAW, depth=2)
-        calibration = Calibration(**fm.images_dict)
-        calibration.run(REDUCED)
+        REDUCED = Path(REDUCED)
 
-        plt.ion()
+        stack_path = REDUCED / "stack.fist"
+        gif_path = REDUCED / "video.gif"
+        reference = fm.images[len(fm.images)//2]
+
+        calibration_block = blocks.Calibration(fm.darks, fm.flats, fm.bias),
+
+        self.detection_s = Sequence([
+            calibration_block,
+            blocks.Trim(name="trimming"),
+            blocks.SegmentedPeaks(n_stars=50, name="detection"),
+            blocks.ImageBuffer(name="buffer")
+        ], reference)
+
+        self.detection_s.run(show_progress=False)
+
+        reference = self.detection_s.buffer.image
+
+        calibration = Sequence([
+            calibration_block,
+            blocks.Trim(skip_wcs=True),
+            blocks.Flip(reference),
+            blocks.SegmentedPeaks(n_stars=50),
+            blocks.Twirl(reference.stars_coords, n=15),
+            blocks.Moffat2D(),
+            blocks.SaveReduced(REDUCED, overwrite=True),
+            blocks.AffineTransform(stars=True, data=True),
+            blocks.Stack(stack_path, header=reference.header, overwrite=True),
+            blocks.Video(gif_path, name="video", from_fits=True),
+            blocks.XArray(
+                ("time", "jd_utc"),
+                ("time", "bjd_tdb"),
+                ("time", "flip"),
+                ("time", "fwhm"),
+                ("time", "fwhmx"),
+                ("time", "fwhmy"),
+                ("time", "dx"),
+                ("time", "dy"),
+                ("time", "airmass"),
+                ("time", "exposure")
+            )
+        ], fm.images, name="Calibration")
 
         # photometry
         # ----------
 
         stack_detection = Sequence([
             blocks.SegmentedPeaks(n_stars=50, threshold=1.05),  # stars detection
-            blocks.Gaussian2D(cutout_size=51, name="psf"),
+            blocks.Moffat2D(cutout_size=51, name="psf"),
             blocks.ImageBuffer(name="buffer"),
         ], calibration.stack)
 
         stack_detection.run(show_progress=False)
         stack = stack_detection.buffer.image
 
-        # plotting stack and detected stars
-        viz.show_stars(stack.data, stack.stars_coords, size=8)
-
         photometry = Sequence([
             blocks.Set(stars_coords=stack.stars_coords, fwhm=stack.fwhm),
             blocks.AffineTransform(),
             blocks.ImageBuffer(),
+            blocks.Peaks(),
             blocks.PhotutilsAperturePhotometry(),
-            blocks.Get("fluxes")
+            blocks.XArray(
+                (("time", "apertures", "star"), "fluxes"),
+                (("time", "apertures", "star"), "errors"),
+                (("time", "apertures", "star"), "apertures_area"),
+                (("time", "apertures", "star"), "apertures_radii"),
+                (("time", "star"), "sky"),
+                (("time", "apertures"), "apertures_area"),
+                (("time", "apertures"), "apertures_radii"),
+                ("time", "annulus_rin"),
+                ("time", "annulus_rout"),
+                ("time", "annulus_area"),
+                (("time", "star"), "peaks")
+            )
         ], calibration.images,name="Photometry")
 
         photometry.run()
