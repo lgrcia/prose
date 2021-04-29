@@ -278,7 +278,7 @@ class Twirl(Block):
 
     def __init__(self, ref, order=0, n=15, **kwargs):
         super(Twirl, self).__init__(**kwargs)
-        self.ref = ref
+        self.ref = ref[0:n]
         self.order = order
         self.n = n
 
