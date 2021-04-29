@@ -267,7 +267,15 @@ class Moffat2D(PSFModel):
 
 class KeepGoodStars(Block):
 
-    def run(self, image):
-        i, stars = cutouts(image.data, image.stars_coords)
-        good = np.array([shapiro(s.data).statistic for s in stars]) > 0.33
-        image.stars_coords = image.stars_coords[i][np.argwhere(good).squeeze()]
+    def __init__(self, n=-1, **kwargs):
+        super().__init__(**kwargs)
+        self.n = n
+
+    def run(self, image, n=-1):
+        good_stars = self(image.data, image.stars_coords)
+        image.stars_coords = good_stars
+
+    def __call__(self, data, stars):
+        i, _stars = cutouts(data, stars, size=21)
+        good = np.array([shapiro(s.data).statistic for s in _stars]) > 0.33
+        return stars[i][np.argwhere(good).squeeze()][0:self.n]

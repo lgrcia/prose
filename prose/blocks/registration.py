@@ -2,6 +2,7 @@ import astroalign
 import numpy as np
 from scipy.spatial import KDTree
 from ..twirl import find_transform
+from ..twirl import utils as tutils
 from skimage.transform import AffineTransform as skAT
 from ..core import Block
 
@@ -283,6 +284,50 @@ class Twirl(Block):
 
     def run(self, image, **kwargs):
         x = find_transform(image.stars_coords, self.ref, n=self.n)
+        image.transform = skAT(x)
+        image.dx, image.dy = image.transform.translation
+        image.header["TWROT"] = image.transform.rotation
+        image.header["TWTRANSX"] = image.transform.translation[0]
+        image.header["TWTRANSY"] = image.transform.translation[1]
+        image.header["TWSCALEX"] = image.transform.scale[0]
+        image.header["TWSCALEY"] = image.transform.scale[1]
+        image.header["ALIGNALG"] = self.__class__.__name__
+
+
+class Twirl2(Block):
+    def __init__(self, ref, order=0, n=10, **kwargs):
+        super().__init__(**kwargs)
+        self.ref = ref[0:n]
+        self.order = order
+        self.n = n
+        self.quads_ref, self.stars_ref = tutils._quads_stars(ref, n=n)
+        self.kdtree = KDTree(self.quads_ref, )
+        self.ref = tutils.clean(self.ref, 200)
+
+    def run(self, image, **kwargs):
+        tolerance = 20
+        s1 = image.stars_coords
+        s2 = self.ref
+        quads2, stars2 = tutils._quads_stars(image.stars_coords, n=self.n)
+        dist, indices = self.kdtree.query(quads2)
+
+        # We pick the two asterisms leading to the highest stars matching
+        closeness = []
+        for i, m in enumerate(indices):
+            M = tutils._find_transform(self.stars_ref[m], stars2[i])
+            new_s1 = tutils.affine_transform(M)(s1)
+            closeness.append(tutils._count_cross_match(s2, new_s1, tolerance=tolerance))
+
+        i = np.argmax(closeness)
+        m = indices[i]
+        S1 = self.stars_ref[m]
+        S2 = stars2[i]
+        M = tutils._find_transform(S1, S2)
+        new_s1 = tutils.affine_transform(M)(s1)
+
+        i, j = tutils.cross_match(new_s1, s2, tolerance=tolerance, return_ixds=True).T
+        x = tutils._find_transform(s1[i], s2[j])
+
         image.transform = skAT(x)
         image.dx, image.dy = image.transform.translation
         image.header["TWROT"] = image.transform.rotation

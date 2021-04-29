@@ -260,3 +260,67 @@ def find_transform(s1, s2, tolerance=10, n=15, show=False):
     i, j = cross_match(new_s1, s2, tolerance=tolerance, return_ixds=True).T
 
     return _find_transform(s1[i], s2[j])
+
+
+# Some optimized methods
+
+def _reorganize(Q):
+    distances = np.linalg.norm((Q[:, :, :, None] - np.swapaxes(Q, 1, 2)[:, None, :, :]), axis=2)
+    return np.array(
+        [Q[i][np.argsort(distances[i, m])[[0, 3, 2, 1]]] for i, m in enumerate(np.argmax(distances, 1)[:, 0])])
+
+
+def _count_cross_match(s1, s2, tolerance=2):
+    """
+    count pair of points whose distance is less than tolerance
+    """
+    return np.count_nonzero(np.linalg.norm(s1[None, :] - s2[:, None], axis=2) < tolerance)
+
+
+def _good_quad(a, b, c, d, max_distance=1000):
+    """
+    whether all points are contained in a circle (see Lang2009)
+    """
+    x = np.vstack([a, b, c, d])
+    r = np.linalg.norm(b - a) / 2
+    center = a + (b - a) / 2
+    # check distance from center
+    in_circle = np.linalg.norm(center - x, axis=1) <= r * 1.01
+    max_distance = np.max(np.linalg.norm(x[:, :, None] - x.T[None, :, :], axis=1)) < max_distance
+    return np.all(in_circle) and max_distance
+
+
+def _quad_hash(a, b, c, d):
+    """
+    from 4 coordinates froduce the quad hash code
+    """
+    x, y = XY(a, b)
+    h = np.linalg.norm(b - a)
+    n = [x, y] - a
+    n = (n / np.linalg.norm(n, 2)).T
+    xd, yd = np.dot(d - a, n) / h
+    xc, yc = np.dot(c - a, n) / h
+    return xc, xd, yc, yd
+
+
+def _quads_stars(xy, n=15):
+    """
+    return matched indexes bewteen two set of points
+    """
+    xy = xy.copy()
+    xy = xy[0:n]
+
+    quads_idxs = list(combinations(np.arange(xy.shape[0]), 4))
+
+    Q = xy[quads_idxs]
+    Q = _reorganize(Q)
+
+    quads = []
+    stars = []
+
+    for q in Q:
+        if _good_quad(*q):
+            quads.append(_quad_hash(*q))
+            stars.append(q)
+
+    return quads, stars

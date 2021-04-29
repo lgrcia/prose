@@ -89,7 +89,8 @@ class Calibration:
         self.detection_s = Sequence([
             self.calibration_block,
             blocks.Trim(name="trimming"),
-            blocks.SegmentedPeaks(n_stars=50, name="detection"),
+            blocks.SegmentedPeaks(n_stars=20, name="detection"),
+            blocks.KeepGoodStars(),
             blocks.ImageBuffer(name="buffer")
         ], self.reference_fits)
 
@@ -101,8 +102,9 @@ class Calibration:
             self.calibration_block,
             blocks.Trim(name="trimming", skip_wcs=True),
             blocks.Flip(ref_image, name="flip"),
-            blocks.SegmentedPeaks(n_stars=50, name="detection"),
-            blocks.Twirl(ref_image.stars_coords, n=15, name="twirl"),
+            blocks.SegmentedPeaks(n_stars=20, name="detection"),
+            blocks.KeepGoodStars(),
+            blocks.Twirl2(ref_image.stars_coords, n=10, name="twirl"),
             self.psf(name="fwhm"),
             blocks.SaveReduced(self.destination, overwrite=self.overwrite, name="save_reduced"),
             blocks.AffineTransform(stars=True, data=True),
