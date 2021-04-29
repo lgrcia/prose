@@ -65,7 +65,7 @@ class Calibration:
         self.reference_fits = self._images[reference_id]
         self.calibration_block = blocks.Calibration(self.darks, self.flats, self.bias, name="calibration")
 
-    def run(self, destination):
+    def run(self, destination, gif=True):
         """Run the calibration pipeline
 
         Parameters
@@ -74,6 +74,7 @@ class Calibration:
             Destination where to save the calibrated images folder
         """
         self.destination = destination
+        gif_block = blocks.Video(self.gif_path, name="video", from_fits=True) if gif else blocks.Pass()
 
         self.make_destination()
 
@@ -98,7 +99,7 @@ class Calibration:
             self.psf(name="fwhm"),
             blocks.Stack(self.stack_path, header=ref_image.header, overwrite=self.overwrite, name="stack"),
             blocks.SaveReduced(self.destination, overwrite=self.overwrite, name="save_reduced"),
-            blocks.Video(self.gif_path, name="video", from_fits=True),
+            gif_block,
             blocks.XArray(
                 ("time", "jd_utc"),
                 ("time", "bjd_tdb"),
