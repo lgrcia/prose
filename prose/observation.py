@@ -14,7 +14,7 @@ from astroquery.mast import Catalogs
 from astropy.wcs import WCS, utils as wcsutils
 import pandas as pd
 from scipy.stats import binned_statistic
-from .blocks.psf import Gaussian2D
+from .blocks.psf import Gaussian2D, Moffat2D,cutouts
 from .console_utils import INFO_LABEL
 from astropy.stats import sigma_clipped_stats
 from astropy.io.fits.verify import VerifyWarning
@@ -621,6 +621,15 @@ class Observation(ApertureFluxes):
                 "std_y": image.psf_sigma_y,
                 "fwhm_x": image.fwhmx,
                 "fwhm_y": image.fwhmy }
+
+    def plot_star_psf(self,star):
+        cutout = cutouts(self.stack, [self.stars[star]], size=21)
+        psf_fit = Moffat2D()
+        list = ['fwhmx =', 'fwhmy =', 'theta =']
+        for i in range(len(list)):
+            print(list[i], psf_fit(cutout.data[0])[i])
+        viz.plot_marginal_model(psf_fit.epsf, psf_fit.optimized_model)
+        return(psf_fit(cutout.data[0]))
 
     def plot_rms(self, bins=0.005):
         """Plot binned rms of lightcurves vs the CCD equation

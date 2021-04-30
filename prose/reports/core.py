@@ -89,9 +89,9 @@ class Report(LatexTemplate):
             paths=self.paths
         ))
 
-    def copy_figures(self, prefix, destination="all_figures"):
-        figures = list(self.destination.glob("**/figures/*.png"))
-        new_folder = Path(self.destination / destination)
-        new_folder.mkdir(exist_ok=True)
-        for fig in figures:
-            shutil.copy(fig, new_folder / (prefix + "_" + fig.name))
+def copy_figures(folder, prefix, destination):
+    figures = list(Path(folder).glob("**/*.png"))
+    new_folder = Path(destination)
+    new_folder.mkdir(exist_ok=True)
+    for fig in figures:
+        shutil.copy(fig, new_folder / (prefix + "_" + fig.name))
