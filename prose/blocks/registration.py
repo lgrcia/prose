@@ -301,37 +301,39 @@ class Twirl2(Block):
         self.order = order
         self.n = n
         self.quads_ref, self.stars_ref = tutils._quads_stars(ref, n=n)
-        self.kdtree = KDTree(self.quads_ref, )
-        #self.ref = tutils.clean(self.ref)
+        self.kdtree = KDTree(self.quads_ref)
 
     def run(self, image, **kwargs):
         tolerance = 20
         s1 = image.stars_coords.copy()
         quads2, stars2 = tutils._quads_stars(image.stars_coords, n=self.n)
-        dist, indices = self.kdtree.query(quads2)
+        if len(quads2) == 0:
+            image.discarded = True
+        else:
+            dist, indices = self.kdtree.query(quads2)
 
-        # We pick the two asterisms leading to the highest stars matching
-        closeness = []
-        for i, m in enumerate(indices):
-            M = tutils._find_transform(self.stars_ref[m], stars2[i])
+            # We pick the two asterisms leading to the highest stars matching
+            closeness = []
+            for i, m in enumerate(indices):
+                M = tutils._find_transform(self.stars_ref[m], stars2[i])
+                new_s1 = tutils.affine_transform(M)(s1)
+                closeness.append(tutils._count_cross_match(self.ref.copy(), new_s1, tolerance=tolerance))
+
+            i = np.argmax(closeness)
+            m = indices[i]
+            S1 = self.stars_ref[m]
+            S2 = stars2[i]
+            M = tutils._find_transform(S1, S2)
             new_s1 = tutils.affine_transform(M)(s1)
-            closeness.append(tutils._count_cross_match(self.ref.copy(), new_s1, tolerance=tolerance))
 
-        i = np.argmax(closeness)
-        m = indices[i]
-        S1 = self.stars_ref[m]
-        S2 = stars2[i]
-        M = tutils._find_transform(S1, S2)
-        new_s1 = tutils.affine_transform(M)(s1)
+            i, j = tutils.cross_match(new_s1, self.ref.copy(), tolerance=tolerance, return_ixds=True).T
+            x = tutils._find_transform(s1[i], self.ref[j])
 
-        i, j = tutils.cross_match(new_s1, self.ref.copy(), tolerance=tolerance, return_ixds=True).T
-        x = tutils._find_transform(s1[i], self.ref[j])
-
-        image.transform = skAT(x)
-        image.dx, image.dy = image.transform.translation
-        image.header["TWROT"] = image.transform.rotation
-        image.header["TWTRANSX"] = image.transform.translation[0]
-        image.header["TWTRANSY"] = image.transform.translation[1]
-        image.header["TWSCALEX"] = image.transform.scale[0]
-        image.header["TWSCALEY"] = image.transform.scale[1]
-        image.header["ALIGNALG"] = self.__class__.__name__
+            image.transform = skAT(x)
+            image.dx, image.dy = image.transform.translation
+            image.header["TWROT"] = image.transform.rotation
+            image.header["TWTRANSX"] = image.transform.translation[0]
+            image.header["TWTRANSY"] = image.transform.translation[1]
+            image.header["TWSCALEX"] = image.transform.scale[0]
+            image.header["TWSCALEY"] = image.transform.scale[1]
+            image.header["ALIGNALG"] = self.__class__.__name__

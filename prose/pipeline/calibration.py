@@ -3,9 +3,7 @@ import os
 from os import path
 from pathlib import Path
 import xarray as xr
-from astropy.io import fits
 from .photometry import plot_function
-
 
 
 class Calibration:
@@ -45,12 +43,14 @@ class Calibration:
             psf=blocks.Moffat2D,
             verbose=True,
             show=False,
+            n=12,
     ):
         self.destination = None
         self.overwrite = overwrite
         self._reference = reference
         self.verbose = verbose
         self.show = show
+        self.n = n
 
         if show:
             self.show = blocks.LivePlot(plot_function, size=(10, 10))
@@ -89,8 +89,7 @@ class Calibration:
         self.detection_s = Sequence([
             self.calibration_block,
             blocks.Trim(name="trimming"),
-            blocks.SegmentedPeaks(n_stars=20, name="detection"),
-            # blocks.KeepGoodStars(),
+            blocks.SegmentedPeaks(n_stars=self.n, name="detection"),
             blocks.ImageBuffer(name="buffer")
         ], self.reference_fits)
 
@@ -102,9 +101,8 @@ class Calibration:
             self.calibration_block,
             blocks.Trim(name="trimming", skip_wcs=True),
             blocks.Flip(ref_image, name="flip"),
-            blocks.SegmentedPeaks(n_stars=20, name="detection"),
-            # blocks.KeepGoodStars(),
-            blocks.Twirl(ref_image.stars_coords, n=15, name="twirl"),
+            blocks.SegmentedPeaks(n_stars=self.n, name="detection"),
+            blocks.Twirl2(ref_image.stars_coords, n=self.n, name="twirl"),
             self.psf(name="fwhm"),
             blocks.SaveReduced(self.destination, overwrite=self.overwrite, name="save_reduced"),
             blocks.AffineTransform(stars=True, data=True),

@@ -128,9 +128,9 @@ class SegmentedPeaks(StarsDetection):
         threshold = self.threshold*np.nanstd(data.flatten()) + np.median(data.flatten())
         regions = regionprops(label(data > threshold), data)
         coordinates = np.array([region.weighted_centroid[::-1] for region in regions])
-        peaks = np.array([np.max(region.intensity_image) for region in regions])
+        fluxes = np.array([np.sum(region.intensity_image) for region in regions])
 
-        return coordinates, peaks
+        return coordinates, fluxes
 
     def citations(self):
         return "numpy", "skimage"
