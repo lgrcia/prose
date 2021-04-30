@@ -50,7 +50,10 @@ class TestReduction(unittest.TestCase):
         )
         photometry.run(calib.phot_path)
 
-        load(calib.phot_path)
+        o = load(calib.phot_path)
+        o.target = 0
+        o.broeg2005(cut=True)
+        o.broeg2005(cut=False)
 
         # shutil.rmtree(calib.destination)
         shutil.rmtree(RAW)
