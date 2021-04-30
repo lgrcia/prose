@@ -53,6 +53,7 @@ class Photometry:
                  centroid=None,
                  show=False,
                  verbose=True,
+                 twirl=False,
                  **kwargs):
 
         self.overwrite = overwrite
@@ -62,6 +63,7 @@ class Photometry:
         self.verbose = verbose
         self.stars = stars
         self.centroid = centroid
+        self.twirl = twirl
 
         # sequences
         self.detection_s = None
@@ -107,7 +109,7 @@ class Photometry:
                 stars_coords=reference.stars_coords,
                 fwhm=reference.fwhm
             ),
-            blocks.AffineTransform(data=False, stars=True, inverse=True),
+            blocks.AffineTransform(data=False, stars=True, inverse=True) if self.twirl else blocks.Pass(),
             centroid,
             self.show,
             blocks.Peaks(),
