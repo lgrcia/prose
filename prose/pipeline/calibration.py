@@ -134,6 +134,7 @@ class Calibration:
         xarray = xr.merge([calib_xarray, stack_xarray], combine_attrs="no_conflicts")
         xarray = xarray.assign_coords(time=xarray.jd_utc)
         xarray.attrs["time_format"] = "jd_utc"
+        xarray.attrs["reduction"] = [b.__name__ for b in self.calibration_s.blocks]
         xarray.to_netcdf(self.phot_path)
 
     @property
