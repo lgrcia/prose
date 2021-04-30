@@ -427,6 +427,7 @@ class ApertureFluxes:
             diff_fluxes, diff_errors, alcs = diff(raw_fluxes, raw_errors, weights=weights, alc=True)
             if not target:
                 comparisons = np.delete(comparisons, self.target, axis=1)
+                weights = np.delete(weights, self.target, axis=1)
 
         # setting xarray
         dims = self.xarray.raw_fluxes.dims
