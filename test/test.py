@@ -15,7 +15,7 @@ from os import path
 import shutil
 from pathlib import Path
 from prose import viz
-from prose import Telescope, blocks, Sequence
+from prose import Telescope, blocks, Sequence, load
 from prose.simulations import fits_image, ObservationSimulation
 
 RAW = "synthetic_dataset"
@@ -49,6 +49,8 @@ class TestReduction(unittest.TestCase):
             overwrite=True
         )
         photometry.run(calib.phot_path)
+
+        load(calib.phot_path)
 
         # shutil.rmtree(calib.destination)
         shutil.rmtree(RAW)

@@ -46,7 +46,7 @@ class Observation(ApertureFluxes):
 
         self.gaia_data = None
         self.tic_data = None
-        self.wcs = WCS(self.xarray.attrs)
+        self.wcs = WCS(utils.remove_arrays(self.xarray.attrs))
         self._meridian_flip = None
 
         if "bjd_tdb" not in self:

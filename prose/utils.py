@@ -275,3 +275,11 @@ def jd_to_bjd(jd, ra, dec):
     bjd = urllib.request.urlopen(f"http://astroutils.astronomy.ohio-state.edu/time/convert.php?JDS={','.join(jd.astype(str))}&RA={ra}&DEC={dec}&FUNCTION=utc2bjd").read()
     bjd = bjd.decode("utf-8")
     return np.array(bjd.split("\n"))[0:-1].astype(float)
+
+
+def remove_arrays(d):
+    copy = d.copy()
+    for name, value in d.items():
+        if isinstance(value, list):
+            del copy[name]
+    return copy
