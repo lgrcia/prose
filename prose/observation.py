@@ -807,7 +807,7 @@ class Observation(ApertureFluxes):
         plt.plot(radii, pixels, "o", fillstyle='none', c="0.7", ms=4)
         plt.plot(binned_radii, binned_pixels, c="k")
 
-        apertures = self.apertures_radii[0]
+        apertures = self.apertures_radii[:,0]
         a = self.aperture
         if "annulus_rin" in self:
             rin = self.annulus_rin.mean()

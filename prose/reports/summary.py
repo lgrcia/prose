@@ -34,7 +34,7 @@ class Summary(Observation, LatexTemplate):
             ["mean std · fwhm (epsf)",
              f"{np.mean(self.fwhm) / (2 * np.sqrt(2 * np.log(2))):.2f} · {np.mean(self.fwhm):.2f} pixels"],
             ["fwhmx · fwhmy (target)", f"{self.plot_star_psf(self.target)[0]:.2f} · {self.plot_star_psf(self.target)[1]:.2f} pixels"],
-            ["optimum aperture", f"{np.mean(self.stars[:,self.target]):.2f}"],
+            ["optimum aperture", f"{np.mean(self.apertures_radii[self.aperture,:]):.2f}"],
             ["Telescope", self.telescope.name],
             ["Filter", self.filter],
             ["exposure", f"{np.mean(self.exptime)} s"],
