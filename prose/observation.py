@@ -14,7 +14,7 @@ from astroquery.mast import Catalogs
 from astropy.wcs import WCS, utils as wcsutils
 import pandas as pd
 from scipy.stats import binned_statistic
-from .blocks.psf import Gaussian2D
+from .blocks.psf import Gaussian2D, Moffat2D,cutouts
 from .console_utils import INFO_LABEL
 from astropy.stats import sigma_clipped_stats
 from astropy.io.fits.verify import VerifyWarning
@@ -23,6 +23,7 @@ import warnings
 from .blocks.registration import distances
 import requests
 import io
+from .utils import fast_binning, z_scale
 
 warnings.simplefilter('ignore', category=VerifyWarning)
 
@@ -49,7 +50,11 @@ class Observation(ApertureFluxes):
         self.wcs = WCS(utils.remove_arrays(self.xarray.attrs))
         self._meridian_flip = None
 
-        if "bjd_tdb" not in self:
+        has_bjd = hasattr(self.xarray, "bjd_tdb")
+        if has_bjd:
+            has_bjd = ~np.all(np.isnan(self.bjd_tdb))
+
+        if not has_bjd:
             try:
                 self.compute_bjd()
                 if not ignore_time:
@@ -57,7 +62,7 @@ class Observation(ApertureFluxes):
             except:
                 if not ignore_time:
                     print(f"{INFO_LABEL} Could not convert time to BJD TDB")
-
+                    
     def _check_stack(self):
         assert 'stack' in self.xarray is not None, "No stack found"
 
@@ -199,16 +204,23 @@ class Observation(ApertureFluxes):
 
     @property
     def tic_id(self):
-        nb = re.findall('\d*\.?\d+', self.name)
-        df = pd.read_csv("https://exofop.ipac.caltech.edu/tess/download_toi?toi=%s&output=csv" % nb[0])
-        tic = df["TIC ID"][0]
-        return f"{tic}"
+        try:
+            nb = re.findall('\d*\.?\d+', self.name)
+            df = pd.read_csv("https://exofop.ipac.caltech.edu/tess/download_toi?toi=%s&output=csv" % nb[0])
+            tic = df["TIC ID"][0]
+            return f"{tic}"
+        except KeyError:
+            print('TIC ID not found')
+            return None
 
     @property
     def gaia_from_toi(self):
-        tic_id = ("TIC " + self.tic_id)
-        catalog_data = Catalogs.query_object(tic_id, radius=.001, catalog="TIC")
-        return f"{catalog_data['GAIA'][0]}"
+        if self.tic_id is not None:
+            tic_id = ("TIC " + self.tic_id)
+            catalog_data = Catalogs.query_object(tic_id, radius=.001, catalog="TIC")
+            return f"{catalog_data['GAIA'][0]}"
+        else:
+            return None
 
     @property
     def tfop_prefix(self):
@@ -236,8 +248,7 @@ class Observation(ApertureFluxes):
         assert self.telescope is not None
         assert self.skycoord is not None
 
-        exposure_kw = self.telescope.keyword_exposure_time.lower()
-        exposure_days = self.xarray.variables[exposure_kw].values/60/60/24
+        exposure_days = self.xarray.exposure.values/60/60/24
 
         # For backward compatibility
         # --------------------------
@@ -614,6 +625,15 @@ class Observation(ApertureFluxes):
                 "fwhm_x": image.fwhmx,
                 "fwhm_y": image.fwhmy }
 
+    def plot_star_psf(self,star):
+        cutout = cutouts(self.stack, [self.stars[star]], size=21)
+        psf_fit = Moffat2D()
+        list = ['fwhmx =', 'fwhmy =', 'theta =']
+        for i in range(len(list)):
+            print(list[i], psf_fit(cutout.data[0])[i])
+        viz.plot_marginal_model(psf_fit.epsf, psf_fit.optimized_model)
+        return(psf_fit(cutout.data[0]))
+
     def plot_rms(self, bins=0.005):
         """Plot binned rms of lightcurves vs the CCD equation
 
@@ -766,6 +786,65 @@ class Observation(ApertureFluxes):
         if meridian_flip:
             self.plot_meridian_flip()
 
+    def plot_psf(self, star=None, n=40, zscale=False):
+        n /= np.sqrt(2)
+        if star is None:
+            x, y = self.stars[self.target]
+        else:
+            x, y = self.stars[star]
+        Y, X = np.indices(self.stack.shape)
+        cutout_mask = (np.abs(X - x + 0.5) < n) & (np.abs(Y - y + 0.5) < n)
+        inside = np.argwhere((cutout_mask).flatten()).flatten()
+        radii = (np.sqrt((X - x) ** 2 + (Y - y) ** 2)).flatten()[inside]
+        idxs = np.argsort(radii)
+        radii = radii[idxs]
+        pixels = self.stack.flatten()[inside]
+        pixels = pixels[idxs]
+
+        binned_radii, binned_pixels, _ = fast_binning(radii, pixels, bins=1)
+
+        fig = plt.figure(figsize=(9.5, 4))
+        fig.patch.set_facecolor('xkcd:white')
+        ax = plt.subplot(1, 5, (1, 3))
+
+        plt.plot(radii, pixels, "o", fillstyle='none', c="0.7", ms=4)
+        plt.plot(binned_radii, binned_pixels, c="k")
+
+        apertures = self.apertures_radii[:,0]
+        a = self.aperture
+        if "annulus_rin" in self:
+            rin = self.annulus_rin.mean()
+            rout = self.annulus_rout.mean()
+        else:
+            print(
+                f"{INFO_LABEL} You are probably using a last version phot file, aperture_rin/out has been, set to default AperturePhotometry value")
+            rin = self.fwhm.mean() * 5
+            rout = self.fwhm.mean() * 8
+
+        plt.xlabel("distance from center (pixels)")
+        plt.ylabel("ADUs")
+        _, ylim = plt.ylim()
+        plt.xlim(0)
+        plt.text(apertures[a], ylim, "APERTURE", ha="right", rotation="vertical", va="top")
+        plt.axvspan(0, apertures[a], color="0.9", alpha=0.1)
+
+        plt.axvspan(rin, rout, color="0.9", alpha=0.1)
+        plt.axvline(rin, color="k", alpha=0.1)
+        plt.axvline(rout, color="k", alpha=0.1)
+        plt.axvline(apertures[a], c="k", alpha=0.1)
+        _ = plt.text(rout, ylim, "ANNULUS", ha="right", rotation="vertical", va="top")
+
+        ax2 = plt.subplot(1, 5, (4, 5))
+        im = self.stack[int(y - n):int(y + n), int(x - n):int(x + n)]
+        if zscale:
+            im = z_scale(im)
+        plt.imshow(im, cmap="Greys_r", aspect="auto", origin="lower")
+        plt.axis("off")
+        ax2.add_patch(plt.Circle((n, n), apertures[a], ec='grey', fill=False, lw=2))
+        ax2.add_patch(plt.Circle((n, n), rin, ec='grey', fill=False, lw=2))
+        ax2.add_patch(plt.Circle((n, n), rout, ec='grey', fill=False, lw=2))
+        plt.tight_layout()
+
     def where(self, condition):
         """return filtered observation given a boolean mask of time
 
@@ -838,7 +917,7 @@ class Observation(ApertureFluxes):
         for i in range(len(self.apertures)):
             for j in range(len(self.stars)):
                 diff_flux = self.diff_fluxes[i, j]
-                w = np.linalg.lstsq(X, diff_flux)[0]
+                w = np.linalg.lstsq(X, diff_flux,rcond=-1)[0]
                 new_diff_fluxes[i, j] = diff_flux - X @ w + 1.
 
         new_self.xarray['diff_fluxes'] = (new_self.xarray.diff_fluxes.dims, new_diff_fluxes)
@@ -849,26 +928,29 @@ class Observation(ApertureFluxes):
     def set_tic_target(self):
 
         self.query_tic()
+        try:
+            # TOI to TIC
+            toi = re.split("-|\.", self.name)[1]
+            b = requests.get(f"https://exofop.ipac.caltech.edu/tess/download_toi?toi={toi}&output=csv").content
+            TIC = pd.read_csv(io.BytesIO(b))["TIC ID"][0]
 
-        # TOI to TIC
-        toi = re.split("-|\.", self.name)[1]
-        b = requests.get(f"https://exofop.ipac.caltech.edu/tess/download_toi?toi={toi}&output=csv").content
-        TIC = pd.read_csv(io.BytesIO(b))["TIC ID"][0]
+            # getting all TICs
+            tics = self.tic_data["ID"].data
+            tics.fill_value = 0
+            tics = tics.data.astype(int)
 
-        # getting all TICs
-        tics = self.tic_data["ID"].data
-        tics.fill_value = 0
-        tics = tics.data.astype(int)
+            # Finding the one
+            i = np.argwhere(tics == TIC).flatten()
+            if len(i) == 0:
+                raise AssertionError(f"TIC {TIC} not found")
+            else:
+                i = i[0]
+            row = self.tic_data[i]
 
-        # Finding the one
-        i = np.argwhere(tics == TIC).flatten()
-        if len(i) == 0:
-            raise AssertionError(f"TIC {TIC} not found")
-        else:
-            i = i[0]
-        row = self.tic_data[i]
+            # setting the closest to target
+            self.target = np.argmin(distances(self.stars.T, [row['x'], row['y']]))
 
-        # setting the closest to target
-        self.target = np.argmin(distances(self.stars.T, [row['x'], row['y']]))
+        except KeyError:
+            print('TIC ID not found')
 
 

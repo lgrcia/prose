@@ -26,7 +26,7 @@ def template_transit(t, t0, duration):
 
 
 class NEB(Observation):
-    """Tool to detect and diagnose near ecllipsing binaries in a field
+    """Tool to detect and diagnose near eclipsing binaries in a field
 
     Parameters
     ----------
@@ -75,7 +75,7 @@ class NEB(Observation):
             - epoch
             - duration 
             - period
-
+            - depth
             in same time unit as observation
         """
         self.epoch = value["epoch"]

@@ -55,11 +55,11 @@ class TransitModel(Observation, LatexTemplate):
         self.obstable = [
             ["Parameters", "Model", "TESS"],
             ["[u1,u2]", None, "-"],
-            ["[R*]", None, None],
-            ["[M*]", None, None],
-            ["P", None, None],
-            ["Rp", None, None],
-            ["Tc", None, None],
+            ["[R*]", "R$_{\odot}$", "R$_{\odot}$"],
+            ["[M*]", "M$_{\odot}$", "M$_{\odot}$"],
+            ["P", "d", "d"],
+            ["Rp", "R$_{\oplus}$",  "R$_{\oplus}$"],
+            ["Tc", None , None],
             ["b", None, None],
             ["Duration", f"{self.t14:.2f} min", None],
             ["(Rp/R*)\u00b2", None, None],
@@ -152,7 +152,7 @@ class TransitModel(Observation, LatexTemplate):
         df.to_csv(destination, sep=" ", index=False)
 
     def snr(self):
-        lc = self.diff_flux - self.transit_model
+        lc = self.diff_flux - self.transit_model - self.trend_model
         wn, rn = pont2006(self.time, lc, plot=False)
         texp = np.mean(self.exptime)
         _duration = (self.egress - self.ingress) * 24 * 60 * 60
