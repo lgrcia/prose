@@ -305,7 +305,7 @@ class Twirl2(Block):
     def run(self, image, **kwargs):
         tolerance = 20
         s = image.stars_coords.copy()
-        quads, stars = tutils._quads_stars(s, n=self.n)
+        quads, stars = tutils.quads_stars(s, n=self.n)
         dist, indices = self.kdtree.query(quads)
 
         # We pick the two asterisms leading to the highest stars matching
