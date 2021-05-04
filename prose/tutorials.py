@@ -9,7 +9,7 @@ from . import Telescope
 from .simulations import fits_image, ObservationSimulation
 
 
-def simulate_observation(time, dflux, destination):
+def simulate_observation(time, dflux, destination, dx=10):
     n = len(time)
 
     # Creating the observation
@@ -17,7 +17,7 @@ def simulate_observation(time, dflux, destination):
     obs.set_psf((3.5, 3.5), 45, 4)
     obs.add_stars(300, time)
     obs.set_target(0, dflux)
-    obs.positions += (np.random.rand(n) * 4)[np.newaxis, np.newaxis, :]
+    obs.positions += np.random.uniform(-dx, dx, (2, n))[np.newaxis, :]
 
     # Cleaning the field
     obs.remove_stars(np.argwhere(obs.fluxes.mean(1) < 20).flatten())

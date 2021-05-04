@@ -3,7 +3,7 @@ import os
 from os import path
 from pathlib import Path
 import xarray as xr
-from astropy.io import fits
+from .photometry import plot_function
 
 
 class Calibration:
@@ -41,12 +41,23 @@ class Calibration:
             darks=None,
             images=None,
             psf=blocks.Moffat2D,
-            verbose=True
+            verbose=True,
+            show=False,
+            twirl=False,
+            n=12,
     ):
         self.destination = None
         self.overwrite = overwrite
         self._reference = reference
         self.verbose = verbose
+        self.show = show
+        self.n = n
+        self.twirl = twirl
+
+        if show:
+            self.show = blocks.LivePlot(plot_function, size=(10, 10))
+        else:
+            self.show = blocks.Pass()
 
         # set on prepare
         self.flats = flats
@@ -81,25 +92,27 @@ class Calibration:
         self.detection_s = Sequence([
             self.calibration_block,
             blocks.Trim(name="trimming"),
-            blocks.SegmentedPeaks(n_stars=50, name="detection"),
+            blocks.SegmentedPeaks(n_stars=self.n, name="detection"),
             blocks.ImageBuffer(name="buffer")
         ], self.reference_fits)
 
         self.detection_s.run(show_progress=False)
 
         ref_image = self.detection_s.buffer.image
+        ref_stars = ref_image.stars_coords
 
         self.calibration_s = Sequence([
             self.calibration_block,
             blocks.Trim(name="trimming", skip_wcs=True),
             blocks.Flip(ref_image, name="flip"),
-            blocks.SegmentedPeaks(n_stars=50, name="detection"),
-            blocks.XYShift(ref_image.stars_coords, name="shift"),
-            blocks.Align(ref_image.data, name="alignment"),
+            blocks.SegmentedPeaks(n_stars=self.n, name="detection"),
+            blocks.Twirl2(ref_stars, n=self.n, name="twirl") if self.twirl else blocks.XYShift(ref_stars),
             self.psf(name="fwhm"),
-            blocks.Stack(self.stack_path, header=ref_image.header, overwrite=self.overwrite, name="stack"),
             blocks.SaveReduced(self.destination, overwrite=self.overwrite, name="save_reduced"),
-            gif_block,
+            blocks.AffineTransform(stars=True, data=True) if self.twirl else blocks.Cutout2D(ref_image),
+            self.show,
+            blocks.Stack(self.stack_path, header=ref_image.header, overwrite=self.overwrite, name="stack"),
+            blocks.Video(self.gif_path, name="video", from_fits=True),
             blocks.XArray(
                 ("time", "jd_utc"),
                 ("time", "bjd_tdb"),
@@ -122,6 +135,7 @@ class Calibration:
         xarray = xr.merge([calib_xarray, stack_xarray], combine_attrs="no_conflicts")
         xarray = xarray.assign_coords(time=xarray.jd_utc)
         xarray.attrs["time_format"] = "jd_utc"
+        xarray.attrs["reduction"] = [b.__class__.__name__ for b in self.calibration_s.blocks]
         xarray.to_netcdf(self.phot_path)
 
     @property

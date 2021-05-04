@@ -133,9 +133,12 @@ class PhotutilsAperturePhotometry(Block):
         bkg_median = []
         for mask in self.annulus_masks:
             annulus_data = mask.multiply(image.data)
-            annulus_data_1d = annulus_data[mask.data > 0]
-            _, median_sigma_clip, _ = sigma_clipped_stats(annulus_data_1d, sigma=self.sigclip)
-            bkg_median.append(median_sigma_clip)
+            if annulus_data is not None:
+                annulus_data_1d = annulus_data[mask.data > 0]
+                _, median_sigma_clip, _ = sigma_clipped_stats(annulus_data_1d, sigma=self.sigclip)
+                bkg_median.append(median_sigma_clip)
+            else:
+                bkg_median.append(0.)
 
         bkg_median = np.array(bkg_median)
 

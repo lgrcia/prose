@@ -1,6 +1,9 @@
 import astroalign
 import numpy as np
 from scipy.spatial import KDTree
+from ..twirl import find_transform
+from ..twirl import utils as tutils
+from skimage.transform import AffineTransform as skAT
 from ..core import Block
 
 
@@ -269,3 +272,64 @@ class AstroAlignShift(Registration):
     @staticmethod
     def doc():
         return """"""
+
+
+class Twirl(Block):
+
+    def __init__(self, ref, order=0, n=15, **kwargs):
+        super(Twirl, self).__init__(**kwargs)
+        self.ref = ref[0:n]
+        self.order = order
+        self.n = n
+
+    def run(self, image, **kwargs):
+        x = find_transform(image.stars_coords, self.ref, n=self.n)
+        image.transform = skAT(x)
+        image.dx, image.dy = image.transform.translation
+        image.header["TWROT"] = image.transform.rotation
+        image.header["TWTRANSX"] = image.transform.translation[0]
+        image.header["TWTRANSY"] = image.transform.translation[1]
+        image.header["TWSCALEX"] = image.transform.scale[0]
+        image.header["TWSCALEY"] = image.transform.scale[1]
+        image.header["ALIGNALG"] = self.__class__.__name__
+
+
+class Twirl2(Block):
+    def __init__(self, ref, n=10, **kwargs):
+        super().__init__(**kwargs)
+        self.ref = ref[0:n]
+        self.n = n
+        self.quads_ref, self.stars_ref = tutils.quads_stars(ref, n=n)
+        self.kdtree = KDTree(self.quads_ref)
+
+    def run(self, image, **kwargs):
+        tolerance = 20
+        s = image.stars_coords.copy()
+        quads, stars = tutils.quads_stars(s, n=self.n)
+        dist, indices = self.kdtree.query(quads)
+
+        # We pick the two asterisms leading to the highest stars matching
+        closeness = []
+        for i, m in enumerate(indices):
+            M = tutils._find_transform(self.stars_ref[m], stars[i])
+            new_ref = tutils.affine_transform(M)(self.ref)
+            closeness.append(tutils._count_cross_match(s, new_ref, tolerance=tolerance))
+
+        i = np.argmax(closeness)
+        m = indices[i]
+        S1 = self.stars_ref[m]
+        S2 = stars[i]
+        M = tutils._find_transform(S1, S2)
+        new_ref = tutils.affine_transform(M)(self.ref)
+
+        i, j = tutils.cross_match(new_ref, s, tolerance=tolerance, return_ixds=True).T
+        x = tutils._find_transform(self.ref[i], s[j])
+
+        image.transform = skAT(x)
+        image.dx, image.dy = image.transform.translation
+        image.header["TWROT"] = image.transform.rotation
+        image.header["TWTRANSX"] = image.transform.translation[0]
+        image.header["TWTRANSY"] = image.transform.translation[1]
+        image.header["TWSCALEX"] = image.transform.scale[0]
+        image.header["TWSCALEY"] = image.transform.scale[1]
+        image.header["ALIGNALG"] = self.__class__.__name__

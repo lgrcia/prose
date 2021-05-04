@@ -119,7 +119,7 @@ class SegmentedPeaks(StarsDetection):
         wether to sort stars coordinates from the highest to the lowest intensity, by default True
     """
 
-    def __init__(self, threshold=2, min_separation=5.0, n_stars=None, sort=True, **kwargs):
+    def __init__(self, threshold=2, min_separation=None, n_stars=None, sort=True, **kwargs):
         super().__init__(n_stars=n_stars, sort=sort, **kwargs)
         self.threshold = threshold
         self.min_separation = min_separation
@@ -128,9 +128,9 @@ class SegmentedPeaks(StarsDetection):
         threshold = self.threshold*np.nanstd(data.flatten()) + np.median(data.flatten())
         regions = regionprops(label(data > threshold), data)
         coordinates = np.array([region.weighted_centroid[::-1] for region in regions])
-        peaks = np.array([np.max(region.intensity_image) for region in regions])
+        fluxes = np.array([np.sum(region.intensity_image) for region in regions])
 
-        return coordinates, peaks
+        return coordinates, fluxes
 
     def citations(self):
         return "numpy", "skimage"

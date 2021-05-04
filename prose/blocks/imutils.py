@@ -13,7 +13,6 @@ from .. import utils
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 import time
-from pathlib import Path
 import xarray as xr
 
 
@@ -75,11 +74,16 @@ class Stack(Block):
             target=-1,
             aperture=-1,
             telescope=self.telescope.name,
-            filter=self.header[self.telescope.keyword_filter],
-            exptime=self.header[self.telescope.keyword_exposure_time],
-            name=self.header[self.telescope.keyword_object],
-            date=str(utils.format_iso_date(self.header[self.telescope.keyword_observation_date])).replace("-", ""),
+            filter=self.header.get(self.telescope.keyword_filter, ""),
+            exptime=self.header.get(self.telescope.keyword_exposure_time, ""),
+            name=self.header.get(self.telescope.keyword_object, ""),
         ))
+
+        if self.telescope.keyword_observation_date in self.header:
+            self.xarray.attrs.update(
+                dict(date=str(utils.format_iso_date(
+                    self.header[self.telescope.keyword_observation_date])).replace("-", ""),
+                     ))
         self.xarray.coords["stack"] = (('w', 'h'), self.stack)
 
 
@@ -362,8 +366,14 @@ class Plot(Block):
 
 
 class LivePlot(Block):
-    def __init__(self, plot_function, sleep=0., size=None, **kwargs):
+    def __init__(self, plot_function=None, sleep=0., size=None, **kwargs):
         super().__init__(**kwargs)
+        if plot_function is None:
+            plot_function = lambda im: viz.show_stars(
+                im.data, im.stars_coords if hasattr(im, "stars_coords") else None,
+                size=size
+                )
+
         self.plot_function = plot_function
         self.sleep = sleep
         self.display = None
@@ -372,7 +382,7 @@ class LivePlot(Block):
     def initialize(self, *args):
         from IPython import display as disp
         self.display = disp
-        if self.size is not None:
+        if isinstance(self.size, tuple):
             plt.figure(figsize=self.size)
 
     def run(self, image):
@@ -433,5 +443,3 @@ class XArray(Block):
 
     def save(self, destination):
         self.xarray.to_netcdf(destination)
-
-

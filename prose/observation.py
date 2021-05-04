@@ -47,7 +47,7 @@ class Observation(ApertureFluxes):
 
         self.gaia_data = None
         self.tic_data = None
-        self.wcs = WCS(self.xarray.attrs)
+        self.wcs = WCS(utils.remove_arrays(self.xarray.attrs))
         self._meridian_flip = None
 
         if "bjd_tdb" not in self:
@@ -859,7 +859,7 @@ class Observation(ApertureFluxes):
         new_obs.xarray = new_obs.xarray.sel(time=self.time[condition])
         return new_obs
 
-    def keep_good_stars(self, threshold=5, trim=10, inplace=True):
+    def keep_good_stars(self, threshold=3, trim=10, inplace=True):
         """Keep only  stars with a median flux higher than `threshold`*sky. 
         
         This action will reorganize stars indexes (target id will be recomputed) and reset the differential fluxes to raw.
@@ -873,7 +873,7 @@ class Observation(ApertureFluxes):
         inplace: bool
             whether to replace current object or return a new one
         """
-        good_stars = np.argwhere(np.median(self.raw_fluxes, (0, 2))/self.sky.mean() > threshold).flatten()
+        good_stars = np.argwhere(np.median(self.peaks, 1)/np.median(self.sky) > threshold).squeeze()
         mask = np.any(np.abs(self.stars[good_stars] - max(self.stack.shape) / 2) > (max(self.stack.shape) - 2 * trim) / 2, axis=1)
         bad_stars = np.argwhere(mask == True).flatten()
 
