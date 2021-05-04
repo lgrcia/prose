@@ -190,6 +190,10 @@ class Image:
     def airmass(self):
         return self.get(self.telescope.keyword_airmass, None)
 
+    @property
+    def shape(self):
+        return np.array(self.data.shape)
+
 
 class Block:
 

@@ -258,7 +258,7 @@ def observation_to_model(time, t0=0.1, r=0.06417):
 
 try:
     import exoplanet as xo
-except ModuleNotFoundError:
+except:
     pass
 
 

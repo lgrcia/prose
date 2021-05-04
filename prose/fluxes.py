@@ -384,7 +384,7 @@ class ApertureFluxes:
         if not inplace:
             return new_self
 
-    def broeg2005(self, inplace=True, cut=True):
+    def broeg2005(self, inplace=True, cut=True, target=False):
         """
         The Broeg et al. 2005 differential photometry algorithm
 
@@ -413,6 +413,9 @@ class ApertureFluxes:
 
         # finding weights
         weights = broeg(raw_fluxes)
+        if not target:
+            weights[:, self.target] = 0
+
         # best comparisons
         if cut:
             comparisons = best_stars(raw_fluxes, weights, self.target)
@@ -422,6 +425,9 @@ class ApertureFluxes:
             # this only works for 3D fluxes (with apertures)
             comparisons = np.repeat(np.expand_dims(np.arange(raw_fluxes.shape[-2]), -1).T, raw_fluxes.shape[0], axis=0)
             diff_fluxes, diff_errors, alcs = diff(raw_fluxes, raw_errors, weights=weights, alc=True)
+            if not target:
+                comparisons = np.delete(comparisons, self.target, axis=1)
+                weights = np.delete(weights, self.target, axis=1)
 
         # setting xarray
         dims = self.xarray.raw_fluxes.dims

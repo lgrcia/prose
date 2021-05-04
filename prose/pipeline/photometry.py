@@ -53,6 +53,7 @@ class Photometry:
                  centroid=None,
                  show=False,
                  verbose=True,
+                 twirl=False,
                  **kwargs):
 
         self.overwrite = overwrite
@@ -62,6 +63,7 @@ class Photometry:
         self.verbose = verbose
         self.stars = stars
         self.centroid = centroid
+        self.twirl = twirl
 
         # sequences
         self.detection_s = None
@@ -107,6 +109,7 @@ class Photometry:
                 stars_coords=reference.stars_coords,
                 fwhm=reference.fwhm
             ),
+            blocks.AffineTransform(data=False, stars=True, inverse=True) if self.twirl else blocks.Pass(),
             centroid,
             self.show,
             blocks.Peaks(),
@@ -143,6 +146,7 @@ class Photometry:
         xarray = xarray.assign_coords(stars=(("star", "n"), self.stars))
         xarray["apertures_sky"] = xarray.sky  # mean over stars
         xarray["sky"] = ("time", np.mean(xarray.apertures_sky.values, 0))  # mean over stars
+        xarray.attrs["photometry"] = [b.__class__.__name__ for b in self.photometry_s.blocks]
         xarray.to_netcdf(self.phot_path)
 
     def _check_phot_path(self, destination):
@@ -207,7 +211,8 @@ class AperturePhotometry(Photometry):
                  photometry=blocks.PhotutilsAperturePhotometry,
                  centroid=None,
                  show=False,
-                 verbose=True):
+                 verbose=True,
+                 twirl=False):
 
         if apertures is None:
             apertures = np.arange(0.1, 10, 0.25)
@@ -226,7 +231,8 @@ class AperturePhotometry(Photometry):
             sigclip=sigclip,
             fwhm_scale=fwhm_scale,
             name="photometry",
-            set_once=True
+            set_once=True,
+            twirl=twirl
 
         )
 

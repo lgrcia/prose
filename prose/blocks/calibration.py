@@ -129,15 +129,22 @@ class Trim(Block):
     """Images trimming
     """
 
-    def __init__(self, skip_wcs=False, **kwargs):
+    def __init__(self, skip_wcs=False, trim=None, **kwargs):
         super().__init__(**kwargs)
         self.skip_wcs = skip_wcs
+        self.trim = trim
 
     def run(self, image, **kwargs):
-        shape = np.array(image.data.shape)
+        shape = image.shape
         center = shape[::-1] / 2
-        dimension = shape - 2 * np.array(image.telescope.trimming[::-1])
+        trim = self.trim if self.trim is not None else image.telescope.trimming[::-1]
+        dimension = shape - 2 * np.array(trim)
         trim_image = Cutout2D(image.data, center, dimension, wcs=None if self.skip_wcs else image.wcs)
         image.data = trim_image.data
         if not self.skip_wcs:
             image.header.update(trim_image.wcs.to_header())
+
+    def __call__(self, data):
+        trim_x, trim_y = self.trim
+        return data[trim_x:-trim_x, trim_y:-trim_y]
+
