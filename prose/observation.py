@@ -50,7 +50,11 @@ class Observation(ApertureFluxes):
         self.wcs = WCS(utils.remove_arrays(self.xarray.attrs))
         self._meridian_flip = None
 
-        if "bjd_tdb" not in self:
+        has_bjd = hasattr(self.xarray, "bjd_tdb")
+        if has_bjd:
+            has_bjd = ~np.all(np.isnan(self.bjd_tdb))
+
+        if not has_bjd:
             try:
                 self.compute_bjd()
                 if not ignore_time:
@@ -58,7 +62,7 @@ class Observation(ApertureFluxes):
             except:
                 if not ignore_time:
                     print(f"{INFO_LABEL} Could not convert time to BJD TDB")
-
+                    
     def _check_stack(self):
         assert 'stack' in self.xarray is not None, "No stack found"
 
@@ -244,8 +248,7 @@ class Observation(ApertureFluxes):
         assert self.telescope is not None
         assert self.skycoord is not None
 
-        exposure_kw = self.telescope.keyword_exposure_time.lower()
-        exposure_days = self.xarray.variables[exposure_kw].values/60/60/24
+        exposure_days = self.xarray.exposure.values/60/60/24
 
         # For backward compatibility
         # --------------------------

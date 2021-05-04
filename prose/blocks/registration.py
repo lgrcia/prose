@@ -303,8 +303,19 @@ class Twirl2(Block):
         self.kdtree = KDTree(self.quads_ref)
 
     def run(self, image, **kwargs):
-        tolerance = 20
-        s = image.stars_coords.copy()
+        x = self(image.stars_coords)
+
+        image.transform = skAT(x)
+        image.dx, image.dy = image.transform.translation
+        image.header["TWROT"] = image.transform.rotation
+        image.header["TWTRANSX"] = image.transform.translation[0]
+        image.header["TWTRANSY"] = image.transform.translation[1]
+        image.header["TWSCALEX"] = image.transform.scale[0]
+        image.header["TWSCALEY"] = image.transform.scale[1]
+        image.header["ALIGNALG"] = self.__class__.__name__
+
+    def __call__(self, stars_coords, tolerance=20):
+        s = stars_coords.copy()
         quads, stars = tutils.quads_stars(s, n=self.n)
         dist, indices = self.kdtree.query(quads)
 
@@ -323,13 +334,5 @@ class Twirl2(Block):
         new_ref = tutils.affine_transform(M)(self.ref)
 
         i, j = tutils.cross_match(new_ref, s, tolerance=tolerance, return_ixds=True).T
-        x = tutils._find_transform(self.ref[i], s[j])
-
-        image.transform = skAT(x)
-        image.dx, image.dy = image.transform.translation
-        image.header["TWROT"] = image.transform.rotation
-        image.header["TWTRANSX"] = image.transform.translation[0]
-        image.header["TWTRANSY"] = image.transform.translation[1]
-        image.header["TWSCALEX"] = image.transform.scale[0]
-        image.header["TWSCALEY"] = image.transform.scale[1]
-        image.header["ALIGNALG"] = self.__class__.__name__
+        x = tutils._find_transform(s[j], self.ref[i])
+        return x
