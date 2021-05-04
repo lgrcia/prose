@@ -183,10 +183,10 @@ class Observation(ApertureFluxes):
 
     @property
     def meridian_flip(self):
-        if "pierside" not in self:
+        if "flip" not in self:
             return None
         elif self._meridian_flip is None:
-            ps = (self.pierside.copy() == "WEST").astype(int)
+            ps = (self.flip.copy() == "WEST").astype(int)
             diffs = np.abs(np.diff(ps))
             if np.any(diffs):
                 self._meridian_flip = self.time[np.argmax(diffs).flatten()]
@@ -914,7 +914,7 @@ class Observation(ApertureFluxes):
         for i in range(len(self.apertures)):
             for j in range(len(self.stars)):
                 diff_flux = self.diff_fluxes[i, j]
-                w = np.linalg.lstsq(X, diff_flux)[0]
+                w = np.linalg.lstsq(X, diff_flux,rcond=-1)[0]
                 new_diff_fluxes[i, j] = diff_flux - X @ w + 1.
 
         new_self.xarray['diff_fluxes'] = (new_self.xarray.diff_fluxes.dims, new_diff_fluxes)
