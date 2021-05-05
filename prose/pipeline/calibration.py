@@ -123,7 +123,7 @@ class Calibration:
                 ("time", "dx"),
                 ("time", "dy"),
                 ("time", "airmass"),
-                ("time", "exptime")
+                ("time", "exposure")
             )
         ], self._images, name="Calibration")
 
