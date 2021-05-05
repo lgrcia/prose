@@ -363,7 +363,7 @@ class Observation(ApertureFluxes):
     # Plot
     # ----
 
-    def show(self, size=10, flip=False, zoom=False, contrast=0.05, wcs=False, cmap="Greys_r", sigclip=None):
+    def show(self, size=10, flip=False, zoom=False, contrast=0.05, wcs=False, cmap="Greys_r", sigclip=None,vmin=None,vmax=None):
         """Show stack image
 
         Parameters
@@ -399,8 +399,10 @@ class Observation(ApertureFluxes):
             ax = plt.subplot(projection=self.wcs, label='overlays')
         else:
             ax = fig.add_subplot(111)
-
-        _ = ax.imshow(utils.z_scale(image), cmap=cmap, origin="lower")
+        if all([vmin, vmax]) is False:
+            _ = ax.imshow(utils.z_scale(image,c=contrast), cmap=cmap, origin="lower")
+        else:
+            _ = ax.imshow(image, cmap=cmap, origin="lower",vmin=vmin,vmax=vmax)
 
         if wcs:
             ax.coords.grid(True, color='white', ls='solid', alpha=0.3)
@@ -876,6 +878,7 @@ class Observation(ApertureFluxes):
         inplace: bool
             whether to replace current object or return a new one
         """
+        # TODO: ignore Gaia stars in the case of NEB check
         good_stars = np.argwhere(np.median(self.peaks, 1)/np.median(self.sky) > threshold).squeeze()
         mask = np.any(np.abs(self.stars[good_stars] - max(self.stack.shape) / 2) > (max(self.stack.shape) - 2 * trim) / 2, axis=1)
         bad_stars = np.argwhere(mask == True).flatten()

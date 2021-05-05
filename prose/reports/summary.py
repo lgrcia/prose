@@ -140,6 +140,8 @@ class Summary(Observation, LatexTemplate):
             plt.plot(self.time, self.diff_flux - 0.03, ".", color="gainsboro", alpha=0.3)
             plt.plot(self.time, self._trend - 0.03, c="k", alpha=0.2, label="systematics model")
             viz.plot(self.time, self.diff_flux - self._trend + 1.,label='data',binlabel='binned data (7.2 min)')
+            plt.text(plt.xlim()[1], 0.965, "RAW", rotation=270)
+            plt.text(plt.xlim()[1], 0.995, "DETRENDED", rotation=270)
             plt.ylim(0.95, 1.02)
         else:
             plt.ylim(0.98, 1.02)

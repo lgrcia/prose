@@ -397,7 +397,7 @@ class ApertureFluxes:
         cut: bool, optional
             whether to pick the best comparison stars and apply unitary weights, default True
         """
-
+        # TODO: ignore apertures out of the image
         if inplace:
             new_self = self
         else:
