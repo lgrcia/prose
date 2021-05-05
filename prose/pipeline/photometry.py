@@ -106,8 +106,8 @@ class Photometry:
 
         self.photometry_s = Sequence([
             blocks.Set(
-                stars_coords=reference.stars_coords,
-                fwhm=reference.fwhm
+                stars_coords=reference.stars_coords.copy(),
+                fwhm=reference.fwhm.copy()
             ),
             blocks.AffineTransform(data=False, stars=True, inverse=True) if self.twirl else blocks.Pass(),
             centroid,
