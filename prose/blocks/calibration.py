@@ -24,25 +24,25 @@ class Calibration(Block):
 
     Parameters
     ----------
-    dark : list
+    darks : list
         list of dark files paths
-    flat : list
+    flats : list
         list of flat files paths
     bias : list
         list of bias files paths
     """
-    def __init__(self, dark=None, flat=None, bias=None, **kwargs):
+    def __init__(self, darks=None, flats=None, bias=None, **kwargs):
 
         super().__init__(**kwargs)
-        if dark is None:
-            dark = []
-        if flat is None:
-            flat = []
+        if darks is None:
+            darks = []
+        if flats is None:
+            flats = []
         if bias is None:
             bias = []
         self.images = {
-            "dark": dark,
-            "flat": flat,
+            "dark": darks,
+            "flat": flats,
             "bias": bias
         }
 
