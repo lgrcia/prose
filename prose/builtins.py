@@ -71,7 +71,8 @@ trappist.update({
 
 trappistN = trappist.copy()
 trappistN.update({
-    "name": "Trappist-North",  
+    "name": "Trappist-North",
+    "names": ["Trappist-North", "ntm"],
     "pixel_scale": 0.60,
     "ra_unit": "hourangle",
     "latlong": [31.2027, -7.8586],

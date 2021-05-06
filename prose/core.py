@@ -144,12 +144,21 @@ class Image:
 
     @property
     def jd_utc(self):
-        jd = self.get(self.telescope.keyword_jd, None) + self.telescope.mjd
+        # if jd keyword not in header compute jd from date
+        if hasattr(self.header, self.telescope.keyword_jd):
+            jd = self.get(self.telescope.keyword_jd, None) + self.telescope.mjd
+        else:
+            jd = Time(self.date, scale="utc").to_value('jd') + self.telescope.mjd
+
         return Time(
             jd,
             format="jd",
             scale=self.telescope.jd_scale,
             location=self.telescope.earth_location).utc.value
+
+    @property
+    def date(self):
+        return self.get(self.telescope.keyword_observation_date, None)
 
     @property
     def bjd_tdb(self):
