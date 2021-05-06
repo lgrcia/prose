@@ -7,6 +7,8 @@ from .psf import cutouts
 
 
 class Centroid2dg(Block):
+    """Centroiding from  ``photutils.centroids.centroid_2dg``
+    """
 
     def __init__(self, cutout=21, **kwargs):
         super().__init__(**kwargs)
@@ -67,6 +69,8 @@ class CNNCentroid(Block):
 
 
 class BalletCentroid(CNNCentroid):
+    """Centroiding with  `ballet <https://github.com/lgrcia/ballet>`_.
+    """
 
     def __init__(self, **kwargs):
         super().__init__(cutout=15, filename="centroid.h5", **kwargs)

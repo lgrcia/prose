@@ -15,5 +15,5 @@ A fast detection algorithm which:
 This method should be used when speed is required over accuracy. Uses scikit-image_.
 
 
-.. autoclass:: prose.blocks.SEAperturePhotometry
+.. autoclass:: prose.blocks.SegmentedPeaks
 	:members:

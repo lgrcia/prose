@@ -126,10 +126,18 @@ class Calibration(Block):
 
 
 class Trim(Block):
-    """Images trimming
+    """Image trimming
+
+    Parameters
+    ----------
+    skip_wcs : bool, optional
+        whether to skip applying trim to WCS, by default False
+    trim : tuple, optional
+        (x, y) trim values, by default None
     """
 
     def __init__(self, skip_wcs=False, trim=None, **kwargs):
+
         super().__init__(**kwargs)
         self.skip_wcs = skip_wcs
         self.trim = trim

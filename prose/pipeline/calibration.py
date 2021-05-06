@@ -106,7 +106,7 @@ class Calibration:
             blocks.Trim(name="trimming", skip_wcs=True),
             blocks.Flip(ref_image, name="flip"),
             blocks.SegmentedPeaks(n_stars=self.n, name="detection"),
-            blocks.Twirl2(ref_stars, n=self.n, name="twirl") if self.twirl else blocks.XYShift(ref_stars),
+            blocks.Twirl(ref_stars, n=self.n, name="twirl") if self.twirl else blocks.XYShift(ref_stars),
             self.psf(name="fwhm"),
             blocks.SaveReduced(self.destination, overwrite=self.overwrite, name="save_reduced"),
             blocks.AffineTransform(stars=True, data=True) if self.twirl else blocks.Cutout2D(ref_image),

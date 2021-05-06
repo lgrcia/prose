@@ -7,10 +7,11 @@ from astropy.nddata import Cutout2D as _Cutout2D
 
 class Cutout2D(Block):
     """
-    Align an image to a reference image using :code:`astropy.nddata.Cutout2D`
+    Align an image to a reference image using ``astropy.nddata.Cutout2D``
+
     Parameters
     ----------
-    reference : np.,darray
+    reference : np.ndarray
         reference image on which alignment is done
     """
 
@@ -39,7 +40,24 @@ class Cutout2D(Block):
 
 class AffineTransform(Block):
     """
-    Align an image to a reference
+    Apply an affine transformation to image and/or stars
+
+    The affine transformation is expected to be found in the follwing header keywords:
+
+    - rotation : ``TWROT``
+    - translation : ``TWTRANSX``, ``TWTRANSY``
+    - scale : ``TWSCALEX``, ``TWSCALEX``
+
+    Parameters
+    ----------
+    stars : bool, optional
+        whether to apply transform to ``Image.stars_coords``, by default True
+    data : bool, optional
+        whether to apply transform to ``Image.data``, by default True
+    inverse : bool, optional
+        whether to apply inverse transform, by default False
+    fill : str, optional
+        fill value for pixels outside image, by default "median"
 
     """
 
