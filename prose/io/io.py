@@ -6,6 +6,7 @@ from ..telescope import Telescope
 from datetime import timedelta
 from astropy.io import fits
 from tqdm import tqdm
+from astropy.time import Time
 import os
 import zipfile
 
@@ -95,31 +96,39 @@ def fits_to_df(files, telescope_kw="TELESCOP", verbose=True):
 
         df_list.append(dict(
             path=i,
-            date=header.get(telescope.keyword_observation_date, ""),
+            date=header.get(telescope.keyword_observation_date, "2000-01-01T00:00:00.000"),
             telescope=telescope.name,
             type=header.get(telescope.keyword_image_type, "").lower(),
             target=header.get(telescope.keyword_object, ""),
             filter=header.get(telescope.keyword_filter, ""),
             dimensions=(header["NAXIS1"], header["NAXIS2"]),
             flip=header.get(telescope.keyword_flip, ""),
-            jd=header.get(telescope.keyword_jd, "") + telescope.mjd,
+            jd=header.get(telescope.keyword_jd, ""),
         ))
 
     df = pd.DataFrame(df_list)
+
     df.type.loc[df.type.str.lower().str.contains(telescope.keyword_light_images)] = "light"
     df.type.loc[df.type.str.lower().str.contains(telescope.keyword_dark_images)] = "dark"
     df.type.loc[df.type.str.lower().str.contains(telescope.keyword_bias_images)] = "bias"
     df.type.loc[df.type.str.lower().str.contains(telescope.keyword_flat_images)] = "flat"
     df.telescope.loc[df.telescope.str.lower().str.contains("unknown")] = np.nan
-    df.date = pd.to_datetime(df.date) - timedelta(hours=15)
-    df.date = df.date.apply(lambda x: x.strftime('%Y-%m-%d'))
+    df.date = pd.to_datetime(df.date)
+
+    if (df.jd == "").all():  # jd empty then convert from date
+        df.jd = Time(df.date, scale="utc").to_value('jd') + telescope.mjd
+
+    # We want dates that correspond to same observations but night might be over 2 days (before and after midnight)
+    # So we remove 15 hours to be sure the date year-month-day are consistent with single observations
+    df.date = (df.date - timedelta(hours=15)).apply(lambda x: x.strftime('%Y-%m-%d'))
 
     return df.replace("", np.nan)
 
 
 def get_new_fits(current_df, folder, depth=3):
     dirs = np.array(os.listdir(folder))
-    new_dirs = dirs[np.argwhere(pd.to_datetime(dirs, errors='coerce') > pd.to_datetime(current_df.date).max()).flatten()]
+    new_dirs = dirs[
+        np.argwhere(pd.to_datetime(dirs, errors='coerce') > pd.to_datetime(current_df.date).max()).flatten()]
     return np.hstack([get_files("*.f*ts", path.join(folder, f), depth=depth) for f in new_dirs])
 
 
