@@ -58,7 +58,7 @@ class Stack(Block):
 
         self.stack = self.stack/self.n_images
 
-        self.header[self.telescope.keyword_image_type] = "Stack image"
+        self.header[self.telescope.keyword_image_type] = "stack"
         self.header["BZERO"] = 0
         self.header["REDDATE"] = Time.now().to_value("fits")
         self.header["NIMAGES"] = self.n_images

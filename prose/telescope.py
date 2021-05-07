@@ -9,6 +9,7 @@ def str_to_astropy_unit(unit_string):
     return u.__dict__[unit_string]
 
 
+# TODO: add exposure time unit
 class Telescope:
     """Object containing telescope information.
 
@@ -44,6 +45,7 @@ class Telescope:
         self.mjd = 0
         self.keyword_bjd = "BJD"
         self.keyword_flip = "PIERSIDE"
+        self.keyword_observation_time = None
 
         # Specs
         self.name = "Unknown"
@@ -55,6 +57,11 @@ class Telescope:
         self.pixel_scale = None
         self.latlong = [None, None]
         self.saturation = 55000
+
+        # extensions
+        self.data_ext = 0
+        self.header_ext = 0
+        self.wcs_ext = None
 
         if telescope_file is not None:
             success = self.load(telescope_file)
@@ -125,3 +132,17 @@ class Telescope:
         telescope = Telescope()
         telescope.load(name)
         return telescope
+
+    # TODO: explain in documentation
+    def date(self, header):
+        _date = header.get(self.keyword_observation_date, None)
+        if _date is None:
+            _date = "2000-01-01T00:00:00.000"
+        else:
+            if self.keyword_observation_time is not None:
+                _date = _date + "T" + header.get(self.keyword_observation_time, "00:00:00.000")
+
+        return _date
+
+    def image_type(self, header):
+        return header.get(self.keyword_image_type, "").lower()

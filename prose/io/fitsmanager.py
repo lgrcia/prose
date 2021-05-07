@@ -190,14 +190,14 @@ class FilesDataFrame:
 
 class FitsManager(FilesDataFrame):
 
-    def __init__(self, files_df_or_folder, verbose=True, image_kw="light", extension="*.f*ts*", **kwargs):
+    def __init__(self, files_df_or_folder, verbose=True, image_kw="light", extension="*.f*ts*", hdu=0, **kwargs):
         if isinstance(files_df_or_folder, pd.DataFrame):
             files_df = files_df_or_folder
             self.folder = None
         elif isinstance(files_df_or_folder, (str, Path)):
             assert path.exists(files_df_or_folder), "Folder does not exist"
             files = get_files(extension, files_df_or_folder, depth=kwargs.get("depth", 1))
-            files_df = fits_to_df(files, verbose=verbose)
+            files_df = fits_to_df(files, verbose=verbose, hdu=hdu)
             self.folder = files_df_or_folder
         else:
             raise AssertionError("input must be pd.DataFrame or folder path")

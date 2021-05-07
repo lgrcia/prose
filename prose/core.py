@@ -158,8 +158,7 @@ class Image:
 
     @property
     def date(self):
-        return self.get(self.telescope.keyword_observation_date, None)
-
+        return self.telescope.date(self.header)
     @property
     def bjd_tdb(self):
         jd_bjd = self.get(self.telescope.keyword_bjd, None)
