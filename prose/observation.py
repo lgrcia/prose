@@ -864,7 +864,7 @@ class Observation(ApertureFluxes):
         new_obs.xarray = new_obs.xarray.sel(time=self.time[condition])
         return new_obs
 
-    def keep_good_stars(self, threshold=3, trim=10, inplace=True):
+    def keep_good_stars(self, threshold=3, trim=10, keep=None, inplace=True):
         """Keep only  stars with a median flux higher than `threshold`*sky. 
         
         This action will reorganize stars indexes (target id will be recomputed) and reset the differential fluxes to raw.
@@ -875,15 +875,23 @@ class Observation(ApertureFluxes):
             threshold for which stars with flux/sky > threshold are kept, default is 5
         trim : float
             value in pixels above which stars are kept, default is 10 to avoid stars too close to the edge
+        keep : int or list
+            number of stars to exclude (starting from 0 if int).
         inplace: bool
             whether to replace current object or return a new one
         """
-        # TODO: ignore Gaia stars in the case of NEB check
         good_stars = np.argwhere(np.median(self.peaks, 1)/np.median(self.sky) > threshold).squeeze()
         mask = np.any(np.abs(self.stars[good_stars] - max(self.stack.shape) / 2) > (max(self.stack.shape) - 2 * trim) / 2, axis=1)
         bad_stars = np.argwhere(mask == True).flatten()
 
         final_stars = np.delete(good_stars, bad_stars)
+
+        if isinstance(keep,int):
+            final_stars = np.concatenate([final_stars,np.arange(0,keep+1)],axis=0)
+            final_stars = np.unique(final_stars)
+        if isinstance(keep,list):
+            final_stars = np.concatenate([final_stars,keep ], axis=0)
+            final_stars = np.unique(final_stars)
 
         if inplace:
             new_self = self
