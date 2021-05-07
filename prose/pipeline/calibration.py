@@ -1,4 +1,4 @@
-from .. import Sequence, blocks, Block, Telescope
+from .. import Sequence, blocks, Block, Image
 import os
 from os import path
 from pathlib import Path
@@ -45,6 +45,7 @@ class Calibration:
             show=False,
             twirl=False,
             n=None,
+            loader=Image,
     ):
         self.destination = None
         self.overwrite = overwrite
@@ -59,11 +60,11 @@ class Calibration:
         else:
             self.show = blocks.Pass()
 
-        # set on prepare
         self.flats = flats
         self.bias = bias
         self.darks = darks
         self._images = images
+        self.loader = loader
 
         self.detection_s = None
         self.calibration_s = None
@@ -94,7 +95,7 @@ class Calibration:
             blocks.Trim(name="trimming"),
             blocks.SegmentedPeaks(n_stars=self.n, name="detection"),
             blocks.ImageBuffer(name="buffer")
-        ], self.reference_fits)
+        ], self.reference_fits, loader=self.loader)
 
         self.detection_s.run(show_progress=False)
 
@@ -126,7 +127,7 @@ class Calibration:
                 ("time", "airmass"),
                 ("time", "exposure")
             )
-        ], self._images, name="Calibration")
+        ], self._images, name="Calibration", loader=self.loader)
 
         self.calibration_s.run(show_progress=self.verbose)
 
