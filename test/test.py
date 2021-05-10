@@ -125,7 +125,7 @@ class TestReduction(unittest.TestCase):
             blocks.Trim(skip_wcs=True),
             blocks.Flip(reference),
             blocks.SegmentedPeaks(n_stars=50),
-            blocks.Twirl(reference.stars_coords, n=15),
+            blocks._Twirl(reference.stars_coords, n=15),
             blocks.Moffat2D(),
             blocks.SaveReduced(REDUCED, overwrite=True),
             blocks.AffineTransform(stars=True, data=True),

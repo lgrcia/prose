@@ -1,4 +1,4 @@
-from .registration import XYShift, AstroAlignShift, Twirl, Twirl2
+from .registration import XYShift, AstroAlignShift, _Twirl, Twirl
 from .alignment import AffineTransform, Cutout2D
 from .detection import SegmentedPeaks, DAOFindStars, SEDetection, Peaks
 from .calibration import Calibration, Trim

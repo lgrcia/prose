@@ -1,75 +1,51 @@
 Telescope
 =========
 
-``FITS`` headers can change from one observatory to another. To analyse data from any telescope, |prose| makes use of the :py:class:`~prose.Telescope` object which stores header translations in a dictionnary like:
+``FITS`` headers can change from one observatory to another. To analyse data from any telescope, |prose| makes use of the :py:class:`~prose.Telescope` object which stores header translations in a dictionnary, for example:
 
-.. code-block:: yaml
+.. code-block:: python3
 
-    name: "SSO"
+    from prose import Telescope
 
-    # Keywords translation
-    keyword_object: "OBJECT"
-    keyword_image_type: "IMAGETYP"
-    keyword_light_images: "light"
-    keyword_dark_images: "dark"
-    keyword_flat_images: "flat"
-    keyword_bias_images: "bias"     
-    keyword_observation_date: "DATE-OBS"
-    keyword_exposure_time: "EXPTIME"
-    keyword_filter: "FILTER"
-    keyword_observatory: "OBSERVAT"
-    keyword_julian_date: "JD"
-    keyword_ra: "RA"    
-    keyword_dec: "DEC"  
-    keyword_flip: "PIERSIDE"
-    keyword_fwhm: "FWHM"
+    telescope_dict = dict(
 
-    # Telescope specs
-    trimming: [8, 22] # pixels
-    read_noise: 10 # ADU
-    gain: 1.02 # ADU/e-
-    altitude: 2000 # m
-    diameter: 100 # cm
-    pixel_scale: 0.33 # arcsec
-    latlong: : [24.6275, 70.4044] # deg
+        # name and alternatives
+        name="OMM",
+        names=["OMM", "OMM-1.6m"],
+        
+        # Keywords translation
+        keyword_object="OBJECT",
+        keyword_image_type="OBJECT",
+        keyword_light_images="TOI",
+        keyword_dark_images="dark",
+        keyword_flat_images="flat",
+        keyword_bias_images="bias",
+        keyword_observation_date="DATE-OBS",
+        keyword_exposure_time="EXPOSURE",
+        keyword_filter="FILTER",
+        keyword_observatory="TELESCOP",
+        keyword_jd="", # empty means computed from date
+        keyword_ra="RA",
+        keyword_dec="DEC",
+        keyword_flip="PIERSIDE",
+        keyword_fwhm="FWHM",
+        
+        # units
+        ra_unit="hourangle",
 
-:py:class:`~prose.Telescope` can then be instantiated from:
+        # Telescope specs
+        trimming=[5, 5], # pixels
+        read_noise=10, # ADU
+        gain=1.02, # ADU/e-
+        altitude=2000, # m
+        diameter=100, # cm
+        pixel_scale=0.4598573, # arcsec
+        latlong=[45.455556, -71.152778], # deg
+    )
 
-- a **python** ``dict``:
+    Telescope(telescope_dict)
 
-    .. code-block:: python
-
-        telescope_dict = {
-            keyword_object: "OBJECT"
-            keyword_image_type: "IMAGETYP"
-            ...
-            gain: 10
-            altitude: 1500
-            diameter: 80
-        }
-
-        Telescope(telescope_dict)
-
-
-- a ``.yaml`` file with a structure similar to the one shown above:
-
-    .. code-block:: yaml
-
-        keyword_object: "OBJECT"
-        keyword_image_type: "IMAGETYP"
-        ...
-        gain: 10
-        altitude: 1500
-        diameter: 80
-
-    and then
-
-    .. code-block:: python
-
-        Telescope("path_to/my_telescope.yaml")
-
-When working with a new telescope, this operation needs to be done only **once**, after which the telescope dictionnary is saved and automatically used whenever the telescope name is encountered in a fits header. See tutorials for use cases.
-
+Once a new telescope is instantiated its dictionary is permanantly saved by prose and automatically used whenever the telescope name is encountered in a fits header. Saved telescopesare located in ``~/.prose`` as yaml files.
 
 API
 ---

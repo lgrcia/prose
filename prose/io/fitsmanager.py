@@ -8,6 +8,7 @@ from ..telescope import Telescope
 from .. import CONFIG
 from datetime import timedelta
 import os
+from pathlib import Path
 from tqdm import tqdm
 from .io import get_files, fits_to_df
 
@@ -189,13 +190,13 @@ class FilesDataFrame:
 
 class FitsManager(FilesDataFrame):
 
-    def __init__(self, files_df_or_folder, verbose=True, image_kw="light", **kwargs):
+    def __init__(self, files_df_or_folder, verbose=True, image_kw="light", extension="*.f*ts*", **kwargs):
         if isinstance(files_df_or_folder, pd.DataFrame):
             files_df = files_df_or_folder
             self.folder = None
-        elif isinstance(files_df_or_folder, str):
+        elif isinstance(files_df_or_folder, (str, Path)):
             assert path.exists(files_df_or_folder), "Folder does not exist"
-            files = get_files("*.f*ts", files_df_or_folder, depth=kwargs.get("depth", 1))
+            files = get_files(extension, files_df_or_folder, depth=kwargs.get("depth", 1))
             files_df = fits_to_df(files, verbose=verbose)
             self.folder = files_df_or_folder
         else:

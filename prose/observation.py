@@ -42,6 +42,8 @@ class Observation(ApertureFluxes):
     def __init__(self, photfile, ignore_time=False):
         super().__init__(photfile)
 
+        utils.remove_sip(self.xarray.attrs)
+
         self.phot = photfile
         self.telescope = Telescope.from_name(self.telescope)
 
@@ -187,7 +189,11 @@ class Observation(ApertureFluxes):
 
     @property
     def meridian_flip(self):
-        if "flip" not in self:
+        has_flip = hasattr(self.xarray, "flip")
+        if has_flip:
+            has_flip = ~np.all(np.isnan(self.flip))
+
+        if not has_flip:
             return None
         elif self._meridian_flip is None:
             ps = (self.flip.copy() == "WEST").astype(int)
@@ -852,6 +858,36 @@ class Observation(ApertureFluxes):
         ax2.add_patch(plt.Circle((n, n), rin, ec='grey', fill=False, lw=2))
         ax2.add_patch(plt.Circle((n, n), rout, ec='grey', fill=False, lw=2))
         plt.tight_layout()
+
+    def dualplot_systematics_signal(self, systematics, signal, ylim=None, offset=None, figsize=(6, 7)):
+        amplitude = np.percentile(self.diff_flux, 95) - np.percentile(self.diff_flux, 5)
+        amplitude *= 1.5
+        if offset is None:
+            offset = amplitude
+        if ylim is None:
+            ylim = (1 - offset - 0.9 * amplitude, 1 + 0.9 * amplitude)
+
+        fig = plt.figure(figsize=figsize)
+        fig.patch.set_facecolor('white')
+        viz.plot(self.time, self.diff_flux, label='data', binlabel='binned data (7.2 min)')
+        plt.plot(self.time, systematics + signal, c="C0",
+                 label="systematics + signal model")
+        plt.plot(self.time, signal + 1. - offset, label="transit model", c="k")
+        plt.text(plt.xlim()[1] + 0.005, 1, "RAW", rotation=270, va="center")
+        viz.plot(self.time, self.diff_flux - systematics + 1. - offset)
+        plt.text(plt.xlim()[1] + 0.005, 1 - offset, "DETRENDED", rotation=270, va="center")
+
+        plt.ylim(ylim)
+
+        self.plot_meridian_flip()
+        plt.legend()
+        self.xlabel()
+        plt.ylabel("diff. flux")
+        plt.tight_layout()
+        viz.paper_style()
+
+    def xlabel(self):
+        plt.xlabel(self.time_format.upper().replace("_", "-"))
 
     def where(self, condition):
         """return filtered observation given a boolean mask of time

@@ -10,6 +10,36 @@ import urllib
 earth2sun = (c.R_earth / c.R_sun).value
 
 
+def remove_sip(dict_like):
+
+    for kw in [
+        'A_ORDER',
+        'A_0_2',
+        'A_1_1',
+        'A_2_0',
+        'B_ORDER',
+        'B_0_2',
+        'B_1_1',
+        'B_2_0',
+        'AP_ORDER',
+        'AP_0_0',
+        'AP_0_1',
+        'AP_0_2',
+        'AP_1_0',
+        'AP_1_1',
+        'AP_2_0',
+        'BP_ORDER',
+        'BP_0_0',
+        'BP_0_1',
+        'BP_0_2',
+        'BP_1_0',
+        'BP_1_1',
+        'BP_2_0'
+    ]:
+        if kw in dict_like:
+            del dict_like[kw]
+
+
 def format_iso_date(date, night_date=True):
     """
     Return a datetime.date corresponding to the day 12 hours before given datetime.

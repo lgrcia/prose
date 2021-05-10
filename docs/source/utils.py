@@ -49,3 +49,4 @@ for name, obj in inspect.getmembers(blocks):
                     f.write(":orphan:\n")
                     f.write(f"{name}\n{'-'*len(name)}")
                     f.write(f"\n\n.. autoclass:: prose.blocks.{name}\n\t:members:")
+                    print(name)

@@ -274,10 +274,10 @@ class AstroAlignShift(Registration):
         return """"""
 
 
-class Twirl(Block):
+class _Twirl(Block):
 
     def __init__(self, ref, order=0, n=15, **kwargs):
-        super(Twirl, self).__init__(**kwargs)
+        super(_Twirl, self).__init__(**kwargs)
         self.ref = ref[0:n]
         self.order = order
         self.n = n
@@ -294,7 +294,7 @@ class Twirl(Block):
         image.header["ALIGNALG"] = self.__class__.__name__
 
 
-class Twirl2(Block):
+class Twirl(Block):
     def __init__(self, ref, n=10, **kwargs):
         super().__init__(**kwargs)
         self.ref = ref[0:n]
