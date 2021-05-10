@@ -75,7 +75,7 @@ class Calibration:
         # set reference file
         reference_id = int(self._reference * len(self._images))
         self.reference_fits = self._images[reference_id]
-        self.calibration_block = blocks.Calibration(self.darks, self.flats, self.bias, name="calibration")
+        self.calibration_block = blocks.Calibration(self.darks, self.flats, self.bias, loader=loader, name="calibration")
 
     def run(self, destination, gif=True):
         """Run the calibration pipeline
