@@ -44,14 +44,14 @@ class Calibration:
             verbose=True,
             show=False,
             twirl=False,
-            n=12,
+            n=None,
     ):
         self.destination = None
         self.overwrite = overwrite
         self._reference = reference
         self.verbose = verbose
         self.show = show
-        self.n = n
+        self.n = n if n is not None else (12 if twirl else 50)
         self.twirl = twirl
 
         if show:
