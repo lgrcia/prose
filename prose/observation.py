@@ -22,6 +22,8 @@ from datetime import datetime
 import warnings
 from .blocks.registration import distances
 import requests
+import shutil
+from pathlib import Path
 import io
 from .utils import fast_binning, z_scale
 
@@ -425,7 +427,7 @@ class Observation(ApertureFluxes):
         if len(axes) == 0:
             self.show(**kwargs)
 
-    def show_stars(self, view=None, n=None, flip=False, comp_color="yellow", color=[0.51, 0.86, 1.], **kwargs):
+    def show_stars(self, view=None, n=None, flip=False, comp_color="yellow", color=[0.51, 0.86, 1.], stars=None, **kwargs):
         """Show detected stars over stack image
 
 
@@ -448,13 +450,16 @@ class Observation(ApertureFluxes):
 
         self._check_show(flip=flip, **kwargs)
 
+        if stars is None:
+            stars = self.stars
+
         if n is not None:
             if view == "reference":
                 raise AssertionError("'n_stars' kwargs is incompatible with 'reference' view that will display all stars")
         else:
-            n = len(self.stars)
+            n = len(stars)
 
-        stars = self.stars[0:n]
+        stars = stars[0:n]
 
         if view is None:
             view = "reference" if 'comps' in self else "all"
@@ -465,11 +470,12 @@ class Observation(ApertureFluxes):
             stars = np.array(image_size) - stars
 
         if view == "all":
-            others = np.arange(n, len(self.stars))
-            others = np.setdiff1d(others, self.target)
-
             viz.plot_marks(*stars.T, np.arange(len(stars)), color=color)
-            viz.plot_marks(*self.stars[others].T, alpha=0.4, color=color)
+
+            if "stars" in self.xarray:
+                others = np.arange(n, len(self.stars))
+                others = np.setdiff1d(others, self.target)
+                viz.plot_marks(*self.stars[others].T, alpha=0.4, color=color)
 
         elif view == "reference":
             x = self.xarray.isel(apertures=self.aperture)
@@ -792,12 +798,16 @@ class Observation(ApertureFluxes):
         if meridian_flip:
             self.plot_meridian_flip()
 
-    def plot_psf(self, star=None, n=40, zscale=False):
+    def plot_psf(self, star=None, n=40, zscale=False, aperture=None, rin=None, rout=None):
         n /= np.sqrt(2)
-        if star is None:
-            x, y = self.stars[self.target]
-        else:
+
+        if isinstance(star, (tuple, list, np.ndarray)):
+            x, y = star
+        elif isinstance(star, int):
             x, y = self.stars[star]
+        elif star is None:
+                x, y = self.stars[self.target]
+
         Y, X = np.indices(self.stack.shape)
         cutout_mask = (np.abs(X - x + 0.5) < n) & (np.abs(Y - y + 0.5) < n)
         inside = np.argwhere((cutout_mask).flatten()).flatten()
@@ -811,44 +821,55 @@ class Observation(ApertureFluxes):
 
         fig = plt.figure(figsize=(9.5, 4))
         fig.patch.set_facecolor('xkcd:white')
-        ax = plt.subplot(1, 5, (1, 3))
+        _ = plt.subplot(1, 5, (1, 3))
 
         plt.plot(radii, pixels, "o", fillstyle='none', c="0.7", ms=4)
         plt.plot(binned_radii, binned_pixels, c="k")
-
-        apertures = self.apertures_radii[:,0]
-        a = self.aperture
-        if "annulus_rin" in self:
-            rin = self.annulus_rin.mean()
-            rout = self.annulus_rout.mean()
-        else:
-            print(
-                f"{INFO_LABEL} You are probably using a last version phot file, aperture_rin/out has been, set to default AperturePhotometry value")
-            rin = self.fwhm.mean() * 5
-            rout = self.fwhm.mean() * 8
-
         plt.xlabel("distance from center (pixels)")
         plt.ylabel("ADUs")
         _, ylim = plt.ylim()
-        plt.xlim(0)
-        plt.text(apertures[a], ylim, "APERTURE", ha="right", rotation="vertical", va="top")
-        plt.axvspan(0, apertures[a], color="0.9", alpha=0.1)
 
-        plt.axvspan(rin, rout, color="0.9", alpha=0.1)
-        plt.axvline(rin, color="k", alpha=0.1)
-        plt.axvline(rout, color="k", alpha=0.1)
-        plt.axvline(apertures[a], c="k", alpha=0.1)
-        _ = plt.text(rout, ylim, "ANNULUS", ha="right", rotation="vertical", va="top")
+        if "apertures_radii" in self.xarray and aperture is None:
+            apertures = self.apertures_radii[:, 0]
+
+            if apertures is not None:
+                aperture = apertures[self.aperture]
+
+            plt.xlim(0)
+            plt.text(aperture, ylim, "APERTURE", ha="right", rotation="vertical", va="top")
+            plt.axvline(aperture, c="k", alpha=0.1)
+            plt.axvspan(0, aperture, color="0.9", alpha=0.1)
+
+        if "annulus_rin" in self:
+            if rin is None:
+                rin = self.annulus_rin.mean()
+            if rout is None:
+                rout = self.annulus_rout.mean()
+
+        if rin is not None:
+            plt.axvline(rin, color="k", alpha=0.1)
+
+        if rout is not None:
+            plt.axvline(rout, color="k", alpha=0.1)
+            if rin is not None:
+                plt.axvspan(rin, rout, color="0.9", alpha=0.1)
+                _ = plt.text(rout, ylim, "ANNULUS", ha="right", rotation="vertical", va="top")
 
         ax2 = plt.subplot(1, 5, (4, 5))
         im = self.stack[int(y - n):int(y + n), int(x - n):int(x + n)]
         if zscale:
             im = z_scale(im)
+
         plt.imshow(im, cmap="Greys_r", aspect="auto", origin="lower")
+
         plt.axis("off")
-        ax2.add_patch(plt.Circle((n, n), apertures[a], ec='grey', fill=False, lw=2))
-        ax2.add_patch(plt.Circle((n, n), rin, ec='grey', fill=False, lw=2))
-        ax2.add_patch(plt.Circle((n, n), rout, ec='grey', fill=False, lw=2))
+        if aperture is not None:
+            ax2.add_patch(plt.Circle((n, n), aperture, ec='grey', fill=False, lw=2))
+        if rin is not None:
+            ax2.add_patch(plt.Circle((n, n), rin, ec='grey', fill=False, lw=2))
+        if rout is not None:
+            ax2.add_patch(plt.Circle((n, n), rout, ec='grey', fill=False, lw=2))
+
         plt.tight_layout()
 
     def dualplot_systematics_signal(self, systematics, signal, ylim=None, offset=None, figsize=(6, 7)):
@@ -988,5 +1009,16 @@ class Observation(ApertureFluxes):
 
         except KeyError:
             print('TIC ID not found')
+
+
+    def folder_to_phot(self, confirm=True):
+        if confirm:
+            confirm = str(input("Will erase all but .phot, enter 'y' to continue: "))
+
+        if confirm:
+            _phot = Path(o.phot)
+            folder = Path(_phot).parent
+            shutil.move(str(_phot.absolute()), str(folder.parent.absolute()))
+            shutil.rmtree(str(folder.absolute()))
 
 
