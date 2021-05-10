@@ -627,14 +627,20 @@ class Observation(ApertureFluxes):
                 "fwhm_x": image.fwhmx,
                 "fwhm_y": image.fwhmy }
 
-    def plot_star_psf(self,star):
+    def plot_star_psf(self,star=None,print_values=True,plot=True):
+        if star is None:
+            star = self.target
         cutout = cutouts(self.stack, [self.stars[star]], size=21)
         psf_fit = Moffat2D()
-        list = ['fwhmx =', 'fwhmy =', 'theta =']
-        for i in range(len(list)):
-            print(list[i], psf_fit(cutout.data[0])[i])
-        viz.plot_marginal_model(psf_fit.epsf, psf_fit.optimized_model)
-        return(psf_fit(cutout.data[0]))
+        params = ['fwhmx =', 'fwhmy =', 'theta =']
+        values = []
+        for i in range(len(params)):
+            if print_values is True:
+                print(params[i], psf_fit(cutout.data[0])[i])
+            values.append(psf_fit(cutout.data[0])[i])
+            if plot is True:
+                viz.plot_marginal_model(psf_fit.epsf, psf_fit.optimized_model)
+        return values
 
     def plot_rms(self, bins=0.005):
         """Plot binned rms of lightcurves vs the CCD equation
