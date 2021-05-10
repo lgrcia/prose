@@ -35,14 +35,18 @@ class FilesDataFrame:
     #     def __getattribute__(self)
 
     @staticmethod
-    def _get(files_df, return_conditions=False, **kwargs):
+    def _get(files_df, return_conditions=False, equals=False, **kwargs):
         conditions = pd.Series(np.ones(len(files_df)).astype(bool))
 
         for field, value in kwargs.items():
             #             if "*" not in value: value += "*"
             if isinstance(value, str):
-                conditions = conditions & (
-                    files_df[field].astype(str).str.lower().str.contains(value.lower())).reset_index(drop=True)
+                if not equals:
+                    conditions = conditions & (
+                        files_df[field].astype(str).str.lower().str.contains(value.lower())).reset_index(drop=True)
+                else:
+                    conditions = conditions & (files_df[field].astype(str).str.lower() == value.lower()
+                                               ).reset_index(drop=True)
             else:
                 conditions = conditions & (files_df[field] == value).reset_index(drop=True)
 
@@ -51,7 +55,7 @@ class FilesDataFrame:
         else:
             return files_df.reset_index(drop=True).loc[conditions]
 
-    def get(self, return_conditions=False, **kwargs):
+    def get(self, return_conditions=False, equals=False, **kwargs):
         """Filter the current dataframe by values of its columns
 
         Parameters
@@ -65,7 +69,7 @@ class FilesDataFrame:
         -------
         dataframe
         """
-        return self._get(self.files_df, return_conditions=return_conditions, **kwargs)
+        return self._get(self.files_df, return_conditions=return_conditions, equals=equals, **kwargs)
 
     def keep(self, inplace=True, **kwargs):
         """Same as get but can replace the inplace dataframe with filtered values and sort by date
@@ -190,7 +194,9 @@ class FilesDataFrame:
 
 class FitsManager(FilesDataFrame):
 
-    def __init__(self, files_df_or_folder, verbose=True, image_kw="light", extension="*.f*ts*", hdu=0, **kwargs):
+    def __init__(self, files_df_or_folder, verbose=True, image_kw="light", extension="*.f*ts*", hdu=0, reduced=False, **kwargs):
+        if reduced:
+            image_kw = "reduced"
         if isinstance(files_df_or_folder, pd.DataFrame):
             files_df = files_df_or_folder
             self.folder = None
@@ -292,7 +298,7 @@ class FitsManager(FilesDataFrame):
             telescope=obs.telescope,
             filter=obs["filter"].replace("+", "\+"),
             target=obs.target.replace("+", "\+"),
-            date=obs.date)
+            date=obs.date, equals=True)
 
         for _type in ["dark", "flat", "bias"]:
             others = others.reset_index(drop=True)
