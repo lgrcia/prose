@@ -1047,7 +1047,7 @@ class Observation(ApertureFluxes):
             confirm = str(input("Will erase all but .phot, enter 'y' to continue: "))
 
         if confirm:
-            _phot = Path(o.phot)
+            _phot = Path(self.phot)
             folder = Path(_phot).parent
             shutil.move(str(_phot.absolute()), str(folder.parent.absolute()))
             shutil.rmtree(str(folder.absolute()))
