@@ -24,6 +24,7 @@ from .blocks.registration import distances
 import requests
 import shutil
 from pathlib import Path
+from . import twirl
 import io
 from .utils import fast_binning, z_scale
 
@@ -490,7 +491,7 @@ class Observation(ApertureFluxes):
             _ = viz.plot_marks(*stars[comps].T, comps, color=comp_color)
             _ = viz.plot_marks(*stars[others].T, alpha=0.4, color=color)
 
-    def show_gaia(self, color="lightblue", alpha=1, n=None, idxs=True, limit=1000):
+    def show_gaia(self, color="yellow", alpha=1, n=None, idxs=True, limit=1000, fontsize=8, align=False):
         """Overlay Gaia objects on stack image
 
 
@@ -511,12 +512,28 @@ class Observation(ApertureFluxes):
         if self.gaia_data is None:
             self.query_gaia(limit=limit)
 
-        x = self.gaia_data["x"].data
-        y = self.gaia_data["y"].data
-        labels = self.gaia_data["source_id"].data.astype(str)
-        labels = [f"{_id[0:len(_id) // 2]}\n{_id[len(_id) // 2::]}" for _id in labels]
+        gaias = np.vstack([self.gaia_data["x"].data, self.gaia_data["y"].data]).T
+        defined = ~np.any(np.isnan(gaias), 1)
+        gaias = gaias[defined]
+        labels = self.gaia_data["source_id"].data.astype(str)[defined]
 
-        _ = viz.plot_marks(x, y, labels if idxs else None, color=color, alpha=alpha, n=n, position="top", fontsize=6)
+        if align:
+            x, y = self.stars.T
+            ax = plt.gcf().axes[0]
+            xlim, ylim = np.array(ax.get_xlim()), np.array(ax.get_ylim())
+            xlim.sort()
+            ylim.sort()
+            within = np.argwhere(np.logical_and.reduce([xlim[0] < x, x < xlim[1], ylim[0] < y, y < ylim[1]])).flatten()
+            x = x[within]
+            y = y[within]
+            stars = np.vstack([x, y]).T
+
+            X = twirl.find_transform(gaias[0:30], stars, n=15)
+            gaias = twirl.affine_transform(X)(gaias)
+
+        labels = [f"{_id[0:len(_id) // 2]}\n{_id[len(_id) // 2::]}" for _id in labels]
+        _ = viz.plot_marks(*gaias.T, labels if idxs else None, color=color, alpha=alpha, n=n, position="top",
+                           fontsize=fontsize)
 
     def show_tic(self, color="white", alpha=1, n=None, idxs=True):
         """Overlay TIC objects on stack image
@@ -544,23 +561,33 @@ class Observation(ApertureFluxes):
         ID = self.tic_data["ID"].data
         _ = viz.plot_marks(x, y, ID if idxs else None, color=color, alpha=alpha, n=n, position="top", fontsize=9, offset=10)
 
-    def show_cutout(self, star=None, size=200):
+    def show_cutout(self, star=None, size=200, marks=True):
         """
-        Show a zoomed cutout around a detected star
+        Show a zoomed cutout around a detected star or coordinates
 
         Parameters
         ----------
         star : [type], optional
-            detected star id, by default None
+            detected star id or (x, y) coordinate, by default None
         size : int, optional
             side size of square cutout in pixel, by default 200
         """
-        if star == None:
-            star = self.target
-        viz.show_stars(self.stack, self.stars, highlight=star, size=6)
-        ax = plt.gcf().axes[0]
-        ax.set_xlim(np.array([-size / 2, size / 2]) + self.stars[star][0])
-        ax.set_ylim(np.array([-size / 2, size / 2]) + self.stars[star][1])
+
+        if star is None:
+            x, y = self.stars[self.target]
+        elif isinstance(star, int):
+            x, y = self.stars[star]
+        elif isinstance(star, (tuple, list, np.ndarray)):
+            x, y = star
+        else:
+            raise ValueError("star type not understood")
+
+        self.show()
+        plt.xlim(np.array([-size / 2, size / 2]) + x)
+        plt.ylim(np.array([-size / 2, size / 2]) + y)
+        if marks:
+            idxs = np.argwhere(np.max(np.abs(self.stars - [x, y]), axis=1) < size).squeeze()
+            viz.plot_marks(*self.stars[idxs].T, label=idxs)
 
     def plot_comps_lcs(self, n=5, ylim=(0.98, 1.02)):
         """Plot comparison stars light curves along target star light curve
