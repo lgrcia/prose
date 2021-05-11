@@ -192,21 +192,25 @@ class Observation(ApertureFluxes):
 
     @property
     def meridian_flip(self):
-        has_flip = hasattr(self.xarray, "flip")
-        if has_flip:
-            has_flip = ~np.all(np.isnan(self.flip))
+        if self._meridian_flip is not None:
+            return self._meridian_flip
+        else:
+            has_flip = hasattr(self.xarray, "flip")
 
-        if not has_flip:
-            return None
-        elif self._meridian_flip is None:
-            ps = (self.flip.copy() == "WEST").astype(int)
-            diffs = np.abs(np.diff(ps))
-            if np.any(diffs):
-                self._meridian_flip = self.time[np.argmax(diffs).flatten()]
+            if has_flip:
+                if "WEST" in self.flip:
+                    flip = (self.flip.copy() == "WEST").astype(int)
+                    diffs = np.abs(np.diff(flip))
+                    if np.any(diffs):
+                        self._meridian_flip = self.time[np.argmax(diffs).flatten()]
+                    else:
+                        self._meridian_flip = None
+
+                    return self._meridian_flip
+                else:
+                    return None
             else:
-                self._meridian_flip = None
-
-        return self._meridian_flip
+                return None
 
     # TESS specific methods
     # --------------------
