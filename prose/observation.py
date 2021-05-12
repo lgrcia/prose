@@ -288,7 +288,7 @@ class Observation(ApertureFluxes):
         # Catalog queries
         # ---------------
 
-    def query_gaia(self, limit=1000, cone_radius=None):
+    def query_gaia(self, limit=-1, cone_radius=None):
         """Query gaia catalog for stars in the field
         """
         from astroquery.gaia import Gaia
@@ -307,7 +307,7 @@ class Observation(ApertureFluxes):
         self.gaia_data.sort("phot_g_mean_flux", reverse=True)
 
         delta_years = (utils.datetime_to_years(datetime.strptime(self.date, "%Y%m%d")) - \
-                      self.gaia_data["ref_epoch"].data.data) * u.year
+                    self.gaia_data["ref_epoch"].data.data) * u.year
 
         dra = delta_years * self.gaia_data["pmra"].to(u.deg / u.year)
         ddec = delta_years * self.gaia_data["pmdec"].to(u.deg / u.year)
@@ -320,12 +320,16 @@ class Observation(ApertureFluxes):
             radial_velocity=self.gaia_data['radial_velocity'],
             obstime=Time(2015.0, format='decimalyear'))
 
-        self.gaia_data["x"], self.gaia_data["y"] = np.array(wcsutils.skycoord_to_pixel(skycoords, self.wcs))
-
+        gaias = np.array(wcsutils.skycoord_to_pixel(skycoords, self.wcs)).T
+        gaias[np.any(np.isnan(gaias), 1), :] = [0, 0]
+        self.gaia_data["x"], self.gaia_data["y"] = gaias.T
+        inside = np.all((np.array([0, 0]) < gaias) & (gaias < np.array(self.stack.shape)), 1)
+        self.gaia_data = self.gaia_data[np.argwhere(inside).squeeze()]
+        
         w, h = self.stack.shape
         if np.abs(np.mean(self.gaia_data["x"])) > w or np.abs(np.mean(self.gaia_data["y"])) > h:
             warnings.warn("Catalog stars seem out of the field. Check that your stack is solved and that telescope "
-                          "'ra_unit' and 'dec_unit' are well set")
+                        "'ra_unit' and 'dec_unit' are well set")
 
     def query_tic(self):
         """Query TIC catalog (through MAST) for stars in the field
@@ -522,17 +526,7 @@ class Observation(ApertureFluxes):
         labels = self.gaia_data["source_id"].data.astype(str)[defined]
 
         if align:
-            x, y = self.stars.T
-            ax = plt.gcf().axes[0]
-            xlim, ylim = np.array(ax.get_xlim()), np.array(ax.get_ylim())
-            xlim.sort()
-            ylim.sort()
-            within = np.argwhere(np.logical_and.reduce([xlim[0] < x, x < xlim[1], ylim[0] < y, y < ylim[1]])).flatten()
-            x = x[within]
-            y = y[within]
-            stars = np.vstack([x, y]).T
-
-            X = twirl.find_transform(gaias[0:30], stars, n=15)
+            X = twirl.find_transform(gaias[0:30], self.stars, n=15)
             gaias = twirl.affine_transform(X)(gaias)
 
         labels = [f"{_id[0:len(_id) // 2]}\n{_id[len(_id) // 2::]}" for _id in labels]
