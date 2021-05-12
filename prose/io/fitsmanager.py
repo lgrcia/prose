@@ -11,6 +11,15 @@ import os
 from pathlib import Path
 from tqdm import tqdm
 from .io import get_files, fits_to_df
+import re
+
+
+def sub(s):
+    return re.sub("[\W_]+", "", s)
+
+
+def clean(df):
+    return df.astype(str).apply(lambda s: sub(s)).str
 
 
 class FilesDataFrame:
@@ -35,18 +44,12 @@ class FilesDataFrame:
     #     def __getattribute__(self)
 
     @staticmethod
-    def _get(files_df, return_conditions=False, equals=False, **kwargs):
+    def _get(files_df, return_conditions=False, **kwargs):
         conditions = pd.Series(np.ones(len(files_df)).astype(bool))
 
         for field, value in kwargs.items():
-            #             if "*" not in value: value += "*"
             if isinstance(value, str):
-                if not equals:
-                    conditions = conditions & (
-                        files_df[field].astype(str).str.lower().str.contains(value.lower())).reset_index(drop=True)
-                else:
-                    conditions = conditions & (files_df[field].astype(str).str.lower() == value.lower()
-                                               ).reset_index(drop=True)
+                conditions = conditions & clean(files_df[field]).contains(sub(value)).reset_index(drop=True)
             else:
                 conditions = conditions & (files_df[field] == value).reset_index(drop=True)
 
@@ -55,7 +58,7 @@ class FilesDataFrame:
         else:
             return files_df.reset_index(drop=True).loc[conditions]
 
-    def get(self, return_conditions=False, equals=False, **kwargs):
+    def get(self, return_conditions=False, **kwargs):
         """Filter the current dataframe by values of its columns
 
         Parameters
@@ -69,7 +72,7 @@ class FilesDataFrame:
         -------
         dataframe
         """
-        return self._get(self.files_df, return_conditions=return_conditions, equals=equals, **kwargs)
+        return self._get(self.files_df, return_conditions=return_conditions, **kwargs)
 
     def keep(self, inplace=True, **kwargs):
         """Same as get but can replace the inplace dataframe with filtered values and sort by date
@@ -298,7 +301,7 @@ class FitsManager(FilesDataFrame):
             telescope=obs.telescope,
             filter=obs["filter"].replace("+", "\+"),
             target=obs.target.replace("+", "\+"),
-            date=obs.date, equals=True)
+            date=obs.date)
 
         for _type in ["dark", "flat", "bias"]:
             others = others.reset_index(drop=True)
