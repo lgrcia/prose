@@ -191,8 +191,10 @@ class Observation(ApertureFluxes):
     def meridian_flip(self):
         has_flip = hasattr(self.xarray, "flip")
         if has_flip:
-            has_flip = ~np.all(np.isnan(self.flip))
-
+            if isinstance(self.flip[0],str):
+                pass
+            else:
+                has_flip = ~np.all(np.isnan(self.flip))
         if not has_flip:
             return None
         elif self._meridian_flip is None:
@@ -1005,5 +1007,8 @@ class Observation(ApertureFluxes):
 
         except KeyError:
             print('TIC ID not found')
+
+    def convert_flip(self,keyword):
+        self.xarray['flip'] = ('time', (self.flip == keyword).astype(int))
 
 
