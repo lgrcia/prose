@@ -499,7 +499,7 @@ class Observation(ApertureFluxes):
             _ = viz.plot_marks(*stars[comps].T, comps, color=comp_color)
             _ = viz.plot_marks(*stars[others].T, alpha=0.4, color=color)
 
-    def show_gaia(self, color="yellow", alpha=1, n=None, idxs=True, limit=1000, fontsize=8, align=False):
+    def show_gaia(self, color="yellow", alpha=1, n=None, idxs=True, limit=-1, fontsize=8, align=False):
         """Overlay Gaia objects on stack image
 
 
