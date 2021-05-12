@@ -407,3 +407,16 @@ class FitsManager(FilesDataFrame):
             return self.products_denominator
         else:
             raise AssertionError("obs_name property is only available for FitsManager containing a unique observation")
+
+    def observation_id(self, target, date):
+        obs = self._observations
+        there = np.argwhere((
+                    clean(obs.date).contains(sub(date)) &
+                    clean(obs.target).contains(sub(target))
+                ).values).flatten()
+
+        if len(there) > 0:
+            i, = there
+            return i
+        else:
+            return None
