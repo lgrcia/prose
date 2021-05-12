@@ -1035,10 +1035,11 @@ class Observation(ApertureFluxes):
         except KeyError:
             print('TIC ID not found')
 
-
     def folder_to_phot(self, confirm=True):
         if confirm:
             confirm = str(input("Will erase all but .phot, enter 'y' to continue: "))
+        else:
+            confirm = True
 
         if confirm:
             _phot = Path(self.phot)
