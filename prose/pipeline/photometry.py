@@ -135,7 +135,7 @@ class Photometry:
 
     def save_xarray(self):
         if path.exists(self.phot_path):
-            initial_xarray = xr.load_dataset(self.phot_path)
+            initial_xarray = xr.load_dataset(self.phot_path, engine="netcdf4")
         else:
             initial_xarray = xr.Dataset()
 
