@@ -13,7 +13,7 @@
   </a>
   
 
-Built for Astronomy, *prose* features pipelines to perform common tasks (such as automated calibration, reduction and photometry) and make building custom ones easy. Documentation at [prose.readthedocs.io](https://prose.readthedocs.io/en/dev)
+Built for Astronomy, *prose* features pipelines to perform common tasks (such as automated calibration, reduction and photometry) and makes building custom ones easy. Documentation at [prose.readthedocs.io](https://prose.readthedocs.io/en/dev)
 
 <p align="center">
   <img width="400" src="docs/source/prose.png">
