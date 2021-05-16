@@ -192,6 +192,8 @@ class Observation(ApertureFluxes):
 
     @property
     def meridian_flip(self):
+        """Meridian flip time. Supposing EAST and WEST encode orientation
+        """
         if self._meridian_flip is not None:
             return self._meridian_flip
         else:
@@ -217,6 +219,8 @@ class Observation(ApertureFluxes):
 
     @property
     def tic_id(self):
+        """TIC id from digits found in target name
+        """
         try:
             nb = re.findall('\d*\.?\d+', self.name)
             df = pd.read_csv("https://exofop.ipac.caltech.edu/tess/download_toi?toi=%s&output=csv" % nb[0])
@@ -228,6 +232,8 @@ class Observation(ApertureFluxes):
 
     @property
     def gaia_from_toi(self):
+        """Gaia id from TOI id if TOI is in target name
+        """
         if self.tic_id is not None:
             tic_id = ("TIC " + self.tic_id)
             catalog_data = Catalogs.query_object(tic_id, radius=.001, catalog="TIC")
@@ -624,16 +630,6 @@ class Observation(ApertureFluxes):
         plt.grid(color="whitesmoke")
         plt.tight_layout()
 
-    def plot_data(self, key):
-
-        self.plot()
-        amp = (np.percentile(self.diff_flux, 95) - np.percentile(self.diff_flux, 5)) / 2
-        plt.plot(self.time, amp * utils.rescale(self.xarray[key]) + 1,
-                 label="normalized {}".format(key),
-                 color="k"
-                 )
-        plt.legend()
-
     def plot_psf_fit(self, size=21, cmap="inferno", c="blueviolet", model=Gaussian2D):
         """Plot a 2D gaussian fit of the global psf (extracted from stack fits)
 
@@ -819,17 +815,43 @@ class Observation(ApertureFluxes):
         plt.title("Photometric precision (raw fluxes)", loc="left")
 
     def plot_meridian_flip(self):
+        """Plot meridian flip line over existing axe
+        """
         if self.meridian_flip is not None:
             plt.axvline(self.meridian_flip, c="k", alpha=0.15)
             _, ylim = plt.ylim()
             plt.text(self.meridian_flip, ylim, "meridian flip ", ha="right", rotation="vertical", va="top", color="0.7")
 
     def plot(self, meridian_flip=True):
+        """Plot observation light curve
+
+        Parameters
+        ----------
+        meridian_flip : bool, optional
+            whether to show meridian flip, by default True
+        """
         super().plot()
         if meridian_flip:
             self.plot_meridian_flip()
 
     def plot_psf(self, star=None, n=40, zscale=False, aperture=None, rin=None, rout=None):
+        """Plot star cutout overalid with aperture and radial flux.
+
+        Parameters
+        ----------
+        star : int or list like, optional
+            if int: star to plot cutout on, if list like (tuple, np.ndarray) of size 2: coords of cutout, by default None
+        n : int, optional
+            cutout width and height, by default 40
+        zscale : bool, optional
+            whether to apply a zscale to cutout image, by default False
+        aperture : float, optional
+            radius of aperture to display, by default None corresponds to best target aperture
+        rin : [type], optional
+            radius of inner annulus to display, by default None corresponds to inner radius saved
+        rout : [type], optional
+            radius of outer annulus to display, by default None corresponds to outer radius saved
+        """
         n /= np.sqrt(2)
 
         if isinstance(star, (tuple, list, np.ndarray)):
@@ -903,25 +925,23 @@ class Observation(ApertureFluxes):
 
         plt.tight_layout()
 
-    def dualplot_systematics_signal(self, systematics, signal, ylim=None, offset=None, figsize=(6, 7)):
-        amplitude = np.percentile(self.diff_flux, 95) - np.percentile(self.diff_flux, 5)
-        amplitude *= 1.5
-        if offset is None:
-            offset = amplitude
-        if ylim is None:
-            ylim = (1 - offset - 0.9 * amplitude, 1 + 0.9 * amplitude)
+    def plot_systematics_signal(self, systematics, signal, ylim=None, offset=None, figsize=(6, 7)):
+        """Plot a systematics and signal model over diff_flux. systeamtics + signal is plotted on top, signal alone on detrended 
+        data on bottom
 
-        fig = plt.figure(figsize=figsize)
-        fig.patch.set_facecolor('white')
-        viz.plot(self.time, self.diff_flux, label='data', binlabel='binned data (7.2 min)')
-        plt.plot(self.time, systematics + signal, c="C0",
-                 label="systematics + signal model")
-        plt.plot(self.time, signal + 1. - offset, label="transit model", c="k")
-        plt.text(plt.xlim()[1] + 0.005, 1, "RAW", rotation=270, va="center")
-        viz.plot(self.time, self.diff_flux - systematics + 1. - offset)
-        plt.text(plt.xlim()[1] + 0.005, 1 - offset, "DETRENDED", rotation=270, va="center")
+        Parameters
+        ----------
+        systematics : np.ndarray
+        signal : np.ndarray
+        ylim : tuple, optional
+            ylim of the plot, by default None, using the dispersion of y
+        offset : tuple, optional
+            offset between, by default None
+        figsize : tuple, optional
+            figure size as in in plt.figure, by default (6, 7)
+        """
 
-        plt.ylim(ylim)
+        viz.plot_systematics_signal(self.time, self.diff_flux, systematics, signal, ylim=ylim, offset=offset, figsize=figsize)
 
         self.plot_meridian_flip()
         plt.legend()
@@ -931,6 +951,8 @@ class Observation(ApertureFluxes):
         viz.paper_style()
 
     def xlabel(self):
+        """Plot xlabel (time) according to its units
+        """
         plt.xlabel(self.time_format.upper().replace("_", "-"))
 
     def where(self, condition):
