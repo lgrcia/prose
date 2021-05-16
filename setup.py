@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="prose",
-    version="0.8.3",
+    version="0.9.0",
     author="Lionel J. Garcia",
     description="Reduction and analysis of FITS telescope observations",
     py_modules=["prose"],
