@@ -8,7 +8,7 @@
   <a href="https://prose.readthedocs.io/en/latest/">
     <img src="https://img.shields.io/badge/read-thedoc-black.svg?style=flat" alt="read the doc"/>
   </a>
-  <a>
+  <a href="">
     <img src="https://img.shields.io/badge/license-MIT-lightgray.svg?style=flat" alt="license"/>
   </a>
   
