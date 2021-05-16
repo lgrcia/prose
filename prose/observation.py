@@ -533,7 +533,7 @@ class Observation(ApertureFluxes):
         _ = viz.plot_marks(*gaias.T, labels if idxs else None, color=color, alpha=alpha, n=n, position="top",
                            fontsize=fontsize)
 
-    def show_tic(self, color="white", alpha=1, n=None, idxs=True):
+    def show_tic(self, color="white", alpha=1, n=None, idxs=True, align=True):
         """Overlay TIC objects on stack image
 
 
@@ -556,8 +556,14 @@ class Observation(ApertureFluxes):
 
         x = self.tic_data["x"].data
         y = self.tic_data["y"].data
+        tics = np.vstack([x, y]).T
         ID = self.tic_data["ID"].data
-        _ = viz.plot_marks(x, y, ID if idxs else None, color=color, alpha=alpha, n=n, position="top", fontsize=9, offset=10)
+
+        if align:
+            X = twirl.find_transform(tics[0:30], self.stars, n=15)
+            tics = twirl.affine_transform(X)(tics)
+
+        _ = viz.plot_marks(*tics.T, ID if idxs else None, color=color, alpha=alpha, n=n, position="top", fontsize=9, offset=10)
 
     def show_cutout(self, star=None, size=200, marks=True):
         """

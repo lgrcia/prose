@@ -58,11 +58,6 @@ class Telescope:
         self.latlong = [None, None]
         self.saturation = 55000
 
-        # extensions
-        self.data_ext = 0
-        self.header_ext = 0
-        self.wcs_ext = None
-
         if telescope_file is not None:
             success = self.load(telescope_file)
             if success:

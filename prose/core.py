@@ -156,42 +156,7 @@ class Block:
     def doc():
         return ""
 
-
-class Pipeline:
-
-    def __init__(self, units, name="default", **kwargs):
-        self.name = name
-        self.units = units
-        self.data = {}
-        self._telescope = None
-
-    @property
-    def telescope(self):
-        return self._telescope
-
-    @telescope.setter
-    def telescope(self, telescope):
-        self._telescope = telescope
-        for unit in self.units:
-            unit.set_telescope(telescope)
-
-    @property
-    def blocks(self):
-        return self.units_dict.values()
-
-    @blocks.setter
-    def blocks(self, units):
-        self.units_dict = OrderedDict({
-            unit.name if unit.name is not None else "block{}".format(i): unit
-            for i, unit in enumerate(units)
-        })
-
-    def run(self):
-        # run
-        for unit in self.units:
-            unit.run()
-
-
+  
 class Sequence:
     # TODO: add index self.i in image within unit loop
 

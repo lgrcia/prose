@@ -173,8 +173,8 @@ def plot_lcs(data, planets={}, W=4, show=None, hide=None, ylim=None, size=[4,3],
             center = jd.min() + (jd.max() - jd.min())/2
 
             for pi, (planet, (t0, period, duration)) in enumerate(planets.items()):
-                n_p = int((jd.max()-t0)/period)
-                if (jd.min()-t0)/period < n_p < (jd.max()-t0)/period:
+                n_p = np.round((jd.max()-t0)/period)
+                if (jd.min()-t0-duration/2)/period < n_p < (jd.max()-t0+duration/2)/period:
                     plt.plot(np.ones(2)*(n_p*period + t0 - duration/2), [0, 4], planet_colors[pi], alpha=0.4)
                     plt.plot(np.ones(2)*(n_p*period + t0 + duration/2), [0, 4], planet_colors[pi], alpha=0.4)
                     p1 = patches.Rectangle(
@@ -729,3 +729,25 @@ def _show_tics(data, header=None, telescope_kw="TELESCOP", r=12*u.arcminute):
     plot_marks(x, y)
 
 
+def plot_transit_window(epoch, period, duration, color="C0"):
+    axes = plt.gcf().axes
+
+    for ax in axes:
+        if ax.has_data():
+            xmin, xmax = ax.get_xlim()
+            n_p = np.round((xmax - epoch) / period)
+            if (xmin - epoch - duration / 2) / period < n_p < (xmax - epoch + duration / 2) / period:
+                ax.axvline(n_p * period + epoch - duration / 2, color=color, alpha=0.4)
+                ax.axvline(n_p * period + epoch + duration / 2, color=color, alpha=0.4)
+                ax.axvspan(n_p * period + epoch - duration / 2, n_p * period + epoch + duration / 2, facecolor=color,
+                           alpha=0.05)
+
+
+def polynomial_trend_latex(**kwargs):
+    monomials = [f"{name}" + (f"^{order}" if order>1 else "") for name, order in kwargs.items() if order>0]
+    return rf"${' + '.join(monomials)}$"
+
+
+def corner_text(text, loc=(0.05, 0.05), va="bottom", ha='left', fontsize=12):
+    ax = plt.gca()
+    plt.text(*loc, text, fontsize=fontsize, ha=ha, va=va, transform=ax.transAxes)
