@@ -57,7 +57,7 @@ class Image:
     @property
     def jd_utc(self):
         # if jd keyword not in header compute jd from date
-        if hasattr(self.header, self.telescope.keyword_jd):
+        if self.telescope.keyword_jd in self.header:
             jd = self.get(self.telescope.keyword_jd, None) + self.telescope.mjd
         else:
             jd = Time(self.date, scale="utc").to_value('jd') + self.telescope.mjd
