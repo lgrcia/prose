@@ -632,6 +632,22 @@ def fancy_gif_image_array(image, median_psf, factor=0.25):
 
 
 def TeX(a, fmt='{: 0.3f}', dim=True):
+    """Display a LaTeX matrix in notebook
+
+    Parameters
+    ----------
+    a : np.ndarray
+        matric to display
+    fmt : str, optional
+        format of matrix element, by default '{: 0.3f}'
+    dim : bool, optional
+        show matrix dim, by default True
+
+    Raises
+    ------
+    ValueError
+        [description]
+    """
     from IPython.display import display, Math
     if isinstance(a, tuple):
         a = np.array(a)
@@ -730,6 +746,19 @@ def _show_tics(data, header=None, telescope_kw="TELESCOP", r=12*u.arcminute):
 
 
 def plot_transit_window(epoch, period, duration, color="C0"):
+    """Plot transit window over all axes
+
+    Parameters
+    ----------
+    epoch : float]
+        transit epoch (mid-point)
+    period : float
+        transit period
+    duration : float
+        transit duration
+    color : str, optional
+        color of the window plotted, by default "C0"
+    """
     axes = plt.gcf().axes
 
     for ax in axes:
@@ -744,15 +773,56 @@ def plot_transit_window(epoch, period, duration, color="C0"):
 
 
 def polynomial_trend_latex(**kwargs):
+    """LateX math for a polynomial trend 
+
+    Returns
+    -------
+    kwargs:
+        dict of variable name and order (example: dict(x=2, y=4))
+    """
     monomials = [f"{name}" + (f"^{order}" if order>1 else "") for name, order in kwargs.items() if order>0]
     return rf"${' + '.join(monomials)}$"
 
 
 def corner_text(text, loc=(0.05, 0.05), va="bottom", ha='left', fontsize=12):
+    """Plot a text on the corner of axe
+
+    Parameters
+    ----------
+    text : str
+        text in plt.txt
+    loc : tuple, optional
+        (x, y) of plt.txt, by default (0.05, 0.05)
+    va : str, optional
+        as in plt.txt, by default "bottom"
+    ha : str, optional
+        as in plt.txt, by default 'left'
+    fontsize : int, optional
+         as in plt.txt, by default 12
+    """
     ax = plt.gca()
     plt.text(*loc, text, fontsize=fontsize, ha=ha, va=va, transform=ax.transAxes)
 
-def plot_systematics_signal(time, y, systematics, signal, ylim=None, offset=None, figsize=(6, 7), signal_label=None):
+
+def plot_systematics_signal(x, y, systematics, signal, ylim=None, offset=None, figsize=(6, 7), signal_label=None):
+    """Plot a systematics and signal model over data. systeamtics + signal is plotted on top, signal alone on detrended 
+    data on bottom
+
+    Parameters
+    ----------
+    x : np.ndarray
+    y : np.ndarray
+    systematics : np.ndarray
+    signal : np.ndarray
+    ylim : tuple, optional
+        ylim of the plot, by default None, using the dispersion of y
+    offset : tuple, optional
+        offset between, by default None
+    figsize : tuple, optional
+        figure size as in in plt.figure, by default (6, 7)
+    signal_label : str, optional
+        label of signal, by default None
+    """
     
     amplitude = np.percentile(y, 95) - np.percentile(y, 5)
     amplitude *= 1.5
@@ -763,11 +833,11 @@ def plot_systematics_signal(time, y, systematics, signal, ylim=None, offset=None
 
     fig = plt.figure(figsize=figsize)
     fig.patch.set_facecolor('white')
-    plot(time, y, label='data', binlabel='binned data (7.2 min)')
-    plt.plot(time, systematics + signal, c="C0",
-                label="systematics + signal model")
-    plt.plot(time, signal + 1. - offset, label=signal_label, c="k")
+    plot(x, y, label='data', binlabel='binned data (7.2 min)')
+    plt.plot(x, systematics + signal, c="C0",
+             label="systematics + signal model")
+    plt.plot(x, signal + 1. - offset, label=signal_label, c="k")
     plt.text(plt.xlim()[1] + 0.005, 1, "RAW", rotation=270, va="center")
-    plot(time, y - systematics + 1. - offset)
+    plot(x, y - systematics + 1. - offset)
     plt.text(plt.xlim()[1] + 0.005, 1 - offset, "DETRENDED", rotation=270, va="center")
     plt.ylim(ylim)
