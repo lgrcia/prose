@@ -751,3 +751,23 @@ def polynomial_trend_latex(**kwargs):
 def corner_text(text, loc=(0.05, 0.05), va="bottom", ha='left', fontsize=12):
     ax = plt.gca()
     plt.text(*loc, text, fontsize=fontsize, ha=ha, va=va, transform=ax.transAxes)
+
+def plot_systematics_signal(time, y, systematics, signal, ylim=None, offset=None, figsize=(6, 7), signal_label=None):
+    
+    amplitude = np.percentile(y, 95) - np.percentile(y, 5)
+    amplitude *= 1.5
+    if offset is None:
+        offset = amplitude
+    if ylim is None:
+        ylim = (1 - offset - 0.9 * amplitude, 1 + 0.9 * amplitude)
+
+    fig = plt.figure(figsize=figsize)
+    fig.patch.set_facecolor('white')
+    plot(time, y, label='data', binlabel='binned data (7.2 min)')
+    plt.plot(time, systematics + signal, c="C0",
+                label="systematics + signal model")
+    plt.plot(time, signal + 1. - offset, label=signal_label, c="k")
+    plt.text(plt.xlim()[1] + 0.005, 1, "RAW", rotation=270, va="center")
+    plot(time, y - systematics + 1. - offset)
+    plt.text(plt.xlim()[1] + 0.005, 1 - offset, "DETRENDED", rotation=270, va="center")
+    plt.ylim(ylim)
