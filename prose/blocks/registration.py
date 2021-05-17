@@ -295,7 +295,26 @@ class _Twirl(Block):
 
 
 class Twirl(Block):
+    """
+    Affine transform computation for images registration
+
+    Parameters
+    ----------
+    ref : (2, n) np.ndarray
+        list of stars coordinates serving as a reference
+    n : int, optional
+        number of stars to consider to compute transformation, by default 10
+    """
     def __init__(self, ref, n=10, **kwargs):
+        """[summary]
+
+        Parameters
+        ----------
+        ref : [type]
+            [description]
+        n : int, optional
+            [description], by default 10
+        """
         super().__init__(**kwargs)
         self.ref = ref[0:n]
         self.n = n
