@@ -155,7 +155,7 @@ class PSFModel(Block):
 
 class FastGaussian(PSFModel):
     """
-    Fit the height, mean sigma of a symetric 2D Gaussian model to an image effective PSF
+    Fit a symetric 2D Gaussian model to an image effective PSF
     """
     def __init__(self, cutout_size=21, **kwargs):
         super().__init__(cutout_size=cutout_size, **kwargs)

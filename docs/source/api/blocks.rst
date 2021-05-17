@@ -64,7 +64,6 @@ Here is a list of all blocks available in |prose|:
    Trim
    Stack
    SaveReduced
-   SavePhot
    Video
 
 
