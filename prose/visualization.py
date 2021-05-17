@@ -97,8 +97,6 @@ def plot_all_cuts(cuts, W=10, cmap="magma", stars=None, stars_in=None):
 
 
 class AnchoredHScaleBar(matplotlib.offsetbox.AnchoredOffsetbox):
-    """ size: length of bar in data units
-        extent : height of bar ends in axes units """
 
     def __init__(self, size=1, extent=0.03, label="", loc=2, ax=None,
                  pad=0.4, borderpad=0.5, ppad=0, sep=2, prop=None,
@@ -124,27 +122,33 @@ class AnchoredHScaleBar(matplotlib.offsetbox.AnchoredOffsetbox):
                                                         **kwargs)
 
 
-def plot_lcs(data, planets={}, W=4, show=None, hide=None, ylim=None, size=[4,3], indexes=None, colors=None, bins=0.005, force_width=True):
-    """
-    A global plot for multiple lightcurves
-    
+def plot_lcs(data, w=4, show=None, hide=None, ylim=None, size=None, labels=None, bins=0.005, force_width=True):
+    """Plot multiple x, y with some shared axis
+
     Parameters
     ----------
     data : list
-        a list of (time, flux)
-    planets : dict, optional
-        dict of planet to display as transit windows, format is:
-            {"name": [t0, period, duration], ...}
-        by default {}
-    W : int, optional
+        a list of (x, y)
+    w : int, optional
         number of plots per row, by default 4
     show : list, optional
         indexes of light curves to show, if None all are shown, by default None
-    hide : [type], optional
-        indexes of light curves to hide, if None, None are hidden, by default None, by default None
-    options : dict, optional
-        plotting options, by default {}
+    hide : list, optional
+        indexes of light curves to hide, if None none are hidden, by default None
+    ylim : tuple, optional
+        common ylim, by default None which auto set ylim for individual plots
+    size : tuple, optional
+        size of individual plots like in plt.figure, by default None for (4, 3)
+    labels : list of str, optional
+        list lower corner text to add in individual plots, by default None
+    bins : float, optional
+        bin size, by default 0.005
+    force_width : bool, optional
+        whether to occupy all width, by default True
     """
+
+    if size is None:
+        size = (4,3)
     
     if isinstance(data[0], dict):
         data = [[d["time"], d["lc"]] for d in data]
@@ -156,14 +160,12 @@ def plot_lcs(data, planets={}, W=4, show=None, hide=None, ylim=None, size=[4,3],
     
     idxs = np.setdiff1d(show, hide)
 
-    H = np.ceil(len(idxs) / W).astype(int)
+    H = np.ceil(len(idxs) / w).astype(int)
     if not force_width:
-        W = np.min([len(idxs), W])
-    fig, axes = plt.subplots(H,W,figsize=(W * size[0], H * size[1]))
+        w = np.min([len(idxs), w])
+    fig, axes = plt.subplots(H, w, figsize=(w * size[0], H * size[1]))
     
-    max_duration = np.max([jd.max() - jd.min() for jd, lc in [data[i] for i in idxs]])
-
-    planet_colors = ["C0", "C1", "C2", "C3", "C4"]
+    max_duration = np.max([jd.max() - jd.min() for jd, _ in [data[i] for i in idxs]])
     
     for _i, ax in enumerate(axes.flat if len(idxs) > 1 else [axes]):
         if _i < len(idxs):
@@ -172,37 +174,19 @@ def plot_lcs(data, planets={}, W=4, show=None, hide=None, ylim=None, size=[4,3],
             jd, lc = data[i]
             center = jd.min() + (jd.max() - jd.min())/2
 
-            for pi, (planet, (t0, period, duration)) in enumerate(planets.items()):
-                n_p = np.round((jd.max()-t0)/period)
-                if (jd.min()-t0-duration/2)/period < n_p < (jd.max()-t0+duration/2)/period:
-                    plt.plot(np.ones(2)*(n_p*period + t0 - duration/2), [0, 4], planet_colors[pi], alpha=0.4)
-                    plt.plot(np.ones(2)*(n_p*period + t0 + duration/2), [0, 4], planet_colors[pi], alpha=0.4)
-                    p1 = patches.Rectangle(
-                        (n_p*period + t0 - duration/2, 0),
-                        duration,
-                        4,
-                        facecolor=planet_colors[pi],
-                        alpha=0.05,
-                    )
-                    ax.add_patch(p1)
-
             plot(jd, lc, bins=bins)
             if ylim is not None:
                 plt.ylim(ylim)
 
             plt.xlim(center - (max_duration/2), center + (max_duration/2))
             # ax.get_legend().remove()
-            if i%W != 0 and ylim is not None:
+            if i%w != 0 and ylim is not None:
                 ax.tick_params(labelleft=False)
             ax.set_title(None)
-            if indexes is not None:
-                text = str(indexes[i])
+            if labels is not None:
+                text = str(labels[i])
             else:
                 text = str(i)
-            if colors is not None:
-                color = colors[i]
-            else:
-                color = "k"
             ax.annotate(
                     text,
                     xy=(0.05, 0.05),
@@ -211,7 +195,7 @@ def plot_lcs(data, planets={}, W=4, show=None, hide=None, ylim=None, size=[4,3],
                     ha="left",
                     va="bottom",
                     fontsize=10,
-                    color=color,
+                    color="k",
                 )
         else:
             ax.axis('off')
@@ -401,46 +385,7 @@ def fancy_show_stars(
         zoom=True,
         options={},
 ):
-    """
-    Plot stack image and detected stars
 
-    Parameters
-    ----------
-    size: float (optional)
-        pyplot figure (size, size)
-    image: int (optional)
-        index of image to plot in light files. Default is None, which show stack image
-    contrast: float
-        contrast within [0, 1] (zscale is applied here)
-    marker_color: [r, g, b]
-    proper_motion: bool
-        whether to display proper motion on the image
-    n_stars: int
-        max number of stars to show
-    flip: bool
-        flip image
-    view: 'all', 'reference'
-        - ``reference`` : only highlight target and comparison stars
-        - ``all`` : all stars are shown
-    zoom: bool
-        whether to include a zoom view
-    options: dict
-        style options:
-            - to do
-
-    Examples
-    --------
-
-    .. code-block:: python3
-
-        from specphot.observations import Photometry
-
-        phot = Photometry("your_path")
-        phot.plot_stars(view="reference")
-
-    .. image:: /user_guide/gallery/plot_stars.png
-       :align: center
-    """
     _options = {
         "aperture_color": "seagreen",
         "aperture_ls": "--"
