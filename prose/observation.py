@@ -635,11 +635,11 @@ class Observation(ApertureFluxes):
                 "fwhm_x": image.fwhmx,
                 "fwhm_y": image.fwhmy }
 
-    def plot_star_psf(self,star=None,print_values=True,plot=True):
+    def plot_star_psf(self,star=None,cutout_size=21,print_values=True,plot=True):
         if star is None:
             star = self.target
-        cutout = cutouts(self.stack, [self.stars[star]], size=21)
-        psf_fit = Moffat2D()
+        cutout = cutouts(self.stack, [self.stars[star]], size=cutout_size)
+        psf_fit = Moffat2D(cutout_size=cutout_size)
         params = ['fwhmx =', 'fwhmy =', 'theta =']
         values = []
         for i in range(len(params)):
