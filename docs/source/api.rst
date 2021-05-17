@@ -11,7 +11,6 @@ API
    api/telescope
    blocks
    api/aperturephotometry
-   api/reduction
-   api/neb
+   api/calibration
    api/converters
    core
