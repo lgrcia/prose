@@ -35,6 +35,7 @@ setup(
         "nbsphinx",
         "docutils",
         "tabulate",
+        "requests",
         "sphinx_rtd_theme",
         "imageio",
         "sep",

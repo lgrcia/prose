@@ -13,4 +13,5 @@ API
    api/aperturephotometry
    api/calibration
    api/converters
+   api/viz
    core

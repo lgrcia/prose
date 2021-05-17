@@ -24,3 +24,4 @@ nbsphinx
 celerite2
 jinja2
 tensorflow
+requests

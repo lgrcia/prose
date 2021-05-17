@@ -4,7 +4,7 @@ import numpy as np
 from astropy.time import Time
 from os import path
 import imageio
-from .. import visualisation as viz
+from .. import viz
 from astropy.stats import SigmaClip
 from photutils import MedianBackground
 from .psf import cutouts

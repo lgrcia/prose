@@ -8,7 +8,7 @@ from . import config
 CONFIG = config.ConfigManager()
 
 
-from . import visualisation as viz
+from . import visualization as viz
 
 from .io.fitsmanager import FitsManager
 from .fluxes import ApertureFluxes

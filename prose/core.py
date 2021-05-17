@@ -2,8 +2,8 @@ from tqdm import tqdm
 from astropy.io import fits
 from .console_utils import TQDM_BAR_FORMAT
 from astropy.wcs import WCS
-from . import visualisation as viz
-from . import  Telescope
+from . import viz
+from . import Telescope
 from collections import OrderedDict
 from tabulate import tabulate
 import numpy as np

@@ -2,7 +2,7 @@ import numpy as np
 from ..core import Block, Image
 from .. import utils
 import matplotlib.pyplot as plt
-from .. import visualisation as viz
+from .. import viz
 from astropy.nddata import Cutout2D
 from ..console_utils import info
 from time import sleep

@@ -6,7 +6,7 @@ from astropy.time import Time
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from .fluxes import ApertureFluxes
-from . import visualisation as viz
+from . import viz
 from astropy.io import fits
 from .telescope import Telescope
 from . import utils

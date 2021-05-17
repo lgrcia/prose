@@ -3,5 +3,5 @@ Visualization
 
 Convenient visualization functions
 
-.. automodule:: prose.viz
+.. automodule:: prose.visualization
     :members:
