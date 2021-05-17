@@ -1,6 +1,10 @@
 # prose
 
-**A python framework to build FITS images pipelines.**
+  <p align="center">
+
+  <img width="400" src="docs/source/prose.png">
+    
+  A python framework to build FITS images pipelines.
 
   <a href="https://github.com/lgrcia/prose">
     <img src="https://img.shields.io/badge/github-lgrcia/prose-blue.svg?style=flat" alt="github"/>
@@ -11,13 +15,10 @@
   <a href="">
     <img src="https://img.shields.io/badge/license-MIT-lightgray.svg?style=flat" alt="license"/>
   </a>
-  
+
+  </p>
 
 Built for Astronomy, *prose* features pipelines to perform common tasks (such as automated calibration, reduction and photometry) and makes building custom ones easy. Documentation at [prose.readthedocs.io](https://prose.readthedocs.io/en/dev)
-
-<p align="center">
-  <img width="400" src="docs/source/prose.png">
-</p>
 
 
 ```python
