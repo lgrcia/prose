@@ -3,6 +3,7 @@ from .alignment import AffineTransform, Cutout2D
 from .detection import SegmentedPeaks, DAOFindStars, SEDetection, Peaks
 from .calibration import Calibration, Trim
 from .psf import Gaussian2D, Moffat2D, FastGaussian, KeepGoodStars
+from .centroids import BalletCentroid
 from .photometry import PhotutilsAperturePhotometry, SEAperturePhotometry, PhotutilsPSFPhotometry
 from .imutils import *
 

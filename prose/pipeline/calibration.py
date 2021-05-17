@@ -30,6 +30,16 @@ class Calibration:
         list of images paths to be calibrated, by default None
     psf : `Block`, optional
         a `Block` to be used to characterise the effective psf, by default blocks.Moffat2D
+    show: bool, optional
+        within a notebook, whether to show processed image during reduction, by default False 
+    verbose: bool, optional
+        whether to print processing info and loading bars, by default True
+    twirl: bool, optional,
+        whether to use the Twirl block for alignment (see blocks.registration.Twirl)
+    n: int, optional,
+        number of stars used for alignment, by default None leading to 12 if twirl else 50
+    loader: Image class, optional
+        class to load Images, by default Image
     """
 
     def __init__(
@@ -43,7 +53,7 @@ class Calibration:
             psf=blocks.Moffat2D,
             verbose=True,
             show=False,
-            twirl=False,
+            twirl=True,
             n=None,
             loader=Image,
     ):
