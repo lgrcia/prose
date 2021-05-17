@@ -4,6 +4,7 @@
 
   <img width="400" src="docs/source/prose.png">
   <br>  
+  <br>
   A python framework to build FITS images pipelines.
   <br>
   <p align="center">
