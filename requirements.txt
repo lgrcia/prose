@@ -23,4 +23,4 @@ netcdf4
 nbsphinx
 celerite2
 jinja2
-tensorflo
+tensorflow
