@@ -10,6 +10,7 @@ setup(
     author="Lionel J. Garcia",
     description="Reduction and analysis of FITS telescope observations",
     py_modules=["prose"],
+    packages=["prose"],
     license="MIT",
     url="https://github.com/lgrcia/prose",
     # entry_points="""
