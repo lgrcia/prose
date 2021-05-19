@@ -153,9 +153,33 @@ class PSFModel(Block):
         return self.optimize()
 
 
+class FWHM(Block):
+    """
+    Fast empirical FWHM (courtesy of Arielle Bertrou-Cantou)
+    """
+
+    def __init__(self, n=15, **kwargs):
+        super().__init__(**kwargs)
+        self.n = n
+
+    def run(self, image, **kwargs):
+        psf = image_psf(image.data, image.stars_coords, self.n)
+        psf -= np.min(psf)
+        mask = psf > np.max(psf) / 2
+        r = np.sqrt(np.sum(mask) / np.pi) * 2
+        image.fwhm = r
+        image.fwhmx = r
+        image.fwhmy = r
+        image.header["FWHM"] = image.fwhm
+        image.header["FWHMX"] = image.fwhmx
+        image.header["FWHMY"] = image.fwhmy
+        image.header["PSFANGLE"] = 0
+        image.header["FWHMALG"] = self.__class__.__name__
+
+
 class FastGaussian(PSFModel):
     """
-    Fit the height, mean sigma of a symetric 2D Gaussian model to an image effective PSF
+    Fit a symetric 2D Gaussian model to an image effective PSF
     """
     def __init__(self, cutout_size=21, **kwargs):
         super().__init__(cutout_size=cutout_size, **kwargs)

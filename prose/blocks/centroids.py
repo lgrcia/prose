@@ -36,6 +36,8 @@ class CNNCentroid(Block):
 
     def import_and_check_model(self):
         try:
+            import os
+            os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
             import tensorflow as tf
             from tensorflow.keras import models as models, layers
             self.tf_models = models

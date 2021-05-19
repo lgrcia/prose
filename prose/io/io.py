@@ -78,7 +78,7 @@ def set_hdu(hdu_list, value):
         hdu_list.append(value)
 
 
-def fits_to_df(files, telescope_kw="TELESCOP", verbose=True):
+def fits_to_df(files, telescope_kw="TELESCOP", verbose=True, hdu=0):
     assert len(files) > 0, "Files not provided"
 
     last_telescope = "_"
@@ -89,19 +89,19 @@ def fits_to_df(files, telescope_kw="TELESCOP", verbose=True):
         return tqdm(x) if verbose else x
 
     for i in progress(files):
-        header = fits.getheader(i)
+        header = fits.getheader(i, hdu)
         telescope_name = header.get(telescope_kw, "")
         if telescope_name != last_telescope:
             telescope = Telescope.from_name(telescope_name)
 
         df_list.append(dict(
             path=i,
-            date=header.get(telescope.keyword_observation_date, "2000-01-01T00:00:00.000"),
+            date=telescope.date(header),
             telescope=telescope.name,
-            type=header.get(telescope.keyword_image_type, "").lower(),
+            type=telescope.image_type(header),
             target=header.get(telescope.keyword_object, ""),
             filter=header.get(telescope.keyword_filter, ""),
-            dimensions=(header["NAXIS1"], header["NAXIS2"]),
+            dimensions=(header.get("NAXIS1", 1), header.get("NAXIS2", 1)),
             flip=header.get(telescope.keyword_flip, ""),
             jd=header.get(telescope.keyword_jd, ""),
         ))

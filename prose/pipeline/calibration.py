@@ -1,4 +1,4 @@
-from .. import Sequence, blocks, Block, Telescope
+from .. import Sequence, blocks, Block, Image
 import os
 from os import path
 from pathlib import Path
@@ -30,6 +30,16 @@ class Calibration:
         list of images paths to be calibrated, by default None
     psf : `Block`, optional
         a `Block` to be used to characterise the effective psf, by default blocks.Moffat2D
+    show: bool, optional
+        within a notebook, whether to show processed image during reduction, by default False 
+    verbose: bool, optional
+        whether to print processing info and loading bars, by default True
+    twirl: bool, optional,
+        whether to use the Twirl block for alignment (see blocks.registration.Twirl)
+    n: int, optional,
+        number of stars used for alignment, by default None leading to 12 if twirl else 50
+    loader: Image class, optional
+        class to load Images, by default Image
     """
 
     def __init__(
@@ -43,8 +53,9 @@ class Calibration:
             psf=blocks.Moffat2D,
             verbose=True,
             show=False,
-            twirl=False,
+            twirl=True,
             n=None,
+            loader=Image,
     ):
         self.destination = None
         self.overwrite = overwrite
@@ -59,11 +70,11 @@ class Calibration:
         else:
             self.show = blocks.Pass()
 
-        # set on prepare
         self.flats = flats
         self.bias = bias
         self.darks = darks
         self._images = images
+        self.loader = loader
 
         self.detection_s = None
         self.calibration_s = None
@@ -74,7 +85,7 @@ class Calibration:
         # set reference file
         reference_id = int(self._reference * len(self._images))
         self.reference_fits = self._images[reference_id]
-        self.calibration_block = blocks.Calibration(self.darks, self.flats, self.bias, name="calibration")
+        self.calibration_block = blocks.Calibration(self.darks, self.flats, self.bias, loader=loader, name="calibration")
 
     def run(self, destination, gif=True):
         """Run the calibration pipeline
@@ -94,7 +105,7 @@ class Calibration:
             blocks.Trim(name="trimming"),
             blocks.SegmentedPeaks(n_stars=self.n, name="detection"),
             blocks.ImageBuffer(name="buffer")
-        ], self.reference_fits)
+        ], self.reference_fits, loader=self.loader)
 
         self.detection_s.run(show_progress=False)
 
@@ -126,7 +137,7 @@ class Calibration:
                 ("time", "airmass"),
                 ("time", "exposure")
             )
-        ], self._images, name="Calibration")
+        ], self._images, name="Calibration", loader=self.loader)
 
         self.calibration_s.run(show_progress=self.verbose)
 

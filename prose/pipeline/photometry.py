@@ -135,7 +135,7 @@ class Photometry:
 
     def save_xarray(self):
         if path.exists(self.phot_path):
-            initial_xarray = xr.load_dataset(self.phot_path)
+            initial_xarray = xr.load_dataset(self.phot_path, engine="netcdf4")
         else:
             initial_xarray = xr.Dataset()
 
@@ -197,6 +197,12 @@ class AperturePhotometry(Photometry):
         aperture photometry Block, by default :class:`~prose.blocks.PhotutilsAperturePhotometry`
     centroid : Block, optional
         centroid computing Block, by default None to keep centroid fixed
+    show: bool, optional
+        within a notebook, whether to show processed image during reduction, by default False 
+    verbose: bool, optional
+        whether to print processing info and loading bars, by default True
+    twirl: bool, optional,
+        whether to use the Twirl block for alignment (see blocks.registration.Twirl)
     """
 
     def __init__(self,
@@ -212,10 +218,10 @@ class AperturePhotometry(Photometry):
                  sigclip=3.,
                  psf=blocks.Gaussian2D,
                  photometry=blocks.PhotutilsAperturePhotometry,
-                 centroid=None,
+                 centroid=blocks.BalletCentroid,
                  show=False,
                  verbose=True,
-                 twirl=False):
+                 twirl=True):
 
         if apertures is None:
             apertures = np.arange(0.1, 10, 0.25)

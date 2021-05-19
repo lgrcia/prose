@@ -108,9 +108,10 @@ class ConfigManager:
         telescope_dict = {}
 
         for id_file in id_files:
-            telescope = yaml.load(id_file.open(mode="r"), Loader=yaml.FullLoader)
+            with id_file.open(mode="r") as f:
+                telescope = yaml.load(f, Loader=yaml.FullLoader)
             telescope_dict[telescope["name"].lower()] = telescope
-            if hasattr(telescope, "names"):
+            if "names" in telescope:
                 for name in telescope["names"]:
                     telescope_dict[name.lower()] = telescope
 

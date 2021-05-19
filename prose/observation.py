@@ -6,7 +6,7 @@ from astropy.time import Time
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from .fluxes import ApertureFluxes
-from . import visualisation as viz
+from . import viz
 from astropy.io import fits
 from .telescope import Telescope
 from . import utils
@@ -22,6 +22,9 @@ from datetime import datetime
 import warnings
 from .blocks.registration import distances
 import requests
+import shutil
+from pathlib import Path
+from . import twirl
 import io
 from .utils import fast_binning, z_scale
 
@@ -189,29 +192,35 @@ class Observation(ApertureFluxes):
 
     @property
     def meridian_flip(self):
-        has_flip = hasattr(self.xarray, "flip")
-        if has_flip:
-            if isinstance(self.flip[0],str):
-                pass
-            else:
-                has_flip = ~np.all(np.isnan(self.flip))
-        if not has_flip:
-            return None
-        elif self._meridian_flip is None:
-            ps = (self.flip.copy() == "WEST").astype(int)
-            diffs = np.abs(np.diff(ps))
-            if np.any(diffs):
-                self._meridian_flip = self.time[np.argmax(diffs).flatten()]
-            else:
-                self._meridian_flip = None
+        """Meridian flip time. Supposing EAST and WEST encode orientation
+        """
+        if self._meridian_flip is not None:
+            return self._meridian_flip
+        else:
+            has_flip = hasattr(self.xarray, "flip")
 
-        return self._meridian_flip
+            if has_flip:
+                if "WEST" in self.flip:
+                    flip = (self.flip.copy() == "WEST").astype(int)
+                    diffs = np.abs(np.diff(flip))
+                    if np.any(diffs):
+                        self._meridian_flip = self.time[np.argmax(diffs).flatten()]
+                    else:
+                        self._meridian_flip = None
+
+                    return self._meridian_flip
+                else:
+                    return None
+            else:
+                return None
 
     # TESS specific methods
     # --------------------
 
     @property
     def tic_id(self):
+        """TIC id from digits found in target name
+        """
         try:
             nb = re.findall('\d*\.?\d+', self.name)
             df = pd.read_csv("https://exofop.ipac.caltech.edu/tess/download_toi?toi=%s&output=csv" % nb[0])
@@ -223,6 +232,8 @@ class Observation(ApertureFluxes):
 
     @property
     def gaia_from_toi(self):
+        """Gaia id from TOI id if TOI is in target name
+        """
         if self.tic_id is not None:
             tic_id = ("TIC " + self.tic_id)
             catalog_data = Catalogs.query_object(tic_id, radius=.001, catalog="TIC")
@@ -283,7 +294,7 @@ class Observation(ApertureFluxes):
         # Catalog queries
         # ---------------
 
-    def query_gaia(self, limit=1000, cone_radius=None):
+    def query_gaia(self, limit=-1, cone_radius=None):
         """Query gaia catalog for stars in the field
         """
         from astroquery.gaia import Gaia
@@ -302,7 +313,7 @@ class Observation(ApertureFluxes):
         self.gaia_data.sort("phot_g_mean_flux", reverse=True)
 
         delta_years = (utils.datetime_to_years(datetime.strptime(self.date, "%Y%m%d")) - \
-                      self.gaia_data["ref_epoch"].data.data) * u.year
+                    self.gaia_data["ref_epoch"].data.data) * u.year
 
         dra = delta_years * self.gaia_data["pmra"].to(u.deg / u.year)
         ddec = delta_years * self.gaia_data["pmdec"].to(u.deg / u.year)
@@ -315,12 +326,16 @@ class Observation(ApertureFluxes):
             radial_velocity=self.gaia_data['radial_velocity'],
             obstime=Time(2015.0, format='decimalyear'))
 
-        self.gaia_data["x"], self.gaia_data["y"] = np.array(wcsutils.skycoord_to_pixel(skycoords, self.wcs))
+        gaias = np.array(wcsutils.skycoord_to_pixel(skycoords, self.wcs)).T
+        gaias[np.any(np.isnan(gaias), 1), :] = [0, 0]
+        self.gaia_data["x"], self.gaia_data["y"] = gaias.T
+        inside = np.all((np.array([0, 0]) < gaias) & (gaias < np.array(self.stack.shape)), 1)
+        self.gaia_data = self.gaia_data[np.argwhere(inside).squeeze()]
 
         w, h = self.stack.shape
         if np.abs(np.mean(self.gaia_data["x"])) > w or np.abs(np.mean(self.gaia_data["y"])) > h:
             warnings.warn("Catalog stars seem out of the field. Check that your stack is solved and that telescope "
-                          "'ra_unit' and 'dec_unit' are well set")
+                        "'ra_unit' and 'dec_unit' are well set")
 
     def query_tic(self):
         """Query TIC catalog (through MAST) for stars in the field
@@ -429,7 +444,7 @@ class Observation(ApertureFluxes):
         if len(axes) == 0:
             self.show(**kwargs)
 
-    def show_stars(self, view=None, n=None, flip=False, comp_color="yellow", color=[0.51, 0.86, 1.], **kwargs):
+    def show_stars(self, view=None, n=None, flip=False, comp_color="yellow", color=[0.51, 0.86, 1.], stars=None, **kwargs):
         """Show detected stars over stack image
 
 
@@ -452,13 +467,16 @@ class Observation(ApertureFluxes):
 
         self._check_show(flip=flip, **kwargs)
 
+        if stars is None:
+            stars = self.stars
+
         if n is not None:
             if view == "reference":
                 raise AssertionError("'n_stars' kwargs is incompatible with 'reference' view that will display all stars")
         else:
-            n = len(self.stars)
+            n = len(stars)
 
-        stars = self.stars[0:n]
+        stars = stars[0:n]
 
         if view is None:
             view = "reference" if 'comps' in self else "all"
@@ -469,11 +487,12 @@ class Observation(ApertureFluxes):
             stars = np.array(image_size) - stars
 
         if view == "all":
-            others = np.arange(n, len(self.stars))
-            others = np.setdiff1d(others, self.target)
-
             viz.plot_marks(*stars.T, np.arange(len(stars)), color=color)
-            viz.plot_marks(*self.stars[others].T, alpha=0.4, color=color)
+
+            if "stars" in self.xarray:
+                others = np.arange(n, len(self.stars))
+                others = np.setdiff1d(others, self.target)
+                viz.plot_marks(*self.stars[others].T, alpha=0.4, color=color)
 
         elif view == "reference":
             x = self.xarray.isel(apertures=self.aperture)
@@ -488,7 +507,7 @@ class Observation(ApertureFluxes):
             _ = viz.plot_marks(*stars[comps].T, comps, color=comp_color)
             _ = viz.plot_marks(*stars[others].T, alpha=0.4, color=color)
 
-    def show_gaia(self, color="lightblue", alpha=1, n=None, idxs=True, limit=1000):
+    def show_gaia(self, color="yellow", alpha=1, n=None, idxs=True, limit=-1, fontsize=8, align=False):
         """Overlay Gaia objects on stack image
 
 
@@ -509,14 +528,20 @@ class Observation(ApertureFluxes):
         if self.gaia_data is None:
             self.query_gaia(limit=limit)
 
-        x = self.gaia_data["x"].data
-        y = self.gaia_data["y"].data
-        labels = self.gaia_data["source_id"].data.astype(str)
+        gaias = np.vstack([self.gaia_data["x"].data, self.gaia_data["y"].data]).T
+        defined = ~np.any(np.isnan(gaias), 1)
+        gaias = gaias[defined]
+        labels = self.gaia_data["source_id"].data.astype(str)[defined]
+
+        if align:
+            X = twirl.find_transform(gaias[0:30], self.stars, n=15)
+            gaias = twirl.affine_transform(X)(gaias)
+
         labels = [f"{_id[0:len(_id) // 2]}\n{_id[len(_id) // 2::]}" for _id in labels]
+        _ = viz.plot_marks(*gaias.T, labels if idxs else None, color=color, alpha=alpha, n=n, position="top",
+                           fontsize=fontsize)
 
-        _ = viz.plot_marks(x, y, labels if idxs else None, color=color, alpha=alpha, n=n, position="top", fontsize=6)
-
-    def show_tic(self, color="white", alpha=1, n=None, idxs=True):
+    def show_tic(self, color="white", alpha=1, n=None, idxs=True, align=True):
         """Overlay TIC objects on stack image
 
 
@@ -539,26 +564,42 @@ class Observation(ApertureFluxes):
 
         x = self.tic_data["x"].data
         y = self.tic_data["y"].data
+        tics = np.vstack([x, y]).T
         ID = self.tic_data["ID"].data
-        _ = viz.plot_marks(x, y, ID if idxs else None, color=color, alpha=alpha, n=n, position="top", fontsize=9, offset=10)
 
-    def show_cutout(self, star=None, size=200):
+        if align:
+            X = twirl.find_transform(tics[0:30], self.stars, n=15)
+            tics = twirl.affine_transform(X)(tics)
+
+        _ = viz.plot_marks(*tics.T, ID if idxs else None, color=color, alpha=alpha, n=n, position="top", fontsize=9, offset=10)
+
+    def show_cutout(self, star=None, size=200, marks=True):
         """
-        Show a zoomed cutout around a detected star
+        Show a zoomed cutout around a detected star or coordinates
 
         Parameters
         ----------
         star : [type], optional
-            detected star id, by default None
+            detected star id or (x, y) coordinate, by default None
         size : int, optional
             side size of square cutout in pixel, by default 200
         """
-        if star == None:
-            star = self.target
-        viz.show_stars(self.stack, self.stars, highlight=star, size=6)
-        ax = plt.gcf().axes[0]
-        ax.set_xlim(np.array([-size / 2, size / 2]) + self.stars[star][0])
-        ax.set_ylim(np.array([-size / 2, size / 2]) + self.stars[star][1])
+
+        if star is None:
+            x, y = self.stars[self.target]
+        elif isinstance(star, int):
+            x, y = self.stars[star]
+        elif isinstance(star, (tuple, list, np.ndarray)):
+            x, y = star
+        else:
+            raise ValueError("star type not understood")
+
+        self.show()
+        plt.xlim(np.array([-size / 2, size / 2]) + x)
+        plt.ylim(np.array([-size / 2, size / 2]) + y)
+        if marks:
+            idxs = np.argwhere(np.max(np.abs(self.stars - [x, y]), axis=1) < size).squeeze()
+            viz.plot_marks(*self.stars[idxs].T, label=idxs)
 
     def plot_comps_lcs(self, n=5, ylim=(0.98, 1.02)):
         """Plot comparison stars light curves along target star light curve
@@ -590,16 +631,6 @@ class Observation(ApertureFluxes):
         plt.title("Comparison stars", loc="left")
         plt.grid(color="whitesmoke")
         plt.tight_layout()
-
-    def plot_data(self, key):
-
-        self.plot()
-        amp = (np.percentile(self.diff_flux, 95) - np.percentile(self.diff_flux, 5)) / 2
-        plt.plot(self.time, amp * utils.rescale(self.xarray[key]) + 1,
-                 label="normalized {}".format(key),
-                 color="k"
-                 )
-        plt.legend()
 
     def plot_psf_fit(self, size=21, cmap="inferno", c="blueviolet", model=Gaussian2D):
         """Plot a 2D gaussian fit of the global psf (extracted from stack fits)
@@ -792,22 +823,52 @@ class Observation(ApertureFluxes):
         plt.title("Photometric precision (raw fluxes)", loc="left")
 
     def plot_meridian_flip(self):
+        """Plot meridian flip line over existing axe
+        """
         if self.meridian_flip is not None:
             plt.axvline(self.meridian_flip, c="k", alpha=0.15)
             _, ylim = plt.ylim()
             plt.text(self.meridian_flip, ylim, "meridian flip ", ha="right", rotation="vertical", va="top", color="0.7")
 
     def plot(self, meridian_flip=True):
+        """Plot observation light curve
+
+        Parameters
+        ----------
+        meridian_flip : bool, optional
+            whether to show meridian flip, by default True
+        """
         super().plot()
         if meridian_flip:
             self.plot_meridian_flip()
 
-    def plot_psf(self, star=None, n=40, zscale=False):
+    def plot_psf(self, star=None, n=40, zscale=False, aperture=None, rin=None, rout=None):
+        """Plot star cutout overalid with aperture and radial flux.
+
+        Parameters
+        ----------
+        star : int or list like, optional
+            if int: star to plot cutout on, if list like (tuple, np.ndarray) of size 2: coords of cutout, by default None
+        n : int, optional
+            cutout width and height, by default 40
+        zscale : bool, optional
+            whether to apply a zscale to cutout image, by default False
+        aperture : float, optional
+            radius of aperture to display, by default None corresponds to best target aperture
+        rin : [type], optional
+            radius of inner annulus to display, by default None corresponds to inner radius saved
+        rout : [type], optional
+            radius of outer annulus to display, by default None corresponds to outer radius saved
+        """
         n /= np.sqrt(2)
-        if star is None:
-            x, y = self.stars[self.target]
-        else:
+
+        if isinstance(star, (tuple, list, np.ndarray)):
+            x, y = star
+        elif isinstance(star, int):
             x, y = self.stars[star]
+        elif star is None:
+                x, y = self.stars[self.target]
+
         Y, X = np.indices(self.stack.shape)
         cutout_mask = (np.abs(X - x + 0.5) < n) & (np.abs(Y - y + 0.5) < n)
         inside = np.argwhere((cutout_mask).flatten()).flatten()
@@ -821,65 +882,74 @@ class Observation(ApertureFluxes):
 
         fig = plt.figure(figsize=(9.5, 4))
         fig.patch.set_facecolor('xkcd:white')
-        ax = plt.subplot(1, 5, (1, 3))
+        _ = plt.subplot(1, 5, (1, 3))
 
         plt.plot(radii, pixels, "o", fillstyle='none', c="0.7", ms=4)
         plt.plot(binned_radii, binned_pixels, c="k")
-
-        apertures = self.apertures_radii[:,0]
-        a = self.aperture
-        if "annulus_rin" in self:
-            rin = self.annulus_rin.mean()
-            rout = self.annulus_rout.mean()
-        else:
-            print(
-                f"{INFO_LABEL} You are probably using a last version phot file, aperture_rin/out has been, set to default AperturePhotometry value")
-            rin = self.fwhm.mean() * 5
-            rout = self.fwhm.mean() * 8
-
         plt.xlabel("distance from center (pixels)")
         plt.ylabel("ADUs")
         _, ylim = plt.ylim()
-        plt.xlim(0)
-        plt.text(apertures[a], ylim, "APERTURE", ha="right", rotation="vertical", va="top")
-        plt.axvspan(0, apertures[a], color="0.9", alpha=0.1)
 
-        plt.axvspan(rin, rout, color="0.9", alpha=0.1)
-        plt.axvline(rin, color="k", alpha=0.1)
-        plt.axvline(rout, color="k", alpha=0.1)
-        plt.axvline(apertures[a], c="k", alpha=0.1)
-        _ = plt.text(rout, ylim, "ANNULUS", ha="right", rotation="vertical", va="top")
+        if "apertures_radii" in self.xarray and aperture is None:
+            apertures = self.apertures_radii[:, 0]
+
+            if apertures is not None:
+                aperture = apertures[self.aperture]
+
+            plt.xlim(0)
+            plt.text(aperture, ylim, "APERTURE", ha="right", rotation="vertical", va="top")
+            plt.axvline(aperture, c="k", alpha=0.1)
+            plt.axvspan(0, aperture, color="0.9", alpha=0.1)
+
+        if "annulus_rin" in self:
+            if rin is None:
+                rin = self.annulus_rin.mean()
+            if rout is None:
+                rout = self.annulus_rout.mean()
+
+        if rin is not None:
+            plt.axvline(rin, color="k", alpha=0.1)
+
+        if rout is not None:
+            plt.axvline(rout, color="k", alpha=0.1)
+            if rin is not None:
+                plt.axvspan(rin, rout, color="0.9", alpha=0.1)
+                _ = plt.text(rout, ylim, "ANNULUS", ha="right", rotation="vertical", va="top")
 
         ax2 = plt.subplot(1, 5, (4, 5))
         im = self.stack[int(y - n):int(y + n), int(x - n):int(x + n)]
         if zscale:
             im = z_scale(im)
+
         plt.imshow(im, cmap="Greys_r", aspect="auto", origin="lower")
+
         plt.axis("off")
-        ax2.add_patch(plt.Circle((n, n), apertures[a], ec='grey', fill=False, lw=2))
-        ax2.add_patch(plt.Circle((n, n), rin, ec='grey', fill=False, lw=2))
-        ax2.add_patch(plt.Circle((n, n), rout, ec='grey', fill=False, lw=2))
+        if aperture is not None:
+            ax2.add_patch(plt.Circle((n, n), aperture, ec='grey', fill=False, lw=2))
+        if rin is not None:
+            ax2.add_patch(plt.Circle((n, n), rin, ec='grey', fill=False, lw=2))
+        if rout is not None:
+            ax2.add_patch(plt.Circle((n, n), rout, ec='grey', fill=False, lw=2))
+
         plt.tight_layout()
 
-    def dualplot_systematics_signal(self, systematics, signal, ylim=None, offset=None, figsize=(6, 7)):
-        amplitude = np.percentile(self.diff_flux, 95) - np.percentile(self.diff_flux, 5)
-        amplitude *= 1.5
-        if offset is None:
-            offset = amplitude
-        if ylim is None:
-            ylim = (1 - offset - 0.9 * amplitude, 1 + 0.9 * amplitude)
+    def plot_systematics_signal(self, systematics, signal, ylim=None, offset=None, figsize=(6, 7)):
+        """Plot a systematics and signal model over diff_flux. systeamtics + signal is plotted on top, signal alone on detrended
+        data on bottom
 
-        fig = plt.figure(figsize=figsize)
-        fig.patch.set_facecolor('white')
-        viz.plot(self.time, self.diff_flux, label='data', binlabel='binned data (7.2 min)')
-        plt.plot(self.time, systematics + signal, c="C0",
-                 label="systematics + signal model")
-        plt.plot(self.time, signal + 1. - offset, label="transit model", c="k")
-        plt.text(plt.xlim()[1] + 0.005, 1, "RAW", rotation=270, va="center")
-        viz.plot(self.time, self.diff_flux - systematics + 1. - offset)
-        plt.text(plt.xlim()[1] + 0.005, 1 - offset, "DETRENDED", rotation=270, va="center")
+        Parameters
+        ----------
+        systematics : np.ndarray
+        signal : np.ndarray
+        ylim : tuple, optional
+            ylim of the plot, by default None, using the dispersion of y
+        offset : tuple, optional
+            offset between, by default None
+        figsize : tuple, optional
+            figure size as in in plt.figure, by default (6, 7)
+        """
 
-        plt.ylim(ylim)
+        viz.plot_systematics_signal(self.time, self.diff_flux, systematics, signal, ylim=ylim, offset=offset, figsize=figsize)
 
         self.plot_meridian_flip()
         plt.legend()
@@ -889,6 +959,8 @@ class Observation(ApertureFluxes):
         viz.paper_style()
 
     def xlabel(self):
+        """Plot xlabel (time) according to its units
+        """
         plt.xlabel(self.time_format.upper().replace("_", "-"))
 
     def where(self, condition):
@@ -1010,5 +1082,18 @@ class Observation(ApertureFluxes):
 
     def convert_flip(self,keyword):
         self.xarray['flip'] = ('time', (self.flip == keyword).astype(int))
+
+
+    def folder_to_phot(self, confirm=True):
+        if confirm:
+            confirm = str(input("Will erase all but .phot, enter 'y' to continue: "))
+        else:
+            confirm = True
+
+        if confirm:
+            _phot = Path(self.phot)
+            folder = Path(_phot).parent
+            shutil.move(str(_phot.absolute()), str(folder.parent.absolute()))
+            shutil.rmtree(str(folder.absolute()))
 
 

@@ -31,7 +31,10 @@ Alignment, Centroiding, PSF
    :nosignatures:
 
    XYShift
+   Twirl
    Align
+   AffineTransform
+   Cutout2D
    AstroAlignShift
    Gaussian2D
    Moffat2D
@@ -57,17 +60,15 @@ Utils
 
    Align
    Calibration
-   CleanCosmics
    Cutouts
    Flip
    ImageBuffer
    Pass
-   RemoveBackground
    SavePhot
    SaveReduced
    Set
    Stack
-   StackStd
    Trim
    Video
    Plot
+   XArray

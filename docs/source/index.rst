@@ -6,11 +6,19 @@
 prose
 =====
 
-A python framework to process FITS images. Built for Astronomy, |prose| features pipelines to perform common tasks (such as automated calibration, reduction and photometry) and makes building custom ones easy.
+A python framework to process FITS images. 
 
 .. image:: prose.png
    :width: 450
    :align: center
+
+.. image:: https://img.shields.io/badge/github-lgrcia/prose-blue.svg?style=flat
+    :target: https://github.com/lgrcia/prose
+.. image:: https://img.shields.io/badge/read-thedoc-black.svg?style=flat
+    :target: https://prose.readthedocs.io/en/latest/
+.. image:: https://img.shields.io/badge/license-MIT-lightgray.svg?style=flat
+
+Built for Astronomy, |prose| features pipelines to perform common tasks (such as automated calibration, reduction and photometry) and makes building custom ones easy.
 
 
 .. toctree::

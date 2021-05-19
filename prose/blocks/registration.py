@@ -295,7 +295,26 @@ class _Twirl(Block):
 
 
 class Twirl(Block):
+    """
+    Affine transform computation for images registration
+
+    Parameters
+    ----------
+    ref : (2, n) np.ndarray
+        list of stars coordinates serving as a reference
+    n : int, optional
+        number of stars to consider to compute transformation, by default 10
+    """
     def __init__(self, ref, n=10, **kwargs):
+        """[summary]
+
+        Parameters
+        ----------
+        ref : [type]
+            [description]
+        n : int, optional
+            [description], by default 10
+        """
         super().__init__(**kwargs)
         self.ref = ref[0:n]
         self.n = n
@@ -303,10 +322,9 @@ class Twirl(Block):
         self.kdtree = KDTree(self.quads_ref)
 
     def run(self, image, **kwargs):
-        x = self(image.stars_coords)
+        x, image.dx, image.dy = self(image.stars_coords, return_dx=True)
 
         image.transform = skAT(x)
-        image.dx, image.dy = image.transform.translation
         image.header["TWROT"] = image.transform.rotation
         image.header["TWTRANSX"] = image.transform.translation[0]
         image.header["TWTRANSY"] = image.transform.translation[1]
@@ -314,7 +332,7 @@ class Twirl(Block):
         image.header["TWSCALEY"] = image.transform.scale[1]
         image.header["ALIGNALG"] = self.__class__.__name__
 
-    def __call__(self, stars_coords, tolerance=20):
+    def __call__(self, stars_coords, tolerance=2, return_dx=False):
         s = stars_coords.copy()
         quads, stars = tutils.quads_stars(s, n=self.n)
         dist, indices = self.kdtree.query(quads)
@@ -335,4 +353,9 @@ class Twirl(Block):
 
         i, j = tutils.cross_match(new_ref, s, tolerance=tolerance, return_ixds=True).T
         x = tutils._find_transform(s[j], self.ref[i])
-        return x
+
+        if return_dx:
+            dx, dy = np.median(s[j]-self.ref[i], 0)
+            return x, dx, dy
+        else:
+            return x

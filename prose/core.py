@@ -2,8 +2,8 @@ from tqdm import tqdm
 from astropy.io import fits
 from .console_utils import TQDM_BAR_FORMAT
 from astropy.wcs import WCS
-from . import visualisation as viz
-from . import  Telescope
+from . import viz
+from . import Telescope
 from collections import OrderedDict
 from tabulate import tabulate
 import numpy as np
@@ -12,104 +12,12 @@ from pathlib import Path
 from astropy.time import Time
 
 
-class Sequence:
-    # TODO: add index self.i in image within unit loop
-
-    def __init__(self, blocks, files, name="default", **kwargs):
-        self.name = name
-        self.files_or_images = files if not isinstance(files, (str, Path)) else [files]
-        self.blocks = blocks
-
-        self.data = {}
-
-    def __getattr__(self, item):
-        return self.blocks_dict[item]
-
-    @property
-    def blocks(self):
-        return list(self.blocks_dict.values())
-
-    @blocks.setter
-    def blocks(self, blocks):
-        self.blocks_dict = OrderedDict({
-            block.name if block.name is not None else "block{}".format(i): block
-            for i, block in enumerate(blocks)
-        })
-
-    def run(self, show_progress=True):
-        if show_progress:
-            progress = lambda x: tqdm(
-                x,
-                desc=self.name,
-                unit="images",
-                ncols=80,
-                bar_format=TQDM_BAR_FORMAT,
-            )
-
-        else:
-            progress = lambda x: x
-
-        if isinstance(self.files_or_images, list):
-            if len(self.files_or_images) == 0:
-                raise ValueError("No images to process")
-        elif self.files_or_images is None:
-            raise ValueError("No images to process")
-
-        # initialization
-        for block in self.blocks:
-            block.set_unit_data(self.data)
-            block.initialize()
-
-        # run
-        for i, file_or_image in enumerate(progress(self.files_or_images)):
-            if isinstance(file_or_image, (str, Path)):
-                image = Image(file_or_image)
-            else:
-                image = file_or_image
-            image.i = i
-            discard_message = False
-            for block in self.blocks:
-                # This allows to discard image in any blocks
-                if not image.discarded:
-                    block._run(image)
-                elif not discard_message:
-                    discard_message = True
-                    if isinstance(file_or_image, str):
-                        print(f"Warning: image {i} (...{file_or_image[i]}) discarded in {type(block).__name__}")
-                    else:
-                        print(f"Warning: image {i} discarded in {type(block).__name__}")
-
-            del image
-
-        # terminate
-        for block in self.blocks:
-            block.terminate()
-
-    def __str__(self):
-        rows = [[block.name, block.__class__.__name__, f"{block.processing_time:.4f} s"] for block in self.blocks]
-        headers = ["name", "type", "processing"]
-
-        return tabulate(rows, headers, tablefmt="fancy_grid")
-
-    def citations(self):
-        citations = [block.citations() for block in self.blocks if block.citations() is not None]
-        return citations if len(citations) > 0 else None
-
-    def insert_before(self, before, block):
-        pass
-
-    @property
-    def processing_time(self):
-        return np.sum([block.processing_time for block in self.blocks])
-
-
 class Image:
 
     def __init__(self, fitspath=None, data=None, header=None, **kwargs):
         if fitspath is not None:
-            self.data = fits.getdata(fitspath).astype(float)
-            self.header = fits.getheader(fitspath)
             self.path = fitspath
+            self.get_data_header()
         else:
             self.data = data
             self.header = header if header is not None else {}
@@ -120,8 +28,12 @@ class Image:
         self.__dict__.update(kwargs)
         self.check_telescope()
 
+    def get_data_header(self):
+        self.data = fits.getdata(self.path).astype(float)
+        self.header = fits.getheader(self.path)
+
     def copy(self, data=True):
-        new_self = Image(**self.__dict__)
+        new_self = self.__class__(**self.__dict__)
         if not data:
             del new_self.__dict__["data"]
 
@@ -145,7 +57,7 @@ class Image:
     @property
     def jd_utc(self):
         # if jd keyword not in header compute jd from date
-        if hasattr(self.header, self.telescope.keyword_jd):
+        if self.telescope.keyword_jd in self.header:
             jd = self.get(self.telescope.keyword_jd, None) + self.telescope.mjd
         else:
             jd = Time(self.date, scale="utc").to_value('jd') + self.telescope.mjd
@@ -158,7 +70,7 @@ class Image:
 
     @property
     def date(self):
-        return self.get(self.telescope.keyword_observation_date, None)
+        return self.telescope.date(self.header)
 
     @property
     def bjd_tdb(self):
@@ -244,38 +156,94 @@ class Block:
     def doc():
         return ""
 
+  
+class Sequence:
+    # TODO: add index self.i in image within unit loop
 
-class Pipeline:
-
-    def __init__(self, units, name="default", **kwargs):
+    def __init__(self, blocks, files, name="default", loader=Image, **kwargs):
         self.name = name
-        self.units = units
+        self.files_or_images = files if not isinstance(files, (str, Path)) else [files]
+        self.blocks = blocks
+        self.loader = loader
+
         self.data = {}
-        self._telescope = None
 
-    @property
-    def telescope(self):
-        return self._telescope
-
-    @telescope.setter
-    def telescope(self, telescope):
-        self._telescope = telescope
-        for unit in self.units:
-            unit.set_telescope(telescope)
+    def __getattr__(self, item):
+        return self.blocks_dict[item]
 
     @property
     def blocks(self):
-        return self.units_dict.values()
+        return list(self.blocks_dict.values())
 
     @blocks.setter
-    def blocks(self, units):
-        self.units_dict = OrderedDict({
-            unit.name if unit.name is not None else "block{}".format(i): unit
-            for i, unit in enumerate(units)
+    def blocks(self, blocks):
+        self.blocks_dict = OrderedDict({
+            block.name if block.name is not None else "block{}".format(i): block
+            for i, block in enumerate(blocks)
         })
 
-    def run(self):
-        # run
-        for unit in self.units:
-            unit.run()
+    def run(self, show_progress=True):
+        if show_progress:
+            progress = lambda x: tqdm(
+                x,
+                desc=self.name,
+                unit="images",
+                ncols=80,
+                bar_format=TQDM_BAR_FORMAT,
+            )
 
+        else:
+            progress = lambda x: x
+
+        if isinstance(self.files_or_images, list):
+            if len(self.files_or_images) == 0:
+                raise ValueError("No images to process")
+        elif self.files_or_images is None:
+            raise ValueError("No images to process")
+
+        # initialization
+        for block in self.blocks:
+            block.set_unit_data(self.data)
+            block.initialize()
+
+        # run
+        for i, file_or_image in enumerate(progress(self.files_or_images)):
+            if isinstance(file_or_image, (str, Path)):
+                image = self.loader(file_or_image)
+            else:
+                image = file_or_image
+            image.i = i
+            discard_message = False
+            for block in self.blocks:
+                # This allows to discard image in any blocks
+                if not image.discarded:
+                    block._run(image)
+                elif not discard_message:
+                    discard_message = True
+                    if isinstance(file_or_image, str):
+                        print(f"Warning: image {i} (...{file_or_image[i]}) discarded in {type(block).__name__}")
+                    else:
+                        print(f"Warning: image {i} discarded in {type(block).__name__}")
+
+            del image
+
+        # terminate
+        for block in self.blocks:
+            block.terminate()
+
+    def __str__(self):
+        rows = [[block.name, block.__class__.__name__, f"{block.processing_time:.4f} s"] for block in self.blocks]
+        headers = ["name", "type", "processing"]
+
+        return tabulate(rows, headers, tablefmt="fancy_grid")
+
+    def citations(self):
+        citations = [block.citations() for block in self.blocks if block.citations() is not None]
+        return citations if len(citations) > 0 else None
+
+    def insert_before(self, before, block):
+        pass
+
+    @property
+    def processing_time(self):
+        return np.sum([block.processing_time for block in self.blocks])

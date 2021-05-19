@@ -9,7 +9,7 @@ from . import Telescope
 from .simulations import fits_image, ObservationSimulation
 
 
-def simulate_observation(time, dflux, destination, dx=10):
+def simulate_observation(time, dflux, destination, dx=3):
     n = len(time)
 
     # Creating the observation

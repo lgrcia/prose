@@ -11,6 +11,15 @@ import os
 from pathlib import Path
 from tqdm import tqdm
 from .io import get_files, fits_to_df
+import re
+
+
+def sub(s):
+    return re.sub("[\W_]+", "", s)
+
+
+def clean(df):
+    return df.astype(str).apply(lambda s: sub(s)).str
 
 
 class FilesDataFrame:
@@ -39,10 +48,8 @@ class FilesDataFrame:
         conditions = pd.Series(np.ones(len(files_df)).astype(bool))
 
         for field, value in kwargs.items():
-            #             if "*" not in value: value += "*"
             if isinstance(value, str):
-                conditions = conditions & (
-                    files_df[field].astype(str).str.lower().str.contains(value.lower())).reset_index(drop=True)
+                conditions = conditions & clean(files_df[field]).contains(sub(value)).reset_index(drop=True)
             else:
                 conditions = conditions & (files_df[field] == value).reset_index(drop=True)
 
@@ -190,14 +197,16 @@ class FilesDataFrame:
 
 class FitsManager(FilesDataFrame):
 
-    def __init__(self, files_df_or_folder, verbose=True, image_kw="light", extension="*.f*ts*", **kwargs):
+    def __init__(self, files_df_or_folder, verbose=True, image_kw="light", extension="*.f*ts*", hdu=0, reduced=False, **kwargs):
+        if reduced:
+            image_kw = "reduced"
         if isinstance(files_df_or_folder, pd.DataFrame):
             files_df = files_df_or_folder
             self.folder = None
         elif isinstance(files_df_or_folder, (str, Path)):
             assert path.exists(files_df_or_folder), "Folder does not exist"
             files = get_files(extension, files_df_or_folder, depth=kwargs.get("depth", 1))
-            files_df = fits_to_df(files, verbose=verbose)
+            files_df = fits_to_df(files, verbose=verbose, hdu=hdu)
             self.folder = files_df_or_folder
         else:
             raise AssertionError("input must be pd.DataFrame or folder path")
@@ -398,3 +407,16 @@ class FitsManager(FilesDataFrame):
             return self.products_denominator
         else:
             raise AssertionError("obs_name property is only available for FitsManager containing a unique observation")
+
+    def observation_id(self, target, date):
+        obs = self._observations
+        there = np.argwhere((
+                    clean(obs.date).contains(sub(date)) &
+                    clean(obs.target).contains(sub(target))
+                ).values).flatten()
+
+        if len(there) > 0:
+            i, = there
+            return i
+        else:
+            return None

@@ -140,7 +140,7 @@ class ApertureFluxes:
 
     def __init__(self, xarray):
         if isinstance(xarray, (str, Path)):
-            self.xarray = xr.load_dataset(xarray)
+            self.xarray = xr.load_dataset(xarray, engine="netcdf4")
         else:
             self.xarray = xarray
 

@@ -2,7 +2,7 @@ import numpy as np
 from ..core import Block, Image
 from .. import utils
 import matplotlib.pyplot as plt
-from .. import visualisation as viz
+from .. import viz
 from astropy.nddata import Cutout2D
 from ..console_utils import info
 from time import sleep
@@ -31,7 +31,7 @@ class Calibration(Block):
     bias : list
         list of bias files paths
     """
-    def __init__(self, darks=None, flats=None, bias=None, **kwargs):
+    def __init__(self, darks=None, flats=None, bias=None, loader=Image, **kwargs):
 
         super().__init__(**kwargs)
         if darks is None:
@@ -50,6 +50,8 @@ class Calibration(Block):
         self.master_flat = None
         self.master_bias = None
 
+        self.loader = loader
+
     def calibration(self, image, exp_time):
         return (image - (self.master_dark * exp_time + self.master_bias)) / self.master_flat
 
@@ -67,7 +69,7 @@ class Calibration(Block):
                 self.master_flat = 1
 
         for image_path in images:
-            image = Image(image_path)
+            image = self.loader(image_path)
             if image_type == "dark":
                 _dark = (image.data - self.master_bias) / image.exposure
                 _master.append(_dark)

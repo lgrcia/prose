@@ -4,7 +4,7 @@ import numpy as np
 from astropy.time import Time
 from os import path
 import imageio
-from .. import visualisation as viz
+from .. import viz
 from astropy.stats import SigmaClip
 from photutils import MedianBackground
 from .psf import cutouts
@@ -58,7 +58,7 @@ class Stack(Block):
 
         self.stack = self.stack/self.n_images
 
-        self.header[self.telescope.keyword_image_type] = "Stack image"
+        self.header[self.telescope.keyword_image_type] = "stack"
         self.header["BZERO"] = 0
         self.header["REDDATE"] = Time.now().to_value("fits")
         self.header["NIMAGES"] = self.n_images
