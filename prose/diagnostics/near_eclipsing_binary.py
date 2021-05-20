@@ -224,7 +224,7 @@ class NEB(Observation):
         nearby_ids = self.nearby_ids[idxs]
         viz.plot_lcs(
             [(self.time[self.mask_lc(i)], self.diff_fluxes[self.aperture, i][self.mask_lc(i)]) for i in nearby_ids],
-            **kwargs
+            labels=nearby_ids,**kwargs
         )
         axes = plt.gcf().get_axes()
         for i, axe in enumerate(axes):
@@ -234,3 +234,5 @@ class NEB(Observation):
                 else:
                     color = self.color(idxs[i], white=True)
                 axe.plot(self.time, self.transits[nearby_ids[i]]+1, c=color)
+                if self.meridian_flip is not None:
+                    axe.vlines(self.meridian_flip, axe.get_ylim()[0], axe.get_ylim()[1], colors="gray", linestyle='--')
