@@ -73,7 +73,7 @@ def broeg(fluxes, tolerance=1e-2, max_iteration=200, bins=12):
     idxs = np.arange(n * bins)
 
     def error_estimate(f):
-        return np.array(np.split(f.take(idxs, axis=-1), n, axis=-1)).std(-1).mean(0)
+        return np.nanmean(np.nanstd(np.array(np.split(f.take(idxs, axis=-1), n, axis=-1)), axis=-1), axis=0)
 
     i = 0
     evolution = 1e25
@@ -91,8 +91,10 @@ def broeg(fluxes, tolerance=1e-2, max_iteration=200, bins=12):
             std = error_estimate(lcs)
             weights = 1 / std
 
+        # weights[np.isnan(weights)] = 0
+
         # Keep track of weights
-        evolution = np.std(np.abs(np.mean(weights, axis=-1) - np.mean(last_weights, axis=-1)))
+        evolution = np.nanstd(np.abs(np.nanmean(weights, axis=-1) - np.nanmean(last_weights, axis=-1)))
 
         last_weights = weights
         lcs = diff(fluxes, weights=weights)
@@ -384,7 +386,7 @@ class ApertureFluxes:
         if not inplace:
             return new_self
 
-    def broeg2005(self, inplace=True, cut=None):
+    def broeg2005(self, inplace=True, cut=None, nans=False):
         """
         The Broeg et al. 2005 differential photometry algorithm
 
@@ -407,6 +409,11 @@ class ApertureFluxes:
         # getting differential values
         raw_fluxes = self.raw_fluxes.copy()
         raw_errors = self.raw_errors.copy()
+
+        if not nans:
+            mask = np.isnan(raw_fluxes)
+            raw_fluxes[mask] = 1
+            raw_errors[mask] = 1
 
         mean_raw_fluxes = np.expand_dims(raw_fluxes.mean(-1), -1)
         raw_errors /= mean_raw_fluxes
