@@ -6,11 +6,10 @@ README = (HERE / "README.md").read_text()
 
 setup(
     name="prose",
-    version="0.9.33",
+    version="0.9.34",
     author="Lionel J. Garcia",
     description="Reduction and analysis of FITS telescope observations",
-    packages=["prose"],
-    package_dir={"": "prose"},
+    py_modules=["prose"],
     license="MIT",
     url="https://github.com/lgrcia/prose",
     # entry_points="""
