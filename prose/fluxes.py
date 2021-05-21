@@ -399,6 +399,8 @@ class ApertureFluxes:
         cut: bool or None, optional
             whether to pick the best comparison stars and apply unitary weights, default None which try both and
             cut if beneficial
+        nans: bool
+            whether to keep nans values in fluxes, otherwise set to 1 (arbitrarly low value) before computing the weights, default False, i.e. removing nans
         """
 
         if inplace:
