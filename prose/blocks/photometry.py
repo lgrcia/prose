@@ -154,10 +154,16 @@ class PhotutilsAperturePhotometry(Block):
         data[data < 0] = 0
 
         photometry = aperture_photometry(data, self.circular_apertures)
-        image.fluxes = np.array([
+        fluxes = np.array([
             photometry[f"aperture_sum_{a}"] - (bkg_median * self.circular_apertures_area[a])
             for a in range(len(self.apertures))
         ])
+
+        # dummy values if negative or nan
+        fluxes[np.isnan(fluxes)] = 1
+        fluxes[fluxes < 0 ] = 1
+
+        image.fluxes = fluxes
 
         self.compute_error(image)
         image.header["sky"] = np.mean(image.sky)
