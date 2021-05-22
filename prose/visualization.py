@@ -164,7 +164,7 @@ def plot_lcs(data, w=4, show=None, hide=None, ylim=None, size=None, labels=None,
     if not force_width:
         w = np.min([len(idxs), w])
     fig, axes = plt.subplots(H, w, figsize=(w * size[0], H * size[1]))
-    
+    fig.patch.set_facecolor('white')
     max_duration = np.max([jd.max() - jd.min() for jd, _ in [data[i] for i in idxs]])
     
     for _i, ax in enumerate(axes.flat if len(idxs) > 1 else [axes]):

@@ -59,11 +59,12 @@ class NEB(Observation):
 
         self.transits = np.ones((len(self.nearby_ids), len(self.time)))
         self.disposition = np.empty(len(self.nearby_ids))
-        self.cleared = np.ones(len(self.nearby_ids))
-        self.likely_cleared = np.ones(len(self.nearby_ids))
-        self.cleared_too_faint = np.ones(len(self.nearby_ids))
-        self.flux_too_low = np.ones(len(self.nearby_ids))
-        self.not_cleared = np.ones(len(self.nearby_ids))
+        self.cleared = None
+        self.likely_cleared = None
+        self.cleared_too_faint = None
+        self.flux_too_low = None
+        self.not_cleared = None
+        self.suspects = None
 
         self.cmap =['r', 'g']
 
@@ -163,6 +164,7 @@ class NEB(Observation):
         self.cleared_too_faint = np.argwhere(self.disposition == 2).squeeze()
         self.flux_too_low = np.argwhere(self.disposition == 3).squeeze()
         self.not_cleared = np.argwhere(self.disposition == 4).squeeze()
+        self.suspects = np.unique(np.hstack([self.not_cleared,self.flux_too_low,self.likely_cleared]))
 
         viz.plot_marks(*self.stars[self.target],self.target, position="top")
         viz.plot_marks(*self.stars[self.cleared].T, self.cleared, color="white", position="top")
@@ -205,10 +207,7 @@ class NEB(Observation):
     def plot_suspects(self):
         """Plot fluxes on which a suspect NEB signal has been identified
         """
-        self.plot(idxs=np.unique(np.hstack([self.not_cleared,
-                                            self.flux_too_low,
-                                            self.likely_cleared
-                                            ])), force_width=False)
+        self.plot(idxs=self.suspects, force_width=False)
 
     def plot(self, idxs=None, **kwargs):
         """Plot all fluxes and model fit used for NEB detection
@@ -224,7 +223,7 @@ class NEB(Observation):
         nearby_ids = self.nearby_ids[idxs]
         viz.plot_lcs(
             [(self.time[self.mask_lc(i)], self.diff_fluxes[self.aperture, i][self.mask_lc(i)]) for i in nearby_ids],
-            labels=nearby_ids,**kwargs
+            labels=nearby_ids, **kwargs
         )
         axes = plt.gcf().get_axes()
         for i, axe in enumerate(axes):
@@ -236,3 +235,6 @@ class NEB(Observation):
                 axe.plot(self.time, self.transits[nearby_ids[i]]+1, c=color)
                 if self.meridian_flip is not None:
                     axe.vlines(self.meridian_flip, axe.get_ylim()[0], axe.get_ylim()[1], colors="gray", linestyle='--')
+                    if nearby_ids[i] == self.target:
+                        axe.text(self.meridian_flip, axe.get_ylim()[1], "MF", ha="right", rotation="vertical", va="top",
+                                 color="gray")

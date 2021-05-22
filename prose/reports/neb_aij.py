@@ -46,7 +46,9 @@ class NEBCheck(LatexTemplate, NEB):
                                                                         obs.stars[obs.target])))]
         self.disposition_string= self.disposition.astype("str")
         self.dpi=100
-        self.neb_table = None
+        self.neb_table = self.make_table()
+        self.table = [["Star","RMS (ppt)","Expected depth (ppt)","Disposition"],
+                          self.neb_table()]
 
 
     def plot_suspect_lcs(self, **kwargs):
@@ -58,7 +60,7 @@ class NEBCheck(LatexTemplate, NEB):
     def plot_stars(self,size):
         self.show_stars(size=size)
 
-    def neb_table(self):
+    def make_table(self):
         destination = path.join(self.destination, "..", self.denominator + ".csv")
 
         self.disposition_string[self.disposition_string == '0.0'] = "Likely cleared"
@@ -72,9 +74,9 @@ class NEBCheck(LatexTemplate, NEB):
                 "Star": self.nearby_ids,
                 "RMS (ppt)": self.rms_ppt,
                 "Expected depth (ppt)": self.expected_depth,
-                "Disposition": self.disposition,
-            }
-        self.neb_table = df.values.tolist()
+                "Disposition": self.disposition_string,
+            })
+        return df.values.tolist()
 
     def make_figures(self, destination):
         self.plot_suspect_lcs()

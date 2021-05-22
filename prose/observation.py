@@ -408,6 +408,7 @@ class Observation(ApertureFluxes):
         self._check_stack()
 
         fig = plt.figure(figsize=(size, size))
+        fig.patch.set_facecolor('white')
 
         image = self.stack.copy()
 
