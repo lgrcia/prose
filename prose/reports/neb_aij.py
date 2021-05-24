@@ -2,8 +2,11 @@ from .core import *
 from ..blocks.registration import distances
 from .. import utils
 import numpy as np
+import pandas as pd
+import collections
 import matplotlib.pyplot as plt
 from os import path
+from pathlib import Path
 import shutil
 from .. import viz
 from .. import Observation
@@ -35,64 +38,106 @@ class NEBCheck(LatexTemplate, NEB):
             template_name : str, optional
                 [description], by default "neb.tex"
             """
-        Observation.__init__(self, obs.xarray)
+        #Observation.__init__(self, obs.xarray)
         LatexTemplate.__init__(self, template_name, style=style)
         self.radius = radius
+        NEB.__init__(self, obs, radius=self.radius)
         self.value = value
-        target_distance = np.array(distances(obs.stars.T, obs.stars[obs.target]))
-        self.nearby_ids = np.argwhere(target_distance * obs.telescope.pixel_scale / 60 < self.radius).flatten()
 
-        self.nearby_ids = self.nearby_ids[np.argsort(np.array(distances(obs.stars[self.nearby_ids].T,
-                                                                        obs.stars[obs.target])))]
-        self.disposition_string= self.disposition.astype("str")
-        self.dpi=100
-        self.neb_table = self.make_table()
-        self.table = [["Star","RMS (ppt)","Expected depth (ppt)","Disposition"],
-                          self.neb_table()]
+        self.disposition_string = None
+        self.dpi = 100
+        self.evaluate_score(self.value)
+        self.obstable = None
 
+    def plot_neb_lcs(self, destination, indexes, disposition,transparent=True):
+        self.lcs = []
+        if len(indexes) > 24:
+            split = [indexes[:24], *np.array([indexes[i:i + 6 * 6] for i in range(24, len(indexes), 6 * 6)])]
+        else:
+            split = indexes
+        path_destination = path.join(destination, disposition)
+        Path(path_destination).mkdir(parents=True, exist_ok=True)
+        for i, idxs in enumerate(split):
+            lcs_path = path.join(destination, disposition, "lcs{}.png".format(i))
+            self.lcs.append(lcs_path)
+            if i == 0:
+                self.plot(idxs)
+            else:
+                self.plot(idxs, w=6)
+            viz.paper_style()
+            fig = plt.gcf()
+            fig.patch.set_facecolor('white')
+            plt.tight_layout()
+            plt.savefig(lcs_path, dpi=self.dpi,transparent=transparent)
+            plt.close()
 
-    def plot_suspect_lcs(self, **kwargs):
-        self.evaluate_score(self.value, **kwargs)
-        self.plot_suspects()
-        fig.patch.set_facecolor('white')
-        plt.tight_layout()
-
-    def plot_stars(self,size):
+    def plot_stars(self,size=8):
         self.show_stars(size=size)
 
-    def make_table(self):
-        destination = path.join(self.destination, "..", self.denominator + ".csv")
+    def plot_dmag_rms(self):
+        fig = plt.figure(figsize=(12, 8))
+        dmag = np.arange(min(self.dmags), max(self.dmags), 0.01)
+        for i in dmag:
+            if i == 0:
+                corr_dmag = dmag
+            else:
+                corr_dmag = dmag - 0.5
+        x = np.power(10, - corr_dmag / 2.50)
+        expected_depth = self.depth / x
+        depth_factor3 = expected_depth / 3
+        depth_factor5 = expected_depth / 5
+        plt.plot(dmag, depth_factor3, '.', color='plum', alpha=0.5, label='Likely cleared boundary')
+        plt.plot(dmag, depth_factor5, '.', color='mediumturquoise', alpha=0.5, label="cleared boundary")
+        plt.plot(self.dmags, self.rmss_ppt, ".",color="0.4")
+        for i,j,k in zip(self.dmags, self.rmss_ppt,self.nearby_ids):
+            plt.annotate('%s' %k, xy=(i,j))
+        plt.xlabel('Dmag')
+        plt.ylabel('RMS (ppt)')
+        plt.grid(color="whitesmoke")
+        plt.legend()
+        plt.tight_layout()
+        self.style()
 
-        self.disposition_string[self.disposition_string == '0.0'] = "Likely cleared"
-        self.disposition_string[self.disposition_string == '1.0'] = "Cleared"
-        self.disposition_string[self.disposition_string == '2.0'] = "Cleared too faint"
-        self.disposition_string[self.disposition_string == '3.0'] = "Flux too low"
-        self.disposition_string[self.disposition_string == '4.0'] = "Not cleared"
+    def make_tables(self,destination):
+        self.disposition_string = self.disposition.astype("str")
+        for i, j in zip(['0.0', '1.0', '2.0', '3.0', '4.0'],
+                        ["Likely cleared", "Cleared", "Cleared too faint", "Flux too low", "Not cleared"]):
+            self.disposition_string[self.disposition_string == i] = j
 
         df = pd.DataFrame(collections.OrderedDict(
             {
                 "Star": self.nearby_ids,
-                "RMS (ppt)": self.rms_ppt,
-                "Expected depth (ppt)": self.expected_depth,
+                "Dmag": self.dmags,
+                "RMS (ppt)": self.rmss_ppt,
+                "Expected depth (ppt)": self.expected_depths,
+                "RMS/expected depth":self.depths_rms,
                 "Disposition": self.disposition_string,
-            })
-        return df.values.tolist()
+            }))
+        df = df.round(3)
+        destination_path = Path(destination)
+        df.to_csv(path.join(destination_path,"neb_table.txt"), sep="\t", index=False)
+        self.obstable = [["Cleared","Likely Cleared","Cleared too faint","Not cleared","Flux too low"],
+                         [len(self.cleared),len(self.likely_cleared),len(self.cleared_too_faint),len(self.not_cleared),
+                          len(self.flux_too_low)]
+                         ]
+        return self.obstable
 
-    def make_figures(self, destination):
-        self.plot_suspect_lcs()
-        plt.savefig(path.join(destination, "suspects.png"), dpi=self.dpi)
-        plt.close()
+    def make_figures(self, destination,transparent=True):
+        self.plot_neb_lcs(destination, indexes=self.suspects, disposition="suspects",transparent=transparent)
+        self.plot_neb_lcs(destination, indexes=self.nearby_ids, disposition="all",transparent=transparent)
         self.plot_stars()
-        plt.savefig(path.join(destination, "stars.png"), dpi=self.dpi)
+        plt.savefig(path.join(destination, "stars.png"), dpi=self.dpi,transparent=transparent)
+        plt.close()
+        self.plot_dmag_rms()
+        plt.savefig(path.join(destination, "dmag_rms.png"), dpi=self.dpi, transparent=transparent)
         plt.close()
 
     def make(self, destination):
         self.make_report_folder(destination)
         self.make_figures(self.figure_destination)
         open(self.tex_destination, "w").write(self.template.render(
-            obstable=self.neb_table
+            obstable=self.make_tables(destination)
         ))
-        self.to_csv_report()
 
 
 
