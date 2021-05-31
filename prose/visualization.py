@@ -194,7 +194,7 @@ def plot_lcs(data, w=4, show=None, hide=None, ylim=None, size=None, labels=None,
                     textcoords="axes fraction",
                     ha="left",
                     va="bottom",
-                    fontsize=10,
+                    fontsize=12,
                     color="k",
                 )
         else:

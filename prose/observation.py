@@ -337,14 +337,15 @@ class Observation(ApertureFluxes):
             warnings.warn("Catalog stars seem out of the field. Check that your stack is solved and that telescope "
                         "'ra_unit' and 'dec_unit' are well set")
 
-    def query_tic(self):
+    def query_tic(self,cone_radius=None):
         """Query TIC catalog (through MAST) for stars in the field
         """
         from astroquery.mast import Catalogs
 
         header = self.xarray.attrs
         shape = self.stack.shape
-        cone_radius = np.sqrt(2) * np.max(shape) * self.telescope.pixel_scale / 120
+        if cone_radius is None:
+            cone_radius = np.sqrt(2) * np.max(shape) * self.telescope.pixel_scale / 120
 
         coord = self.skycoord
         radius = u.Quantity(cone_radius, u.arcminute)

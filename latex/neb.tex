@@ -6,7 +6,7 @@
     {\LARGE Near eclipsing binary diagnostic}
 
     \boxtitle{RADIUS}
-    \mbox{\hspace{-0.7cm}\includegraphics[width=\linewidth + 0.5cm]{neb/figures/stars.png}}
+    \mbox{\hspace{-0.7cm}\includegraphics[width=\linewidth + 0.5cm]{neb/figures/neb_stars.png}}
     \vspace{-0.7cm}\newline
     \boxtitle{SUMMARY}
     \vspace{-0.3cm}\newline
@@ -26,38 +26,28 @@
 
     \vspace{0.5cm}\newline
     \boxtitle{DMAG vs RMS}
+    \vspace{-0.4cm}
+    \mbox{\vspace{-0.7cm}\includegraphics[width=\linewidth + 1cm]{neb/figures/dmag_rms.png}}
 
-    \mbox{\vspace{-0.3cm}\includegraphics[width=\linewidth]{neb/figures/dmag_rms.png}}
-
-  } & \hspace{0.7cm}\parbox{\linewidth}{
+  } & \hspace{0.7cm}\parbox{\linewidth}{\vspace{0.4cm}
     \boxtitle{LIGHT CURVES}
-    \mbox{\hspace{-1cm}\includegraphics[width=\linewidth + 1cm]{neb/figures/suspects/lc0.png}}
+    \vspace{-0.2cm}
+    \mbox{\hspace{-0.8cm}\includegraphics[width=\linewidth + 0.9cm]{neb/figures/suspects/lc0.png}}
   } \\
 \end{tabular}
-\newpage
 
+
+\BLOCK{for number in lcs}
+\newpage
 \begin{tabular}{m{0.95\linewidth}m{0.05\linewidth}}
    \hspace{0.7cm}\parbox{\linewidth}{
     \boxtitle{LIGHT CURVES}
     \vspace{-0.45cm}\newline
-    \mbox{\hspace{-0.5cm}\includegraphics[width=\linewidth + 0.8cm]{neb/figures/suspects/lcs1.png}}
+    \mbox{\hspace{-0.5cm}\includegraphics[width=\linewidth + 0.8cm]{\VAR{number}}}
   } & \parbox{\linewidth}{
 
   }
   \\
 \end{tabular}
-
-\newpage
-
-\begin{tabular}{m{0.95\linewidth}m{0.05\linewidth}}
-   \hspace{0.7cm}\parbox{\linewidth}{
-    \boxtitle{LIGHT CURVES}
-    \vspace{-0.45cm}\newline
-    \mbox{\hspace{-0.5cm}\includegraphics[width=\linewidth + 0.8cm]{neb/figures/suspects/lcs2.png}}
-  } & \parbox{\linewidth}{
-
-  }
-  \\
-\end{tabular}
-}
+\BLOCK{endfor}
 }

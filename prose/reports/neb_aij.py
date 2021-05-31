@@ -49,33 +49,44 @@ class NEBCheck(LatexTemplate, NEB):
         self.evaluate_score(self.value)
         self.obstable = None
 
-    def plot_neb_lcs(self, destination, indexes, disposition,transparent=True):
+    def plot_neb_lcs(self, destination, indexes, disposition,transparent=True,w=True):
         self.lcs = []
-        if len(indexes) > 24:
-            split = [indexes[:24], *np.array([indexes[i:i + 6 * 6] for i in range(24, len(indexes), 6 * 6)])]
+        if w is True:
+            if len(indexes) > 24:
+                split = [indexes[:24], *np.array([indexes[i:i + 6 * 6] for i in range(24, len(indexes), 6 * 6)])]
+            else:
+                split = indexes
         else:
-            split = indexes
+            if len(indexes) > 24:
+                split = [indexes[:24], *np.array([indexes[i:i + 6 * 4] for i in range(24, len(indexes), 6 * 4)])]
+            else:
+                split = indexes
         path_destination = path.join(destination, disposition)
         Path(path_destination).mkdir(parents=True, exist_ok=True)
         for i, idxs in enumerate(split):
             lcs_path = path.join(destination, disposition, "lcs{}.png".format(i))
-            self.lcs.append(lcs_path)
-            if i == 0:
-                self.plot(idxs)
+            if i > 0:
+                self.lcs.append(lcs_path)
+            if w is True:
+                if i == 0:
+                    self.plot(idxs)
+                else:
+                    self.plot(idxs, w=6)
             else:
-                self.plot(idxs, w=6)
+                self.plot(idxs)
             viz.paper_style()
             fig = plt.gcf()
             fig.patch.set_facecolor('white')
             plt.tight_layout()
-            plt.savefig(lcs_path, dpi=self.dpi,transparent=transparent)
+            plt.savefig(lcs_path, dpi=self.dpi, transparent=transparent)
             plt.close()
 
     def plot_stars(self,size=8):
         self.show_stars(size=size)
 
     def plot_dmag_rms(self):
-        fig = plt.figure(figsize=(12, 8))
+        fig = plt.figure(figsize=(6, 4))
+        fig.patch.set_facecolor('white')
         dmag = np.arange(min(self.dmags), max(self.dmags), 0.01)
         for i in dmag:
             if i == 0:
@@ -104,29 +115,63 @@ class NEBCheck(LatexTemplate, NEB):
                         ["Likely cleared", "Cleared", "Cleared too faint", "Flux too low", "Not cleared"]):
             self.disposition_string[self.disposition_string == i] = j
 
+        self.query_tic(cone_radius=2.5)
+        tic_stars = np.vstack((np.array(self.tic_data['x']), np.array(self.tic_data['y']))).T
+        idxs = []
+        for i in self.stars[self.nearby_ids]:
+            distance = np.linalg.norm((i - tic_stars), axis=1)
+            _id = np.argmin(distance)
+            if distance[_id] < 3 and not _id in idxs:
+                idxs.append(np.argmin(distance))
+            else:
+                idxs.append(np.nan)
+        list_tic = []
+        list_gaia = []
+        list_ra = []
+        list_dec = []
+        list_dist = []
+        for j in idxs:
+            if j is not np.nan:
+                list_tic.append(self.tic_data['ID'][j])
+                list_gaia.append(self.tic_data['GAIA'][j])
+                list_ra.append(self.tic_data['ra'][j])
+                list_dec.append(self.tic_data['dec'][j])
+                list_dist.append(self.tic_data['dstArcSec'][j])
+
         df = pd.DataFrame(collections.OrderedDict(
             {
-                "Star": self.nearby_ids,
+                "Star number": self.nearby_ids,
+                "GAIA ID": list_gaia,
+                "TIC ID": list_tic,
+                "RA (deg)": list_ra,
+                "DEC (deg)": list_dec,
+                "Distance to target (arcsec)": list_dist,
                 "Dmag": self.dmags,
                 "RMS (ppt)": self.rmss_ppt,
                 "Expected depth (ppt)": self.expected_depths,
                 "RMS/expected depth":self.depths_rms,
                 "Disposition": self.disposition_string,
             }))
-        df = df.round(3)
+        for c in ["Distance to target (arcsec)", "Dmag", "RMS (ppt)", "Expected depth (ppt)", "RMS/expected depth"]:
+            df[c] = df[c].round(decimals=3)
         destination_path = Path(destination)
         df.to_csv(path.join(destination_path,"neb_table.txt"), sep="\t", index=False)
-        self.obstable = [["Cleared","Likely Cleared","Cleared too faint","Not cleared","Flux too low"],
+        self.obstable = [["Cleared", "Likely Cleared", "Cleared too faint", "Not cleared", "Flux too low"],
                          [len(self.cleared),len(self.likely_cleared),len(self.cleared_too_faint),len(self.not_cleared),
                           len(self.flux_too_low)]
                          ]
         return self.obstable
 
-    def make_figures(self, destination,transparent=True):
-        self.plot_neb_lcs(destination, indexes=self.suspects, disposition="suspects",transparent=transparent)
-        self.plot_neb_lcs(destination, indexes=self.nearby_ids, disposition="all",transparent=transparent)
+    def make_figures(self, destination, transparent=True, disposition='suspects', w=True):
+        if disposition == 'suspects':
+            self.plot_neb_lcs(destination, indexes=self.suspects, disposition="suspects",transparent=transparent,w=w)
+        elif disposition == 'all':
+            self.plot_neb_lcs(destination, indexes=self.nearby_ids, disposition="all",transparent=transparent,w=w)
+        else:
+            self.plot_neb_lcs(destination, indexes=self.suspects, disposition="suspects", transparent=transparent, w=w)
+            self.plot_neb_lcs(destination, indexes=self.nearby_ids, disposition="all", transparent=transparent, w=w)
         self.plot_stars()
-        plt.savefig(path.join(destination, "stars.png"), dpi=self.dpi,transparent=transparent)
+        plt.savefig(path.join(destination, "neb_stars.png"), dpi=self.dpi,transparent=transparent)
         plt.close()
         self.plot_dmag_rms()
         plt.savefig(path.join(destination, "dmag_rms.png"), dpi=self.dpi, transparent=transparent)
@@ -136,7 +181,7 @@ class NEBCheck(LatexTemplate, NEB):
         self.make_report_folder(destination)
         self.make_figures(self.figure_destination)
         open(self.tex_destination, "w").write(self.template.render(
-            obstable=self.make_tables(destination)
+            obstable=self.make_tables(destination), lcs=self.lcs
         ))
 
 

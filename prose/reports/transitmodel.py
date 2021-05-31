@@ -120,7 +120,7 @@ class TransitModel(Observation, LatexTemplate):
         """
         This one adds de-trended light-curve
         """
-        destination = path.join(self.destination, "..", self.denominator + ".csv")
+        destination = path.join(self.destination, "..", self.denominator + ".txt")
 
         comparison_stars = self.comps[self.aperture]
         list_diff = ["DIFF_FLUX_C%s" % i for i in comparison_stars]
@@ -149,7 +149,7 @@ class TransitModel(Observation, LatexTemplate):
                 "EXPOSURE": self.exptime,
             })
         )
-        df.to_csv(destination, sep=" ", index=False)
+        df.to_csv(destination, sep="\t", index=False)
 
     def snr(self):
         lc = self.diff_flux - self.transit_model - self.trend_model

@@ -175,7 +175,7 @@ class TESSSummary(Summary):
     def to_csv_report(self):
         """Export a typical csv of the observation's data
         """
-        destination = path.join(self.destination, "..", self.denominator + ".csv")
+        destination = path.join(self.destination, "..", self.denominator + ".txt")
 
         comparison_stars = self.comps[self.aperture]
         list_diff = ["DIFF_FLUX_C%s" % i for i in comparison_stars]
@@ -203,7 +203,7 @@ class TESSSummary(Summary):
                 "EXPOSURE": self.exptime,
             })
         )
-        df.to_csv(destination, sep=" ", index=False)
+        df.to_csv(destination, sep="\t", index=False)
 
     def make(self, destination):
         super().make(destination)
