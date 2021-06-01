@@ -798,7 +798,8 @@ class HandlerEllipse(HandlerPatch):
         self.update_prop(p, orig_handle, legend)
         p.set_transform(trans)
         return [p]
-    
+
+
 def circles_legend(colors, texts):
     c = [mpatches.Circle((0.5, 0.5), radius = 0.25, fill=None, ec=colors[i]) for i in range(len(texts))]
     plt.legend(c, texts , bbox_to_anchor=(1, 1.05), loc='upper right', ncol=3, handler_map={mpatches.Circle: HandlerEllipse()}, frameon=False)

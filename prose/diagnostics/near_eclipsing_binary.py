@@ -174,7 +174,7 @@ class NEB(Observation):
         self.plot_meridian_flip()
         plt.legend()
 
-    def show_stars(self, size=10):
+    def show_stars(self, size=10, legend=True):
         """
         Visualization of the star dispositions on the zoomed stack image.
                 Parameters
@@ -224,6 +224,10 @@ class NEB(Observation):
 
         plt.ylim(ylim)
         plt.xlim(xlim)
+        if legend:
+            colors = ["gainsboro", "goldenrod", "indianred"]
+            texts = ["Cleared/Cleared too faint", "Likely cleared", "Not cleared/Flux too low"]
+            viz.circles_legend(colors, texts)
         plt.tight_layout()
 
     def color(self, i, white=False):
@@ -235,7 +239,7 @@ class NEB(Observation):
             return "goldenrod"
         else:
             if white:
-                return "grey"
+                return "darkgrey"
             else:
                 return "yellowgreen"  # np.array([131, 220, 255]) / 255 #np.array([78, 144, 67])/255
 

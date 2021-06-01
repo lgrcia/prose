@@ -188,7 +188,7 @@ class AperturePhotometry(Photometry):
     r_out : int, optional
         Radius of the outer annulus to be used in pixels, by default 8
     fwhm_scale : bool, optional
-        wheater to multiply ``apertures``, ``r_in`` and ``r_out`` by the global fwhm, by default True
+        whether to multiply ``apertures``, ``r_in`` and ``r_out`` by the global fwhm, by default True
     sigclip : float, optional
         Sigma clipping factor used in the annulus, by default 3. No effect if :class:`~prose.blocks.SEAperturePhotometry` is used
     psf : Block, optional

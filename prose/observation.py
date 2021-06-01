@@ -446,7 +446,7 @@ class Observation(ApertureFluxes):
         if len(axes) == 0:
             self.show(**kwargs)
 
-    def show_stars(self, view=None, n=None, flip=False,
+    def show_stars(self, size=10, view=None, n=None, flip=False,
                    comp_color="yellow", color=[0.51, 0.86, 1.], stars=None, legend=True, **kwargs):
         """Show detected stars over stack image
 
@@ -511,8 +511,8 @@ class Observation(ApertureFluxes):
             _ = viz.plot_marks(*stars[others].T, alpha=0.4, color=color)
 
             if legend:
-                colors = ["gold", [0.51, 0.86, 1.]]
-                texts = ["comparisons", "target"]
+                colors = [comp_color, color]
+                texts = ["Comparison stars", "Target"]
                 viz.circles_legend(colors, texts)
 
     def show_gaia(self, color="yellow", alpha=1, n=None, idxs=True, limit=-1, fontsize=8, align=False):
