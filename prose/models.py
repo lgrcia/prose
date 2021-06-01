@@ -40,8 +40,8 @@ try:
     import theano
     import theano.tensor as tt
     theano.config.compute_test_value = "warn"
-except ModuleNotFoundError:
-    pass
+except:
+    print("Could not import theano, try 'import theano' for more details")
 
 
 class LinearModel:

@@ -73,7 +73,7 @@ def broeg(fluxes, tolerance=1e-2, max_iteration=200, bins=12):
     idxs = np.arange(n * bins)
 
     def error_estimate(f):
-        return np.array(np.split(f.take(idxs, axis=-1), n, axis=-1)).std(-1).mean(0)
+        return np.nanmean(np.nanstd(np.array(np.split(f.take(idxs, axis=-1), n, axis=-1)), axis=-1), axis=0)
 
     i = 0
     evolution = 1e25
@@ -91,8 +91,10 @@ def broeg(fluxes, tolerance=1e-2, max_iteration=200, bins=12):
             std = error_estimate(lcs)
             weights = 1 / std
 
+        # weights[np.isnan(weights)] = 0
+
         # Keep track of weights
-        evolution = np.std(np.abs(np.mean(weights, axis=-1) - np.mean(last_weights, axis=-1)))
+        evolution = np.nanstd(np.abs(np.nanmean(weights, axis=-1) - np.nanmean(last_weights, axis=-1)))
 
         last_weights = weights
         lcs = diff(fluxes, weights=weights)
@@ -384,7 +386,7 @@ class ApertureFluxes:
         if not inplace:
             return new_self
 
-    def broeg2005(self, inplace=True, cut=True, target=False):
+    def broeg2005(self, inplace=True, cut=None, nans=False):
         """
         The Broeg et al. 2005 differential photometry algorithm
 
@@ -394,8 +396,11 @@ class ApertureFluxes:
         ----------
         inplace: bool, optional
             whether to perform the changes on current Observation or to return a new one, default True
-        cut: bool, optional
-            whether to pick the best comparison stars and apply unitary weights, default True
+        cut: bool or None, optional
+            whether to pick the best comparison stars and apply unitary weights, default None which try both and
+            cut if beneficial
+        nans: bool
+            whether to keep nans values in fluxes, otherwise set to 1 (arbitrarly low value) before computing the weights, default False, i.e. removing nans
         """
         # TODO: ignore apertures out of the image
         if inplace:
@@ -407,27 +412,53 @@ class ApertureFluxes:
         raw_fluxes = self.raw_fluxes.copy()
         raw_errors = self.raw_errors.copy()
 
+        if not nans:
+            mask = np.isnan(raw_fluxes)
+            raw_fluxes[mask] = 1
+            raw_errors[mask] = 1
+
         mean_raw_fluxes = np.expand_dims(raw_fluxes.mean(-1), -1)
         raw_errors /= mean_raw_fluxes
         raw_fluxes /= mean_raw_fluxes
 
         # finding weights
         weights = broeg(raw_fluxes)
-        if not target:
-            weights[:, self.target] = 0
+        weights[:, self.target] = 0
 
-        # best comparisons
-        if cut:
-            comparisons = best_stars(raw_fluxes, weights, self.target)
-            weights = np.ones_like(comparisons)
-            diff_fluxes, diff_errors, alcs = diff(raw_fluxes, raw_errors, comps=comparisons, alc=True)
-        else:
-            # this only works for 3D fluxes (with apertures)
-            comparisons = np.repeat(np.expand_dims(np.arange(raw_fluxes.shape[-2]), -1).T, raw_fluxes.shape[0], axis=0)
-            diff_fluxes, diff_errors, alcs = diff(raw_fluxes, raw_errors, weights=weights, alc=True)
-            if not target:
-                comparisons = np.delete(comparisons, self.target, axis=1)
-                weights = np.delete(weights, self.target, axis=1)
+        comparisons = best_stars(raw_fluxes, weights, self.target)
+
+        # We always try with and without a cut
+        # -----————---------------------------
+        # - with
+        cut_comparisons = best_stars(raw_fluxes, weights, self.target)
+        cut_weights = np.ones_like(comparisons)
+        cut_diff_fluxes, cut_diff_errors, cut_alcs = diff(raw_fluxes, raw_errors, comps=comparisons, alc=True)
+
+        # - without
+        comparisons = np.repeat(np.expand_dims(np.arange(raw_fluxes.shape[-2]), -1).T, raw_fluxes.shape[0], axis=0)
+        diff_fluxes, diff_errors, alcs = diff(raw_fluxes, raw_errors, weights=weights, alc=True)
+        comparisons = np.delete(comparisons, self.target, axis=1)
+        weights = np.delete(weights, self.target, axis=1)
+
+        # cutting or not
+        if cut is True:
+            diff_fluxes, diff_errors, alcs = cut_diff_fluxes, cut_diff_errors, cut_alcs
+            comparisons, weights = cut_comparisons, cut_weights
+        elif cut is None:
+            # we decide if cutting it beneficial
+            bins = np.min([self.time.shape[-1], 12])
+            b = self.time.shape[-1] // bins
+            idxs = np.arange(b * bins)
+
+            def error_estimate(f):
+                return np.array(np.split(f.take(idxs, axis=-1), b, axis=-1)).std(-1).mean(0)
+
+            cut_std = error_estimate(cut_diff_fluxes[:, self.target]).min()
+            uncut_std = error_estimate(diff_fluxes[:, self.target]).min()
+
+            if cut_std < uncut_std:
+                diff_fluxes, diff_errors, alcs = cut_diff_fluxes, cut_diff_errors, cut_alcs
+                comparisons, weights = cut_comparisons, cut_weights
 
         # setting xarray
         dims = self.xarray.raw_fluxes.dims

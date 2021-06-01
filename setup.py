@@ -6,7 +6,7 @@ README = (HERE / "README.md").read_text()
 
 setup(
     name="prose",
-    version="0.9.1",
+    version="0.9.36",
     author="Lionel J. Garcia",
     description="Reduction and analysis of FITS telescope observations",
     py_modules=["prose"],

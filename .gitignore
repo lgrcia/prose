@@ -21,3 +21,5 @@ docs/source/notebooks/dev
 docs/source/notebooks/*
 test/*
 !test/*.py
+dist
+build
