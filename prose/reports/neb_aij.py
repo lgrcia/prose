@@ -48,9 +48,25 @@ class NEBCheck(LatexTemplate, NEB):
         self.dpi = 100
         self.evaluate_score(self.value)
         self.obstable = None
-
-    def plot_neb_lcs(self, destination, indexes, disposition,transparent=True,w=True):
         self.lcs = []
+
+    def plot_neb_lcs(self, destination, indexes, disposition, transparent=True, w=True):
+        """Plot all the light curves of a given list of stars with the expected transits.
+
+                    Parameters
+                    ----------
+                    destination : str
+                        Path to save the images
+                    indexes : list
+                        List of indexes corresponding to star numbers
+                    disposition: str
+                       Can be "suspects" for only the not completely cleared light curves or "all" for cleared and not
+                       cleared
+                    transparent : bool
+                        Whether to save the images with transparent background or not
+                    w : bool
+                        Number of columns to plot
+                    """
         if w is True:
             if len(indexes) > 24:
                 split = [indexes[:24], *np.array([indexes[i:i + 6 * 6] for i in range(24, len(indexes), 6 * 6)])]
@@ -82,9 +98,18 @@ class NEBCheck(LatexTemplate, NEB):
             plt.close()
 
     def plot_stars(self,size=8):
+        """
+        Visualization of the star dispositions on the zoomed stack image.
+                Parameters
+                ----------
+                size : int
+        """
         self.show_stars(size=size)
 
     def plot_dmag_rms(self):
+        """
+        Plot of delta magnitude as a function of RMS.
+        """
         fig = plt.figure(figsize=(6, 4))
         fig.patch.set_facecolor('white')
         dmag = np.arange(min(self.dmags), max(self.dmags), 0.01)
@@ -109,7 +134,15 @@ class NEBCheck(LatexTemplate, NEB):
         plt.tight_layout()
         self.style()
 
-    def make_tables(self,destination):
+    def make_tables(self, destination):
+        """
+        Create a . txt table with the information on each star that was checked : star number, gaia id, tic id, RA/DEC, distance
+        to target, dmag, rms, expected transit depth, ratio of rms to expected transit depth and disposition
+                Parameters
+                ----------
+                destination : str
+                    Path to store the table.
+        """
         self.disposition_string = self.disposition.astype("str")
         for i, j in zip(['0.0', '1.0', '2.0', '3.0', '4.0'],
                         ["Likely cleared", "Cleared", "Cleared too faint", "Flux too low", "Not cleared"]):
@@ -163,6 +196,20 @@ class NEBCheck(LatexTemplate, NEB):
         return self.obstable
 
     def make_figures(self, destination, transparent=True, disposition='suspects', w=True):
+        """
+        Create the figures needed for the report : light curve plots, zoomed stack image, dmag vs rms plot.
+                Parameters
+                ----------
+                destination : str
+                        Path to save the images
+                disposition: str
+                   Can be "suspects" for only the not completely cleared light curves or "all" for cleared and not
+                   cleared
+                transparent : bool
+                    Whether to save the images with transparent background or not
+                w : bool
+                    Number of columns to plot
+        """
         if disposition == 'suspects':
             self.plot_neb_lcs(destination, indexes=self.suspects, disposition="suspects",transparent=transparent,w=w)
         elif disposition == 'all':
@@ -178,6 +225,13 @@ class NEBCheck(LatexTemplate, NEB):
         plt.close()
 
     def make(self, destination):
+        """
+        Automatically build the NEB check report
+                Parameters
+                ----------
+                destination : str
+                        Path to save the report
+        """
         self.make_report_folder(destination)
         self.make_figures(self.figure_destination)
         open(self.tex_destination, "w").write(self.template.render(

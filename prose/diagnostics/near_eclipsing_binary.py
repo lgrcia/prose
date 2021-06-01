@@ -90,10 +90,10 @@ class NEB(Observation):
             - period
             - depth (in ppt)
             in same time unit as observation
-        star: float
-        dmag_buffer: float
-        bins: float
-        sigma: float
+        star: float, star number
+        dmag_buffer: float, default -0.5 for TESS
+        bins: float, default 0.0027 (3 min)
+        sigma: float, threshold for sigma clipping
         """
         self.epoch = value["epoch"]
         self.duration = value["duration"]
@@ -120,6 +120,20 @@ class NEB(Observation):
                        period=self.period)
 
     def evaluate_score(self, value, **kwargs):
+        """Find the expected transit and star disposition
+
+                Parameters
+                ----------
+                value : dict
+                    dict containing:
+
+                    - epoch
+                    - duration
+                    - period
+                    - depth (in ppt)
+                    in same time unit as observation
+
+        """
         for i_star in np.arange(len(self.nearby_ids)):
             self.transits[i_star] = self.get_transit(value, star=i_star, **kwargs).flatten()
             self.dmags[i_star] = self.dmag
@@ -148,6 +162,12 @@ class NEB(Observation):
         self.suspects = np.unique(np.hstack([self.not_cleared, self.flux_too_low, self.likely_cleared]))
 
     def plot_lc(self, star):
+        """
+        Plotting the light curve of designated star with the expected transit. Use evaluate_score() first.
+                Parameters
+                ----------
+                star : int
+        """
         viz.plot(self.time[self.mask_lc(star)],
                  self.diff_fluxes[self.aperture, self.nearby_ids[star]][self.mask_lc(star)], std=True)
         plt.plot(self.time, self.transits[star] + 1, label="expected transit")
@@ -155,6 +175,12 @@ class NEB(Observation):
         plt.legend()
 
     def show_stars(self, size=10):
+        """
+        Visualization of the star dispositions on the zoomed stack image.
+                Parameters
+                ----------
+                size : int
+        """
 
         self._check_show(size=size)
 
@@ -230,18 +256,24 @@ class NEB(Observation):
             idxs = np.arange(len(self.nearby_ids))
 
         nearby_ids = self.nearby_ids[idxs]
+        labels = nearby_ids.astype(str)
+        for k in np.arange(len(nearby_ids)):
+            if nearby_ids[k] == self.target:
+                labels[k] = labels[k] + ' (target)'
+
         viz.plot_lcs(
             [(self.time[self.mask_lc(i)], self.diff_fluxes[self.aperture, i][self.mask_lc(i)]) for i in nearby_ids],
-            labels=nearby_ids, **kwargs
+            labels=labels, **kwargs
         )
         axes = plt.gcf().get_axes()
         for i, axe in enumerate(axes):
             if i < len(nearby_ids):
                 if nearby_ids[i] == self.target:
-                    color = "k"
+                    axe.plot(self.time, self.transits[nearby_ids[i]] + 1, c='k', label='expected transit')
+                    axe.legend()
                 else:
                     color = self.color(idxs[i], white=True)
-                axe.plot(self.time, self.transits[nearby_ids[i]] + 1, c=color)
+                    axe.plot(self.time, self.transits[nearby_ids[i]] + 1, c=color)
                 if self.meridian_flip is not None:
                     axe.vlines(self.meridian_flip, axe.get_ylim()[0], axe.get_ylim()[1], colors="gray", linestyle='--')
                     if nearby_ids[i] == self.target:

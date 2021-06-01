@@ -446,7 +446,7 @@ class Observation(ApertureFluxes):
         if len(axes) == 0:
             self.show(**kwargs)
 
-    def show_stars(self, view=None, n=None, flip=False, comp_color="yellow", color=[0.51, 0.86, 1.], stars=None, **kwargs):
+    def show_stars(self, size=10, view=None, n=None, flip=False, comp_color="yellow", color=[0.51, 0.86, 1.], stars=None, **kwargs):
         """Show detected stars over stack image
 
 
@@ -455,7 +455,7 @@ class Observation(ApertureFluxes):
         size : int, optional
             size of the square figure, by default 10
         flip : bool, optional
-            wether to flip image, by default False
+            whether to flip image, by default False
         view : str, optional
             "all" to see all stars OR "reference" to have target and comparison stars hilighted, by default None
         n : int, optional
@@ -467,7 +467,7 @@ class Observation(ApertureFluxes):
             [description]
         """
 
-        self._check_show(flip=flip, **kwargs)
+        self._check_show(flip=flip, size=size, **kwargs)
 
         if stars is None:
             stars = self.stars
@@ -898,6 +898,12 @@ class Observation(ApertureFluxes):
             if apertures is not None:
                 aperture = apertures[self.aperture]
 
+            plt.xlim(0)
+            plt.text(aperture, ylim, "APERTURE", ha="right", rotation="vertical", va="top")
+            plt.axvline(aperture, c="k", alpha=0.1)
+            plt.axvspan(0, aperture, color="0.9", alpha=0.1)
+
+        if aperture is not None:
             plt.xlim(0)
             plt.text(aperture, ylim, "APERTURE", ha="right", rotation="vertical", va="top")
             plt.axvline(aperture, c="k", alpha=0.1)
