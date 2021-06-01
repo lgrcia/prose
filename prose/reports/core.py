@@ -94,4 +94,5 @@ def copy_figures(folder, prefix, destination):
     new_folder = Path(destination)
     new_folder.mkdir(exist_ok=True)
     for fig in figures:
-        shutil.copy(fig, new_folder / (prefix + "_" + fig.name))
+        if ".ipynb_checkpoints" not in str(fig):
+            shutil.copy(fig, new_folder / (prefix + "_" + fig.name))
