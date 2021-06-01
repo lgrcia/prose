@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from skimage.transform import resize
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.ticker import AutoMinorLocator
+from matplotlib.legend_handler import HandlerPatch
 import matplotlib.patches as mpatches
 from .models import transit
 
@@ -786,3 +787,18 @@ def plot_systematics_signal(x, y, systematics, signal, ylim=None, offset=None, f
     plot(x, y - systematics + 1. - offset)
     plt.text(plt.xlim()[1] + 0.005, 1 - offset, "DETRENDED", rotation=270, va="center")
     plt.ylim(ylim)
+
+
+class HandlerEllipse(HandlerPatch):
+    def create_artists(self, legend, orig_handle,
+                       xdescent, ydescent, width, height, fontsize, trans):
+        center = 0.5 * width - 0.5 * xdescent, 0.5 * height - 0.5 * ydescent
+        p = mpatches.Ellipse(xy=center, width=height + xdescent,
+                             height=height + ydescent)
+        self.update_prop(p, orig_handle, legend)
+        p.set_transform(trans)
+        return [p]
+    
+def circles_legend(colors, texts):
+    c = [mpatches.Circle((0.5, 0.5), radius = 0.25, fill=None, ec=colors[i]) for i in range(len(texts))]
+    plt.legend(c, texts , bbox_to_anchor=(1, 1.05), loc='upper right', ncol=3, handler_map={mpatches.Circle: HandlerEllipse()}, frameon=False)

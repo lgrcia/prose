@@ -331,7 +331,7 @@ class Observation(ApertureFluxes):
         self.gaia_data["x"], self.gaia_data["y"] = gaias.T
         inside = np.all((np.array([0, 0]) < gaias) & (gaias < np.array(self.stack.shape)), 1)
         self.gaia_data = self.gaia_data[np.argwhere(inside).squeeze()]
-
+        
         w, h = self.stack.shape
         if np.abs(np.mean(self.gaia_data["x"])) > w or np.abs(np.mean(self.gaia_data["y"])) > h:
             warnings.warn("Catalog stars seem out of the field. Check that your stack is solved and that telescope "
@@ -446,7 +446,8 @@ class Observation(ApertureFluxes):
         if len(axes) == 0:
             self.show(**kwargs)
 
-    def show_stars(self, size=10, view=None, n=None, flip=False, comp_color="yellow", color=[0.51, 0.86, 1.], stars=None, **kwargs):
+    def show_stars(self, view=None, n=None, flip=False,
+                   comp_color="yellow", color=[0.51, 0.86, 1.], stars=None, legend=True, **kwargs):
         """Show detected stars over stack image
 
 
@@ -508,6 +509,11 @@ class Observation(ApertureFluxes):
             _ = viz.plot_marks(*stars[self.target], self.target, color=color)
             _ = viz.plot_marks(*stars[comps].T, comps, color=comp_color)
             _ = viz.plot_marks(*stars[others].T, alpha=0.4, color=color)
+
+            if legend:
+                colors = ["gold", [0.51, 0.86, 1.]]
+                texts = ["comparisons", "target"]
+                viz.circles_legend(colors, texts)
 
     def show_gaia(self, color="yellow", alpha=1, n=None, idxs=True, limit=-1, fontsize=8, align=False):
         """Overlay Gaia objects on stack image
