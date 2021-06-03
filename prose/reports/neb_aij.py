@@ -50,7 +50,7 @@ class NEBCheck(LatexTemplate, NEB):
         self.obstable = None
         self.lcs = []
 
-    def plot_neb_lcs(self, destination, indexes, disposition, transparent=True, w=True):
+    def plot_neb_lcs(self, destination, indexes, disposition, transparent=True, report_layout=True):
         """Plot all the light curves of a given list of stars with the expected transits.
 
                     Parameters
@@ -64,32 +64,32 @@ class NEBCheck(LatexTemplate, NEB):
                        cleared
                     transparent : bool
                         Whether to save the images with transparent background or not
-                    w : bool
+                    report_layout : bool
                         Number of columns to plot
                     """
-        if w is True:
+        if report_layout is True:
             if len(indexes) > 24:
                 split = [indexes[:24], *np.array([indexes[i:i + 6 * 6] for i in range(24, len(indexes), 6 * 6)])]
-            else:
-                split = indexes
+            elif len(indexes) <= 24:
+                split = [indexes]
         else:
             if len(indexes) > 24:
                 split = [indexes[:24], *np.array([indexes[i:i + 6 * 4] for i in range(24, len(indexes), 6 * 4)])]
-            else:
-                split = indexes
+            elif len(indexes) <= 24:
+                split = [indexes]
         path_destination = path.join(destination, disposition)
         Path(path_destination).mkdir(parents=True, exist_ok=True)
         for i, idxs in enumerate(split):
             lcs_path = path.join(destination, disposition, "lcs{}.png".format(i))
             if i > 0:
                 self.lcs.append(lcs_path)
-            if w is True:
+            if report_layout is True:
                 if i == 0:
-                    self.plot(idxs)
+                    self.plot_lcs(idxs)
                 else:
-                    self.plot(idxs, w=6)
+                    self.plot_lcs(idxs, w=6)
             else:
-                self.plot(idxs)
+                self.plot_lcs(idxs)
             viz.paper_style()
             fig = plt.gcf()
             fig.patch.set_facecolor('white')
@@ -154,7 +154,7 @@ class NEBCheck(LatexTemplate, NEB):
         for i in self.stars[self.nearby_ids]:
             distance = np.linalg.norm((i - tic_stars), axis=1)
             _id = np.argmin(distance)
-            if distance[_id] < 3 and not _id in idxs:
+            if distance[_id] < 10 and not _id in idxs:
                 idxs.append(np.argmin(distance))
             else:
                 idxs.append(np.nan)
@@ -170,6 +170,12 @@ class NEBCheck(LatexTemplate, NEB):
                 list_ra.append(self.tic_data['ra'][j])
                 list_dec.append(self.tic_data['dec'][j])
                 list_dist.append(self.tic_data['dstArcSec'][j])
+            else:
+                list_tic.append('Not found')
+                list_gaia.append('Not found')
+                list_ra.append('Not found')
+                list_dec.append('Not found')
+                list_dist.append('Not found')
 
         df = pd.DataFrame(collections.OrderedDict(
             {
@@ -195,7 +201,7 @@ class NEBCheck(LatexTemplate, NEB):
                          ]
         return self.obstable
 
-    def make_figures(self, destination, transparent=True, disposition='suspects', w=True):
+    def make_figures(self, destination, transparent=True, disposition='suspects', report_layout=True):
         """
         Create the figures needed for the report : light curve plots, zoomed stack image, dmag vs rms plot.
                 Parameters
@@ -207,16 +213,16 @@ class NEBCheck(LatexTemplate, NEB):
                    cleared
                 transparent : bool
                     Whether to save the images with transparent background or not
-                w : bool
+                report_layout : bool
                     Number of columns to plot
         """
         if disposition == 'suspects':
-            self.plot_neb_lcs(destination, indexes=self.suspects, disposition="suspects",transparent=transparent,w=w)
+            self.plot_neb_lcs(destination, indexes=self.suspects, disposition="suspects",transparent=transparent, report_layout=report_layout)
         elif disposition == 'all':
-            self.plot_neb_lcs(destination, indexes=self.nearby_ids, disposition="all",transparent=transparent,w=w)
+            self.plot_neb_lcs(destination, indexes=self.nearby_ids, disposition="all",transparent=transparent, report_layout=report_layout)
         else:
-            self.plot_neb_lcs(destination, indexes=self.suspects, disposition="suspects", transparent=transparent, w=w)
-            self.plot_neb_lcs(destination, indexes=self.nearby_ids, disposition="all", transparent=transparent, w=w)
+            self.plot_neb_lcs(destination, indexes=self.suspects, disposition="suspects", transparent=transparent, report_layout=report_layout)
+            self.plot_neb_lcs(destination, indexes=self.nearby_ids, disposition="all", transparent=transparent, report_layout=report_layout)
         self.plot_stars()
         plt.savefig(path.join(destination, "neb_stars.png"), dpi=self.dpi,transparent=transparent)
         plt.close()
