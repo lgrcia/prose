@@ -882,11 +882,12 @@ class Observation(ApertureFluxes):
         plt.ylabel("ADUs")
         _, ylim = plt.ylim()
 
-        if "apertures_radii" in self.xarray and aperture is None:
-            apertures = self.apertures_radii[:, 0]
+        if "apertures_radii" in self.xarray or aperture is not None:
+            if "apertures_radii" in self.xarray and aperture is None:
+                apertures = self.apertures_radii[:, 0]
 
-            if apertures is not None:
-                aperture = apertures[self.aperture]
+                if apertures is not None:
+                    aperture = apertures[self.aperture]
 
             plt.xlim(0)
             plt.text(aperture, ylim, "APERTURE", ha="right", rotation="vertical", va="top")
