@@ -37,16 +37,19 @@ class NEB(Observation):
        radius around the target in which to analyse other stars fluxes, by default 2.5 (in arcminutes)
     """
 
-    def __init__(self, obs, radius=2.5):
+    def __init__(self, obs, radius=2.5,nearby_ids=None):
 
         super(NEB, self).__init__(obs.xarray.copy())
 
         self.radius = radius
-        target_distance = np.array(distances(obs.stars.T, obs.stars[obs.target]))
-        self.nearby_ids = np.argwhere(target_distance * obs.telescope.pixel_scale / 60 < self.radius).flatten()
+        if nearby_ids is None:
+            target_distance = np.array(distances(obs.stars.T, obs.stars[obs.target]))
+            self.nearby_ids = np.argwhere(target_distance * obs.telescope.pixel_scale / 60 < self.radius).flatten()
 
-        self.nearby_ids = self.nearby_ids[np.argsort(np.array(distances(obs.stars[self.nearby_ids].T,
-                                                                        obs.stars[obs.target])))]
+            self.nearby_ids = np.sort(self.nearby_ids[np.argsort(np.array(distances(obs.stars[self.nearby_ids].T,
+                                                                            obs.stars[obs.target])))])
+        else :
+            self.nearby_ids = nearby_ids
 
         self.time = self.time
         self.epoch = None
@@ -174,7 +177,7 @@ class NEB(Observation):
         self.plot_meridian_flip()
         plt.legend()
 
-    def show_stars(self, size=10, legend=True):
+    def show_neb_stars(self, size=10, legend=True, **kwargs):
         """
         Visualization of the star dispositions on the zoomed stack image.
                 Parameters
@@ -182,7 +185,7 @@ class NEB(Observation):
                 size : int
         """
 
-        self._check_show(size=size)
+        self._check_show(size=size,**kwargs)
 
         search_radius = 60 * self.radius / self.telescope.pixel_scale
         target_coord = self.stars[self.target]
@@ -233,9 +236,9 @@ class NEB(Observation):
     def color(self, i, white=False):
         if self.nearby_ids[i] == self.target:
             return 'k'
-        elif any(self.not_cleared == i) or any(self.flux_too_low == i):
+        elif np.any(self.not_cleared == i) or np.any(self.flux_too_low == i):
             return "firebrick"
-        elif any(self.likely_cleared == i):
+        elif np.any(self.likely_cleared == i):
             return "goldenrod"
         else:
             if white:
@@ -246,9 +249,9 @@ class NEB(Observation):
     def plot_suspects(self):
         """Plot fluxes on which a suspect NEB signal has been identified
         """
-        self.plot(idxs=self.suspects, force_width=False)
+        self.plot_lcs(idxs=self.suspects, force_width=False)
 
-    def plot(self, idxs=None, **kwargs):
+    def plot_lcs(self, idxs=None, **kwargs):
         """Plot all fluxes and model fit used for NEB detection
 
         Parameters

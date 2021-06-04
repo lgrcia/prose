@@ -97,14 +97,14 @@ class NEBCheck(LatexTemplate, NEB):
             plt.savefig(lcs_path, dpi=self.dpi, transparent=transparent)
             plt.close()
 
-    def plot_stars(self,size=8):
+    def plot_stars(self, size=8, **kwargs):
         """
         Visualization of the star dispositions on the zoomed stack image.
                 Parameters
                 ----------
                 size : int
         """
-        self.show_stars(size=size)
+        self.show_neb_stars(size=size, **kwargs)
 
     def plot_dmag_rms(self):
         """
