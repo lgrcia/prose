@@ -1086,13 +1086,14 @@ class Observation(ApertureFluxes):
         import json
         from pathlib import Path
 
-        html = Path(__file__).parent.absolute() / "html/lightcurve_widget.html"
+        html = Path("/Users/lionelgarcia/Code/prose/prose/html/lightcurve_widget.html")
         widget = html.open("r").read()
         widget = widget.replace("__fluxes__", json.dumps(self.diff_fluxes[:, self.target].tolist()))
         widget = widget.replace("__time__", json.dumps((self.time - 2450000).tolist()))
         widget = widget.replace("__best__", json.dumps(int(self.aperture)))
         widget = widget.replace("__apertures__", json.dumps(self.apertures.tolist()))
         widget = widget.replace("__width__", json.dumps(width))
+        i = "a" + str(int(np.random.rand()*100000))
+        widget = widget.replace("__divid__", i)
         display(HTML(widget))
-
 

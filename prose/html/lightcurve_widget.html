@@ -317,9 +317,9 @@
 </script>
 <script>console.log("hello")</script>
 
-<div id="prose">
+<div id="prose__divid__">
     <div class="lc-plot" style="width: __width__px">
-        <div id="prose-plot" class="plot"></div>
+        <div id="__divid__" class="plot"></div>
         <div class="header">
             <div class="lc-interact">
                 <div v-on:click="reset()" v-tooltip.top="'reset'">
@@ -417,13 +417,14 @@
 </style>
 
 <script>
-    var main = new Vue({
-        el: '#prose',
+    var __divid__ = new Vue({
+        el: '#prose__divid__',
         data: {
             fluxes: __fluxes__,
             time: __time__,
             best: __best__,
             apertures: __apertures__,
+            divid: '__divid__',
 
             aperture: undefined,
             binning: 0.005,
@@ -439,7 +440,7 @@
                 this.plot_lc()
             },
             plot_lc: function (aperture = this.aperture, binning = this.binning) {
-                plot(this.time, this.fluxes[aperture], "prose-plot", binning, color = "black")
+                plot(this.time, this.fluxes[aperture], this.divid, binning, color = "black")
             },
         }
     })
