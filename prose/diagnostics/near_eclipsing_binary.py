@@ -157,11 +157,11 @@ class NEB(Observation):
                 continue
             else:
                 self.disposition[i_star] = 4
-        self.likely_cleared = np.argwhere(self.disposition == 0).squeeze()
-        self.cleared = np.argwhere(self.disposition == 1).squeeze()
-        self.cleared_too_faint = np.argwhere(self.disposition == 2).squeeze()
-        self.flux_too_low = np.argwhere(self.disposition == 3).squeeze()
-        self.not_cleared = np.argwhere(self.disposition == 4).squeeze()
+        self.likely_cleared = np.argwhere(self.disposition == 0).flatten()
+        self.cleared = np.argwhere(self.disposition == 1).flatten()
+        self.cleared_too_faint = np.argwhere(self.disposition == 2).flatten()
+        self.flux_too_low = np.argwhere(self.disposition == 3).flatten()
+        self.not_cleared = np.argwhere(self.disposition == 4).flatten()
         self.suspects = np.unique(np.hstack([self.not_cleared, self.flux_too_low, self.likely_cleared]))
 
     def plot_lc(self, star):

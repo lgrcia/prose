@@ -16,7 +16,7 @@ from .core import LatexTemplate
 
 class NEBCheck(LatexTemplate, NEB):
 
-    def __init__(self, obs, value, radius=2.5, style="paper", template_name="neb.tex"):
+    def __init__(self, obs, value, radius=2.5, nearby_ids=None, style="paper", template_name="neb.tex"):
         """NEB check report page
 
             Parameters
@@ -41,7 +41,7 @@ class NEBCheck(LatexTemplate, NEB):
         #Observation.__init__(self, obs.xarray)
         LatexTemplate.__init__(self, template_name, style=style)
         self.radius = radius
-        NEB.__init__(self, obs, radius=self.radius)
+        NEB.__init__(self, obs, radius=self.radius, nearby_ids=nearby_ids)
         self.value = value
 
         self.disposition_string = None
