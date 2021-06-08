@@ -198,6 +198,9 @@ class Observation(ApertureFluxes):
             return self._meridian_flip
         else:
             has_flip = hasattr(self.xarray, "flip")
+            if has_flip:
+                if np.all(np.isnan(self.flip)):
+                    return None
 
             if has_flip:
                 if "WEST" in self.flip:
@@ -838,7 +841,7 @@ class Observation(ApertureFluxes):
             _, ylim = plt.ylim()
             plt.text(self.meridian_flip, ylim, "meridian flip ", ha="right", rotation="vertical", va="top", color="0.7")
 
-    def plot(self, meridian_flip=True):
+    def plot(self, star=None, meridian_flip=True):
         """Plot observation light curve
 
         Parameters
@@ -846,7 +849,7 @@ class Observation(ApertureFluxes):
         meridian_flip : bool, optional
             whether to show meridian flip, by default True
         """
-        super().plot()
+        super().plot(star=star)
         if meridian_flip:
             self.plot_meridian_flip()
 
@@ -1097,7 +1100,6 @@ class Observation(ApertureFluxes):
     def convert_flip(self,keyword):
         self.xarray['flip'] = ('time', (self.flip == keyword).astype(int))
 
-
     def folder_to_phot(self, confirm=True):
         if confirm:
             confirm = str(input("Will erase all but .phot, enter 'y' to continue: "))
@@ -1124,4 +1126,26 @@ class Observation(ApertureFluxes):
         widget = widget.replace("__width__", json.dumps(width))
         display(HTML(widget))
 
+    def radec_to_pixel(self, radecs, unit=(u.deg, u.deg)):
+        ra, dec = radecs.T
+        skycoords = SkyCoord(ra=ra, dec=dec, unit=unit)
+        return np.array(wcsutils.skycoord_to_pixel(skycoords, self.wcs)).T
+
+    def plot_circle(self, center, arcmin=2.5):
+        if center is None:
+            x, y = self.stars[self.target]
+        elif isinstance(center, int):
+            x, y = self.stars[center]
+        elif isinstance(center, (tuple, list, np.ndarray)):
+            x, y = center
+        else:
+            raise ValueError("center type not understood")
+
+        search_radius = 60 * arcmin / self.telescope.pixel_scale
+        circle = plt.Circle((x, y), search_radius, fill=None, ec="white", alpha=0.6)
+
+        ax = plt.gca()
+        ax.add_artist(circle)
+        plt.annotate(f"radius {arcmin}'", xy=[x, y + search_radius + 15], color="white",
+                     ha='center', fontsize=12, va='bottom', alpha=0.6)
 
