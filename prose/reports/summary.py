@@ -175,7 +175,7 @@ class TESSSummary(Summary):
     def to_csv_report(self):
         """Export a typical csv of the observation's data
         """
-        destination = path.join(self.destination, "..", self.denominator + ".txt")
+        destination = path.join(self.destination, "..", "measurements.txt")
 
         comparison_stars = self.comps[self.aperture]
         list_diff = ["DIFF_FLUX_C%s" % i for i in comparison_stars]
