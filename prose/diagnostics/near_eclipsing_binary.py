@@ -130,7 +130,7 @@ class NEB(Observation):
         self.not_cleared = np.array(self.not_cleared)
         self.suspects = np.unique(np.hstack([self.not_cleared, self.flux_too_low, self.likely_cleared])).astype(int)
 
-    def plot_lc(self, star):
+    def plot_lc(self, star, sigma=3.):
         """
         Plotting the light curve of designated star with the expected transit. Use evaluate_score() first.
                 Parameters
