@@ -199,8 +199,11 @@ class Observation(ApertureFluxes):
         else:
             has_flip = hasattr(self.xarray, "flip")
             if has_flip:
-                if np.all(np.isnan(self.flip)):
+                try:
+                    np.all(np.isnan(self.flip))
                     return None
+                except TypeError:
+                    pass
 
             if has_flip:
                 if "WEST" in self.flip:
@@ -584,7 +587,7 @@ class Observation(ApertureFluxes):
 
         _ = viz.plot_marks(*tics.T, ID if idxs else None, color=color, alpha=alpha, n=n, position="top", fontsize=9, offset=10)
 
-    def show_cutout(self, star=None, size=200, marks=True):
+    def show_cutout(self, star=None, size=200, marks=True,**kwargs):
         """
         Show a zoomed cutout around a detected star or coordinates
 
@@ -605,7 +608,7 @@ class Observation(ApertureFluxes):
         else:
             raise ValueError("star type not understood")
 
-        self.show()
+        self.show(**kwargs)
         plt.xlim(np.array([-size / 2, size / 2]) + x)
         plt.ylim(np.array([-size / 2, size / 2]) + y)
         if marks:
@@ -1131,7 +1134,7 @@ class Observation(ApertureFluxes):
         skycoords = SkyCoord(ra=ra, dec=dec, unit=unit)
         return np.array(wcsutils.skycoord_to_pixel(skycoords, self.wcs)).T
 
-    def plot_circle(self, center, arcmin=2.5):
+    def plot_circle(self, center=None, arcmin=2.5):
         if center is None:
             x, y = self.stars[self.target]
         elif isinstance(center, int):

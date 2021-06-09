@@ -130,17 +130,19 @@ class NEB(Observation):
         self.not_cleared = np.array(self.not_cleared)
         self.suspects = np.unique(np.hstack([self.not_cleared, self.flux_too_low, self.likely_cleared])).astype(int)
 
-    def plot(self, star=None, meridian_flip=True, transit=True):
+    def plot_lc(self, star):
         """
         Plotting the light curve of designated star with the expected transit. Use evaluate_score() first.
                 Parameters
                 ----------
                 star : int
         """
-        super().plot(star=star, meridian_flip=meridian_flip)
-        if transit:
-            plt.plot(self.time, self.transits[star] + 1, label="expected transit")
-
+        diff_flux = self.diff_fluxes[self.aperture, star].copy()
+        mask = sigma_clip(diff_flux, return_mask=True, sigma=sigma)
+        viz.plot(self.time[mask],
+                 diff_flux[mask], std=True)
+        plt.plot(self.time, self.transits[star] + 1, label="expected transit")
+        self.plot_meridian_flip()
         plt.legend()
 
     def show_neb_stars(self, size=10, legend=True, **kwargs):
@@ -197,7 +199,7 @@ class NEB(Observation):
         plt.tight_layout()
 
     def color(self, i, white=False):
-        if self.nearby_ids[i] == self.target:
+        if i == self.target:
             return 'k'
         elif np.any(self.not_cleared == i) or np.any(self.flux_too_low == i):
             return "firebrick"

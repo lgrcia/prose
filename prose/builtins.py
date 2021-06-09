@@ -58,7 +58,7 @@ artemis.update({
 
 trappist = speculoos_south.copy()
 trappist.update({
-    "name": "Trappist-South",
+    "name": "TRAPPIST-South",
     "trimming": [40, 40],
     "pixel_scale": 0.64,
     "ra_unit": "deg",
@@ -71,7 +71,7 @@ trappist.update({
 
 trappistN = trappist.copy()
 trappistN.update({
-    "name": "Trappist-North",
+    "name": "TRAPPIST-North",
     "names": ["Trappist-North", "ntm"],
     "pixel_scale": 0.60,
     "ra_unit": "hourangle",
