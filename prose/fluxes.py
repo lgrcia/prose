@@ -91,7 +91,7 @@ def broeg(fluxes, tolerance=1e-2, max_iteration=200, bins=12):
             std = error_estimate(lcs)
             weights = 1 / std
 
-        # weights[np.isnan(weights)] = 0
+        weights[~np.isfinite(weights)] = 0
 
         # Keep track of weights
         evolution = np.nanstd(np.abs(np.nanmean(weights, axis=-1) - np.nanmean(last_weights, axis=-1)))
