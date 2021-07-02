@@ -443,7 +443,8 @@ class Observation(ApertureFluxes):
         if len(axes) == 0:
             self.show(**kwargs)
 
-    def show_stars(self, view=None, n=None, flip=False, comp_color="yellow", color=[0.51, 0.86, 1.], stars=None, **kwargs):
+    def show_stars(self, view=None, n=None, flip=False,
+                   comp_color="yellow", color=[0.51, 0.86, 1.], stars=None, legend=True, **kwargs):
         """Show detected stars over stack image
 
 
@@ -505,6 +506,11 @@ class Observation(ApertureFluxes):
             _ = viz.plot_marks(*stars[self.target], self.target, color=color)
             _ = viz.plot_marks(*stars[comps].T, comps, color=comp_color)
             _ = viz.plot_marks(*stars[others].T, alpha=0.4, color=color)
+
+            if legend:
+                colors = ["gold", [0.51, 0.86, 1.]]
+                texts = ["comparisons", "target"]
+                viz.circles_legend(colors, texts)
 
     def show_gaia(self, color="yellow", alpha=1, n=None, idxs=True, limit=-1, fontsize=8, align=False):
         """Overlay Gaia objects on stack image
@@ -1077,4 +1083,19 @@ class Observation(ApertureFluxes):
             shutil.move(str(_phot.absolute()), str(folder.parent.absolute()))
             shutil.rmtree(str(folder.absolute()))
 
+    def lc_widget(self, width=500):
+        from IPython.core.display import display, HTML
+        import json
+        from pathlib import Path
+
+        html = Path(__file__).parent.absolute() / "html/lightcurve_widget.html"
+        widget = html.open("r").read()
+        widget = widget.replace("__fluxes__", json.dumps(self.diff_fluxes[:, self.target].tolist()))
+        widget = widget.replace("__time__", json.dumps((self.time - 2450000).tolist()))
+        widget = widget.replace("__best__", json.dumps(int(self.aperture)))
+        widget = widget.replace("__apertures__", json.dumps(self.apertures.tolist()))
+        widget = widget.replace("__width__", json.dumps(width))
+        i = "a" + str(int(np.random.rand()*100000))
+        widget = widget.replace("__divid__", i)
+        display(HTML(widget))
 
