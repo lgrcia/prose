@@ -12,7 +12,7 @@ import collections
 
 class TransitModel(Observation, LatexTemplate):
 
-    def __init__(self, obs, transit, trend=None, expected=None, rms_bin=0.005, style="paper", template_name="transitmodel.tex"):
+    def __init__(self, obs, transit, trend=None, expected=None, rms_bin=5/24/60, style="paper", template_name="transitmodel.tex"):
         """Transit modeling report
 
         Parameters
@@ -43,6 +43,7 @@ class TransitModel(Observation, LatexTemplate):
 
         self.transit_model = transit
         self.trend_model = trend if trend is not None else np.zeros_like(self.time)
+        self.residuals = self.diff_flux - self.transit_model - self.trend_model
         intransit = self.transit_model < -1e-6
         self.ingress = self.time[intransit][0]
         self.egress = self.time[intransit][-1]
@@ -63,7 +64,7 @@ class TransitModel(Observation, LatexTemplate):
             ["b", None, None],
             ["Duration", f"{self.t14:.2f} min", None],
             ["(Rp/R*)\u00b2", None, None],
-            ["Apparent depth", f"{np.abs(min(self.transit_model)):.2e}", None],
+            ["Apparent depth (min. flux)", f"{np.abs(min(self.transit_model)):.2e}", None],
             ["a/R*", None, None],
             ["i", None, None],
             ["SNR", f"{self.snr:.2f}", None],
@@ -120,7 +121,7 @@ class TransitModel(Observation, LatexTemplate):
         """
         This one adds de-trended light-curve
         """
-        destination = path.join(self.destination, "..", self.denominator + ".txt")
+        destination = path.join(self.destination, "..", 'measurements' + ".txt")
 
         comparison_stars = self.comps[self.aperture]
         list_diff = ["DIFF_FLUX_C%s" % i for i in comparison_stars]
@@ -137,9 +138,9 @@ class TransitModel(Observation, LatexTemplate):
         df = pd.DataFrame(collections.OrderedDict(
             {
                 "BJD-TDB" if self.time_format == "bjd_tdb" else "JD-UTC": self.time,
-                "DIFF_FLUX_T1": self.diff_flux,
-                "DIFF_FLUX_T1_DETRENDED": self.diff_flux - self.trend_model + 1,
-                "DIFF_ERROR_T1": self.diff_error,
+                "DIFF_FLUX_T%s" % self.target: self.diff_flux,
+                "DIFF_FLUX_T%s_DETRENDED" % self.target: self.diff_flux - self.trend_model + 1,
+                "DIFF_ERROR_T%s" % self.target: self.diff_error,
                 **dict(zip(list_columns, list_columns_array)),
                 "dx": self.dx,
                 "dy": self.dy,
@@ -161,5 +162,5 @@ class TransitModel(Observation, LatexTemplate):
         return depth / (np.sqrt(((wn ** 2) / n) + (rn ** 2)))
 
     def rms_binned(self):
-        bins, flux, std = binning(self.time, self.diff_flux - self.trend_model + 1, bins=self.rms_bin, std=True)
-        return np.mean(std), self.rms_bin * 24 * 60
+        bins, flux, std = binning(self.time, self.residuals, bins=self.rms_bin, std=True)
+        return np.std(flux), self.rms_bin * 24 * 60

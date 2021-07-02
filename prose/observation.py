@@ -615,7 +615,7 @@ class Observation(ApertureFluxes):
             idxs = np.argwhere(np.max(np.abs(self.stars - [x, y]), axis=1) < size).squeeze()
             viz.plot_marks(*self.stars[idxs].T, label=idxs)
 
-    def plot_comps_lcs(self, n=5, ylim=(0.98, 1.02)):
+    def plot_comps_lcs(self, n=15, ylim=(0.98, 1.02)):
         """Plot comparison stars light curves along target star light curve
 
         Parameters
@@ -1000,15 +1000,15 @@ class Observation(ApertureFluxes):
         new_obs.xarray = new_obs.xarray.sel(time=self.time[condition])
         return new_obs
 
-    def keep_good_stars(self, threshold=3, trim=10, keep=None, inplace=True):
+    def keep_good_stars(self, lower_threshold=3., upper_threshold=35000., trim=10, keep=None, inplace=True):
         """Keep only  stars with a median flux higher than `threshold`*sky. 
         
         This action will reorganize stars indexes (target id will be recomputed) and reset the differential fluxes to raw.
 
         Parameters
         ----------
-        threshold : float
-            threshold for which stars with flux/sky > threshold are kept, default is 5
+        lower_threshold : float
+            threshold for which stars with flux/sky > threshold are kept, default is 3
         trim : float
             value in pixels above which stars are kept, default is 10 to avoid stars too close to the edge
         keep : int or list
@@ -1016,7 +1016,7 @@ class Observation(ApertureFluxes):
         inplace: bool
             whether to replace current object or return a new one
         """
-        good_stars = np.argwhere(np.median(self.peaks, 1)/np.median(self.sky) > threshold).squeeze()
+        good_stars = np.argwhere((np.median(self.peaks, 1)/np.median(self.sky) > lower_threshold) & (np.median(self.peaks, 1) < upper_threshold)).squeeze()
         mask = np.any(np.abs(self.stars[good_stars] - max(self.stack.shape) / 2) > (max(self.stack.shape) - 2 * trim) / 2, axis=1)
         bad_stars = np.argwhere(mask == True).flatten()
 
