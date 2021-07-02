@@ -91,7 +91,12 @@ class Report(LatexTemplate):
 
 def copy_figures(folder, prefix, destination):
     figures = list(Path(folder).glob("**/*.png"))
+    texts = list(Path(folder).glob("**/*.txt"))
     new_folder = Path(destination)
     new_folder.mkdir(exist_ok=True)
     for fig in figures:
-        shutil.copy(fig, new_folder / (prefix + "_" + fig.name))
+        if ".ipynb_checkpoints" not in str(fig):
+            shutil.copy(fig, new_folder / (prefix + "_" + fig.name))
+    for txt in texts:
+        if ".ipynb_checkpoints" not in str(txt):
+            shutil.copy(txt, new_folder / (prefix + "_" + txt.name))

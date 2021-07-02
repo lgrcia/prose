@@ -30,14 +30,14 @@ class Summary(Observation, LatexTemplate):
         self.obstable = [
             ["Time", obs_duration],
             ["RA - DEC", f"{self.RA} {self.DEC}"],
-            ["images", len(self.time)],
-            ["mean std · fwhm (epsf)",
+            ["Images", len(self.time)],
+            ["Mean std · fwhm (epsf)",
              f"{np.mean(self.fwhm) / (2 * np.sqrt(2 * np.log(2))):.2f} · {np.mean(self.fwhm):.2f} pixels"],
-            ["fwhmx · fwhmy (target)", f"{self.plot_star_psf(self.target)[0]:.2f} · {self.plot_star_psf(self.target)[1]:.2f} pixels"],
-            ["optimum aperture", f"{np.mean(self.apertures_radii[self.aperture,:]):.2f}"],
+            ["Fwhmx · fwhmy (target)", f"{self.plot_star_psf(print_values=False,plot=False)[0]:.2f} · {self.plot_star_psf(print_values=False,plot=False)[1]:.2f} pixels"],
+            ["Optimum aperture", f"{np.mean(self.apertures_radii[self.aperture,:]):.2f} pixels"],
             ["Telescope", self.telescope.name],
             ["Filter", self.filter],
-            ["exposure", f"{np.mean(self.exptime)} s"],
+            ["Exposure", f"{np.mean(self.exptime)} s"],
         ]
 
         self.description = f"{self.date[0:4]} {self.date[4:6]} {self.date[6::]} $\cdot$ {self.telescope.name} $\cdot$ {self.filter}"
@@ -140,6 +140,8 @@ class Summary(Observation, LatexTemplate):
             plt.plot(self.time, self.diff_flux - 0.03, ".", color="gainsboro", alpha=0.3)
             plt.plot(self.time, self._trend - 0.03, c="k", alpha=0.2, label="systematics model")
             viz.plot(self.time, self.diff_flux - self._trend + 1.,label='data',binlabel='binned data (7.2 min)')
+            plt.text(plt.xlim()[1], 0.965, "RAW", rotation=270)
+            plt.text(plt.xlim()[1], 0.995, "DETRENDED", rotation=270)
             plt.ylim(0.95, 1.02)
         else:
             plt.ylim(0.98, 1.02)
@@ -173,7 +175,7 @@ class TESSSummary(Summary):
     def to_csv_report(self):
         """Export a typical csv of the observation's data
         """
-        destination = path.join(self.destination, "..", self.denominator + ".csv")
+        destination = path.join(self.destination, "..", "measurements.txt")
 
         comparison_stars = self.comps[self.aperture]
         list_diff = ["DIFF_FLUX_C%s" % i for i in comparison_stars]
@@ -190,8 +192,8 @@ class TESSSummary(Summary):
         df = pd.DataFrame(collections.OrderedDict(
             {
                 "BJD-TDB" if self.time_format == "bjd_tdb" else "JD-UTC": self.time,
-                "DIFF_FLUX_T1": self.diff_flux,
-                "DIFF_ERROR_T1": self.diff_error,
+                "DIFF_FLUX_T%s" % self.target : self.diff_flux,
+                "DIFF_ERROR_T%s" % self.target: self.diff_error,
                 **dict(zip(list_columns, list_columns_array)),
                 "dx": self.dx,
                 "dy": self.dy,
@@ -201,7 +203,7 @@ class TESSSummary(Summary):
                 "EXPOSURE": self.exptime,
             })
         )
-        df.to_csv(destination, sep=" ", index=False)
+        df.to_csv(destination, sep="\t", index=False)
 
     def make(self, destination):
         super().make(destination)

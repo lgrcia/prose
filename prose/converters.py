@@ -343,7 +343,7 @@ def AIJ_to_phot(aij_file, telescope, destination, stack):
 
     # getting values
     stars_ids = [eval(key.split('rel_flux_T')[-1].split("_")[0]) for key in df.keys() if
-                 re.match('rel_flux_T[1-9]*$', key) is not None]
+                 re.match('rel_flux_T[0-9]*$', key) is not None]
     bjd_tdb = df["BJD_TDB"]
     fluxes = np.zeros((1, len(stars_ids), len(bjd_tdb)))
     errors = np.zeros_like(fluxes)

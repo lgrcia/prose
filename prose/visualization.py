@@ -165,7 +165,7 @@ def plot_lcs(data, w=4, show=None, hide=None, ylim=None, size=None, labels=None,
     if not force_width:
         w = np.min([len(idxs), w])
     fig, axes = plt.subplots(H, w, figsize=(w * size[0], H * size[1]))
-    
+    fig.patch.set_facecolor('white')
     max_duration = np.max([jd.max() - jd.min() for jd, _ in [data[i] for i in idxs]])
     
     for _i, ax in enumerate(axes.flat if len(idxs) > 1 else [axes]):
@@ -195,7 +195,7 @@ def plot_lcs(data, w=4, show=None, hide=None, ylim=None, size=None, labels=None,
                     textcoords="axes fraction",
                     ha="left",
                     va="bottom",
-                    fontsize=10,
+                    fontsize=12,
                     color="k",
                 )
         else:
@@ -336,8 +336,15 @@ def plot_marks(x, y, label=None, position="bottom", offset=7, fontsize=12, color
     if not isinstance(x, (list, np.ndarray, tuple)):
         x = np.array([x])
         y = np.array([y])
-        if label is not None:
+        if label is True:
+            label = np.array([0])
+        elif label is not None:
             label = np.array([label])
+    else:
+        if label is True:
+            label = np.arange(len(x))
+        elif label is not None:
+            label = np.array(label)
 
     if inside:
         ax = plt.gcf().axes[0]
@@ -348,7 +355,8 @@ def plot_marks(x, y, label=None, position="bottom", offset=7, fontsize=12, color
         x = x[within]
         y = y[within]
         if label is not None:
-            label = np.array(label)[within]
+            print
+            label = label[within]
 
     if n is not None:
         x = x[0:n]
@@ -798,7 +806,8 @@ class HandlerEllipse(HandlerPatch):
         self.update_prop(p, orig_handle, legend)
         p.set_transform(trans)
         return [p]
-    
+
+
 def circles_legend(colors, texts):
     c = [mpatches.Circle((0.5, 0.5), radius = 0.25, fill=None, ec=colors[i]) for i in range(len(texts))]
     plt.legend(c, texts , bbox_to_anchor=(1, 1.05), loc='upper right', ncol=3, handler_map={mpatches.Circle: HandlerEllipse()}, frameon=False)

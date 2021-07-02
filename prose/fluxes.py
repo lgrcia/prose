@@ -402,7 +402,7 @@ class ApertureFluxes:
         nans: bool
             whether to keep nans values in fluxes, otherwise set to 1 (arbitrarly low value) before computing the weights, default False, i.e. removing nans
         """
-
+        # TODO: ignore apertures out of the image
         if inplace:
             new_self = self
         else:
@@ -492,12 +492,17 @@ class ApertureFluxes:
     # Plotting
     # ========
 
-    def plot(self, which="None", bins=0.005, color="k", std=True):
+    def plot(self, star=None, bins=0.005, color="k", std=True):
+        if star is None:
+            star = self.target
         binned = self.binn(bins, std=std)
-        plt.plot(self.time, self.diff_flux, ".", c="gainsboro", zorder=0, alpha=0.6)
-        plt.errorbar(binned.time, binned.diff_flux, yerr=binned.diff_error, fmt=".", zorder=1, color=color, alpha=0.8)
+        plt.plot(self.time, self.diff_fluxes[self.aperture, star], ".", c="gainsboro", zorder=0, alpha=0.6)
+        plt.errorbar(
+            binned.time,
+            binned.diff_fluxes[self.aperture, star],
+            yerr=binned.diff_error, fmt=".", zorder=1, color=color, alpha=0.8)
 
-    def sigma_clip(self, sigma=3.):
+    def sigma_clip(self, sigma=3., star=None):
         """Sigma clipping
 
         Parameters
@@ -505,10 +510,19 @@ class ApertureFluxes:
         sigma : float, optional
             sigma clipping threshold, by default 3.
 
+        star : int, optional
+            star on which to apply the sigma clip, is target by default
+
         """
         new_self = self.copy()
-        new_self.xarray = new_self.xarray.sel(
-            time=self.time[np.abs(self.diff_flux - np.median(self.diff_flux)) < sigma * np.std(self.diff_flux)])
+        if star is None:
+            new_self.xarray = new_self.xarray.sel(
+                time=self.time[np.abs(self.diff_flux - np.median(self.diff_flux)) < sigma * np.std(self.diff_flux)])
+        else:
+            new_self.xarray = new_self.xarray.sel(
+                time=self.time[np.abs(self.diff_fluxes[self.aperture, star] - np.median(
+                    self.diff_fluxes[self.aperture, star])) < sigma * np.std(self.diff_fluxes[self.aperture, star])])
+
         return new_self
 
     # modeling
