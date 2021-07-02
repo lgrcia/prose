@@ -57,7 +57,7 @@ class Observation(ApertureFluxes):
 
         has_bjd = hasattr(self.xarray, "bjd_tdb")
         if has_bjd:
-            has_bjd = ~np.all(np.isnan(self.bjd_tdb))
+            has_bjd = ~np.all(self.xarray.bjd_tdb.isnull().values)
 
         if not has_bjd:
             try:
@@ -91,6 +91,7 @@ class Observation(ApertureFluxes):
 
         Parameters
         ----------
+
         destination : str
             Path of the csv file to save
         sep : str, optional
