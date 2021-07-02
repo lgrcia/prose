@@ -140,10 +140,10 @@ class Photometry:
             initial_xarray = xr.Dataset()
 
         #  TODO: align in time? In case calib and phot are only partially overlapping
-        initial_xarray = initial_xarray.drop_dims(["star","apertures"],errors="ignore")
-        initial_xarray = initial_xarray.drop_vars(["annulus_rin","annulus_rout","annulus_area","sky"],errors="ignore")
+        initial_xarray = initial_xarray.drop_dims(["star", "apertures"], errors="ignore")
+        initial_xarray = initial_xarray.drop_vars(["annulus_rin", "annulus_rout", "annulus_area", "sky"], errors="ignore")
         phot_xarray = self.photometry_s.xarray.xarray
-        xarray = xr.merge([phot_xarray,initial_xarray], combine_attrs="no_conflicts",join='left',compat='override')
+        xarray = xr.merge([phot_xarray,initial_xarray], combine_attrs="no_conflicts", join='left', compat='override')
         xarray = xarray.transpose("apertures", "star", "time", ...)
         xarray = xarray.assign_coords(stars=(("star", "n"), self.stars))
         xarray["apertures_sky"] = xarray.sky  # mean over stars
