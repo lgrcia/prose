@@ -205,7 +205,7 @@ class FitsManager(FilesDataFrame):
             self.folder = None
         elif isinstance(files_df_or_folder, (str, Path)):
             assert path.exists(files_df_or_folder), "Folder does not exist"
-            files = get_files(extension, files_df_or_folder, depth=kwargs.get("depth", 1))
+            files = get_files(extension, files_df_or_folder, depth=kwargs.get("depth", 1), single_list_removal=False)
             files_df = fits_to_df(files, verbose=verbose, hdu=hdu)
             self.folder = files_df_or_folder
         else:

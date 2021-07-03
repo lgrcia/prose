@@ -67,25 +67,6 @@ class Stack(Block):
             stack_hdu = fits.PrimaryHDU(self.stack, header=self.header)
             stack_hdu.writeto(self.destination, overwrite=self.overwrite)
 
-        self.xarray = xr.Dataset()
-
-        self.xarray.attrs.update(utils.header_to_cdf4_dict(self.header))
-        self.xarray.attrs.update(dict(
-            target=-1,
-            aperture=-1,
-            telescope=self.telescope.name,
-            filter=self.header.get(self.telescope.keyword_filter, ""),
-            exptime=self.header.get(self.telescope.keyword_exposure_time, ""),
-            name=self.header.get(self.telescope.keyword_object, ""),
-        ))
-
-        if self.telescope.keyword_observation_date in self.header:
-            self.xarray.attrs.update(
-                dict(date=str(utils.format_iso_date(
-                    self.header[self.telescope.keyword_observation_date])).replace("-", ""),
-                     ))
-        self.xarray.coords["stack"] = (('w', 'h'), self.stack)
-
 
 class StackStd(Block):
     
@@ -430,7 +411,7 @@ class XArray(Block):
                 self.variables[name][1].append(image.__getattribute__(name))
             except AttributeError:
                 if self.raise_error:
-                    raise - AttributeError()
+                    raise AttributeError()
                 else:
                     pass
 

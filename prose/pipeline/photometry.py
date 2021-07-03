@@ -305,3 +305,42 @@ class PSFPhotometry(Photometry):
             psf=psf,
             photometry=photometry
         )
+
+
+class ShapeletPhotometry(Photometry):
+    """PSF Photometry pipeline (not tested)
+
+    Parameters
+    ----------
+    files : list of str, optional
+        List of files to process
+    stack: str, optional
+        Path of the stack image
+    overwrite : bool, optional
+        whether to overwrite existing products, by default False
+    n_stars : int, optional
+        max number of stars to take into account, by default 500
+    psf : Block, optional
+        PSF modeling Block (mainly used to estimate fwhm and scale aperture if ``fwhm_scale`` is ``True``), by default :class:`~prose.blocks.Gaussian2D`
+    photometry : Block, optional
+        aperture photometry Block, by default :class:`~prose.blocks.PhotutilsAperturePhotometry`
+    """
+
+    def __init__(self,
+                 files=None,
+                 stack=None,
+                 stars=None,
+                 overwrite=False,
+                 n_stars=500,
+                 psf=blocks.Gaussian2D,
+                 photometry=blocks.Shepard):
+
+        super().__init__(
+            files=files,
+            stack=stack,
+            overwrite=overwrite,
+            stars=stars,
+            n_stars=n_stars,
+            psf=psf,
+            photometry=photometry
+        )
