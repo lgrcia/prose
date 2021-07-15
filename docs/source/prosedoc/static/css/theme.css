@@ -85,9 +85,13 @@ nav a.icon-home {
     font-size: 30px;
     color: inherit;
     font-style: italic;
-    margin-bottom: 30px;
+    margin-bottom: 10px;
     font-family: Georgia, 'Times New Roman', Times, serif;
     font-weight: bold;
+}
+
+div.version {
+    margin-bottom: 20px
 }
 
 nav .nav-head {
