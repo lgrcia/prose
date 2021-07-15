@@ -367,8 +367,8 @@ nav .top-nav{
     justify-content: center;
 }
 
-.github-link svg{
-    height:20px;
-    fill:inherit;
-    margin:3px;
+.github-link a {
+    text-decoration: underline;
+    text-transform: unset;
+    color:red;
 }
