@@ -3,10 +3,12 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-prose
-=====
 
-A python framework to process FITS images. 
+   prose
+   =====
+
+.. role:: underline
+    :class: underline
 
 .. image:: prose.png
    :width: 450
@@ -18,7 +20,7 @@ A python framework to process FITS images.
     :target: https://prose.readthedocs.io/en/latest/
 .. image:: https://img.shields.io/badge/license-MIT-lightgray.svg?style=flat
 
-Built for Astronomy, |prose| features pipelines to perform common tasks (such as automated calibration, reduction and photometry) and makes building custom ones easy.
+|prose| is a tool to build pipelines dedicated to astronomical images processing, :underline:`only based on pip installable dependencies` (e.g. no IRAF, Sextractor or Astrometry.net install needed 🎉). It features default pipelines to perform common tasks (such as automated calibration, reduction and photometry) and makes building custom ones easy.
 
 
 .. toctree::
