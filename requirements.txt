@@ -26,3 +26,4 @@ jinja2
 tensorflow
 requests
 ipython
+sphinx-copybutton
