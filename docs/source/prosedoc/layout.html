@@ -120,7 +120,7 @@
     <div class="container main">
       <div class="columns">
         <nav class="column">
-          <div class="">
+          <div class="nav-container">
             <div class="nav-head" {% if theme_style_nav_header_background %} style="background: {{theme_style_nav_header_background}}" {% endif %}>
               {% block sidebartitle %}
 
@@ -147,6 +147,8 @@
                   <div class="version">
                     {{ nav_version }}
                   </div>
+                  {% else %}
+                  <div class="version">deving</div>
                 {% endif %}
               {% endif %}
 
@@ -183,7 +185,7 @@
           </div>
         </nav>
 
-        <div class="column col-8">
+        <div class="column col-8 content">
 
           {# MOBILE NAV, TRIGGLES SIDE NAV ON TOGGLE #}
           <nav class="" aria-label="top navigation">

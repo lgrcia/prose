@@ -35,6 +35,10 @@ ul {
     list-style: disc;
 }
 
+.content {
+    margin-left: 300px;
+}
+
 /* should be a light and darker primary color */
 
 a:visited {
@@ -48,13 +52,20 @@ a:hover, a:focus {
 
 /* NAVIATION BAR */
 
+.nav-container {
+    display:flex;
+    flex-direction: column;
+    max-width: 300px;
+    align-items: flex-start;
+}
+
 nav.column {
+    position:fixed;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     line-height: 12px !important;
     text-transform: uppercase;
-    font-size: 11px;
+    font-size: 12px;
     margin-top: 0px;
-    max-width: 300px;
     margin-right: var(--base-space);
     color: var(--lightdark);
     letter-spacing: 0.3px;
@@ -82,10 +93,11 @@ nav a.current {
 
 nav a.icon-home {
     text-transform: none;
-    font-size: 30px;
+    font-size: 40px;
     color: inherit;
     font-style: italic;
-    margin-bottom: 10px;
+    margin-bottom: var(--base-space);
+    margin-top: var(--base-space);
     font-family: Georgia, 'Times New Roman', Times, serif;
     font-weight: bold;
 }
@@ -97,8 +109,6 @@ div.version {
 nav .nav-head {
     display: flex;
     flex-direction: column;
-    height: 60px;
-    justify-content: center;
     align-items: center;
     margin-bottom: 30px;
 }
