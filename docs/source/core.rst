@@ -2,8 +2,8 @@
 
 .. currentmodule:: prose
     
-Core objects
-============
+Getting started
+==============
 
 prose features three core objects that can be used to sequentialy analyze and process images: ``Image``, ``Block`` and ``Squence``
 

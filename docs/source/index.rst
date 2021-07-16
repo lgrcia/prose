@@ -4,11 +4,12 @@
    contain the root `toctree` directive.
 
 
-   prose
-   =====
-
 .. role:: underline
     :class: underline
+
+
+prose
+=====
 
 .. image:: prose.png
    :width: 450
@@ -28,9 +29,10 @@
    :maxdepth: 1
 
    installation
+   core
    citing
    api
-   core
+   
 
 .. toctree::
    :caption: Tutorials

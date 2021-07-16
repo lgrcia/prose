@@ -341,7 +341,7 @@ footer {
     background: none;
     border: none;
     padding: 0px;
-    text-decoration: underline;
+    /* text-decoration: underline; */
 }
 
 .rst-content dl.py dd {
@@ -415,3 +415,15 @@ div.note p.admonition-title {
 img {
     max-width: 100%;
 }
+
+div.note p.admonition-title:before {
+    content: "∆";
+    display: inline-block;
+    margin-right: 3px;
+ }
+
+ .py dl.field-list dt {
+     color: var(--lighterdark);
+     font-weight: normal;
+     text-decoration: underline;
+ }
