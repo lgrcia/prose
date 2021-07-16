@@ -257,7 +257,7 @@ class FitsManager(FilesDataFrame):
         self.files_df = self.get_observation(i, return_df=True, **kwargs)
         assert self.unique_obs, "observation should be unique, please use set_observation"
         obs = self._observations.loc[0]
-        ids_dict = {value["name"]: key.lower() for key, value in CONFIG.telescopes_dict.items()}
+        ids_dict = {value["name"].lower(): key.lower() for key, value in CONFIG.telescopes_dict.items()}
         self.telescope = Telescope.from_name(ids_dict[obs.telescope])
         self.sort_by_date()
 
