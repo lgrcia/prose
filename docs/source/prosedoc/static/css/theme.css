@@ -21,6 +21,14 @@ p {
     margin: 0 0 24px 0;
 }
 
+ul.simple li p, table p, .note p {
+    margin-bottom: 0.3rem
+}
+
+ol.simple li {
+    list-style: arabic;
+}
+
 a.headerlink {
     display: none;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -53,14 +61,14 @@ a:hover, a:focus {
 /* NAVIATION BAR */
 
 .nav-container {
-    display:flex;
+    display: flex;
     flex-direction: column;
     max-width: 300px;
     align-items: flex-start;
 }
 
 nav.column {
-    position:fixed;
+    position: fixed;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     line-height: 12px !important;
     text-transform: uppercase;
@@ -121,7 +129,7 @@ h2 {
     text-decoration: underline;
     font-size: 22px;
     margin-top: 50px;
-    margin-bottom:20px;
+    margin-bottom: 20px;
 }
 
 /* CODE BLOCKS */
@@ -180,7 +188,7 @@ div.nboutput.container div.output_area.stderr {
     background: none !important;
 }
 
-div.highlight pre , div.nbinput.container div.input_area pre {
+div.highlight pre, div.nbinput.container div.input_area pre {
     padding: 12px 12px !important;
 }
 
@@ -288,6 +296,7 @@ footer {
 /* AUTODOC */
 
 /* table */
+
 .rst-content table.docutils {
     border-collapse: collapse;
     border-spacing: 0;
@@ -295,14 +304,13 @@ footer {
     border: 1px solid #e1e4e5;
     margin-top: var(--base-space);
     margin-bottom: var(--base-space);
-
 }
+
 .rst-content table.docutils td {
     border-bottom: 1px solid #e1e4e5;
     border-bottom-width: 1px;
     border-left: 1px solid #e1e4e5;
 }
-
 
 .rst-content table.docutils td, .rst-content table.field-list td, .wy-table th, .rst-content table.docutils th, .rst-content table.field-list th {
     margin: 0;
@@ -331,8 +339,8 @@ footer {
 .rst-content dl.py code {
     font-size: inherit;
     background: none;
-    border:none;
-    padding:0px;
+    border: none;
+    padding: 0px;
     text-decoration: underline;
 }
 
@@ -340,45 +348,70 @@ footer {
     padding-left: 30px
 }
 
-.rst-content dl.method > dt {
+.rst-content dl.method>dt {
     display: table;
     border-left: solid 3px #ccc;
     padding: 5px;
     background: whitesmoke;
 }
 
-#prose h1{
+#prose h1 {
     display: none;
 }
 
 img.align-center {
     display: block;
-    margin:auto;
+    margin: auto;
     margin: 30px auto 30px auto;
-} 
+}
 
 .underline {
     text-decoration: underline;
-  }
+}
 
 /* TOP NAVIGATION */
-nav .top-nav{
+
+nav .top-nav {
     font-size: 110%;
     display: flex;
     flex-direction: row;
     justify-content: right;
-    margin-top:10px;
+    margin-top: 10px;
 }
 
 .github-link {
-    margin-top:20px;
+    margin-top: 20px;
     display: flex;
-    width:100%;
+    width: 100%;
     justify-content: center;
 }
 
 .github-link a {
     text-decoration: underline;
     text-transform: unset;
-    color:red;
+    color: red;
+}
+
+/* NOTE */
+
+div.note, div.admonition {
+    background: #e7f2fa;
+    padding: 12px;
+    margin-bottom: 16px;
+}
+
+div.note p, div.admonition p {
+    margin-bottom: 0px;
+}
+
+div.note p.admonition-title {
+    color: white;
+    background-color: #6ab0de;
+    margin: -12px;
+    margin-bottom: 12px;
+    padding: 6px 12px;
+}
+
+img {
+    max-width: 100%;
 }

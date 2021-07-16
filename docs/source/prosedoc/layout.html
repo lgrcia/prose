@@ -50,6 +50,7 @@
   {%- endif %}
 
   {# JAVASCRIPTS #}
+  <script src="https://unpkg.com/feather-icons"></script>
   {%- block scripts %}
   <!--[if lt IE 9]>
     <script src="{{ pathto('_static/js/html5shiv.min.js', 1) }}"></script>
@@ -143,13 +144,15 @@
                 {% if READTHEDOCS and current_version %}
                   {%- set nav_version = current_version %}
                 {% endif %}
-                {% if nav_version %}
-                  <div class="version">
-                    {{ nav_version }}
-                  </div>
-                  {% else %}
-                  <div class="version">deving</div>
-                {% endif %}
+ 
+                    <div class="version text-icon">
+                      <!-- <i data-feather="git-branch"></i> -->
+                      {% if nav_version %}
+                        {{ nav_version }}
+                      {% else %}
+                        deving
+                      {% endif %}
+                    </div>
               {% endif %}
 
               {% include "searchbox.html" %}
@@ -224,6 +227,11 @@
     </div>
 
   </div>
+
+  <script>
+    feather.replace()
+  </script>
+
   {% include "versions.html" %}
 
   {# Do not conflict with RTD insertion of analytics script #}
