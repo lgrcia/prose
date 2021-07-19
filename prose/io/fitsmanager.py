@@ -248,7 +248,7 @@ class FitsManager(FilesDataFrame):
         print(table_string)
         return None
 
-    def describe(self):
+    def describe(self, calib=True):
         """
        display a table of available observations (defined as a unique date, telescope, target, and filter)
         Returns:
