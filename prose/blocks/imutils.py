@@ -399,7 +399,7 @@ class Get(Block):
 
 class XArray(Block):
 
-    def __init__(self, *names, name="xarray", raise_error=False):
+    def __init__(self, *names, name="xarray", raise_error=True):
         super().__init__(name=name)
         self.variables = {name: (dims, []) for dims, name in names}
         self.raise_error = raise_error

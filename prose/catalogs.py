@@ -9,14 +9,12 @@ from datetime import datetime
 from astropy.time import Time
 
 
-def gaia_stars(image_path, n=500, limit=-1, align=15):
+def gaia_stars(image, n=500, limit=-1, align=15):
     """Query gaia catalog for stars in the field
     """
     from astroquery.gaia import Gaia
     Gaia.ROW_LIMIT = limit
 
-    image = Image(image_path)
-    shape = image.shape
     cone_radius = np.sqrt(2) * np.max(image.shape) * image.telescope.pixel_scale / 120
 
     coord = SkyCoord(image.ra, image.dec, frame='icrs', unit=(image.telescope.ra_unit, image.telescope.dec_unit))
