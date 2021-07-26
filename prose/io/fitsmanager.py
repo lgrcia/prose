@@ -115,7 +115,8 @@ class FilesDataFrame:
         else:
             raise KeyError("'{}' is not in files_df".format(field))
 
-    def describe(self, *fields, return_string=False, original=False, unique=True, index=False, hide=None, **kwargs):
+    def description_table(self, *fields, original=False, unique=True, index=False, hide=None,
+                          **kwargs):
         """Print a table description of dataframe
 
         Parameters
@@ -163,16 +164,9 @@ class FilesDataFrame:
             if index:
                 headers.insert(0, "index")
             single_index_obs = multi_index_obs.reset_index().rename(columns={0: 'quantity'}).reset_index(level=0)
-            rows = OrderedDict(single_index_obs[[*headers, "quantity"]].to_dict(orient="list"))
-            table_string = tabulate(rows, tablefmt="fancy_grid", headers="keys")
+            return single_index_obs[[*headers, "quantity"]]
         else:
-            rows = OrderedDict(files_df[headers].to_dict(orient="list"))
-            table_string = tabulate(rows, tablefmt="fancy_grid", headers="keys")
-
-        if return_string:
-            return table_string
-        else:
-            print(table_string)
+            return files_df[headers]
 
     def move_to(self, dirname):
         if not path.exists(dirname):
@@ -205,7 +199,7 @@ class FitsManager(FilesDataFrame):
             self.folder = None
         elif isinstance(files_df_or_folder, (str, Path)):
             assert path.exists(files_df_or_folder), "Folder does not exist"
-            files = get_files(extension, files_df_or_folder, depth=kwargs.get("depth", 1))
+            files = get_files(extension, files_df_or_folder, depth=kwargs.get("depth", 1), single_list_removal=False)
             files_df = fits_to_df(files, verbose=verbose, hdu=hdu)
             self.folder = files_df_or_folder
         else:
@@ -216,10 +210,15 @@ class FitsManager(FilesDataFrame):
 
     @property
     def observations(self):
-        """Print a table of observations (observation is defined as a unique combinaison of date, telescope, target and filter)
+        """
+        Print a table of observations (observation is defined as a unique combinaison of date, telescope, target and filter)
+        Only for reverse compatibility
         """
         headers = ["date", "telescope", "target", "filter"]
-        self.describe(*headers, index=True, type=self.image_kw, hide=["type"])
+        table = self.description_table(*headers, index=True, type=self.image_kw, hide=["type"])
+        rows = OrderedDict(table.to_dict(orient="list"))
+        table_string = tabulate(rows, tablefmt="fancy_grid", headers="keys")
+        print(table_string)
         return None
 
     @property
@@ -243,10 +242,37 @@ class FitsManager(FilesDataFrame):
 
         """
         headers = ["date", "telescope", "target", "filter", "type"]
-        self.describe(*headers, index=False)
+        table = self.description_table(*headers, index=False)
+        rows = OrderedDict(table.to_dict(orient="list"))
+        table_string = tabulate(rows, tablefmt="fancy_grid", headers="keys")
+        print(table_string)
         return None
 
-    def set_observation(self, i, **kwargs):
+    def describe(self, calib=True):
+        """
+       display a table of available observations (defined as a unique date, telescope, target, and filter)
+        Returns:
+
+        """
+        headers = ["date", "telescope", "target", "filter"]
+        _observations = self._observations[headers]
+        table = self.description_table(*headers, "type", index=True)
+
+        for i, row in table.iterrows():
+            match = np.all((_observations == row[headers]).values, 1)
+            if np.any(match):
+                table["index"][i] = np.flatnonzero(match)[0]
+            else:
+                table["index"][i] = ""
+
+        if not calib:
+            table = table[table["type"] == self.image_kw][["index", *headers]]
+
+        stable = OrderedDict(table.to_dict(orient="list"))
+        table_string = tabulate(stable, tablefmt="fancy_grid", headers="keys")
+        print(table_string)
+
+    def set_observation(self, i, future=0, past=None, same_telescope=False):
         """Set the unique observation to use by its id. Observation indexes are specified in `self.observations`
 
         Parameters
@@ -254,7 +280,7 @@ class FitsManager(FilesDataFrame):
         i : int
             index of the observation as displayed in `self.observations`
         """
-        self.files_df = self.get_observation(i, return_df=True, **kwargs)
+        self.files_df = self.get_observation(i, future=future, past=past, same_telescope=same_telescope, return_df=True)
         assert self.unique_obs, "observation should be unique, please use set_observation"
         obs = self._observations.loc[0]
         ids_dict = {value["name"].lower(): key.lower() for key, value in CONFIG.telescopes_dict.items()}
@@ -281,12 +307,12 @@ class FitsManager(FilesDataFrame):
         flats = original_fm.get(
             telescope=telescope + "*", filter=obs["filter"].replace("+", "\+"),
             type="flat",
-            dimensions=dimensions).loc[ dates_before]
+            dimensions=dimensions).loc[dates_before]
         darks = original_fm.get(telescope=telescope + "*", type="dark", dimensions=dimensions).loc[dates_before]
         bias = original_fm.get(telescope=telescope + "*", type="bias", dimensions=dimensions).loc[dates_before]
         dfs = []
 
-        # To keep only calibration from a single day (the rmost recent possible)
+        # To keep only calibration from a single day (the most recent possible)
         if len(flats) > 0:
             flats = flats.loc[flats.date == flats.date.max()]
             dfs.append(flats)

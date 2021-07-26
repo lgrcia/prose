@@ -53,7 +53,7 @@ Then to locally install |prose|
 
 
 Upgrading
-=========
+---------
 
 - In |prose| source code folder:
 

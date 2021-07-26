@@ -1,11 +1,13 @@
-from astropy.time import Time
-from datetime import datetime, timedelta
+from datetime import timedelta
 import numpy as np
 from astropy.visualization import ZScaleInterval
 from astropy.io import fits
 import numba
 import astropy.constants as c
 import urllib
+from astropy.time import Time
+from datetime import datetime
+
 
 earth2sun = (c.R_earth / c.R_sun).value
 
@@ -326,3 +328,5 @@ def sigma_clip(y, sigma=5., return_mask=False, x=None):
             return y[mask]
         else:
             return x[mask], y[mask]
+
+

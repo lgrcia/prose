@@ -6,6 +6,7 @@ from .psf import Gaussian2D, Moffat2D, FastGaussian, KeepGoodStars, FWHM
 from .centroids import BalletCentroid
 from .photometry import PhotutilsAperturePhotometry, SEAperturePhotometry, PhotutilsPSFPhotometry
 from .imutils import *
+from .shepard import  Shepard
 
 
 # import prose
