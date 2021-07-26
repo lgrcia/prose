@@ -39,7 +39,7 @@ class StarsDetection(Block):
             self.last_coords = coordinates
 
         else:
-            image.discarded = True
+            image.discard = True
 
     def __call__(self, data):
         coordinates, fluxes = self.single_detection(data)
