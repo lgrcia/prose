@@ -15,11 +15,11 @@ import re
 
 
 def sub(s):
-    return re.sub("[\W_]+", "", s)
+    return re.sub("[\W_]+", "", s).lower()
 
 
 def clean(df):
-    return df.astype(str).apply(lambda s: sub(s)).str
+    return df.astype(str).apply(lambda s: sub(s))
 
 
 class FilesDataFrame:
@@ -49,7 +49,7 @@ class FilesDataFrame:
 
         for field, value in kwargs.items():
             if isinstance(value, str):
-                conditions = conditions & clean(files_df[field]).contains(sub(value)).reset_index(drop=True)
+                conditions = conditions & clean(files_df[field]).str.contains(sub(value)).reset_index(drop=True)
             else:
                 conditions = conditions & (files_df[field] == value).reset_index(drop=True)
 
@@ -434,15 +434,19 @@ class FitsManager(FilesDataFrame):
         else:
             raise AssertionError("obs_name property is only available for FitsManager containing a unique observation")
 
-    def observation_id(self, target, date):
+    def observation_id(self, target, date, telescope='', error=True):
         obs = self._observations
         there = np.argwhere((
-                    clean(obs.date).contains(sub(date)) &
-                    clean(obs.target).contains(sub(target))
-                ).values).flatten()
+                    clean(obs.date).str.contains(sub(date)) &
+                    clean(obs.target).str.contains(sub(target)) &
+                    clean(obs.telescope).str.contains(sub(telescope))
+            ).values).flatten()
 
         if len(there) > 0:
-            i, = there
-            return i
+            if len(there) == 1 or not error:
+                i = there[0]
+                return i
+            elif error:
+                raise AssertionError(f"multiple observations found {there}")
         else:
             return None
