@@ -222,10 +222,7 @@ class Sequence:
                 elif not discard_message:
                     last_block = self.blocks[b-1]
                     discard_message = True
-                    if isinstance(file_or_image, str):
-                        print(f"Warning: image {i} (...{file_or_image[i]}) discarded in {type(last_block).__name__}")
-                    else:
-                        print(f"Warning: image {i} discarded in {type(last_block).__name__}")
+                    print(f"Warning: image {i} discarded in {type(last_block).__name__}")
 
             del image
 
