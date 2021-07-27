@@ -213,6 +213,7 @@ class Sequence:
             else:
                 image = file_or_image
             image.i = i
+            self._last_image = image
             discard_message = False
             for b, block in enumerate(self.blocks):
                 # This allows to discard image in any Block
