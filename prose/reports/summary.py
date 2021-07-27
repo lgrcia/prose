@@ -192,7 +192,7 @@ class TESSSummary(Summary):
         df = pd.DataFrame(collections.OrderedDict(
             {
                 "BJD-TDB" if self.time_format == "bjd_tdb" else "JD-UTC": self.time,
-                "DIFF_FLUX_T%s" % self.target: self.diff_flux,
+                "DIFF_FLUX_T%s" % self.target : self.diff_flux,
                 "DIFF_ERROR_T%s" % self.target: self.diff_error,
                 **dict(zip(list_columns, list_columns_array)),
                 "dx": self.dx,

@@ -313,3 +313,16 @@ def remove_arrays(d):
         if isinstance(value, list):
             del copy[name]
     return copy
+
+
+def sigma_clip(y, sigma=5., return_mask=False, x=None):
+    mask = np.abs(y - np.nanmedian(y)) < sigma * np.nanstd(y)
+
+    if return_mask:
+        return mask
+
+    else:
+        if x is None:
+            return y[mask]
+        else:
+            return x[mask], y[mask]

@@ -16,12 +16,12 @@ from .core import LatexTemplate
 
 class NEBCheck(LatexTemplate, NEB):
 
-    def __init__(self, obs, value, radius=2.5, nearby_ids=None, style="paper", template_name="neb.tex"):
+    def __init__(self, neb, radius=2.5, style="paper", template_name="neb.tex"):
         """NEB check report page
 
             Parameters
             ----------
-            observation : prose.Observation
+            obs : prose.Observation
                 observation on which to perform the NEB check
             value : dict
                 dict containing:
@@ -38,15 +38,13 @@ class NEBCheck(LatexTemplate, NEB):
             template_name : str, optional
                 [description], by default "neb.tex"
             """
-        #Observation.__init__(self, obs.xarray)
-        LatexTemplate.__init__(self, template_name, style=style)
-        self.radius = radius
-        NEB.__init__(self, obs, radius=self.radius, nearby_ids=nearby_ids)
-        self.value = value
 
+        LatexTemplate.__init__(self, template_name, style=style)
+        self.__dict__.update(neb.__dict__)
+
+        self.radius = radius
         self.disposition_string = None
         self.dpi = 100
-        self.evaluate_score(self.value)
         self.obstable = None
         self.lcs = []
 
@@ -80,9 +78,9 @@ class NEBCheck(LatexTemplate, NEB):
         path_destination = path.join(destination, disposition)
         Path(path_destination).mkdir(parents=True, exist_ok=True)
         for i, idxs in enumerate(split):
-            lcs_path = path.join(destination, disposition, "lcs{}.png".format(i))
+            lcs_path = path.join(destination, disposition, f"lcs{i}.png")
             if i > 0:
-                self.lcs.append(lcs_path)
+                self.lcs.append(str(i+1))
             if report_layout is True:
                 if i == 0:
                     self.plot_lcs(idxs)
@@ -110,23 +108,24 @@ class NEBCheck(LatexTemplate, NEB):
         """
         Plot of delta magnitude as a function of RMS.
         """
-        fig = plt.figure(figsize=(6, 4))
+        fig = plt.figure(figsize=(7, 4))
         fig.patch.set_facecolor('white')
-        dmag = np.arange(min(self.dmags), max(self.dmags), 0.01)
-        for i in dmag:
-            if i == 0:
-                corr_dmag = dmag
-            else:
-                corr_dmag = dmag - 0.5
-        x = np.power(10, - corr_dmag / 2.50)
-        expected_depth = self.depth / x
-        depth_factor3 = expected_depth / 3
-        depth_factor5 = expected_depth / 5
-        plt.plot(dmag, depth_factor3, '.', color='plum', alpha=0.5, label='Likely cleared boundary')
-        plt.plot(dmag, depth_factor5, '.', color='mediumturquoise', alpha=0.5, label="cleared boundary")
-        plt.plot(self.dmags, self.rmss_ppt, ".",color="0.4")
-        for i,j,k in zip(self.dmags, self.rmss_ppt,self.nearby_ids):
-            plt.annotate('%s' %k, xy=(i,j))
+
+        dmags = np.array([self.dmags[i] for i in self.nearby_ids]) - 0.5
+        rmss_ppt = np.array([self.rmss_ppt[i] for i in self.nearby_ids]) - 0.5
+
+        # bounds
+        _dmags = np.arange(np.min(dmags), np.max(dmags), 0.01)
+        _expected_depth = self.depth / np.power(10, - _dmags / 2.50)
+        depth_factor3 = _expected_depth / 3
+        depth_factor5 = _expected_depth / 5
+        plt.plot(_dmags, depth_factor3, color='plum', label='Likely cleared boundary')
+        plt.plot(_dmags, depth_factor5, color='mediumturquoise', label="cleared boundary")
+
+        plt.plot(dmags, rmss_ppt, "x", color="0.1")
+        for i, j, k in zip(dmags, rmss_ppt, self.nearby_ids):
+            plt.annotate('%s' % k, xy=(i, j + 20), va="center", ha="center", color="0.1")
+
         plt.xlabel('Dmag')
         plt.ylabel('RMS (ppt)')
         plt.grid(color="whitesmoke")
@@ -143,7 +142,7 @@ class NEBCheck(LatexTemplate, NEB):
                 destination : str
                     Path to store the table.
         """
-        self.disposition_string = self.disposition.astype("str")
+        self.disposition_string = np.array([self.disposition for i in self.nearby_ids]).astype("str")
         for i, j in zip(['0.0', '1.0', '2.0', '3.0', '4.0'],
                         ["Likely cleared", "Cleared", "Cleared too faint", "Flux too low", "Not cleared"]):
             self.disposition_string[self.disposition_string == i] = j
@@ -185,18 +184,19 @@ class NEBCheck(LatexTemplate, NEB):
                 "RA (deg)": list_ra,
                 "DEC (deg)": list_dec,
                 "Distance to target (arcsec)": list_dist,
-                "Dmag": self.dmags,
-                "RMS (ppt)": self.rmss_ppt,
-                "Expected depth (ppt)": self.expected_depths,
-                "RMS/expected depth":self.depths_rms,
-                "Disposition": self.disposition_string,
+                "Dmag": [self.dmags[i] for i in self.nearby_ids],
+                "RMS (ppt)": [self.rmss_ppt[i] for i in self.nearby_ids],
+                "Expected depth (ppt)": [self.expected_depths[i] * 1e3 for i in self.nearby_ids],
+                "RMS/expected depth": [self.depths_rms[i] for i in self.nearby_ids],
+                "Disposition": [self.disposition_string[i] for i in self.nearby_ids],
             }))
         for c in ["Distance to target (arcsec)", "Dmag", "RMS (ppt)", "Expected depth (ppt)", "RMS/expected depth"]:
             df[c] = df[c].round(decimals=3)
         destination_path = Path(destination)
-        df.to_csv(path.join(destination_path,"neb_table.txt"), sep="\t", index=False)
+        df.to_csv(path.join(destination_path, "neb_table.txt"), sep="\t", index=False)
         self.obstable = [["Cleared", "Likely Cleared", "Cleared too faint", "Not cleared", "Flux too low"],
-                         [len(self.cleared),len(self.likely_cleared),len(self.cleared_too_faint),len(self.not_cleared),
+                         [len(self.cleared), len(self.likely_cleared), len(self.cleared_too_faint),
+                          len(self.not_cleared),
                           len(self.flux_too_low)]
                          ]
         return self.obstable
@@ -241,7 +241,9 @@ class NEBCheck(LatexTemplate, NEB):
         self.make_report_folder(destination)
         self.make_figures(self.figure_destination)
         open(self.tex_destination, "w").write(self.template.render(
-            obstable=self.make_tables(destination), lcs=self.lcs
+            obstable=self.make_tables(destination),
+            lcs=self.lcs,
+            target=self.name
         ))
 
 

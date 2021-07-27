@@ -57,7 +57,7 @@ class Observation(ApertureFluxes):
 
         has_bjd = hasattr(self.xarray, "bjd_tdb")
         if has_bjd:
-            has_bjd = ~np.all(np.isnan(self.bjd_tdb))
+            has_bjd = ~np.all(self.xarray.bjd_tdb.isnull().values)
 
         if not has_bjd:
             try:
@@ -91,6 +91,7 @@ class Observation(ApertureFluxes):
 
         Parameters
         ----------
+
         destination : str
             Path of the csv file to save
         sep : str, optional
@@ -198,6 +199,12 @@ class Observation(ApertureFluxes):
             return self._meridian_flip
         else:
             has_flip = hasattr(self.xarray, "flip")
+            if has_flip:
+                try:
+                    np.all(np.isnan(self.flip))
+                    return None
+                except TypeError:
+                    pass
 
             if has_flip:
                 if "WEST" in self.flip:
@@ -581,7 +588,7 @@ class Observation(ApertureFluxes):
 
         _ = viz.plot_marks(*tics.T, ID if idxs else None, color=color, alpha=alpha, n=n, position="top", fontsize=9, offset=10)
 
-    def show_cutout(self, star=None, size=200, marks=True):
+    def show_cutout(self, star=None, size=200, marks=True,**kwargs):
         """
         Show a zoomed cutout around a detected star or coordinates
 
@@ -602,14 +609,14 @@ class Observation(ApertureFluxes):
         else:
             raise ValueError("star type not understood")
 
-        self.show()
+        self.show(**kwargs)
         plt.xlim(np.array([-size / 2, size / 2]) + x)
         plt.ylim(np.array([-size / 2, size / 2]) + y)
         if marks:
             idxs = np.argwhere(np.max(np.abs(self.stars - [x, y]), axis=1) < size).squeeze()
             viz.plot_marks(*self.stars[idxs].T, label=idxs)
 
-    def plot_comps_lcs(self, n=5, ylim=(0.98, 1.02)):
+    def plot_comps_lcs(self, n=15, ylim=(0.98, 1.02)):
         """Plot comparison stars light curves along target star light curve
 
         Parameters
@@ -838,7 +845,7 @@ class Observation(ApertureFluxes):
             _, ylim = plt.ylim()
             plt.text(self.meridian_flip, ylim, "meridian flip ", ha="right", rotation="vertical", va="top", color="0.7")
 
-    def plot(self, meridian_flip=True):
+    def plot(self, star=None, meridian_flip=True):
         """Plot observation light curve
 
         Parameters
@@ -846,7 +853,7 @@ class Observation(ApertureFluxes):
         meridian_flip : bool, optional
             whether to show meridian flip, by default True
         """
-        super().plot()
+        super().plot(star=star)
         if meridian_flip:
             self.plot_meridian_flip()
 
@@ -898,11 +905,12 @@ class Observation(ApertureFluxes):
         plt.ylabel("ADUs")
         _, ylim = plt.ylim()
 
-        if "apertures_radii" in self.xarray and aperture is None:
-            apertures = self.apertures_radii[:, 0]
+        if "apertures_radii" in self.xarray or aperture is not None:
+            if "apertures_radii" in self.xarray and aperture is None:
+                apertures = self.apertures_radii[:, 0]
 
-            if apertures is not None:
-                aperture = apertures[self.aperture]
+                if apertures is not None:
+                    aperture = apertures[self.aperture]
 
             plt.xlim(0)
             plt.text(aperture, ylim, "APERTURE", ha="right", rotation="vertical", va="top")
@@ -994,15 +1002,15 @@ class Observation(ApertureFluxes):
         new_obs.xarray = new_obs.xarray.sel(time=self.time[condition])
         return new_obs
 
-    def keep_good_stars(self, threshold=3, trim=10, keep=None, inplace=True):
+    def keep_good_stars(self, lower_threshold=3., upper_threshold=35000., trim=10, keep=None, inplace=True):
         """Keep only  stars with a median flux higher than `threshold`*sky. 
         
         This action will reorganize stars indexes (target id will be recomputed) and reset the differential fluxes to raw.
 
         Parameters
         ----------
-        threshold : float
-            threshold for which stars with flux/sky > threshold are kept, default is 5
+        lower_threshold : float
+            threshold for which stars with flux/sky > threshold are kept, default is 3
         trim : float
             value in pixels above which stars are kept, default is 10 to avoid stars too close to the edge
         keep : int or list
@@ -1010,7 +1018,7 @@ class Observation(ApertureFluxes):
         inplace: bool
             whether to replace current object or return a new one
         """
-        good_stars = np.argwhere(np.median(self.peaks, 1)/np.median(self.sky) > threshold).squeeze()
+        good_stars = np.argwhere((np.median(self.peaks, 1)/np.median(self.sky) > lower_threshold) & (np.median(self.peaks, 1) < upper_threshold)).squeeze()
         mask = np.any(np.abs(self.stars[good_stars] - max(self.stack.shape) / 2) > (max(self.stack.shape) - 2 * trim) / 2, axis=1)
         bad_stars = np.argwhere(mask == True).flatten()
 
@@ -1097,7 +1105,6 @@ class Observation(ApertureFluxes):
     def convert_flip(self,keyword):
         self.xarray['flip'] = ('time', (self.flip == keyword).astype(int))
 
-
     def folder_to_phot(self, confirm=True):
         if confirm:
             confirm = str(input("Will erase all but .phot, enter 'y' to continue: "))
@@ -1122,6 +1129,30 @@ class Observation(ApertureFluxes):
         widget = widget.replace("__best__", json.dumps(int(self.aperture)))
         widget = widget.replace("__apertures__", json.dumps(self.apertures.tolist()))
         widget = widget.replace("__width__", json.dumps(width))
+        i = "a" + str(int(np.random.rand()*100000))
+        widget = widget.replace("__divid__", i)
         display(HTML(widget))
 
+    def radec_to_pixel(self, radecs, unit=(u.deg, u.deg)):
+        ra, dec = radecs.T
+        skycoords = SkyCoord(ra=ra, dec=dec, unit=unit)
+        return np.array(wcsutils.skycoord_to_pixel(skycoords, self.wcs)).T
+
+    def plot_circle(self, center=None, arcmin=2.5):
+        if center is None:
+            x, y = self.stars[self.target]
+        elif isinstance(center, int):
+            x, y = self.stars[center]
+        elif isinstance(center, (tuple, list, np.ndarray)):
+            x, y = center
+        else:
+            raise ValueError("center type not understood")
+
+        search_radius = 60 * arcmin / self.telescope.pixel_scale
+        circle = plt.Circle((x, y), search_radius, fill=None, ec="white", alpha=0.6)
+
+        ax = plt.gca()
+        ax.add_artist(circle)
+        plt.annotate(f"radius {arcmin}'", xy=[x, y + search_radius + 15], color="white",
+                     ha='center', fontsize=12, va='bottom', alpha=0.6)
 

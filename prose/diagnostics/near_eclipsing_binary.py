@@ -1,17 +1,10 @@
 from prose.blocks.registration import distances
 import numpy as np
 import matplotlib.pyplot as plt
-from astropy.io import fits
-from prose import utils
-from prose.utils import binning
+from prose.utils import binning, sigma_clip
 import matplotlib.patches as mpatches
 from .. import viz
-import os
-from os import path
-import shutil
-from prose import Observation
-from astropy.time import Time
-from astropy import units as u
+from prose import Observation, utils
 from prose.models import transit
 
 
@@ -27,7 +20,7 @@ def template_transit(t, t0, duration):
 
 
 class NEB(Observation):
-    """Tool to detect and diagnose near eclipsing binaries in a field
+    """Tool to detect and diagnose near eclipsing binaries in a field (using AIJ methods)
 
     Parameters
     ----------
@@ -37,36 +30,32 @@ class NEB(Observation):
        radius around the target in which to analyse other stars fluxes, by default 2.5 (in arcminutes)
     """
 
-    def __init__(self, obs, radius=2.5,nearby_ids=None):
+    def __init__(self, obs, radius=2.5, nearby_ids=None):
 
         super(NEB, self).__init__(obs.xarray.copy())
 
         self.radius = radius
         if nearby_ids is None:
-            target_distance = np.array(distances(obs.stars.T, obs.stars[obs.target]))
-            self.nearby_ids = np.argwhere(target_distance * obs.telescope.pixel_scale / 60 < self.radius).flatten()
-
-            self.nearby_ids = np.sort(self.nearby_ids[np.argsort(np.array(distances(obs.stars[self.nearby_ids].T,
-                                                                            obs.stars[obs.target])))])
-        else :
+            target_distance = np.linalg.norm(self.stars - self.stars[self.target], axis=1)
+            self.nearby_ids = np.argwhere(target_distance * self.telescope.pixel_scale / 60 < self.radius).flatten()
+        else:
             self.nearby_ids = nearby_ids
 
-        self.time = self.time
+        # transit params
         self.epoch = None
         self.duration = None
         self.period = None
         self.depth = None
-        self.dmag = None
-        self.dmags = np.ones(len(self.nearby_ids))
-        self.expected_depth = None
-        self.expected_depths = np.ones(len(self.nearby_ids))
-        self.rms_ppt = None
-        self.rmss_ppt = np.ones(len(self.nearby_ids))
-        self.depth_rms = None
-        self.depths_rms = np.ones(len(self.nearby_ids))
 
-        self.transits = np.ones((len(self.nearby_ids), len(self.time)))
-        self.disposition = np.empty(len(self.nearby_ids))
+        # computed
+        self.dmags = {}
+        self.expected_depths = {}  # not ppt
+        self.rmss_ppt = {}
+        self.depths_rms = {}
+        self.transits = {}
+        self.disposition = {}
+
+        # indexes
         self.cleared = None
         self.likely_cleared = None
         self.cleared_too_faint = None
@@ -74,105 +63,84 @@ class NEB(Observation):
         self.not_cleared = None
         self.suspects = None
 
-        self.cmap = ['r', 'g']
+    def set_transit(self, epoch, duration, depth, period):
+        self.epoch = epoch
+        self.duration = duration
+        self.depth = depth
+        self.period = period
 
-    def mask_lc(self, star, sigma=3.):
-        return np.abs(self.diff_fluxes[self.aperture, star] - np.median(
-            self.diff_fluxes[self.aperture, star])) < sigma * np.std(self.diff_fluxes[self.aperture, star])
+    @property
+    def transit_params(self):
+        return self.epoch, self.duration, self.period, self.depth
 
-    def get_transit(self, value, star, dmag_buffer=-0.5, bins=0.0027, sigma=3.):
-        """Set transit parameters and run analysis of other stars to detect matching signals
+    def evaluate_score(self, epoch, duration, depth, period, dmag_buffer=-0.5, bins=0.0027, sigma=3.):
+        """Find the expected transit and star disposition"""
 
-        Parameters
-        ----------
-        value : dict
-            dict containing:
+        self.set_transit(epoch, duration, depth, period)
 
-            - epoch
-            - duration
-            - period
-            - depth (in ppt)
-            in same time unit as observation
-        star: float, star number
-        dmag_buffer: float, default -0.5 for TESS
-        bins: float, default 0.0027 (3 min)
-        sigma: float, threshold for sigma clipping
-        """
-        self.epoch = value["epoch"]
-        self.duration = value["duration"]
-        self.period = value["period"]
-        self.depth = value["depth"]
+        flux_target = self.raw_fluxes[self.aperture, self.target].copy()
 
-        flux = self.raw_fluxes[self.aperture, star][self.mask_lc(star, sigma)]
-        flux_target = self.raw_fluxes[self.aperture, self.target][self.mask_lc(star, sigma)]
-        self.dmag = np.nanmean(-2.5 * np.log10(flux / flux_target))
-        bins, binned_flux = binning(self.time[self.mask_lc(star, sigma)],
-                                    self.diff_fluxes[self.aperture, star][self.mask_lc(star, sigma)], bins)
-        variance = np.var(binned_flux)
-        rms_bin = np.sqrt(variance)
-        if star == self.target:
-            corr_dmag = self.dmag
-        else:
-            corr_dmag = self.dmag + dmag_buffer
-        x = np.power(10, -corr_dmag / 2.50)
-        self.expected_depth = self.depth / x
-        self.rms_ppt = rms_bin * 1000
-        self.depth_rms = self.expected_depth / self.rms_ppt
+        self.cleared = []
+        self.likely_cleared = []
+        self.cleared_too_faint = []
+        self.flux_too_low = []
+        self.not_cleared = []
+        self.suspects = []
 
-        return transit(self.time, self.epoch, self.duration, depth=self.expected_depth * 1e-3, c=50,
-                       period=self.period)
+        for i in self.nearby_ids:
+            raw_flux = self.raw_fluxes[self.aperture, i].copy()
+            diff_flux = self.diff_fluxes[self.aperture, i].copy()
+            mask = sigma_clip(diff_flux, return_mask=True, sigma=sigma)
 
-    def evaluate_score(self, value, **kwargs):
-        """Find the expected transit and star disposition
+            # computing depth relative rms
+            dmag = np.nanmean(-2.5 * np.log10(raw_flux[mask] / flux_target[mask])) + (dmag_buffer if i != self.target else 0)
+            binned_std = np.std(binning(self.time[mask], diff_flux[mask], bins)[1])
+            expected_depth = (self.depth / (np.power(10, -dmag / 2.50)))/1e3
+            depth_rms = expected_depth / binned_std
 
-                Parameters
-                ----------
-                value : dict
-                    dict containing:
+            self.transits[i] = transit(
+                self.time, self.epoch, self.duration, depth=expected_depth, c=50, period=self.period
+            ).flatten()
+            self.dmags[i] = dmag
+            self.expected_depths[i] = expected_depth
+            self.rmss_ppt[i] = binned_std * 1000
+            self.depths_rms[i] = depth_rms
 
-                    - epoch
-                    - duration
-                    - period
-                    - depth (in ppt)
-                    in same time unit as observation
-
-        """
-        for i_star in np.arange(len(self.nearby_ids)):
-            self.transits[i_star] = self.get_transit(value, star=i_star, **kwargs).flatten()
-            self.dmags[i_star] = self.dmag
-            self.expected_depths[i_star] = self.expected_depth
-            self.rmss_ppt[i_star] = self.rms_ppt
-            self.depths_rms[i_star] = self.depth_rms
-            if (self.depth_rms >= 3) & (self.depth_rms <= 5):
-                self.disposition[i_star] = 0
-                continue
-            elif self.depth_rms > 5:
-                self.disposition[i_star] = 1
-                continue
-            elif self.expected_depth >= 1000:
-                self.disposition[i_star] = 2
-                continue
-            elif any(self.raw_fluxes[self.aperture, i_star] / self.apertures_area[self.aperture].mean() <= 2):
-                self.disposition[i_star] = 3
-                continue
+            # check score
+            if (depth_rms >= 3) & (depth_rms <= 5):
+                self.disposition[i] = 0
+                self.likely_cleared.append(i)
+            elif depth_rms > 5:
+                self.disposition[i] = 1
+                self.cleared.append(i)
+            elif expected_depth >= 1000:
+                self.disposition[i] = 2
+                self.cleared_too_faint.append(i)
+            elif any(self.raw_fluxes[self.aperture, i] / self.apertures_area[self.aperture].mean() <= 2):
+                self.disposition[i] = 3
+                self.flux_too_low.append(i)
             else:
-                self.disposition[i_star] = 4
-        self.likely_cleared = np.argwhere(self.disposition == 0).flatten()
-        self.cleared = np.argwhere(self.disposition == 1).flatten()
-        self.cleared_too_faint = np.argwhere(self.disposition == 2).flatten()
-        self.flux_too_low = np.argwhere(self.disposition == 3).flatten()
-        self.not_cleared = np.argwhere(self.disposition == 4).flatten()
-        self.suspects = np.unique(np.hstack([self.not_cleared, self.flux_too_low, self.likely_cleared]))
+                self.disposition[i] = 4
+                self.not_cleared.append(i)
 
-    def plot_lc(self, star):
+        self.likely_cleared = np.array(self.likely_cleared)
+        self.cleared = np.array(self.cleared)
+        self.cleared_too_faint = np.array(self.cleared_too_faint)
+        self.flux_too_low = np.array(self.flux_too_low)
+        self.not_cleared = np.array(self.not_cleared)
+        self.suspects = np.unique(np.hstack([self.not_cleared, self.flux_too_low, self.likely_cleared])).astype(int)
+
+    def plot_lc(self, star, sigma=3.):
         """
         Plotting the light curve of designated star with the expected transit. Use evaluate_score() first.
                 Parameters
                 ----------
                 star : int
         """
-        viz.plot(self.time[self.mask_lc(star)],
-                 self.diff_fluxes[self.aperture, self.nearby_ids[star]][self.mask_lc(star)], std=True)
+        diff_flux = self.diff_fluxes[self.aperture, star].copy()
+        mask = sigma_clip(diff_flux, return_mask=True, sigma=sigma)
+        viz.plot(self.time[mask],
+                 diff_flux[mask], std=True)
         plt.plot(self.time, self.transits[star] + 1, label="expected transit")
         self.plot_meridian_flip()
         plt.legend()
@@ -185,7 +153,7 @@ class NEB(Observation):
                 size : int
         """
 
-        self._check_show(size=size,**kwargs)
+        self._check_show(size=size, **kwargs)
 
         search_radius = 60 * self.radius / self.telescope.pixel_scale
         target_coord = self.stars[self.target]
@@ -205,20 +173,17 @@ class NEB(Observation):
 
         viz.plot_marks(*self.stars.T, alpha=0.4)
         viz.plot_marks(*self.stars[self.target], self.target, position="top")
-        viz.plot_marks(*self.stars[self.cleared].T, self.cleared, color="white", position="top")
-        viz.plot_marks(*self.stars[self.cleared_too_faint].T, self.cleared_too_faint, color="white", position="top")
-        viz.plot_marks(*self.stars[self.likely_cleared].T, self.likely_cleared, color="goldenrod", position="top")
-        viz.plot_marks(*self.stars[self.not_cleared].T, self.not_cleared, color="indianred", position="top")
-        viz.plot_marks(*self.stars[self.flux_too_low].T, self.flux_too_low, color="indianred", position="top")
 
-        # plt.tight_layout()
-        # ax = plt.gca()
-        #
-        # if self.telescope.pixel_scale is not None:
-        #     ob = viz.AnchoredHScaleBar(size=60 / self.telescope.pixel_scale,
-        #                                label="1'", loc=4, frameon=False, extent=0,
-        #                                pad=0.6, sep=4, linekw=dict(color="white", linewidth=0.8))
-        #     ax.add_artist(ob)
+        if len(self.cleared) > 0:
+            viz.plot_marks(*self.stars[self.cleared].T, self.cleared, color="white", position="top")
+        if len(self.cleared_too_faint) > 0:
+            viz.plot_marks(*self.stars[self.cleared_too_faint].T, self.cleared_too_faint, color="white", position="top")
+        if len(self.likely_cleared) > 0:
+            viz.plot_marks(*self.stars[self.likely_cleared].T, self.likely_cleared, color="goldenrod", position="top")
+        if len(self.not_cleared) > 0:
+            viz.plot_marks(*self.stars[self.not_cleared].T, self.not_cleared, color="indianred", position="top")
+        if len(self.flux_too_low) > 0:
+            viz.plot_marks(*self.stars[self.flux_too_low].T, self.flux_too_low, color="indianred", position="top")
 
         ylim = np.array([target_coord[1] + search_radius + 100, target_coord[1] - search_radius - 100])
         xlim = np.array([target_coord[0] - search_radius - 100, target_coord[0] + search_radius + 100])
@@ -234,7 +199,7 @@ class NEB(Observation):
         plt.tight_layout()
 
     def color(self, i, white=False):
-        if self.nearby_ids[i] == self.target:
+        if i == self.target:
             return 'k'
         elif np.any(self.not_cleared == i) or np.any(self.flux_too_low == i):
             return "firebrick"
@@ -260,29 +225,28 @@ class NEB(Observation):
             list of star indexes to plot, by default None and plot fluxes of all stars
         """
         if idxs is None:
-            idxs = np.arange(len(self.nearby_ids))
+            idxs = self.nearby_ids
 
-        nearby_ids = self.nearby_ids[idxs]
-        labels = nearby_ids.astype(str)
-        for k in np.arange(len(nearby_ids)):
-            if nearby_ids[k] == self.target:
+        labels = idxs.astype(str)
+        for k in np.arange(len(idxs)):
+            if idxs[k] == self.target:
                 labels[k] = labels[k] + ' (target)'
 
-        viz.plot_lcs(
-            [(self.time[self.mask_lc(i)], self.diff_fluxes[self.aperture, i][self.mask_lc(i)]) for i in nearby_ids],
-            labels=labels, **kwargs
-        )
+        viz.plot_lcs([sigma_clip(self.diff_fluxes[self.aperture, i], x=self.time) for i in idxs],
+                     labels=labels,
+                     **kwargs)
+
         axes = plt.gcf().get_axes()
         for i, axe in enumerate(axes):
-            if i < len(nearby_ids):
-                if nearby_ids[i] == self.target:
-                    axe.plot(self.time, self.transits[nearby_ids[i]] + 1, c='k', label='expected transit')
+            if i < len(idxs):
+                if idxs[i] == self.target:
+                    axe.plot(self.time, self.transits[idxs[i]] + 1, c='k', label='expected transit')
                     axe.legend()
                 else:
                     color = self.color(idxs[i], white=True)
-                    axe.plot(self.time, self.transits[nearby_ids[i]] + 1, c=color)
+                    axe.plot(self.time, self.transits[idxs[i]] + 1, c=color)
                 if self.meridian_flip is not None:
                     axe.vlines(self.meridian_flip, axe.get_ylim()[0], axe.get_ylim()[1], colors="gray", linestyle='--')
-                    if nearby_ids[i] == self.target:
+                    if idxs[i] == self.target:
                         axe.text(self.meridian_flip, axe.get_ylim()[1], "MF", ha="right", rotation="vertical", va="top",
                                  color="gray")

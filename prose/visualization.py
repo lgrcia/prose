@@ -336,8 +336,15 @@ def plot_marks(x, y, label=None, position="bottom", offset=7, fontsize=12, color
     if not isinstance(x, (list, np.ndarray, tuple)):
         x = np.array([x])
         y = np.array([y])
-        if label is not None:
+        if label is True:
+            label = np.array([0])
+        elif label is not None:
             label = np.array([label])
+    else:
+        if label is True:
+            label = np.arange(len(x))
+        elif label is not None:
+            label = np.array(label)
 
     if inside:
         ax = plt.gcf().axes[0]
@@ -348,7 +355,8 @@ def plot_marks(x, y, label=None, position="bottom", offset=7, fontsize=12, color
         x = x[within]
         y = y[within]
         if label is not None:
-            label = np.array(label)[within]
+            print
+            label = label[within]
 
     if n is not None:
         x = x[0:n]

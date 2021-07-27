@@ -40,6 +40,7 @@ Built for Astronomy, |prose| features pipelines to perform common tasks (such as
    notebooks/custom_pipeline.ipynb
    notebooks/modeling.ipynb
    notebooks/reports.ipynb
+   notebooks/neb.ipynb
    
 .. toctree::
    :caption: Notes

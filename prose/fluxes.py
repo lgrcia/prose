@@ -91,7 +91,7 @@ def broeg(fluxes, tolerance=1e-2, max_iteration=200, bins=12):
             std = error_estimate(lcs)
             weights = 1 / std
 
-        # weights[np.isnan(weights)] = 0
+        weights[~np.isfinite(weights)] = 0
 
         # Keep track of weights
         evolution = np.nanstd(np.abs(np.nanmean(weights, axis=-1) - np.nanmean(last_weights, axis=-1)))
@@ -492,10 +492,15 @@ class ApertureFluxes:
     # Plotting
     # ========
 
-    def plot(self, which="None", bins=0.005, color="k", std=True):
+    def plot(self, star=None, bins=0.005, color="k", std=True):
+        if star is None:
+            star = self.target
         binned = self.binn(bins, std=std)
-        plt.plot(self.time, self.diff_flux, ".", c="gainsboro", zorder=0, alpha=0.6)
-        plt.errorbar(binned.time, binned.diff_flux, yerr=binned.diff_error, fmt=".", zorder=1, color=color, alpha=0.8)
+        plt.plot(self.time, self.diff_fluxes[self.aperture, star], ".", c="gainsboro", zorder=0, alpha=0.6)
+        plt.errorbar(
+            binned.time,
+            binned.diff_fluxes[self.aperture, star],
+            yerr=binned.diff_error, fmt=".", zorder=1, color=color, alpha=0.8)
 
     def sigma_clip(self, sigma=3., star=None):
         """Sigma clipping
