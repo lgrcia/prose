@@ -65,8 +65,6 @@ class CNNCentroid(Block):
             ])
             pos_int = np.array([[st.bbox.ixmin, st.bbox.iymin] for st in stars])
             image.stars_coords[stars_in] = pos_int + self.model(stars_data_reshaped, training=False).numpy()[:, ::-1]
-        else:
-            image.discard = True
 
     @staticmethod
     def citations():
