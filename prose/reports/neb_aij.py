@@ -142,7 +142,7 @@ class NEBCheck(LatexTemplate, NEB):
                 destination : str
                     Path to store the table.
         """
-        self.disposition_string = np.array([self.disposition for i in self.nearby_ids]).astype("str")
+        self.disposition_string = np.array([self.disposition[i] for i in self.nearby_ids]).astype("str")
         for i, j in zip(['0.0', '1.0', '2.0', '3.0', '4.0'],
                         ["Likely cleared", "Cleared", "Cleared too faint", "Flux too low", "Not cleared"]):
             self.disposition_string[self.disposition_string == i] = j
