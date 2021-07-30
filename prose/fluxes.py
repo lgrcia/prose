@@ -386,7 +386,7 @@ class ApertureFluxes:
         if not inplace:
             return new_self
 
-    def broeg2005(self, inplace=True, cut=None, nans=False):
+    def broeg2005(self, inplace=True, cut=True, nans=False):
         """
         The Broeg et al. 2005 differential photometry algorithm
 
