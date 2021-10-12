@@ -104,4 +104,4 @@ def copy_figures(folder, prefix, destination):
             shutil.copy(txt, new_folder / (prefix + "_" + txt.name))
     for pdf in pdfs:
         if ".ipynb_checkpoints" not in str(pdf):
-            shutil.copy(pdf, new_folder / (prefix + "_" + report))
+            shutil.copy(pdf, new_folder / (prefix + "_" + "report.pdf"))
