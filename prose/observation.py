@@ -1025,7 +1025,7 @@ class Observation(ApertureFluxes):
         final_stars = np.delete(good_stars, bad_stars)
 
         if isinstance(keep,int):
-            final_stars = np.concatenate([final_stars,np.arange(0,keep+1)],axis=0)
+            final_stars = np.concatenate([final_stars,np.arange(0,keep)],axis=0)
             final_stars = np.unique(final_stars)
         if isinstance(keep,list):
             final_stars = np.concatenate([final_stars,keep ], axis=0)

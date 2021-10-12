@@ -80,7 +80,7 @@ class NEBCheck(LatexTemplate, NEB):
         for i, idxs in enumerate(split):
             lcs_path = path.join(destination, disposition, f"lcs{i}.png")
             if i > 0:
-                self.lcs.append(str(i+1))
+                self.lcs.append(str(i))
             if report_layout is True:
                 if i == 0:
                     self.plot_lcs(idxs)
@@ -143,7 +143,7 @@ class NEBCheck(LatexTemplate, NEB):
                     Path to store the table.
         """
         self.disposition_string = np.array([self.disposition[i] for i in self.nearby_ids]).astype("str")
-        for i, j in zip(['0.0', '1.0', '2.0', '3.0', '4.0'],
+        for i, j in zip(['0', '1', '2', '3', '4'],
                         ["Likely cleared", "Cleared", "Cleared too faint", "Flux too low", "Not cleared"]):
             self.disposition_string[self.disposition_string == i] = j
 

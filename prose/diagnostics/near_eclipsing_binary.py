@@ -30,7 +30,7 @@ class NEB(Observation):
        radius around the target in which to analyse other stars fluxes, by default 2.5 (in arcminutes)
     """
 
-    def __init__(self, obs, radius=2.5, nearby_ids=None):
+    def __init__(self, obs, radius=2.5, nearby_ids=None,flip_corr=False):
 
         super(NEB, self).__init__(obs.xarray.copy())
 
@@ -40,6 +40,9 @@ class NEB(Observation):
             self.nearby_ids = np.argwhere(target_distance * self.telescope.pixel_scale / 60 < self.radius).flatten()
         else:
             self.nearby_ids = nearby_ids
+
+        if flip_corr is True:
+            self.flip_correction()
 
         # transit params
         self.epoch = None
