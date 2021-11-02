@@ -6,6 +6,11 @@ import matplotlib.patches as mpatches
 from .. import viz
 from prose import Observation, utils
 from prose.models import transit
+from prose import blocks
+import pandas as pd
+from astropy import units as u
+from prose.pipeline import AperturePhotometry
+from prose import load
 
 
 def protopapas2005(t, t0, duration, depth, c, period=1):
@@ -30,9 +35,13 @@ class NEB(Observation):
        radius around the target in which to analyse other stars fluxes, by default 2.5 (in arcminutes)
     """
 
-    def __init__(self, obs, radius=2.5, nearby_ids=None,flip_corr=False):
+    def __init__(self, obs, radius=2.5, nearby_ids=None, flip_corr=False, photometry=False, radec_file='', **kwargs):
 
         super(NEB, self).__init__(obs.xarray.copy())
+
+        if photometry is True: #TODO test this new way of redoing the photometry for the NEB check
+            self.new_photometry(radec_file, **kwargs)
+            self = new_self.copy()
 
         self.radius = radius
         if nearby_ids is None:
@@ -42,7 +51,7 @@ class NEB(Observation):
             self.nearby_ids = nearby_ids
 
         if flip_corr is True:
-            self.flip_correction()
+            self.flip_correction() #Does this modify only the neb xarray or the obs xarray as well ?
 
         # transit params
         self.epoch = None
@@ -65,6 +74,19 @@ class NEB(Observation):
         self.flux_too_low = None
         self.not_cleared = None
         self.suspects = None
+
+    def new_photometry(self, radec_file, **kwargs):
+        base_stars, _ = blocks.DAOFindStars(n_stars=100, min_separation=10)(self.stack)
+        radecs = pd.read_csv(radec_file, names=["ra", "dec"], usecols=[0, 1]).iloc[:, [0, 1]].values
+        close_stars = self.radec_to_pixel(radecs, unit=(u.hourangle, u.deg))
+        target_distance = np.linalg.norm(base_stars - close_stars[0], axis=1)
+        base_stars = base_stars[np.argwhere(target_distance * self.telescope.pixel_scale / 60 > 2.6).flatten()]
+        full_stars = np.vstack([close_stars, base_stars])
+        photometry = AperturePhotometry(stars=full_stars, overwrite=True, **kwargs)
+        photometry.run(self.phot)
+        new_self = load(self.phot)
+        return(new_self)
+
 
     def set_transit(self, epoch, duration, depth, period):
         self.epoch = epoch
