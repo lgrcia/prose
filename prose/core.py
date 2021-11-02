@@ -218,7 +218,11 @@ class Sequence:
             for b, block in enumerate(self.blocks):
                 # This allows to discard image in any Block
                 if not image.discard:
-                    block._run(image)
+                    try:
+                        block._run(image)
+                    except:
+                        # TODO
+                        print(f"{type(last_block).__name__} failed")
                 elif not discard_message:
                     last_block = self.blocks[b-1]
                     discard_message = True
