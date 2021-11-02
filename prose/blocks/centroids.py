@@ -64,7 +64,14 @@ class CNNCentroid(Block):
                 (im.data / np.max(im.data)).reshape(self.cutout, self.cutout, 1) for im in stars
             ])
             pos_int = np.array([[st.bbox.ixmin, st.bbox.iymin] for st in stars])
-            image.stars_coords[stars_in] = pos_int + self.model(stars_data_reshaped, training=False).numpy()[:, ::-1]
+            current_stars_coords = image.stars_coords[stars_in].copy()
+            # apply model
+            aligned_stars_coords = pos_int + self.model(stars_data_reshaped, training=False).numpy()[:, ::-1]
+            # if coords is nan (any of x, y), keep old coord
+            nan_mask = np.any(np.isnan(aligned_stars_coords), 1)
+            aligned_stars_coords[nan_mask] = current_stars_coords[nan_mask]
+            # change image.stars_coords
+            image.stars_coords[stars_in] = aligned_stars_coords
 
     @staticmethod
     def citations():
