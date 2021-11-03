@@ -119,12 +119,6 @@ class Calibration:
             blocks.SegmentedPeaks(n_stars=self.n, name="detection"),
             blocks.Twirl(ref_stars, n=self.n, name="twirl") if self.twirl else blocks.XYShift(ref_stars),
             self.psf(name="fwhm"),
-            blocks.Cutout2D(ref_image) if not self.twirl else blocks.Pass(),
-            blocks.SaveReduced(self.destination, overwrite=self.overwrite, name="save_reduced"),
-            blocks.AffineTransform(stars=True, data=True) if self.twirl else blocks.Pass(),
-            self.show,
-            blocks.Stack(self.stack_path, header=ref_image.header, overwrite=self.overwrite, name="stack"),
-            blocks.Video(self.gif_path, name="video", from_fits=True),
             blocks.XArray(
                 ("time", "jd_utc"),
                 ("time", "bjd_tdb"),
@@ -136,7 +130,13 @@ class Calibration:
                 ("time", "dy"),
                 ("time", "airmass"),
                 ("time", "exposure")
-            )
+            ),
+            blocks.Cutout2D(ref_image) if not self.twirl else blocks.Pass(),
+            blocks.SaveReduced(self.destination, overwrite=self.overwrite, name="save_reduced"),
+            blocks.AffineTransform(stars=True, data=True) if self.twirl else blocks.Pass(),
+            self.show,
+            blocks.Stack(self.stack_path, header=ref_image.header, overwrite=self.overwrite, name="stack"),
+            blocks.Video(self.gif_path, name="video", from_fits=True),
         ], self._images, name="Calibration", loader=self.loader)
 
         self.calibration_s.run(show_progress=self.verbose)
