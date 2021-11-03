@@ -20,7 +20,7 @@ class Telescope:
         telescope dict or description file, by default None which load a "default" telescope
 
     """
-    def __init__(self, telescope_file=None):
+    def __init__(self, telescope_file=None, verbose=True):
 
         # Keywords
         self.keyword_object = "OBJECT"
@@ -59,6 +59,8 @@ class Telescope:
         self.latlong = [None, None]
         self.saturation = 55000
 
+        self.verbose = verbose
+
         if telescope_file is not None:
             success = self.load(telescope_file)
             if success:
@@ -81,7 +83,8 @@ class Telescope:
         elif isinstance(file, str):
             telescope = CONFIG.match_telescope_name(file)
             if telescope is None:
-                info(f"telescope {file} not found - using default")
+                if self.verbose:
+                    info(f"telescope {file} not found - using default")
                 self.name = file
 
         elif file is None:
@@ -125,8 +128,8 @@ class Telescope:
         return np.sqrt(_squarred_error)
 
     @staticmethod
-    def from_name(name):
-        telescope = Telescope()
+    def from_name(name, verbose=True):
+        telescope = Telescope(verbose=verbose)
         telescope.load(name)
         return telescope
 
