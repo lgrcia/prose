@@ -4,6 +4,7 @@ import numpy as np
 from . import CONFIG
 import astropy.units as u
 from warnings import warn
+from .console_utils import info
 
 def str_to_astropy_unit(unit_string):
     return u.__dict__[unit_string]
@@ -80,7 +81,8 @@ class Telescope:
         elif isinstance(file, str):
             telescope = CONFIG.match_telescope_name(file)
             if telescope is None:
-                warn(f"telescope {file} not found")
+                info(f"telescope {file} not found - using default")
+                self.name = file
 
         elif file is None:
             return False
