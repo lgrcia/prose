@@ -49,7 +49,7 @@ class FilesDataFrame:
 
         for field, value in kwargs.items():
             if isinstance(value, str):
-                conditions = conditions & clean(files_df[field]).str.contains(sub(value)).reset_index(drop=True)
+                conditions = conditions & clean(files_df[field]).str.fullmatch(sub(value)).reset_index(drop=True)
             else:
                 conditions = conditions & (files_df[field] == value).reset_index(drop=True)
 
@@ -283,8 +283,7 @@ class FitsManager(FilesDataFrame):
         self.files_df = self.get_observation(i, future=future, past=past, same_telescope=same_telescope, return_df=True)
         assert self.unique_obs, "observation should be unique, please use set_observation"
         obs = self._observations.loc[0]
-        ids_dict = {value["name"].lower(): key.lower() for key, value in CONFIG.telescopes_dict.items()}
-        self.telescope = Telescope.from_name(ids_dict[obs.telescope.lower()])
+        self.telescope = Telescope.from_name(obs.telescope.lower())
         self.sort_by_date()
 
     def get_observation(self, i, future=0, past=None, same_telescope=False, return_df=False):
