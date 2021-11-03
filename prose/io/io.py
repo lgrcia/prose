@@ -93,6 +93,7 @@ def fits_to_df(files, telescope_kw="TELESCOP", verbose=True, hdu=0):
         telescope_name = header.get(telescope_kw, "")
         if telescope_name != last_telescope:
             telescope = Telescope.from_name(telescope_name)
+            last_telescope = telescope_name
 
         df_list.append(dict(
             path=i,
