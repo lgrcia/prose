@@ -45,7 +45,8 @@ setup(
         "nbsphinx",
         "celerite2",
         "jinja2",
-        "tensorflow"
+        "tensorflow",
+        "sphinx-copybutton"
     ],
     zip_safe=True,
     classifiers=[

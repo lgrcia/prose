@@ -86,7 +86,10 @@ class AffineTransform(Block):
             transform = transform.inverse
 
         if self.data:
-            image.data = warp(image.data, transform.inverse, cval=self.fill_function(image))
+            try:
+                image.data = warp(image.data, transform.inverse, cval=self.fill_function(image))
+            except np.linalg.LinAlgError:
+                image.discard = True
 
         if self.stars:
             image.stars_coords = transform(image.stars_coords)

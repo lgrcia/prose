@@ -1,7 +1,7 @@
 .. _api:
 
-API
-===
+API & Blocks
+============
 
 .. toctree::
    :titlesonly:
@@ -14,4 +14,3 @@ API
    api/calibration
    api/converters
    api/viz
-   core

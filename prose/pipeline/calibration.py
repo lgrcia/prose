@@ -2,7 +2,7 @@ from .. import Sequence, blocks, Block, Image
 import os
 from os import path
 from pathlib import Path
-import xarray as xr
+from .. import utils
 from .photometry import plot_function
 
 
@@ -142,9 +142,26 @@ class Calibration:
         self.calibration_s.run(show_progress=self.verbose)
 
         # saving xarray
-        calib_xarray = self.calibration_s.xarray.xarray
-        stack_xarray = self.calibration_s.stack.xarray
-        xarray = xr.merge([calib_xarray, stack_xarray], combine_attrs="no_conflicts")
+        xarray = self.calibration_s.xarray.xarray
+        stack_header = self.calibration_s.stack.header
+        stack_telescope = self.calibration_s.stack.telescope
+        xarray.attrs.update(utils.header_to_cdf4_dict(stack_header))
+        xarray.attrs.update(dict(
+            target=-1,
+            aperture=-1,
+            telescope=stack_telescope.name,
+            filter=stack_header.get(stack_telescope.keyword_filter, ""),
+            exptime=stack_header.get(stack_telescope.keyword_exposure_time, ""),
+            name=stack_header.get(stack_telescope.keyword_object, ""),
+        ))
+
+        if stack_telescope.keyword_observation_date in stack_header:
+            xarray.attrs.update(
+                dict(date=str(utils.format_iso_date(
+                    stack_header[stack_telescope.keyword_observation_date])).replace("-", ""),
+                     ))
+        xarray.coords["stack"] = (('w', 'h'), self.calibration_s.stack.stack)
+
         xarray = xarray.assign_coords(time=xarray.jd_utc)
         xarray.attrs["time_format"] = "jd_utc"
         xarray.attrs["reduction"] = [b.__class__.__name__ for b in self.calibration_s.blocks]

@@ -59,11 +59,12 @@ class CNNCentroid(Block):
     def run(self, image, **kwargs):
         initial_positions = image.stars_coords.copy()
         stars_in, stars = cutouts(image.data.copy(), initial_positions.copy(), self.cutout)
-        stars_data_reshaped = np.array([
-            (im.data / np.max(im.data)).reshape(self.cutout, self.cutout, 1) for im in stars
-        ])
-        pos_int = np.array([[st.bbox.ixmin, st.bbox.iymin] for st in stars])
-        image.stars_coords[stars_in] = pos_int + self.model(stars_data_reshaped, training=False).numpy()[:, ::-1]
+        if len(stars_in) > 0:
+            stars_data_reshaped = np.array([
+                (im.data / np.max(im.data)).reshape(self.cutout, self.cutout, 1) for im in stars
+            ])
+            pos_int = np.array([[st.bbox.ixmin, st.bbox.iymin] for st in stars])
+            image.stars_coords[stars_in] = pos_int + self.model(stars_data_reshaped, training=False).numpy()[:, ::-1]
 
     @staticmethod
     def citations():

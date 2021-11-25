@@ -24,7 +24,7 @@ class Image:
             self.path = None
 
         self.telescope = None
-        self.discarded = False
+        self.discard = False
         self.__dict__.update(kwargs)
         self.check_telescope()
 
@@ -213,17 +213,16 @@ class Sequence:
             else:
                 image = file_or_image
             image.i = i
+            self._last_image = image
             discard_message = False
-            for block in self.blocks:
-                # This allows to discard image in any blocks
-                if not image.discarded:
+            for b, block in enumerate(self.blocks):
+                # This allows to discard image in any Block
+                if not image.discard:
                     block._run(image)
                 elif not discard_message:
+                    last_block = self.blocks[b-1]
                     discard_message = True
-                    if isinstance(file_or_image, str):
-                        print(f"Warning: image {i} (...{file_or_image[i]}) discarded in {type(block).__name__}")
-                    else:
-                        print(f"Warning: image {i} discarded in {type(block).__name__}")
+                    print(f"Warning: image {i} discarded in {type(last_block).__name__}")
 
             del image
 

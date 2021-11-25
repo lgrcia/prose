@@ -8,7 +8,7 @@ from photutils.psf import extract_stars
 from astropy.stats import gaussian_sigma_to_fwhm
 from ..core import Block
 import matplotlib.pyplot as plt
-from scipy.stats import shapiro
+from collections import OrderedDict
 
 
 def image_psf(image, stars, size=15, normalize=False, return_cutouts=False):
@@ -75,6 +75,34 @@ def cutouts(image, stars, size=15):
             names=["x", "y"])
         stars = extract_stars(NDData(data=image), stars_tbl, size=size)
         return stars
+
+
+def good_cutouts(image, xy, r=30, upper=40000, lower=1000, trim=100):
+    idxs, _cuts = cutouts(image, xy, r)
+    cuts = OrderedDict(zip(idxs, _cuts))
+    peaks = [cutout.data.max() for cutout in cuts.values()]
+
+    for i, cutout in cuts.copy().items():
+        if i in cuts:
+            peak = cutout.data.max()
+            center = cutout.center
+
+            # removing saturated and faint stars
+            if peak > upper or peak < lower:
+                del cuts[i]
+
+            # removing stars on borders
+            elif np.any(center < [trim, trim]) or np.any(center > np.array(image.shape) - trim):
+                del cuts[i]
+
+            # removing close stars
+            closest = idxs[np.nonzero(np.linalg.norm(center - xy[idxs], axis=1) < r)[0]]
+            if len(closest) > 1:
+                for j in closest:
+                    if j in cuts:
+                        del cuts[j]
+
+    return cuts
 
 
 def moments(data):
