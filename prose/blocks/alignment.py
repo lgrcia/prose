@@ -16,12 +16,14 @@ class Cutout2D(Block):
         reference image on which alignment is done
     """
 
+    # TODO should take shape as input not an image
     def __init__(self, reference_image, **kwargs):
         super().__init__(**kwargs)
         self.ref_shape = np.array(reference_image.shape)
         self.ref_center = self.ref_shape[::-1] / 2
 
     def run(self, image):
+        # TODO this is shitty, should use image.dx, image.dy
         shift = np.array([image.header["DX"], image.header["DY"]])
 
         aligned_image = _Cutout2D(
