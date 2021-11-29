@@ -10,7 +10,8 @@ from datetime import timedelta
 import os
 from pathlib import Path
 from tqdm import tqdm
-from .io import get_files, fits_to_df
+from .io import fits_to_df
+from glob import glob
 import re
 
 
@@ -191,15 +192,16 @@ class FilesDataFrame:
 
 class FitsManager(FilesDataFrame):
 
-    def __init__(self, files_df_or_folder, verbose=True, image_kw="light", extension="*.f*ts*", hdu=0, reduced=False, **kwargs):
+    def __init__(self, files_df_or_folder, verbose=True, image_kw="light", extension="*.f*ts*", hdu=0, reduced=False, depth=1, **kwargs):
         if reduced:
             image_kw = "reduced"
         if isinstance(files_df_or_folder, pd.DataFrame):
             files_df = files_df_or_folder
             self.folder = None
         elif isinstance(files_df_or_folder, (str, Path)):
+            folder = files_df_or_folder
             assert path.exists(files_df_or_folder), "Folder does not exist"
-            files = get_files(extension, files_df_or_folder, depth=kwargs.get("depth", 1), single_list_removal=False)
+            files = glob(path.join(str(folder), "*"*depth, "*"+extension))
             files_df = fits_to_df(files, verbose=verbose, hdu=hdu)
             self.folder = files_df_or_folder
         else:
