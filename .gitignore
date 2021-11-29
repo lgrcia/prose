@@ -23,3 +23,22 @@ test/*
 !test/*.py
 dist
 build
+*.phot*
+
+## Core latex/pdflatex auxiliary files:
+latex/*.aux
+latex/*.lof
+latex/*.log
+latex/*.lot
+latex/*.fls
+latex/*.out
+latex/*.toc
+latex/*.fmt
+latex/*.fot
+latex/*.cb
+latex/*.cb2
+latex/*.pdf
+latex/*.fdb_latexmk
+latex/*.synctex.gz
+.*.lb
+
