@@ -7,6 +7,7 @@ from astropy.nddata import Cutout2D as _Cutout2D
 
 class Cutout2D(Block):
     """
+    TODO: change name of this... not explicit
     Align an image to a reference image using ``astropy.nddata.Cutout2D``
 
     Parameters
