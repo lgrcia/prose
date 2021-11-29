@@ -101,6 +101,7 @@ class SaveReduced(Block):
     overwrite : bool, optional
         weather to overwrite file if exists, by default False
     """
+    # TODO rename to SaveFITS and make destination a string like thing with the name of the image...
     def __init__(self, destination, overwrite=False, **kwargs):
 
         super().__init__(**kwargs)
@@ -114,7 +115,8 @@ class SaveReduced(Block):
 
         new_hdu = fits.PrimaryHDU(image.data)
         new_hdu.header = image.header
-
+        
+        # TODO: what the fuck?
         image.header["SEEING"] = image.get(image.telescope.keyword_seeing, "")
         image.header["BZERO"] = 0
         image.header["REDDATE"] = Time.now().to_value("fits")
