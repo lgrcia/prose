@@ -49,6 +49,7 @@ class Photometry:
                  overwrite=False,
                  n_stars=500,
                  psf=blocks.Gaussian2D,
+                 stack_psf=blocks.FWHM,
                  photometry=blocks.PhotutilsAperturePhotometry,
                  centroid=None,
                  show=False,
@@ -76,6 +77,8 @@ class Photometry:
         # check blocks
         assert psf is None or issubclass(psf, Block), "psf must be a subclass of Block"
         self.psf = psf
+        assert stack_psf is None or issubclass(stack_psf, Block), "stack_psf must be a subclass of Block"
+        self.stack_psf = stack_psf
         self.photometry = photometry(**kwargs)
         self.show = show
 
@@ -87,7 +90,7 @@ class Photometry:
         self.detection_s = Sequence([
             blocks.DAOFindStars(n_stars=self.n_stars, name="detection"),
             blocks.Set(stars_coords=self.stars) if self.stars is not None else blocks.Pass(),
-            self.psf(name="fwhm"),
+            self.stack_psf(name="fwhm"),
             blocks.ImageBuffer(name="buffer"),
         ], self.stack)
 
