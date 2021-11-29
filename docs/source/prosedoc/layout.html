@@ -118,8 +118,8 @@
     {# SIDE NAV, TOGGLES ON MOBILE #}
 
     <div class="container main">
-      <div class="columns">
-        <nav class="column">
+      <div class="columns ">
+        <nav class="column col-auto">
           <div class="nav-container">
             <div class="nav-head" {% if theme_style_nav_header_background %} style="background: {{theme_style_nav_header_background}}" {% endif %}>
               {% block sidebartitle %}
@@ -187,7 +187,7 @@
           </div>
         </nav>
 
-        <div class="column col-8 content">
+        <div class="column col-10 content col-mx-auto">
 
           {# MOBILE NAV, TRIGGLES SIDE NAV ON TOGGLE #}
           <nav class="" aria-label="top navigation">
