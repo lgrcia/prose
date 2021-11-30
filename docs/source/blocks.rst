@@ -4,7 +4,11 @@ Blocks
 .. currentmodule:: prose.blocks
 
 
-A ``Block`` is a single unit of processing acting on the ``Image`` object, reading and writing its attributes.
+A ``Block`` is a single unit of processing acting on the ``Image`` object, reading and writing its attributes. Blocks documentation include the following labels:
+
+- |read|: describe the ``Image`` attributes read, hence needed, by the block
+- |write|: describe the ``Image`` attributes written by the block
+- |modify|: indicates that the block directly modify the ``Image.data``
 
 Detection
 ---------

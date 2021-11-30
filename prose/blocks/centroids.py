@@ -8,6 +8,8 @@ from .psf import cutouts
 
 class Centroid2dg(Block):
     """Centroiding from  ``photutils.centroids.centroid_2dg``
+    
+    |write| ``Image.stars_coords``
     """
 
     def __init__(self, cutout=21, **kwargs):
@@ -80,6 +82,8 @@ class CNNCentroid(Block):
 
 class BalletCentroid(CNNCentroid):
     """Centroiding with  `ballet <https://github.com/lgrcia/ballet>`_.
+
+    |write| ``Image.stars_coords``
     """
 
     def __init__(self, **kwargs):

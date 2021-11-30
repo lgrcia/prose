@@ -45,11 +45,18 @@ class AffineTransform(Block):
     """
     Apply an affine transformation to image and/or stars
 
-    The affine transformation is expected to be found in the follwing header keywords:
+    |read|
+    
+    - rotation : ``Image.header['TWROT']``
+    - translation : ``Image.header['TWTRANSX']``, ``Image.header['TWTRANSY']``
+    - scale : ``Image.header['TWSCALEX']``, ``Image.header['TWSCALEY']``
 
-    - rotation : ``TWROT``
-    - translation : ``TWTRANSX``, ``TWTRANSY``
-    - scale : ``TWSCALEX``, ``TWSCALEX``
+
+    |write|
+    
+    - ``Image.transform``
+    - ``Image.inverse``
+    - ``Image.stars_coords``
 
     Parameters
     ----------
