@@ -272,22 +272,31 @@ class FitsManager(FilesDataFrame):
         table_string = tabulate(stable, tablefmt="fancy_grid", headers="keys")
         print(table_string)
 
-    def set_observation(self, i, future=0, past=None, same_telescope=False):
+    def set_observation(self, i, future=0, past=None, same_telescope=False, same_exposure=False):
         """Set the unique observation to use by its id. Observation indexes are specified in `self.observations`
 
         Parameters
         ----------
         i : int
             index of the observation as displayed in `self.observations`
+        future : int, optional
+            number of days in the future to look for calibration files, by default 0
+        past : int or None, optional
+            number of days in the past to look for calibration file, by default None which mean infinite
+        same_telescope : bool, optional
+            whether to force calibration files to come from the same telescope as the science (lights) images, by default False due to some
+            calibration files that have their telescope keyword empty (FITS header design flaw)
+        same_exposure : bool, optional
+            whether to force using darks calibration images taken with the same exposure as science (lights) images, by default False
         """
-        self.files_df = self.get_observation(i, future=future, past=past, same_telescope=same_telescope, return_df=True)
+        self.files_df = self.get_observation(i, return_df=True, future=future, past=past, same_telescope=same_telescope, same_exposure=same_exposure)
         assert self.unique_obs, "observation should be unique, please use set_observation"
         obs = self._observations.loc[0]
         ids_dict = {value["name"].lower(): key.lower() for key, value in CONFIG.telescopes_dict.items()}
         self.telescope = Telescope.from_name(ids_dict[obs.telescope.lower()])
         self.sort_by_date()
 
-    def get_observation(self, i, future=0, past=None, same_telescope=False, return_df=False):
+    def get_observation(self, i, future=0, past=None, same_telescope=False, same_exposure=False, return_df=False):
 
         original_fm = FitsManager(self._original_files_df.fillna(""))
         obs = self._observations.loc[i]
@@ -299,6 +308,7 @@ class FitsManager(FilesDataFrame):
             days_limit = past
 
         telescope = obs.telescope if same_telescope else "."
+        exposure = obs.exposure if same_exposure else "."
         dimensions = obs.dimensions
 
         dates_before = (
@@ -308,7 +318,7 @@ class FitsManager(FilesDataFrame):
             telescope=telescope + "*", filter=obs["filter"].replace("+", "\+"),
             type="flat",
             dimensions=dimensions).loc[dates_before]
-        darks = original_fm.get(telescope=telescope + "*", type="dark", dimensions=dimensions).loc[dates_before]
+        darks = original_fm.get(telescope=telescope + "*", type="dark", dimensions=dimensions, exposure=exposure).loc[dates_before]
         bias = original_fm.get(telescope=telescope + "*", type="bias", dimensions=dimensions).loc[dates_before]
         dfs = []
 

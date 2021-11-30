@@ -27,18 +27,32 @@ class Summary(Observation, LatexTemplate):
         obs_duration = f"{min_datetime.strftime('%H:%M')} - {max_datetime.strftime('%H:%M')} " \
             f"[{obs_duration_hours}h{obs_duration_mins if obs_duration_mins != 0 else ''}]"
 
-        self.obstable = [
-            ["Time", obs_duration],
-            ["RA - DEC", f"{self.RA} {self.DEC}"],
-            ["Images", len(self.time)],
-            ["Mean std · fwhm (epsf)",
-             f"{np.mean(self.fwhm) / (2 * np.sqrt(2 * np.log(2))):.2f} · {np.mean(self.fwhm):.2f} pixels"],
-            ["Fwhmx · fwhmy (target)", f"{self.plot_star_psf(print_values=False,plot=False)[0]:.2f} · {self.plot_star_psf(print_values=False,plot=False)[1]:.2f} pixels"],
-            ["Optimum aperture", f"{np.mean(self.apertures_radii[self.aperture,:]):.2f} pixels"],
-            ["Telescope", self.telescope.name],
-            ["Filter", self.filter],
-            ["Exposure", f"{np.mean(self.exptime)} s"],
-        ]
+        if self.telescope.name=='ASTEP':
+            self.obstable = [
+                ["Time", obs_duration],
+                ["RA - DEC", f"{self.SCIDCRD.split('--')[0]} -{self.SCIDCRD.split('--')[1]}"],
+                ["Images", len(self.time)],
+                ["Mean std · fwhm (epsf)",
+                 f"{np.mean(self.fwhm) / (2 * np.sqrt(2 * np.log(2))):.2f} · {np.mean(self.fwhm):.2f} pixels"],
+                ["Fwhmx · fwhmy (target)", f"{self.plot_star_psf(print_values=False,plot=False)[0]:.2f} · {self.plot_star_psf(print_values=False,plot=False)[1]:.2f} pixels"],
+                ["Optimum aperture", f"{np.mean(self.apertures_radii[self.aperture,:]):.2f} pixels"],
+                ["Telescope", self.telescope.name],
+                ["Filter", self.filter],
+                ["Exposure", f"{np.mean(self.exptime)} s"],
+            ]
+        else:
+            self.obstable = [
+                ["Time", obs_duration],
+                ["RA - DEC", f"{self.RA} {self.DEC}"],
+                ["Images", len(self.time)],
+                ["Mean std · fwhm (epsf)",
+                 f"{np.mean(self.fwhm) / (2 * np.sqrt(2 * np.log(2))):.2f} · {np.mean(self.fwhm):.2f} pixels"],
+                ["Fwhmx · fwhmy (target)", f"{self.plot_star_psf(print_values=False,plot=False)[0]:.2f} · {self.plot_star_psf(print_values=False,plot=False)[1]:.2f} pixels"],
+                ["Optimum aperture", f"{np.mean(self.apertures_radii[self.aperture,:]):.2f} pixels"],
+                ["Telescope", self.telescope.name],
+                ["Filter", self.filter],
+                ["Exposure", f"{np.mean(self.exptime)} s"],
+            ]
 
         self.description = f"{self.date[0:4]} {self.date[4:6]} {self.date[6::]} $\cdot$ {self.telescope.name} $\cdot$ {self.filter}"
         self._trend = None

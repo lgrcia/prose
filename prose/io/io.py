@@ -96,7 +96,7 @@ def fits_to_df(files, telescope_kw="TELESCOP", verbose=True, hdu=0):
 
         df_list.append(dict(
             path=i,
-            date=telescope.date(header),
+            date=telescope.start_date(header),
             telescope=telescope.name,
             type=telescope.image_type(header),
             target=header.get(telescope.keyword_object, ""),
@@ -104,7 +104,10 @@ def fits_to_df(files, telescope_kw="TELESCOP", verbose=True, hdu=0):
             dimensions=(header.get("NAXIS1", 1), header.get("NAXIS2", 1)),
             flip=header.get(telescope.keyword_flip, ""),
             jd=header.get(telescope.keyword_jd, ""),
+            proper_date=telescope.date(header),
+            exposure=header.get(telescope.keyword_exposure_time, "")
         ))
+
 
     df = pd.DataFrame(df_list)
 
@@ -114,13 +117,17 @@ def fits_to_df(files, telescope_kw="TELESCOP", verbose=True, hdu=0):
     df.type.loc[df.type.str.lower().str.contains(telescope.keyword_flat_images)] = "flat"
     df.telescope.loc[df.telescope.str.lower().str.contains("unknown")] = np.nan
     df.date = pd.to_datetime(df.date)
+    df.proper_date=pd.to_datetime(df.proper_date)
 
     if (df.jd == "").all():  # jd empty then convert from date
-        df.jd = Time(df.date, scale="utc").to_value('jd') + telescope.mjd
+        df.jd = Time(df.proper_date, scale="utc").to_value('jd') + telescope.mjd
 
     # We want dates that correspond to same observations but night might be over 2 days (before and after midnight)
     # So we remove 15 hours to be sure the date year-month-day are consistent with single observations
-    df.date = (df.date - timedelta(hours=15)).apply(lambda x: x.strftime('%Y-%m-%d'))
+    if telescope.name == 'ASTEP':
+        df.date = (df.date - timedelta(hours=0)).apply(lambda x: x.strftime('%Y-%m-%d'))
+    else:
+        df.date = (df.date - timedelta(hours=15)).apply(lambda x: x.strftime('%Y-%m-%d'))
 
     return df.replace("", np.nan)
 

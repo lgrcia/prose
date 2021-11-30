@@ -27,6 +27,7 @@ from pathlib import Path
 from . import twirl
 import io
 from .utils import fast_binning, z_scale
+from .search_db import search_db
 
 warnings.simplefilter('ignore', category=VerifyWarning)
 
@@ -54,6 +55,7 @@ class Observation(ApertureFluxes):
         self.tic_data = None
         self.wcs = WCS(utils.remove_arrays(self.xarray.attrs))
         self._meridian_flip = None
+        self.transit_params = None
 
         has_bjd = hasattr(self.xarray, "bjd_tdb")
         if has_bjd:
@@ -161,7 +163,11 @@ class Observation(ApertureFluxes):
     def skycoord(self):
         """astropy SkyCoord object for the target
         """
-        return SkyCoord(self.RA, self.DEC, frame='icrs', unit=(self.telescope.ra_unit, self.telescope.dec_unit))
+
+        if self.telescope.name == 'ASTEP':
+            return SkyCoord(self.SCIDCRD.split('--')[0], f'-{self.SCIDCRD.split("--")[1]}', frame='icrs', unit=('deg'))
+        else:
+            return SkyCoord(self.RA, self.DEC, frame='icrs', unit=(self.telescope.ra_unit, self.telescope.dec_unit))
 
     @property
     def simbad_url(self):
@@ -228,14 +234,17 @@ class Observation(ApertureFluxes):
     def tic_id(self):
         """TIC id from digits found in target name
         """
-        try:
-            nb = re.findall('\d*\.?\d+', self.name)
-            df = pd.read_csv("https://exofop.ipac.caltech.edu/tess/download_toi?toi=%s&output=csv" % nb[0])
-            tic = df["TIC ID"][0]
-            return f"{tic}"
-        except KeyError:
-            print('TIC ID not found')
-            return None
+        if self.telescope.name == 'ASTEP':
+            return f"{self.SCINAME}"
+        else:
+            try:
+                nb = re.findall('\d*\.?\d+', self.name)
+                df = pd.read_csv("https://exofop.ipac.caltech.edu/tess/download_toi?toi=%s&output=csv" % nb[0])
+                tic = df["TIC ID"][0]
+                return f"{tic}"
+            except KeyError:
+                print('TIC ID not found')
+                return None
 
     @property
     def gaia_from_toi(self):
@@ -357,6 +366,41 @@ class Observation(ApertureFluxes):
         coord = self.skycoord
         radius = u.Quantity(cone_radius, u.arcminute)
         self.tic_data = Catalogs.query_region(coord, radius, "TIC", verbose=False)
+        self.tic_data.sort("Jmag")
+
+        skycoords = SkyCoord(
+            ra=self.tic_data['ra'],
+            dec=self.tic_data['dec'], unit="deg")
+
+        self.tic_data["x"], self.tic_data["y"] = np.array(wcsutils.skycoord_to_pixel(skycoords, self.wcs))
+
+        w, h = self.stack.shape
+        if np.abs(np.mean(self.tic_data["x"])) > w or np.abs(np.mean(self.tic_data["y"])) > h:
+            warnings.warn("Catalog stars seem out of the field. Check that your stack is solved and that telescope "
+                          "'ra_unit' and 'dec_unit' are well set")
+
+    def query_tic_offline(self,cone_radius=None):
+        """Query TIC catalog (through MAST) for stars in the field
+        """
+        from astroquery.mast import Catalogs
+
+        header = self.xarray.attrs
+        shape = self.stack.shape
+        if cone_radius is None:
+            cone_radius = np.sqrt(2) * np.max(shape) * self.telescope.pixel_scale / 120
+
+        coord = self.skycoord
+        radius = u.Quantity(cone_radius, u.arcminute)
+
+        
+        #calculate the min/max ra/decs to search in the TIC
+        maxDec=u.Quantity(coord.dec+radius, u.deg)
+        minDec=u.Quantity(coord.dec-radius, u.deg)
+        maxRa=u.Quantity(coord.ra+radius, u.deg)
+        minRa=u.Quantity(coord.ra-radius, u.deg)
+
+        #self.tic_data = Catalogs.query_region(coord, radius, "TIC", verbose=False)
+        self.tic_data=search_db(minRa.value, maxRa.value, minDec.value, maxDec.value, coord.dec.value)
         self.tic_data.sort("Jmag")
 
         skycoords = SkyCoord(
@@ -1074,19 +1118,31 @@ class Observation(ApertureFluxes):
         if not inplace:
             return new_self
 
-    def set_tic_target(self):
+    def set_tic_target(self, offline=True):
 
-        self.query_tic()
+        if self.telescope.name == 'ASTEP':
+            if offline==True:
+                self.query_tic_offline()
+            else:
+                self.query_tic()
+        else:
+            self.query_tic()
         try:
             # TOI to TIC
-            toi = re.split("-|\.", self.name)[1]
-            b = requests.get(f"https://exofop.ipac.caltech.edu/tess/download_toi?toi={toi}&output=csv").content
-            TIC = pd.read_csv(io.BytesIO(b))["TIC ID"][0]
-
+            if self.tic_id==None:
+                toi = re.split("-|\.", self.name)[1]
+                b = requests.get(f"https://exofop.ipac.caltech.edu/tess/download_toi?toi={toi}&output=csv").content
+                TIC = pd.read_csv(io.BytesIO(b))["TIC ID"][0]
+            else:
+                TIC=self.tic_id
+            if offline==True:
+                TIC=int(TIC)
             # getting all TICs
             tics = self.tic_data["ID"].data
-            tics.fill_value = 0
-            tics = tics.data.astype(int)
+            #print(tics)
+            #print(type(tics[0]))
+            #tics.fill_value = 0
+            #tics = tics.data.astype(int)
 
             # Finding the one
             i = np.argwhere(tics == TIC).flatten()

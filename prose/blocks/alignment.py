@@ -92,7 +92,10 @@ class AffineTransform(Block):
                 image.discard = True
 
         if self.stars:
+            #print(image.i)
+            #print(np.all(np.isfinite(image.stars_coords)))
             image.stars_coords = transform(image.stars_coords)
+            #print(np.all(np.isfinite(image.stars_coords)))
 
     def citations(self, image):
         return "astropy", "numpy"

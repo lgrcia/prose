@@ -171,6 +171,7 @@ class Peaks(Block):
         self.cutout = cutout
 
     def run(self, image, **kwargs):
+        #print(image.stars_coords)
         idxs, cuts = cutouts(image.data, image.stars_coords, size=self.cutout)
         image.peaks = np.ones(len(image.stars_coords)) * -1
         for i, cut in zip(idxs, cuts):

@@ -68,6 +68,8 @@ trappist.update({
                 "start_date={date}&days_to_print=90&days_in_past=0&minimum_start_elevation=23&and_vs_or=or&minimum_end_elevation=23&minimum_ha=-12" \
                 "&maximum_ha=12&baseline_hrs=1.5&show_unc=1&maximum_priority=4&minimum_depth=0&maximum_V_mag=&target_string={tic_id}&lco_only=0&" \
                 "single_object=0&ra=&dec=&epoch=&period=&duration=&target=&show_ephemeris=0&print_html=1&twilight=-12&max_airmass=2.4"})
+                
+
 
 trappistN = trappist.copy()
 trappistN.update({
@@ -117,6 +119,37 @@ liverpool.update ({
     "TTF_link": None
 })
 
+ASTEP = {
+    "name": "ASTEP",
+    "diameter": 40, # cm
+    "trimming": [30, 30],
+    "pixel_scale": 0.92819166094286,
+    "latlong": [-75.10028, -123.32417],
+    "keyword_object": "OBJECT",
+    'keyword_image_type':'FILENAME',
+    'keyword_dark_images':"dark",
+    'keyword_flat_images':"flat",
+    'altitude':3233,
+    'keyword_ra':'SCIDCRD',
+    'keyword_dec':'SCIDCRD',
+    'keyword_radec':'SCIDCRD',
+    "keyword_light_images": "science",
+    'keyword_exposure_time':'EXPTIME',
+    'keyword_filter':'INSTFILT',
+    "keyword_fwhm": "FWHM",
+    "keyword_seeing": "SEEING",
+    "keyword_airmass": "AIRMASS",
+    "keyword_observation_date": "DATE-OBS",
+    "keyword_start_date": "BEGINOBS",
+    "TTF_link": "https://astro.swarthmore.edu/telescope/tess-secure/print_eclipses.cgi?observatory_string=-75.1%3B123.35%3BAntarctica%2FCasey%3BASTEP" 
+                "+0.4m+at+Concordia+Station%2C+Antarctica%3BASTEP+0.4m&use_utc=1&observatory_latitude=-29.2563&observatory_longitude=-70.738&timezone=UTC" 
+                "&start_date={date}&days_to_print=10&days_in_past=0&minimum_start_elevation=23&and_vs_or=or&minimum_end_elevation=23&minimum_ha=-12&maximum" 
+                "_ha=12&baseline_hrs=1.5&show_unc=1&maximum_priority=4&minimum_depth=0&maximum_V_mag=&target_string={tic_id}&lco_only=0&single_object=0&ra=&" 
+                "dec=&epoch=&period=&duration=&target=&show_ephemeris=0&print_html=1&twilight=-12&max_airmass=2.4"
+}
+
+
+
 built_in_telescopes = {
     "trappist": trappist,
     "artemis": artemis,
@@ -128,7 +161,8 @@ built_in_telescopes = {
     "ntm": trappistN,
     "trappist-north": trappistN,
     "saint-ex": saintex,
-    "liverpool": liverpool
+    "liverpool": liverpool,
+    'ASTEP': ASTEP,
 }
 
 TESS_pixel = 2.5 # arcmin

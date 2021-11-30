@@ -374,7 +374,7 @@ def plot_marks(x, y, label=None, position="bottom", offset=7, fontsize=12, color
         f = 5
         if _label is not None:
             plt.annotate(_label, xy=[_x, _y - y_offset], color=color, ha='center', fontsize=fontsize, alpha=alpha,
-                         va="top" if position is "bottom" else "bottom")
+                         va="top" if position =="bottom" else "bottom")
 
 
 def fancy_show_stars(
@@ -641,7 +641,7 @@ def plot_expected_transit(time, epoch, period, duration, depth=None, color="gain
 
     if depth is not None:
         model = transit(time, epoch, duration, depth, period=period).flatten()
-        plt.plot(time, model + 1., c="grey")
+        plt.plot(time, model + 1., c="#FFA533")
 
 
 def rename_tab(name):

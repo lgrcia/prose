@@ -46,6 +46,8 @@ class Telescope:
         self.keyword_bjd = "BJD"
         self.keyword_flip = "PIERSIDE"
         self.keyword_observation_time = None
+        self.keyword_start_date = "BEGINOBS"
+        self.keyword_sci_name = 'SCINAME'
 
         # Specs
         self.name = "Unknown"
@@ -131,6 +133,7 @@ class Telescope:
     # TODO: explain in documentation
     def date(self, header):
         _date = header.get(self.keyword_observation_date, None)
+        
         if _date is None:
             _date = "2000-01-01T00:00:00.000"
         else:
@@ -138,6 +141,19 @@ class Telescope:
                 _date = _date + "T" + header.get(self.keyword_observation_time, "00:00:00.000")
 
         return _date
+
+    def start_date(self, header):
+        if self.name == 'ASTEP':
+            _s_date = header.get(self.keyword_start_date, None)
+        else:
+            _s_date = header.get(self.keyword_observation_date, None)
+        
+        if _s_date is None:
+                _s_date = "2000-01-01T00:00:00.000"
+        else:
+            if self.keyword_observation_time is not None:
+                _s_date = _s_date + "T" + header.get(self.keyword_observation_time, "00:00:00.000")
+        return _s_date
 
     def image_type(self, header):
         return header.get(self.keyword_image_type, "").lower()
