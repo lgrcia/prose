@@ -10,7 +10,8 @@ from datetime import timedelta
 import os
 from pathlib import Path
 from tqdm import tqdm
-from .io import get_files, fits_to_df
+from .io import fits_to_df
+from glob import glob
 import re
 
 
@@ -49,7 +50,7 @@ class FilesDataFrame:
 
         for field, value in kwargs.items():
             if isinstance(value, str):
-                conditions = conditions & clean(files_df[field]).str.contains(sub(value)).reset_index(drop=True)
+                conditions = conditions & clean(files_df[field]).str.fullmatch(sub(value)).reset_index(drop=True)
             else:
                 conditions = conditions & (files_df[field] == value).reset_index(drop=True)
 
@@ -191,15 +192,16 @@ class FilesDataFrame:
 
 class FitsManager(FilesDataFrame):
 
-    def __init__(self, files_df_or_folder, verbose=True, image_kw="light", extension="*.f*ts*", hdu=0, reduced=False, **kwargs):
+    def __init__(self, files_df_or_folder, verbose=True, image_kw="light", extension="*.f*ts*", hdu=0, reduced=False, depth=1, **kwargs):
         if reduced:
             image_kw = "reduced"
         if isinstance(files_df_or_folder, pd.DataFrame):
             files_df = files_df_or_folder
             self.folder = None
         elif isinstance(files_df_or_folder, (str, Path)):
+            folder = files_df_or_folder
             assert path.exists(files_df_or_folder), "Folder does not exist"
-            files = get_files(extension, files_df_or_folder, depth=kwargs.get("depth", 1), single_list_removal=False)
+            files = glob(path.join(str(folder), "*"*depth, "*"+extension))
             files_df = fits_to_df(files, verbose=verbose, hdu=hdu)
             self.folder = files_df_or_folder
         else:
@@ -283,8 +285,7 @@ class FitsManager(FilesDataFrame):
         self.files_df = self.get_observation(i, future=future, past=past, same_telescope=same_telescope, return_df=True)
         assert self.unique_obs, "observation should be unique, please use set_observation"
         obs = self._observations.loc[0]
-        ids_dict = {value["name"].lower(): key.lower() for key, value in CONFIG.telescopes_dict.items()}
-        self.telescope = Telescope.from_name(ids_dict[obs.telescope.lower()])
+        self.telescope = Telescope.from_name(obs.telescope)
         self.sort_by_date()
 
     def get_observation(self, i, future=0, past=None, same_telescope=False, return_df=False):

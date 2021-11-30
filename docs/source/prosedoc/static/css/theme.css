@@ -1,12 +1,14 @@
 @import url("spectre.css");
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@650&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@600&display=swap');
+
 html {}
 
 :root {
     --base-space: 20px;
     --lightdark: #3b4351;
     --lighterdark: #949aa3;
-    --primary-color: #005cc5;
+    --primary-color: #1f74d4;
 }
 
 /* FULL PAGE */
@@ -15,10 +17,16 @@ html {}
     max-width: 1100px;
     margin-top: 40px;
     font-size: 90%;
+    /* font-family: 'Roboto', sans-serif; */
 }
 
 p {
     margin: 0 0 24px 0;
+    line-height: 1.65;
+}
+
+.content {
+    margin-top: var(--base-space)
 }
 
 ul.simple li p, table p, .note p {
@@ -65,14 +73,15 @@ a:hover, a:focus {
     flex-direction: column;
     max-width: 300px;
     align-items: flex-start;
+    color: var(--lightdark);
 }
 
 nav.column {
     position: fixed;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    line-height: 12px !important;
-    text-transform: uppercase;
-    font-size: 12px;
+    /* font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; */
+    line-height: 1.5 !important;
+    /* text-transform: uppercase; */
+    font-size: 14px;
     margin-top: 0px;
     margin-right: var(--base-space);
     color: var(--lightdark);
@@ -86,12 +95,28 @@ nav a:visited {
 /* Nav sections title */
 
 nav .caption-text {
-    font-style: italic;
+    color: var(--primary-color);
+    font-weight: 600;
+    text-transform: uppercase;
+    opacity: 0.9;
+    font-size: 14px;
+}
+
+nav ul {
+    margin-bottom: 30px;
 }
 
 nav ul, nav li, nav a {
-    color: black;
+    color: var(--lightdark);
     list-style-type: none;
+    margin-left: 0px;
+}
+
+/* TocTree level 1 list style */
+
+li.toctree-l1 ul li, li.toctree-l2 ul li {
+    margin-left : 20px;
+    list-style-type: circle;
 }
 
 nav a.current {
@@ -104,14 +129,22 @@ nav a.icon-home {
     font-size: 40px;
     color: inherit;
     font-style: italic;
-    margin-bottom: var(--base-space);
+    margin-bottom: 0px;
     margin-top: var(--base-space);
     font-family: Georgia, 'Times New Roman', Times, serif;
     font-weight: bold;
 }
 
 div.version {
-    margin-bottom: 20px
+    margin-bottom: 40px
+}
+
+div.version.text-icon {
+    font-family: 'Caveat', cursive;
+    font-size: 24px;
+    color: var(--primary-color);
+    margin-top: -10px;
+    opacity: 0.9;
 }
 
 nav .nav-head {
@@ -334,6 +367,7 @@ footer {
 .rst-content dl.class em.property {
     color: var(--primary-color);
     margin-right: 10px;
+    font-weight: normal;
 }
 
 .rst-content dl.py code {
@@ -420,10 +454,10 @@ div.note p.admonition-title:before {
     content: "∆";
     display: inline-block;
     margin-right: 3px;
- }
+}
 
- .py dl.field-list dt {
-     color: var(--lighterdark);
-     font-weight: normal;
-     text-decoration: underline;
- }
+.py dl.field-list dt {
+    color: var(--lighterdark);
+    font-weight: normal;
+    text-decoration: underline;
+}

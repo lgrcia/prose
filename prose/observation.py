@@ -879,10 +879,12 @@ class Observation(ApertureFluxes):
 
         if isinstance(star, (tuple, list, np.ndarray)):
             x, y = star
-        elif isinstance(star, int):
+        else:
+            if star is None:
+                star = 0
+            assert isinstance(star, int), "star must be star coordinates or integer index"
+        
             x, y = self.stars[star]
-        elif star is None:
-                x, y = self.stars[self.target]
 
         Y, X = np.indices(self.stack.shape)
         cutout_mask = (np.abs(X - x + 0.5) < n) & (np.abs(Y - y + 0.5) < n)
@@ -905,17 +907,15 @@ class Observation(ApertureFluxes):
         plt.ylabel("ADUs")
         _, ylim = plt.ylim()
 
-        if "apertures_radii" in self.xarray or aperture is not None:
-            if "apertures_radii" in self.xarray and aperture is None:
-                apertures = self.apertures_radii[:, 0]
-
-                if apertures is not None:
-                    aperture = apertures[self.aperture]
-
-            plt.xlim(0)
-            plt.text(aperture, ylim, "APERTURE", ha="right", rotation="vertical", va="top")
-            plt.axvline(aperture, c="k", alpha=0.1)
-            plt.axvspan(0, aperture, color="0.9", alpha=0.1)
+        if "apertures_radii" in self and self.aperture != -1:
+            apertures = self.apertures_radii[:, 0]
+            aperture = apertures[self.aperture]
+        
+            if "annulus_rin" in self:
+                if rin is None:
+                    rin = self.annulus_rin.mean()
+                if rout is None:
+                    rout = self.annulus_rout.mean() 
 
         if aperture is not None:
             plt.xlim(0)
@@ -923,20 +923,17 @@ class Observation(ApertureFluxes):
             plt.axvline(aperture, c="k", alpha=0.1)
             plt.axvspan(0, aperture, color="0.9", alpha=0.1)
 
-        if "annulus_rin" in self:
-            if rin is None:
-                rin = self.annulus_rin.mean()
-            if rout is None:
-                rout = self.annulus_rout.mean()
-
         if rin is not None:
-            plt.axvline(rin, color="k", alpha=0.1)
+            plt.axvline(rin, color="k", alpha=0.2)
 
         if rout is not None:
-            plt.axvline(rout, color="k", alpha=0.1)
+            plt.axvline(rout, color="k", alpha=0.2)
             if rin is not None:
-                plt.axvspan(rin, rout, color="0.9", alpha=0.1)
+                plt.axvspan(rin, rout, color="0.9", alpha=0.2)
                 _ = plt.text(rout, ylim, "ANNULUS", ha="right", rotation="vertical", va="top")
+
+        n = np.max([np.max(radii), rout +2 if rout else 0])
+        plt.xlim(0, n)
 
         ax2 = plt.subplot(1, 5, (4, 5))
         im = self.stack[int(y - n):int(y + n), int(x - n):int(x + n)]
@@ -952,9 +949,10 @@ class Observation(ApertureFluxes):
             ax2.add_patch(plt.Circle((n, n), rin, ec='grey', fill=False, lw=2))
         if rout is not None:
             ax2.add_patch(plt.Circle((n, n), rout, ec='grey', fill=False, lw=2))
+        ax2.text(0.05, 0.05, f"{star}", fontsize=12, color="white", transform=ax2.transAxes)
 
         plt.tight_layout()
-
+        
     def plot_systematics_signal(self, systematics, signal, ylim=None, offset=None, figsize=(6, 7)):
         """Plot a systematics and signal model over diff_flux. systeamtics + signal is plotted on top, signal alone on detrended
         data on bottom

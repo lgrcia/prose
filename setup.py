@@ -25,7 +25,7 @@ setup(
         "matplotlib",
         "colorama",
         "scikit-image",
-        "pandas",
+        "pandas>=1.1",
         "tqdm",
         "astroalign",
         "photutils",

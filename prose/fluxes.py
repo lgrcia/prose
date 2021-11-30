@@ -40,6 +40,7 @@ def binned_std(fluxes, bins=12):
 
 
 def diff(fluxes, errors=None, weights=None, comps=None, alc=False):
+    
     # not to divide flux by itself
     sub = np.expand_dims((~np.eye(fluxes.shape[-2]).astype(bool)).astype(int), 0)
 
@@ -48,15 +49,20 @@ def diff(fluxes, errors=None, weights=None, comps=None, alc=False):
         weights = np.zeros(fluxes.shape[0:-1])
         weights[np.arange(fluxes.shape[0]), comps.T] = 1.
 
-    weighted_fluxes = fluxes * np.expand_dims(weights, -1)
-    art_lc = (sub @ weighted_fluxes) / np.expand_dims(weights @ sub[0], -1)
+    # Formulae
+    # https://en.wikipedia.org/wiki/Weighted_arithmetic_mean#Standard_error
+
+    normalized_weights = weights/np.expand_dims(np.sum(weights, -1), -1)
+
+    weighted_fluxes = fluxes * np.expand_dims(normalized_weights, -1)
+    art_lc = sub @ weighted_fluxes
     lcs = fluxes / art_lc
 
     returns = lcs
 
     if errors is not None:
-        weighted_errors = errors * np.expand_dims(weights, -1)
-        squarred_art_error = (sub @ weighted_errors) ** 2 / np.expand_dims(weights @ sub[0], -1)
+        weighted_errors = errors**2 * np.expand_dims(normalized_weights, -1)**2
+        squarred_art_error = sub @ weighted_errors
         lcs_errors = np.sqrt(errors ** 2 + squarred_art_error)
         returns = [lcs, lcs_errors]
 

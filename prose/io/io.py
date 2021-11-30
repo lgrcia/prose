@@ -82,8 +82,10 @@ def fits_to_df(files, telescope_kw="TELESCOP", verbose=True, hdu=0):
     assert len(files) > 0, "Files not provided"
 
     last_telescope = "_"
+    telescopes_seen = []
     telescope = None
     df_list = []
+    verbose = True
 
     def progress(x):
         return tqdm(x) if verbose else x
@@ -91,8 +93,15 @@ def fits_to_df(files, telescope_kw="TELESCOP", verbose=True, hdu=0):
     for i in progress(files):
         header = fits.getheader(i, hdu)
         telescope_name = header.get(telescope_kw, "")
+        if telescope_name not in telescopes_seen:
+            telescopes_seen.append(telescope_name)
+            verbose = True
+        else:
+            verbose = False
+
         if telescope_name != last_telescope:
-            telescope = Telescope.from_name(telescope_name)
+            telescope = Telescope.from_name(telescope_name, verbose=verbose)
+            last_telescope = telescope_name
 
         df_list.append(dict(
             path=i,
@@ -129,7 +138,7 @@ def get_new_fits(current_df, folder, depth=3):
     dirs = np.array(os.listdir(folder))
     new_dirs = dirs[
         np.argwhere(pd.to_datetime(dirs, errors='coerce') > pd.to_datetime(current_df.date).max()).flatten()]
-    return np.hstack([get_files("*.f*ts", path.join(folder, f), depth=depth) for f in new_dirs])
+    return np.hstack([glob(path.join(folder, f, "*"*depth, "*.f*ts")) for f in new_dirs])
 
 
 def convert_old_index(df):

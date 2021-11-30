@@ -13,9 +13,10 @@ from astropy.time import Time
 import xarray as xr
 from prose.blocks.registration import xyshift, closeness
 from prose.blocks import SegmentedPeaks
+from glob import glob
 
 def get_phot_stack(folder, phot_extension, stack_extension="stack.fits"):
-    return io.get_files(phot_extension, folder), io.get_files(stack_extension, folder)
+    return glob(path.join(folder, "*"+phot_extension)), glob(path.join(folder, "*"+stack_extension))
 
 
 def trapphot_to_prose(folder, destination=None):
@@ -203,7 +204,7 @@ def old_to_new(folder_path, destination=None, keyword_observatory="OBSERVAT"):
         raise FileNotFoundError("Folder does not exist")
 
     # Loading unique phot file
-    phot_files = io.get_files(".phot*", folder_path, single_list_removal=False)
+    phot_files = glob(path.join(folder_path, "*.phot*"))
 
     if len(phot_files) == 0:
         raise ValueError("Cannot find a phot file in this folder, should contain one")
@@ -211,7 +212,7 @@ def old_to_new(folder_path, destination=None, keyword_observatory="OBSERVAT"):
         phot_file = phot_files[0]
 
     # Loading unique stack file
-    stack_fits = io.get_files("_stack.f*ts", folder_path, single_list_removal=False)
+    stack_fits = glob(path.join(folder_path, "*_stack.f*ts"))
 
     if len(stack_fits) > 1:
         raise ValueError("Several stack files present in folder, should contain one")

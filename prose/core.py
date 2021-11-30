@@ -167,6 +167,7 @@ class Sequence:
         self.loader = loader
 
         self.data = {}
+        self.n_processed_images = None
 
     def __getattr__(self, item):
         return self.blocks_dict[item]
@@ -206,6 +207,8 @@ class Sequence:
             block.set_unit_data(self.data)
             block.initialize()
 
+        self.n_processed_images = 0
+
         # run
         for i, file_or_image in enumerate(progress(self.files_or_images)):
             if isinstance(file_or_image, (str, Path)):
@@ -215,23 +218,34 @@ class Sequence:
             image.i = i
             self._last_image = image
             discard_message = False
+
+            last_block = None
+
             for b, block in enumerate(self.blocks):
                 # This allows to discard image in any Block
                 if not image.discard:
                     block._run(image)
+                    # except:
+                    #     # TODO
+                    #     if not last_block is None:
+                    #         print(f"{type(last_block).__name__} failed")
                 elif not discard_message:
                     last_block = self.blocks[b-1]
                     discard_message = True
                     print(f"Warning: image {i} discarded in {type(last_block).__name__}")
 
             del image
+            self.n_processed_images += 1
 
         # terminate
         for block in self.blocks:
             block.terminate()
 
     def __str__(self):
-        rows = [[block.name, block.__class__.__name__, f"{block.processing_time:.4f} s"] for block in self.blocks]
+        rows = [[
+            block.name, block.__class__.__name__, f"{block.processing_time:.3f} s ({(block.processing_time/self.processing_time)*100:.0f}%)"] 
+            for block in self.blocks
+            ]
         headers = ["name", "type", "processing"]
 
         return tabulate(rows, headers, tablefmt="fancy_grid")

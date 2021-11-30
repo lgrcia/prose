@@ -11,8 +11,8 @@
 prose
 =====
 
-.. image:: prose.png
-   :width: 450
+.. image:: prose_illustration.png
+   :width: 500
    :align: center
 
 .. image:: https://img.shields.io/badge/github-lgrcia/prose-blue.svg?style=flat
