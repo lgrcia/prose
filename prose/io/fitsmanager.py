@@ -10,8 +10,7 @@ from datetime import timedelta
 import os
 from pathlib import Path
 from tqdm import tqdm
-from .io import fits_to_df
-from glob import glob
+from .io import fits_to_df, get_files
 import re
 
 
@@ -200,10 +199,10 @@ class FitsManager(FilesDataFrame):
             self.folder = None
         elif isinstance(files_df_or_folder, (str, Path)):
             folder = files_df_or_folder
-            assert path.exists(files_df_or_folder), "Folder does not exist"
-            files = glob(path.join(str(folder), "*"*depth, "*"+extension))
+            assert path.exists(folder), "Folder does not exist"
+            files = get_files(extension, folder, depth=kwargs.get("depth", 1))
             files_df = fits_to_df(files, verbose=verbose, hdu=hdu)
-            self.folder = files_df_or_folder
+            self.folder = folder
         else:
             raise AssertionError("input must be pd.DataFrame or folder path")
 
