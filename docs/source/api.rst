@@ -1,7 +1,7 @@
 .. _api:
 
-API & Blocks
-============
+API
+===
 
 .. toctree::
    :titlesonly:
@@ -9,7 +9,6 @@ API & Blocks
    api/fitsmanager
    api/observation
    api/telescope
-   blocks
    api/aperturephotometry
    api/calibration
    api/converters

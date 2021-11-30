@@ -30,7 +30,7 @@ prose
 
    installation
    core
-   citing
+   blocks
    api
    
 

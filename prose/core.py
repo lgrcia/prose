@@ -117,8 +117,26 @@ class Image:
 
 
 class Block:
+    """A ``Block`` is a single unit of processing acting on the ``Image`` object, reading, processing and writing its attributes. When placed in a sequence, it goes through three steps:
+
+        1. :py:meth:`~prose.Block.initialize` method is called before the sequence is run
+        2. *Images* go succesively and sequentially through its :py:meth:`~prose.run` methods
+        3. :py:meth:`~prose.Block.terminate` method is called after the sequence is terminated
+
+        Parameters
+        ----------
+        name : [type], optional
+            [description], by default None
+    """
 
     def __init__(self, name=None):
+        """[summary]
+
+        Parameters
+        ----------
+        name : [type], optional
+            [description], by default None
+        """
         self.name = name
         self.unit_data = None
         self.processing_time = 0

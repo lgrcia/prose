@@ -54,9 +54,7 @@ Then to locally install prose
 
 ```shell
 git clone https://github.com/lgrcia/prose.git
-
-cd prose_env
-python3.6 -m pip install -e ../prose
+python3.6 -m pip install -e prose
 ```
 
 Applicable to Linux-based and Windows OS
