@@ -129,7 +129,8 @@ class Calibration:
                 ("time", "dx"),
                 ("time", "dy"),
                 ("time", "airmass"),
-                ("time", "exposure")
+                ("time", "exposure"),
+                ("time", "path")
             ),
             blocks.Cutout2D(ref_image) if not self.twirl else blocks.Pass(),
             blocks.SaveReduced(self.destination, overwrite=self.overwrite, name="save_reduced"),
