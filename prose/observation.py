@@ -845,15 +845,24 @@ class Observation(ApertureFluxes):
             _, ylim = plt.ylim()
             plt.text(self.meridian_flip, ylim, "meridian flip ", ha="right", rotation="vertical", va="top", color="0.7")
 
-    def plot(self, star=None, meridian_flip=True):
+    def plot(self, star=None, meridian_flip=True, bins=0.005, color="k", std=True):
         """Plot observation light curve
 
         Parameters
         ----------
+        star : [type], optional
+            [description], by default None
         meridian_flip : bool, optional
             whether to show meridian flip, by default True
+        bins : float, optional
+            bin size in same unit as Observation.time, by default 0.005
+        color : str, optional
+            binned points color, by default "k"
+        std : bool, optional
+            whether to see standard deviation of bins as error bar, by default True, otherwise theoretical error bat is shown
         """
-        super().plot(star=star)
+
+        super().plot(star=star, bins=bins, color=color, std=std)
         if meridian_flip:
             self.plot_meridian_flip()
 
@@ -952,7 +961,7 @@ class Observation(ApertureFluxes):
         ax2.text(0.05, 0.05, f"{star}", fontsize=12, color="white", transform=ax2.transAxes)
 
         plt.tight_layout()
-        
+
     def plot_systematics_signal(self, systematics, signal, ylim=None, offset=None, figsize=(6, 7)):
         """Plot a systematics and signal model over diff_flux. systeamtics + signal is plotted on top, signal alone on detrended
         data on bottom
