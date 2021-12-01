@@ -14,10 +14,13 @@ class Calibration:
 
     Parameters
     ----------
-    destination : str, optional
-        Destination of the newly created folder, by default beside the folder given to FitsManager
-    reference : float, optional
-        Reference image to use for alignment from 0 (first image) to 1 (last image), by default 1/2
+    reference : float or str, optional
+        Reference image to use for alignment:
+         
+        - if ``float``: from 0 (first image) to 1 (last image)
+        - if ``str``: path of the reference image
+        
+        by default 1/2
     overwrite : bool, optional
         whether to overwrite existing products, by default False
     flats : list, optional
@@ -83,8 +86,12 @@ class Calibration:
         self.psf = psf
         
         # set reference file
-        reference_id = int(self._reference * len(self._images))
-        self.reference_fits = self._images[reference_id]
+        if isinstance(self._reference, (int, float)):
+            reference_id = int(self._reference * len(self._images))
+            self.reference_fits = self._images[reference_id]
+        elif isinstance(self._reference, (str, Path)):
+            self.reference_fits = self._reference
+
         self.calibration_block = blocks.Calibration(self.darks, self.flats, self.bias, loader=loader, name="calibration")
 
     def run(self, destination, gif=True):
