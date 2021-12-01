@@ -173,14 +173,14 @@ class Calibration:
         xarray = xarray.assign_coords(time=xarray.jd_utc)
         xarray.attrs["time_format"] = "jd_utc"
         xarray.attrs["reduction"] = [b.__class__.__name__ for b in self.calibration_s.blocks]
-        xarray.to_netcdf(self.phot_path)
+        xarray.to_netcdf(self.phot)
 
     @property
     def stack_path(self):
         return self.destination / "stack.fits"
 
     @property
-    def phot_path(self):
+    def phot(self):
         return self.destination / (self.destination.name + ".phot")
 
     @property

@@ -72,7 +72,7 @@ class Photometry:
 
         # preparing inputs and outputs
         self.destination = None
-        self.phot_path = None
+        self.phot = None
 
         # check blocks
         assert psf is None or issubclass(psf, Block), "psf must be a subclass of Block"
@@ -137,8 +137,8 @@ class Photometry:
         self.save_xarray()
 
     def save_xarray(self):
-        if path.exists(self.phot_path):
-            initial_xarray = xr.load_dataset(self.phot_path, engine="netcdf4")
+        if path.exists(self.phot):
+            initial_xarray = xr.load_dataset(self.phot, engine="netcdf4")
         else:
             initial_xarray = xr.Dataset()
 
@@ -152,7 +152,7 @@ class Photometry:
         xarray["apertures_sky"] = xarray.sky  # mean over stars
         xarray["sky"] = ("time", np.mean(xarray.apertures_sky.values, 0))  # mean over stars
         xarray.attrs["photometry"] = [b.__class__.__name__ for b in self.photometry_s.blocks]
-        xarray.to_netcdf(self.phot_path)
+        xarray.to_netcdf(self.phot)
 
     def _check_phot_path(self, destination):
         destination = Path(destination)
@@ -161,7 +161,7 @@ class Photometry:
         else:
             parent = destination.parent
 
-        self.phot_path = parent / (destination.stem + '.phot')
+        self.phot = parent / (destination.stem + '.phot')
 
     def __repr__(self):
         return f"{self.detection_s}\n{self.photometry_s}"

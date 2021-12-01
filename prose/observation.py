@@ -67,7 +67,7 @@ class Observation(ApertureFluxes):
             except:
                 if not ignore_time:
                     print(f"{INFO_LABEL} Could not convert time to BJD TDB")
-                    
+
     def _check_stack(self):
         assert 'stack' in self.xarray is not None, "No stack found"
 
