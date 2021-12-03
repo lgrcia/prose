@@ -42,3 +42,4 @@ latex/*.fdb_latexmk
 latex/*.synctex.gz
 .*.lb
 
+prose/hst

@@ -15,6 +15,7 @@ from .fluxes import ApertureFluxes
 from .telescope import Telescope
 from prose.core import Block, Sequence, Image
 from .observation import Observation
+from .observations import Observations
 
 
 def load(photfile):

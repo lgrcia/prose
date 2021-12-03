@@ -962,7 +962,7 @@ class Observation(ApertureFluxes):
 
         plt.tight_layout()
 
-    def plot_systematics_signal(self, systematics, signal, ylim=None, offset=None, figsize=(6, 7)):
+    def plot_systematics_signal(self, systematics, signal=None, ylim=None, offset=None, figsize=(6, 7)):
         """Plot a systematics and signal model over diff_flux. systeamtics + signal is plotted on top, signal alone on detrended
         data on bottom
 
@@ -978,7 +978,8 @@ class Observation(ApertureFluxes):
             figure size as in in plt.figure, by default (6, 7)
         """
 
-        viz.plot_systematics_signal(self.time, self.diff_flux, systematics, signal, ylim=ylim, offset=offset, figsize=figsize)
+        viz.plot_systematics_signal(self.time, self.diff_flux, systematics, signal, ylim=ylim, offset=offset,
+                                figsize=figsize)
 
         self.plot_meridian_flip()
         plt.legend()
@@ -1163,3 +1164,19 @@ class Observation(ApertureFluxes):
         plt.annotate(f"radius {arcmin}'", xy=[x, y + search_radius + 15], color="white",
                      ha='center', fontsize=12, va='bottom', alpha=0.6)
 
+    def plot_detrended(self, star=None, bins=0.005, color="k", std=True, fancy=False, ylim=None, label=True):
+        if star is None:
+            star = self.target
+        diff_flux = self.diff_fluxes[self.aperture, star]
+        trend = self.trends[star]
+
+        if fancy:
+            self.plot_systematics_signal(trend, signal=None, ylim=ylim)
+            if label:
+                viz.corner_text(f"{self.trend}", c="C0", loc=(0.05, 0.03))
+        else:
+            viz.plot(self.time, diff_flux - trend + 1, std=std, bins=bins, bincolor=color)
+            if label:
+                viz.corner_text(f"detrended ({self.trend})", c="C0")
+            if ylim is not None:
+                plt.ylim(ylim)

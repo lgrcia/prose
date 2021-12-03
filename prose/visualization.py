@@ -123,7 +123,21 @@ class AnchoredHScaleBar(matplotlib.offsetbox.AnchoredOffsetbox):
                                                         **kwargs)
 
 
-def plot_lcs(data, w=4, show=None, hide=None, ylim=None, size=None, labels=None, bins=0.005, force_width=True):
+def multiplot(
+        data,
+        bins=0.005,
+        std=True,
+        color="gainsboro",
+        bincolor="k",
+        alpha=0.6,
+        binalpha=0.8,
+        w=4,
+        show=None,
+        hide=None,
+        ylim=None,
+        size=None,
+        labels=None,
+        force_width=True):
     """Plot multiple x, y with some shared axis
 
     Parameters
@@ -149,7 +163,7 @@ def plot_lcs(data, w=4, show=None, hide=None, ylim=None, size=None, labels=None,
     """
 
     if size is None:
-        size = (4,3)
+        size = (4, 3)
     
     if isinstance(data[0], dict):
         data = [[d["time"], d["lc"]] for d in data]
@@ -159,23 +173,23 @@ def plot_lcs(data, w=4, show=None, hide=None, ylim=None, size=None, labels=None,
     if hide is None:
         hide = []
     
-    idxs = np.setdiff1d(show, hide)
+    indexes = np.setdiff1d(show, hide)
 
-    H = np.ceil(len(idxs) / w).astype(int)
+    H = np.ceil(len(indexes) / w).astype(int)
     if not force_width:
-        w = np.min([len(idxs), w])
+        w = np.min([len(indexes), w])
     fig, axes = plt.subplots(H, w, figsize=(w * size[0], H * size[1]))
     fig.patch.set_facecolor('white')
-    max_duration = np.max([jd.max() - jd.min() for jd, _ in [data[i] for i in idxs]])
+    max_duration = np.max([jd.max() - jd.min() for jd, _ in [data[i] for i in indexes]])
     
-    for _i, ax in enumerate(axes.flat if len(idxs) > 1 else [axes]):
-        if _i < len(idxs):
-            i = idxs[_i]
+    for _i, ax in enumerate(axes.flat if len(indexes) > 1 else [axes]):
+        if _i < len(indexes):
+            i = indexes[_i]
             plt.sca(ax)
             jd, lc = data[i]
             center = jd.min() + (jd.max() - jd.min())/2
 
-            plot(jd, lc, bins=bins)
+            plot(jd, lc, bins=bins, std=std, bincolor=bincolor, color=color, alpha=alpha, binalpha=binalpha)
             if ylim is not None:
                 plt.ylim(ylim)
 
@@ -585,7 +599,7 @@ def fancy_gif_image_array(image, median_psf, factor=0.25):
     return np.fromstring(canvas.tostring_rgb(), dtype='uint8').reshape(height, width, 3)
 
 
-def TeX(a, fmt='{: 0.3f}', dim=True):
+def array_to_tex(a, fmt='{: 0.3f}', dim=True):
     """Display a LaTeX matrix in notebook
 
     Parameters
@@ -626,6 +640,11 @@ def TeX(a, fmt='{: 0.3f}', dim=True):
     teX_math += '\n'.join(rv)
     
     display(Math(r"{}".format(teX_math)))
+
+
+def print_tex(tex):
+    from IPython.display import display, Math
+    display(Math(r"{}".format(tex)))
 
 
 def plot_expected_transit(time, epoch, period, duration, depth=None, color="gainsboro"):
@@ -738,7 +757,7 @@ def polynomial_trend_latex(**kwargs):
     return rf"${' + '.join(monomials)}$"
 
 
-def corner_text(text, loc=(0.05, 0.05), va="bottom", ha='left', fontsize=12):
+def corner_text(text, loc=(0.05, 0.05), va="bottom", ha='left', fontsize=12, c="k", ax=None):
     """Plot a text on the corner of axe
 
     Parameters
@@ -754,11 +773,12 @@ def corner_text(text, loc=(0.05, 0.05), va="bottom", ha='left', fontsize=12):
     fontsize : int, optional
          as in plt.txt, by default 12
     """
-    ax = plt.gca()
-    plt.text(*loc, text, fontsize=fontsize, ha=ha, va=va, transform=ax.transAxes)
+    if ax is None:
+        ax = plt.gca()
+    ax.text(*loc, text, fontsize=fontsize, ha=ha, va=va, transform=ax.transAxes, color=c)
 
 
-def plot_systematics_signal(x, y, systematics, signal, ylim=None, offset=None, figsize=(6, 7), signal_label=None):
+def plot_systematics_signal(x, y, systematics, signal=None, ylim=None, offset=None, figsize=(6, 7), signal_label=None):
     """Plot a systematics and signal model over data. systeamtics + signal is plotted on top, signal alone on detrended 
     data on bottom
 
@@ -777,20 +797,29 @@ def plot_systematics_signal(x, y, systematics, signal, ylim=None, offset=None, f
     signal_label : str, optional
         label of signal, by default None
     """
-    
-    amplitude = np.percentile(y, 95) - np.percentile(y, 5)
-    amplitude *= 1.5
-    if offset is None:
+    if ylim is not None:
+        amplitude = ylim[1] - ylim[0]
+        offset = amplitude
+        ylim = (ylim[0] - amplitude, ylim[1])
+    else:
+        amplitude = np.percentile(y, 95) - np.percentile(y, 5)
+        amplitude *= 1.5
         offset = amplitude
     if ylim is None:
         ylim = (1 - offset - 0.9 * amplitude, 1 + 0.9 * amplitude)
+    if signal is None:
+        signal = np.zeros_like(x)
+        has_signal = False
+    else:
+        has_signal = True
 
     fig = plt.figure(figsize=figsize)
     fig.patch.set_facecolor('white')
     plot(x, y, label='data', binlabel='binned data (7.2 min)')
     plt.plot(x, systematics + signal, c="C0",
-             label="systematics + signal model")
-    plt.plot(x, signal + 1. - offset, label=signal_label, c="k")
+             label=f"systematics {'+ signal' if has_signal else ''} model")
+    if has_signal:
+        plt.plot(x, signal + 1. - offset, label=signal_label, c="k")
     plt.text(plt.xlim()[1] + 0.005, 1, "RAW", rotation=270, va="center")
     plot(x, y - systematics + 1. - offset)
     plt.text(plt.xlim()[1] + 0.005, 1 - offset, "DETRENDED", rotation=270, va="center")
@@ -811,3 +840,13 @@ class HandlerEllipse(HandlerPatch):
 def circles_legend(colors, texts):
     c = [mpatches.Circle((0.5, 0.5), radius = 0.25, fill=None, ec=colors[i]) for i in range(len(texts))]
     plt.legend(c, texts , bbox_to_anchor=(1, 1.05), loc='upper right', ncol=3, handler_map={mpatches.Circle: HandlerEllipse()}, frameon=False)
+
+
+def plot_signal(x, y, label=None, **kwargs):
+    axes = plt.gcf().axes
+    for i, ax in enumerate(axes):
+        xmin, xmax = ax.get_xlim()
+        idxs = (xmin <= x) & (x <= xmax)
+        ax.plot(x[idxs], y[idxs], label=label if i == 0 else None, **kwargs)
+        if label is not None and i == 0:
+            ax.legend()

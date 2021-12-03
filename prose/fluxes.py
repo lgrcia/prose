@@ -7,10 +7,23 @@ import xarray as xr
 from itertools import product
 from tqdm import tqdm
 from . import models
+from . import viz
+from .console_utils import info
 
 
 def nu(n, sw, sr):
     return (sw ** 2) / n + sr ** 2
+
+
+def append_tex_order(current, n, name):
+    _str = r""
+    if n == 0:
+        return current
+    elif n == 1:
+        _str += name
+    elif n > 1:
+        _str += fr"{name}^{n}"
+    current.append(_str)
 
 
 def pont2006(x, y, n=30, plot=True, return_error=False):
@@ -144,6 +157,61 @@ def best_stars(fluxes, weights, target, return_idxs=True, bins=12):
         return _weights
 
 
+def scargle(time, flux, error, periods, X=None, n=1, plot=False, return_signals=False):
+
+    if X is None:
+        X = np.atleast_2d(np.ones_like(time))
+
+    variability = lambda p: models.harmonics(time, p, n)
+
+    chi2 = []
+
+    for p in tqdm(periods):
+        x = models.design_matrix([X.T, *variability(p)])
+        residuals = x @ np.linalg.lstsq(x, flux, rcond=None)[0] - flux
+        chi2.append(-np.sum((residuals / error) ** 2))
+
+    period = periods[np.argmax(chi2)]
+    chi2 = np.array(chi2)
+
+    # idxs = np.argwhere(np.abs(chi2) < 30*np.std(chi2)).flatten()
+    # periods = periods[idxs]
+    # chi2 = chi2[idxs]
+
+    if plot:
+        var = variability(period)
+        x = models.design_matrix([X.T, *var])
+        w = np.linalg.lstsq(x, flux, rcond=None)[0]
+        corrected_flux = flux - x.T[0:-len(var)].T @ w.T[0:-len(var)].T
+
+        plt.figure(figsize=(12, 4))
+        plt.subplot(121)
+        plt.xlabel("period")
+        plt.axvline(period, c="0.9", lw=4)
+        plt.plot(periods, chi2, c="k")
+
+        plt.subplot(122)
+        ft = (time + 0.5 * period) % period - 0.5 * period
+        i = np.argsort(ft)
+
+        _variability = models.harmonics(ft[i], period, n)
+
+        plt.plot(ft, corrected_flux, ".", c="0.7")
+        x = np.hstack(_variability)
+        w = np.linalg.lstsq(x, corrected_flux[i], rcond=None)[0]
+        plt.plot(ft[i], x @ w, "k")
+
+    if return_signals:
+        var = variability(period)
+        x = models.design_matrix([X.T, *var])
+        w = np.linalg.lstsq(x, flux, rcond=None)[0]
+        _variability = x.T[len(X)::].T @ w.T[len(X)::].T
+        _trend = x.T[0:len(X)].T @ w.T[0:len(X)].T
+        return period, _variability, _trend
+    else:
+        return period
+
+
 class ApertureFluxes:
 
     def __init__(self, xarray):
@@ -248,10 +316,7 @@ class ApertureFluxes:
 
     @property
     def diff_flux(self):
-        if self.corrected_diff_flux is not None:
-            return self.corrected_diff_flux
-        else:
-            return self.xarray.diff_fluxes.isel(apertures=self.aperture, star=self.target).values
+        return self.xarray.diff_fluxes.isel(apertures=self.aperture, star=self.target).values
 
     @property
     def raw_flux(self):
@@ -266,18 +331,18 @@ class ApertureFluxes:
         return self.xarray.raw_errors.isel(apertures=self.aperture, star=self.target).values
 
     @property
-    def corrected_diff_flux(self):
-        if "corrected_diff_flux" in self:
-            return self.xarray["corrected_diff_flux"].values
+    def detrended_diff_flux(self):
+        if "trends" in self:
+            return self.diff_flux - self.trend + 1
         else:
             return None
 
-    @corrected_diff_flux.setter
-    def corrected_diff_flux(self, value):
-        if value is not None:
-            self.xarray["corrected_diff_flux"] = ("time", value)
-        elif "corrected_diff_flux" in self:
-            self.xarray = self.xarray.drop("corrected_diff_flux")
+    @property
+    def trend(self):
+        if "trends" in self:
+            return self.xarray.trends[self.target].values
+        else:
+            return None
 
     @property
     def comparison_raw_fluxes(self):
@@ -501,12 +566,7 @@ class ApertureFluxes:
     def plot(self, star=None, bins=0.005, color="k", std=True):
         if star is None:
             star = self.target
-        binned = self.binn(bins, std=std)
-        plt.plot(self.time, self.diff_fluxes[self.aperture, star], ".", c="gainsboro", zorder=0, alpha=0.6)
-        plt.errorbar(
-            binned.time,
-            binned.diff_fluxes[self.aperture, star],
-            yerr=binned.diff_error, fmt=".", zorder=1, color=color, alpha=0.8)
+        viz.plot(self.time, self.diff_fluxes[self.aperture, star], std=std, bins=bins, bincolor=color)
 
     def sigma_clip(self, sigma=3., star=None):
         """Sigma clipping
@@ -533,12 +593,12 @@ class ApertureFluxes:
 
     # modeling
 
-    def trend(self, dm, split=None):
+    def lstsq(self, X, star=None, split=None):
         """Given a design matrix return the fitted trend
 
         Parameters
         ----------
-        dm : np.ndarray
+        X : np.ndarray
             design matrix of shape (time, n), n being the number of regressors.
         split : int or array, optional
             splitting indexes of the design matrix, passed to np.split and used to retrieve splitted models, by default None
@@ -548,15 +608,18 @@ class ApertureFluxes:
         [type]
             [description]
         """
-        w, dw, _, _ = np.linalg.lstsq(dm, self.diff_flux, rcond=None)
+        if star is None:
+            star = self.target
+
+        w, dw, _, _ = np.linalg.lstsq(X, self.diff_fluxes[self.aperture, star], rcond=None)
         if split is not None:
             if not isinstance(split, list):
                 split = [split]
             split_w = np.split(w, [-1])
-            split_dm_T = np.split(dm.T, [-1])
-            return [_w@_dm for _w, _dm in zip(split_w, split_dm_T)]
+            split_dm_T = np.split(X.T, [-1])
+            return [_w @ _dm for _w, _dm in zip(split_w, split_dm_T)]
         else:
-            return dm @ w
+            return X @ w
 
     def polynomial(self, **orders):
         """Return a design matrix representing a polynomial model
@@ -607,7 +670,7 @@ class ApertureFluxes:
 
     def dm_ll(self, dm):
         n = len(self.time)
-        chi2 = (self.diff_flux - self.trend(dm)) ** 2
+        chi2 = (self.diff_flux - self.lstsq(dm)) ** 2
         return np.sum(-(n / 2) * np.log(2 * np.pi * self.diff_error ** 2) - (1 / (2 * (self.diff_error ** 2))) * chi2)
 
     def dm_bic(self, dm):
@@ -639,6 +702,39 @@ class ApertureFluxes:
             dms = [np.hstack([self.polynomial(**d), add]) for d in dms_dicts]
         bics = [self.dm_bic(dm) for dm in progress(dms)]
         return dms_dicts[np.argmin(bics)]
+
+    def polynomial_trend(self, bic=True, verbose=True, **kwargs):
+        if kwargs == dict() and bic:
+            n = 3
+            kwargs = dict(sky=n, dx=n, dy=n, airmass=n, fwhm=n)
+
+        if bic:
+            orders = self.best_polynomial(**kwargs)
+        else:
+            orders = kwargs
+
+        # compute trend for all stars
+        X = self.polynomial(**orders)
+        trends = np.array([self.lstsq(X, star=s) for s in self.star])
+        self.xarray["trends"] = (("stars", "time"), trends)
+
+        # Display and save trend model
+        polynomial_tex = [r"1"]
+        original_orders = orders.copy()
+        orders = list(orders.items())
+        orders = sorted(orders, key=lambda x: x[1])
+
+        for variable, order in orders:
+            append_tex_order(polynomial_tex, order, variable)
+        polynomial_tex = rf"${'+'.join(polynomial_tex)}$"
+
+        if verbose:
+            info(f"Polynomial trend:")
+            viz.print_tex(polynomial_tex)
+
+        self.xarray.attrs["trend"] = polynomial_tex
+        self.xarray.attrs["trend_model"] = "polynomial"
+        self.xarray.attrs["trend_orders"] = original_orders
 
     def noise_stats(self, bins=0.005, verbose=True):
         pont_w, pont_r = self.pont2006(plot=False)

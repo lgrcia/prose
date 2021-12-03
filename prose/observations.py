@@ -1,10 +1,13 @@
 from .observation import Observation
+from .fluxes import scargle
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from tabulate import tabulate
 from tabulate import tabulate
-from prose import viz
+from . import viz
+from . import models
+from .console_utils import info
 
 def phase_coverage(t, p):
     if p==0:
@@ -24,11 +27,13 @@ def phase_coverage(t, p):
 
         return np.sum(spaces_in - spaces_out)/p
 
+
 def plot_slice(offset, width, color='#016CA050', R=1, alpha=0.5):
     n = plt.pie([width*100, 100-width*100], colors=[color, 'none'], counterclock=False, startangle=90-offset*360, radius=R)
     for wedge in n[0]:
         wedge.set_alpha(alpha)
-    
+
+
 class Observations:
     def __init__(self, files_or_obs):
         """Object to hold multiple observations
@@ -53,7 +58,7 @@ class Observations:
         return self.observations[key]
     
     def __repr__(self):
-        rows = [[i, o.date, o.telescope.name, o.name, o.filter, len(o.time)] for i, o in enumerate(obs)]
+        rows = [[i, o.date, o.telescope.name, o.name, o.filter, len(o.time)] for i, o in enumerate(self)]
         table_string = tabulate(rows, tablefmt="fancy_grid", headers=["index", "date", "telescope", "target", "filter", "images"])
         return table_string
     
@@ -76,8 +81,13 @@ class Observations:
     @property
     def raw_error(self):
         return np.hstack([o.raw_error for o in self.observations])
-    
-    def plot(self, ylim=None, w=4):
+
+    @property
+    def stacked_trends(self):
+        return np.hstack([o.trend for o in self.observations])
+
+    def plot(self, ylim=None, w=4, bins=0.005, color="k", std=True):
+        # TODO: add viz.plot_lcs kwargs
         """Plot all observations in a grid plot
 
         Parameters
@@ -87,10 +97,50 @@ class Observations:
         w: int, optional
             grid width in number of plots, default is 4
         """
-        viz.plot_lcs(
-            [[o.time, o.diff_flux] for o in self.observations], 
-             labels=[f"{i}: {o.date}" for i, o in enumerate(self.observations)],
-             ylim=ylim, w=w)
+
+        viz.multiplot(
+            [[o.time, o.diff_flux] for o in self.observations],
+            labels=[f"{i}: {o.date}" for i, o in enumerate(self.observations)],
+            ylim=ylim, w=w, bincolor=color, std=std, bins=bins
+        )
+
+        viz.paper_style()
+
+    def polynomial_trend(self, verbose=True, **kwargs):
+        if verbose:
+            info(f"Polynomial trends:")
+        for i, o in enumerate(self.observations):
+            o.polynomial_trend(**kwargs, verbose=False)
+            if verbose:
+                viz.print_tex(rf"{i}: " + o.xarray.attrs["trend"][1:-1])
+
+    def plot_detrended(self, w=4, bins=0.005, color="k", std=True, ylim=None, each=True, label=True):
+
+        if each:
+            data = [[o.time, o.detrended_diff_flux] for o in self.observations]
+        else:
+            data = []
+            for o in self.observations:
+                time_min = o.time.min()
+                time_max = o.time.max()
+                idxs = (time_min <= self.time) & (time_max >= self.time)
+                data.append([o.time, o.diff_flux - self.trend[idxs]])
+
+        viz.multiplot(
+            data,
+            labels=[f"{i}: {o.date}" for i, o in enumerate(self.observations)],
+            ylim=ylim, w=w, bincolor=color, std=std, bins=bins
+        )
+
+        viz.paper_style()
+
+        if label:
+            if each:
+                label = "all independantly detrended"
+            else:
+                label = "all globally detrended"
+
+            viz.corner_text(label, loc=(0.05, 0.95), ax=plt.gcf().axes[0], c="C0" if each else "C3", va="top")
         
     def plot_folded(self, period, t0=0, bins=0.005, phase=True):
         """Phase folded differential flux (in time) 
@@ -173,3 +223,38 @@ class Observations:
             fractional coverages
         """
         return np.array([phase_coverage(self.time, p) for p in np.atleast_1d(periods)])
+
+    @property
+    def X(self):
+        Xs = []
+
+        for i, o in enumerate(self.observations):
+            _X = o.polynomial(**o.trend_orders)
+            _n = _X.shape[1]
+            Xs.append(np.vstack(
+                [_X if j == i else np.zeros((len(_o.time), _n)) for j, _o in enumerate(self.observations)]))
+
+        return np.hstack(Xs).T
+
+    def scargle(self, X=True, n=1, plot=False, return_signals=False, periods=None):
+
+        if X is not None:
+            if isinstance(X, bool):
+                if X:
+                    X = self.X
+                else:
+                    X = None
+
+        if X is None:
+            X = np.atleast_2d(np.ones_like(self.time))
+
+        return scargle(
+            self.time,
+            self.diff_flux,
+            self.diff_error,
+            periods,
+            X=X,
+            n=n,
+            plot=plot,
+            return_signals=return_signals
+        )

@@ -179,7 +179,7 @@ class NEB(LatexTemplate, Observation):
             idxs = np.arange(len(self.nearby_ids))
 
         nearby_ids = self.nearby_ids[idxs]
-        viz.plot_lcs(
+        viz.multiplot(
             [(self.time, self.diff_fluxes[self.aperture, i]) for i in nearby_ids],
             labels=nearby_ids,
             colors=[self.color(idxs[i], white=True) for i in range(len(nearby_ids))],
