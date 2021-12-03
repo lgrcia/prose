@@ -85,7 +85,6 @@ def fits_to_df(files, telescope_kw="TELESCOP", verbose=True, hdu=0):
     telescopes_seen = []
     telescope = None
     df_list = []
-    verbose = True
 
     def progress(x):
         return tqdm(x) if verbose else x
