@@ -9,6 +9,7 @@ from . import viz
 from . import models
 from .console_utils import info
 
+
 def phase_coverage(t, p):
     if p==0:
         return 1
@@ -35,7 +36,7 @@ def plot_slice(offset, width, color='#016CA050', R=1, alpha=0.5):
 
 
 class Observations:
-    def __init__(self, files_or_obs):
+    def __init__(self, files_or_obs, verbose=True):
         """Object to hold multiple observations
 
         Parameters
@@ -44,8 +45,11 @@ class Observations:
             A list containing phot file paths or Observation object instances
         """
 
+        def progress(x):
+            return tqdm(x) if verbose else x
+
         self.observations = []
-        for fo in tqdm(files_or_obs):
+        for fo in progress(files_or_obs):
             if isinstance(fo, Observation):
                 self.observations.append(fo)
             else:
@@ -236,10 +240,7 @@ class Observations:
 
         return np.hstack(Xs).T
 
-    def scargle(self, X=True, n=1, plot=False, return_signals=False, periods=None):
-
-        if periods is None:
-            periods = np.linspace(0.01, 10, 4000)
+    def scargle(self, periods, X=True, n=1):
 
         if X is not None:
             if isinstance(X, bool):
@@ -258,10 +259,42 @@ class Observations:
             periods,
             X=X,
             n=n,
-            plot=plot,
-            return_signals=return_signals
         )
+
+    def plot_folded_scargle(self, period, X=True, n=1):
+
+        if X is not None:
+            if isinstance(X, bool):
+                if X:
+                    X = self.X
+                else:
+                    X = None
+
+        if X is None:
+            X = np.atleast_2d(np.ones_like(self.time))
+
+        def variability(p):
+            return models.harmonics(self.time, p, n)
+
+        var = variability(period)
+        x = models.design_matrix([X.T, *var])
+        w = np.linalg.lstsq(x, self.diff_flux, rcond=None)[0]
+        corrected_flux = self.diff_flux - x.T[0:-len(var)].T @ w.T[0:-len(var)].T
+
+        ft = (self.time + 0.5 * period) % period - 0.5 * period
+        i = np.argsort(ft)
+
+        _variability = models.harmonics(ft[i], period, n)
+
+        plt.plot(ft, corrected_flux, ".", c="0.7")
+        x = np.hstack(_variability)
+        w = np.linalg.lstsq(x, corrected_flux[i], rcond=None)[0]
+        plt.plot(ft[i], x @ w, "k")
 
     def save(self):
         for o in self.observations:
             o.save()
+
+    def mask_transits(self, epoch, period, duration):
+        return Observations([o.mask_transits(epoch, period, duration) for o in self.observations], verbose=False)
+

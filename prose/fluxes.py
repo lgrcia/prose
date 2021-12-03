@@ -157,7 +157,7 @@ def best_stars(fluxes, weights, target, return_idxs=True, bins=12):
         return _weights
 
 
-def scargle(time, flux, error, periods, X=None, n=1, plot=False, return_signals=False):
+def scargle(time, flux, error, periods, X=None, n=1):
 
     if X is None:
         X = np.atleast_2d(np.ones_like(time))
@@ -171,45 +171,13 @@ def scargle(time, flux, error, periods, X=None, n=1, plot=False, return_signals=
         residuals = x @ np.linalg.lstsq(x, flux, rcond=None)[0] - flux
         chi2.append(-np.sum((residuals / error) ** 2))
 
-    period = periods[np.argmax(chi2)]
     chi2 = np.array(chi2)
+
+    return chi2
 
     # idxs = np.argwhere(np.abs(chi2) < 30*np.std(chi2)).flatten()
     # periods = periods[idxs]
     # chi2 = chi2[idxs]
-
-    if plot:
-        var = variability(period)
-        x = models.design_matrix([X.T, *var])
-        w = np.linalg.lstsq(x, flux, rcond=None)[0]
-        corrected_flux = flux - x.T[0:-len(var)].T @ w.T[0:-len(var)].T
-
-        plt.figure(figsize=(12, 4))
-        plt.subplot(121)
-        plt.xlabel("period")
-        plt.axvline(period, c="0.9", lw=4)
-        plt.plot(periods, chi2, c="k")
-
-        plt.subplot(122)
-        ft = (time + 0.5 * period) % period - 0.5 * period
-        i = np.argsort(ft)
-
-        _variability = models.harmonics(ft[i], period, n)
-
-        plt.plot(ft, corrected_flux, ".", c="0.7")
-        x = np.hstack(_variability)
-        w = np.linalg.lstsq(x, corrected_flux[i], rcond=None)[0]
-        plt.plot(ft[i], x @ w, "k")
-
-    if return_signals:
-        var = variability(period)
-        x = models.design_matrix([X.T, *var])
-        w = np.linalg.lstsq(x, flux, rcond=None)[0]
-        _variability = x.T[len(X)::].T @ w.T[len(X)::].T
-        _trend = x.T[0:len(X)].T @ w.T[0:len(X)].T
-        return period, _variability, _trend
-    else:
-        return period
 
 
 class ApertureFluxes:
@@ -233,7 +201,7 @@ class ApertureFluxes:
 
     @property
     def target(self):
-        return self.xarray.target
+        return self.xarray.attrs['target']
 
     @target.setter
     def target(self, value):
@@ -260,7 +228,7 @@ class ApertureFluxes:
 
     def mask(self, mask, dim="time"):
         new_self = self.copy()
-        new_self.xarray = new_self.xarray.where(xr.DataArray(mask, dims=dim), drop=True)
+        new_self.xarray = self.x.sel(**{dim: self.x[dim][mask]})
         return new_self
 
     @staticmethod
@@ -574,11 +542,28 @@ class ApertureFluxes:
     # Plotting
     # ========
 
-    def plot(self, star=None, bins=0.005, color="k", std=True):
+    def plot(self, star=None, bins=0.005, color="k", std=True, mask=True):
         if star is None:
             star = self.target
-        viz.plot(self.time, self.diff_fluxes[self.aperture, star], std=std, bins=bins, bincolor=color)
+        viz.plot(self.time, self.x.diff_fluxes[self.aperture, star], std=std, bins=bins, bincolor=color)
 
+    def plot_detrended(self, star=None, bins=0.005, color="k", std=True, fancy=False, ylim=None, label=True):
+        if star is None:
+            star = self.target
+        diff_flux = self.diff_fluxes[self.aperture, star]
+        trend = self.trends[star]
+
+        if fancy:
+            self.plot_systematics_signal(trend, signal=None, ylim=ylim)
+            if label:
+                viz.corner_text(f"{self.trend}", c="C0", loc=(0.05, 0.03))
+        else:
+            viz.plot(self.time, diff_flux - trend + 1, std=std, bins=bins, bincolor=color)
+            if label:
+                viz.corner_text(f"detrended ({self.trend})", c="C0")
+            if ylim is not None:
+                plt.ylim(ylim)
+                
     def sigma_clip(self, sigma=3., star=None):
         """Sigma clipping
 

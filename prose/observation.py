@@ -1166,19 +1166,9 @@ class Observation(ApertureFluxes):
         plt.annotate(f"radius {arcmin}'", xy=[x, y + search_radius + 15], color="white",
                      ha='center', fontsize=12, va='bottom', alpha=0.6)
 
-    def plot_detrended(self, star=None, bins=0.005, color="k", std=True, fancy=False, ylim=None, label=True):
-        if star is None:
-            star = self.target
-        diff_flux = self.diff_fluxes[self.aperture, star]
-        trend = self.trends[star]
-
-        if fancy:
-            self.plot_systematics_signal(trend, signal=None, ylim=ylim)
-            if label:
-                viz.corner_text(f"{self.trend}", c="C0", loc=(0.05, 0.03))
-        else:
-            viz.plot(self.time, diff_flux - trend + 1, std=std, bins=bins, bincolor=color)
-            if label:
-                viz.corner_text(f"detrended ({self.trend})", c="C0")
-            if ylim is not None:
-                plt.ylim(ylim)
+    def mask_transits(self, epoch, period, duration):
+        xmin, xmax = self.time.min(), self.time.max()
+        n_p = np.round((xmax - epoch) / period)
+        ingress, egress = n_p * period + epoch - duration / 2, n_p * period + epoch + duration / 2
+        mask = (self.time < ingress) | (self.time > egress)
+        return self.mask(mask)
