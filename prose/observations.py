@@ -229,7 +229,7 @@ class Observations:
         Xs = []
 
         for i, o in enumerate(self.observations):
-            _X = o.polynomial(**o.trend_orders)
+            _X = o.X
             _n = _X.shape[1]
             Xs.append(np.vstack(
                 [_X if j == i else np.zeros((len(_o.time), _n)) for j, _o in enumerate(self.observations)]))
@@ -237,6 +237,9 @@ class Observations:
         return np.hstack(Xs).T
 
     def scargle(self, X=True, n=1, plot=False, return_signals=False, periods=None):
+
+        if periods is None:
+            periods = np.linspace(0.01, 10, 4000)
 
         if X is not None:
             if isinstance(X, bool):
@@ -258,3 +261,7 @@ class Observations:
             plot=plot,
             return_signals=return_signals
         )
+
+    def save(self):
+        for o in self.observations:
+            o.save()

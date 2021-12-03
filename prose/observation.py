@@ -27,6 +27,7 @@ from pathlib import Path
 from . import twirl
 import io
 from .utils import fast_binning, z_scale
+from .console_utils import info
 
 warnings.simplefilter('ignore', category=VerifyWarning)
 
@@ -124,6 +125,7 @@ class Observation(ApertureFluxes):
             path to phot file, by default None
         """
         self.xarray.to_netcdf(self.phot if destination is None else destination)
+        info(f"saved {self.phot}")
 
     def export_stack(self, destination, **kwargs):
         """Export stack to FITS file

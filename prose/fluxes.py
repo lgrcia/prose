@@ -348,6 +348,17 @@ class ApertureFluxes:
     def comparison_raw_fluxes(self):
         return self.raw_fluxes[self.aperture, self.comps[self.aperture]]
 
+    @property
+    def X(self):
+        if "polynomial_trend_orders" in self.xarray.attrs:
+            orders = list(zip(
+                self.xarray.attrs["polynomial_trend_variables"],
+                self.xarray.attrs["polynomial_trend_orders"])
+            )
+            return self.polynomial(**dict(orders))
+        else:
+            return None
+
     def __copy__(self):
         return self.__class__(self.xarray.copy())
 
@@ -734,7 +745,8 @@ class ApertureFluxes:
 
         self.xarray.attrs["trend"] = polynomial_tex
         self.xarray.attrs["trend_model"] = "polynomial"
-        self.xarray.attrs["trend_orders"] = original_orders
+        self.xarray.attrs["polynomial_trend_variables"] = list([o[0] for o in orders])
+        self.xarray.attrs["polynomial_trend_orders"] = list([o[1] for o in orders])
 
     def noise_stats(self, bins=0.005, verbose=True):
         pont_w, pont_r = self.pont2006(plot=False)

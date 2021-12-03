@@ -312,7 +312,7 @@ def jd_to_bjd(jd, ra, dec):
 def remove_arrays(d):
     copy = d.copy()
     for name, value in d.items():
-        if isinstance(value, list):
+        if isinstance(value, (list, np.ndarray)):
             del copy[name]
     return copy
 
