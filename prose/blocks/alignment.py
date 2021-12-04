@@ -71,13 +71,11 @@ class AffineTransform(Block):
 
     """
 
-    def __init__(self, stars=True, data=True, inverse=False, fill="median", **kwargs):
+    def __init__(self, stars=True, data=True, inverse=False, **kwargs):
         super().__init__(**kwargs)
         self.data = data
         self.stars = stars
         self.inverse = inverse
-        if fill == "median":
-            self.fill_function = lambda im: np.median(im.data)
 
     def run(self, image, **kwargs):
         if "transform" not in image.__dict__:
@@ -97,7 +95,7 @@ class AffineTransform(Block):
 
         if self.data:
             try:
-                image.data = warp(image.data, transform.inverse, cval=self.fill_function(image))
+                image.data = warp(image.data, transform.inverse, cval=np.median(image.data))
             except np.linalg.LinAlgError:
                 image.discard = True
 
