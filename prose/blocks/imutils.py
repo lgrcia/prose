@@ -68,7 +68,13 @@ class Stack(Block):
             stack_hdu.writeto(self.destination, overwrite=self.overwrite)
 
     def concat(self, block):
-        self.stack += block.stack
+        if self.stack is not None:
+            if block.stack is not None:
+                self.stack += block.stack
+            else:
+                pass
+        else:
+            self.stack = block.stack
         self.n_images += block.n_images
 
 class StackStd(Block):
@@ -132,6 +138,9 @@ class SaveReduced(Block):
 
         new_hdu.writeto(fits_new_path, overwrite=self.overwrite)
         self.files.append(fits_new_path)
+    
+    def concat(self, block):
+        self.files = [*self.files, *block.files]
 
 
 class Video(Block):
