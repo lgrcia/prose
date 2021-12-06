@@ -335,6 +335,7 @@ class FitsManager(FilesDataFrame):
             dfs.append(bias)
 
         others = original_fm.get(
+            exposure=obs.exposure,
             telescope=obs.telescope,
             filter=obs["filter"].replace("+", "\+"),
             target=obs.target.replace("+", "\+"),
