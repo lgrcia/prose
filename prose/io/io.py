@@ -24,7 +24,7 @@ def get_files(
         folder,
         depth=0,
         return_folders=False,
-        single_list_removal=True,
+        single_list_removal=False,
         none_for_empty=False,
 ):
     """
@@ -85,7 +85,6 @@ def fits_to_df(files, telescope_kw="TELESCOP", verbose=True, hdu=0):
     telescopes_seen = []
     telescope = None
     df_list = []
-    verbose = True
 
     def progress(x):
         return tqdm(x) if verbose else x
@@ -138,8 +137,7 @@ def get_new_fits(current_df, folder, depth=3):
     dirs = np.array(os.listdir(folder))
     new_dirs = dirs[
         np.argwhere(pd.to_datetime(dirs, errors='coerce') > pd.to_datetime(current_df.date).max()).flatten()]
-    return np.hstack([glob(path.join(folder, f, "*"*depth, "*.f*ts")) for f in new_dirs])
-
+    return np.hstack([get_files("*.f*ts", path.join(folder, f), depth=depth) for f in new_dirs])
 
 def convert_old_index(df):
     new_df = df[["date", "path", "telescope", "type", "target", "filter", "dimensions", "flip", "jd"]]

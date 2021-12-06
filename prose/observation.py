@@ -27,6 +27,7 @@ from pathlib import Path
 from . import twirl
 import io
 from .utils import fast_binning, z_scale
+from .console_utils import info
 
 warnings.simplefilter('ignore', category=VerifyWarning)
 
@@ -67,7 +68,7 @@ class Observation(ApertureFluxes):
             except:
                 if not ignore_time:
                     print(f"{INFO_LABEL} Could not convert time to BJD TDB")
-                    
+
     def _check_stack(self):
         assert 'stack' in self.xarray is not None, "No stack found"
 
@@ -124,6 +125,7 @@ class Observation(ApertureFluxes):
             path to phot file, by default None
         """
         self.xarray.to_netcdf(self.phot if destination is None else destination)
+        info(f"saved {self.phot}")
 
     def export_stack(self, destination, **kwargs):
         """Export stack to FITS file
@@ -845,15 +847,24 @@ class Observation(ApertureFluxes):
             _, ylim = plt.ylim()
             plt.text(self.meridian_flip, ylim, "meridian flip ", ha="right", rotation="vertical", va="top", color="0.7")
 
-    def plot(self, star=None, meridian_flip=True):
+    def plot(self, star=None, meridian_flip=True, bins=0.005, color="k", std=True):
         """Plot observation light curve
 
         Parameters
         ----------
+        star : [type], optional
+            [description], by default None
         meridian_flip : bool, optional
             whether to show meridian flip, by default True
+        bins : float, optional
+            bin size in same unit as Observation.time, by default 0.005
+        color : str, optional
+            binned points color, by default "k"
+        std : bool, optional
+            whether to see standard deviation of bins as error bar, by default True, otherwise theoretical error bat is shown
         """
-        super().plot(star=star)
+
+        super().plot(star=star, bins=bins, color=color, std=std)
         if meridian_flip:
             self.plot_meridian_flip()
 
@@ -952,8 +963,8 @@ class Observation(ApertureFluxes):
         ax2.text(0.05, 0.05, f"{star}", fontsize=12, color="white", transform=ax2.transAxes)
 
         plt.tight_layout()
-        
-    def plot_systematics_signal(self, systematics, signal, ylim=None, offset=None, figsize=(6, 7)):
+
+    def plot_systematics_signal(self, systematics, signal=None, ylim=None, offset=None, figsize=(6, 7)):
         """Plot a systematics and signal model over diff_flux. systeamtics + signal is plotted on top, signal alone on detrended
         data on bottom
 
@@ -969,7 +980,8 @@ class Observation(ApertureFluxes):
             figure size as in in plt.figure, by default (6, 7)
         """
 
-        viz.plot_systematics_signal(self.time, self.diff_flux, systematics, signal, ylim=ylim, offset=offset, figsize=figsize)
+        viz.plot_systematics_signal(self.time, self.diff_flux, systematics, signal, ylim=ylim, offset=offset,
+                                figsize=figsize)
 
         self.plot_meridian_flip()
         plt.legend()
@@ -1154,3 +1166,9 @@ class Observation(ApertureFluxes):
         plt.annotate(f"radius {arcmin}'", xy=[x, y + search_radius + 15], color="white",
                      ha='center', fontsize=12, va='bottom', alpha=0.6)
 
+    def mask_transits(self, epoch, period, duration):
+        xmin, xmax = self.time.min(), self.time.max()
+        n_p = np.round((xmax - epoch) / period)
+        ingress, egress = n_p * period + epoch - duration / 2, n_p * period + epoch + duration / 2
+        mask = (self.time < ingress) | (self.time > egress)
+        return self.mask(mask)

@@ -62,6 +62,8 @@ class DAOFindStars(StarsDetection):
     """
     DAOPHOT stars detection with :code:`photutils` implementation.
 
+    |write| ``Image.stars_coords``
+    
     Parameters
     ----------
     sigma_clip : float, optional
@@ -105,6 +107,8 @@ class SegmentedPeaks(StarsDetection):
     """
     Stars detection based on image segmentation.
 
+    |write| ``Image.stars_coords``
+
     Parameters
     ----------
     threshold : float, optional
@@ -136,6 +140,8 @@ class SegmentedPeaks(StarsDetection):
 class SEDetection(StarsDetection):
     """
     Source Extractor detection
+
+    |write| ``Image.stars_coords``
 
     Parameters
     ----------

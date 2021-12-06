@@ -257,9 +257,9 @@ class NEB(Observation):
             if idxs[k] == self.target:
                 labels[k] = labels[k] + ' (target)'
 
-        viz.plot_lcs([sigma_clip(self.diff_fluxes[self.aperture, i], x=self.time) for i in idxs],
-                     labels=labels,
-                     **kwargs)
+        viz.multiplot([sigma_clip(self.diff_fluxes[self.aperture, i], x=self.time) for i in idxs],
+                      labels=labels,
+                      **kwargs)
 
         axes = plt.gcf().get_axes()
         for i, axe in enumerate(axes):

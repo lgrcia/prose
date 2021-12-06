@@ -45,11 +45,18 @@ class AffineTransform(Block):
     """
     Apply an affine transformation to image and/or stars
 
-    The affine transformation is expected to be found in the follwing header keywords:
+    |read|
+    
+    - rotation : ``Image.header['TWROT']``
+    - translation : ``Image.header['TWTRANSX']``, ``Image.header['TWTRANSY']``
+    - scale : ``Image.header['TWSCALEX']``, ``Image.header['TWSCALEY']``
 
-    - rotation : ``TWROT``
-    - translation : ``TWTRANSX``, ``TWTRANSY``
-    - scale : ``TWSCALEX``, ``TWSCALEX``
+
+    |write|
+    
+    - ``Image.transform``
+    - ``Image.inverse``
+    - ``Image.stars_coords``
 
     Parameters
     ----------
@@ -64,13 +71,11 @@ class AffineTransform(Block):
 
     """
 
-    def __init__(self, stars=True, data=True, inverse=False, fill="median", **kwargs):
+    def __init__(self, stars=True, data=True, inverse=False, **kwargs):
         super().__init__(**kwargs)
         self.data = data
         self.stars = stars
         self.inverse = inverse
-        if fill == "median":
-            self.fill_function = lambda im: np.median(im.data)
 
     def run(self, image, **kwargs):
         if "transform" not in image.__dict__:
@@ -90,7 +95,7 @@ class AffineTransform(Block):
 
         if self.data:
             try:
-                image.data = warp(image.data, transform.inverse, cval=self.fill_function(image))
+                image.data = warp(image.data, transform.inverse, cval=np.median(image.data))
             except np.linalg.LinAlgError:
                 image.discard = True
 

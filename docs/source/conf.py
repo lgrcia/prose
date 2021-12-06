@@ -55,4 +55,14 @@ rst_prolog = """
 .. |prose| replace:: *prose*
 .. _photutils: https://photutils.readthedocs.io/en/stable/
 .. _scikit-image: https://scikit-image.org/
+
+.. role:: blockread
+.. |read| replace:: :blockread:`read`
+
+.. role:: blockwrite
+.. |write| replace:: :blockwrite:`write`
+
+.. role:: blockmodify
+.. |modify| replace:: :blockmodify:`modify data`
+
 """

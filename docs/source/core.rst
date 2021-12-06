@@ -2,46 +2,28 @@
 
 .. currentmodule:: prose
     
-Getting started
-==============
 
-prose features three core objects that can be used to sequentialy analyze and process images: ``Image``, ``Block`` and ``Squence``
+What is a pipeline?
+===================
 
-``Image``
----------
+.. image:: _static/pipeline.png
+   :align: center
+   :height: 400px
+
+
+A *pipeline*, strictly speaking, is a series of connected tubes running a fluid. In the scientific literature, the word refers to `processing pipelines <https://en.wikipedia.org/wiki/Pipeline_(computing)>`_ in which data are flowing, going through processing units as in tubes. |prose| contains the structure to build modular image processing pipelines with three key objects: ``Images`` going through ``Blocks`` assembled in ``Sequences``.
+
+Image, Block and Sequence
+-------------------------------------
 
 .. image:: _static/image.png
    :align: center
    :width: 280px
 
 
-The ``Image`` object is self descriptive. The 2D array image itself is stored in ``Image.data`` as well as original metadata in ``Image.header``. The rest of the information can either be read or written in the object attributes.
+In an ``Image`` object, the image itself is stored in ``Image.data`` as well as original metadata in ``Image.header``. When being processed, additional data can either be read or written in the object attributes. A ``Block`` is a single unit of processing acting on the ``Image`` object, reading and writing its attributes. Finally a ``Sequence`` is a succesion of ``Block`` intended to sequentially process a set of ``Image``.
 
-
-``Block``
----------
-
-.. image:: _static/block.png
-   :align: center
-   :width: 220px
-
-
-A ``Block`` is a single unit of processing acting on the ``Image`` object, reading, processing and writing its attributes.
-
-
-``Sequence``
-------------
-
-.. image:: _static/sequence.png
-   :align: center
-   :height: 330px
-
-
-A ``Sequence`` is a succesion of ``Block`` intended to sequentially process a set of ``Image``. It follows three steps:
-
-1. All *Blocks* have their :py:meth:`~prose.Block.initialize` method called
-2. *Images* go succesively and sequentially through the *Blocks* :py:meth:`~prose.run` methods
-3. All *Blocks* have their :py:meth:`~prose.Block.terminate` method called
+With this architecture |prose| can deal with any type of images. To do so, an appropriate loader must be provided to the ``Sequence``, to transform a binary image type into an ``Image`` object. Since |prose| is developped for astronomy, the default loader is intended for the ``FITS`` image format.
 
 Example: Hello world
 --------------------
