@@ -6,11 +6,11 @@ import math as mh
 
 #CHANGE PATH TO HEADERS TO RELATIVE PATH
 col_heads = [i.strip('[').strip(']') 
-             for i in np.genfromtxt('tic_column_description.txt', 
+             for i in np.genfromtxt('/Users/gxg831/Documents/PhD/SPECULOOS/Python/prose/prose/tic_column_description.txt', 
                                     unpack=True, dtype='str')[0]]
 
 #CHANGE THIS TO RELATIVE PATH
-dbfile='TIC_new.db'
+dbfile='/Volumes/TOSHIBA EXT/TIC_new.db'
 
 def create_connection(db_file):
     """ create a database connection to the SQLite database

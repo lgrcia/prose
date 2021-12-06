@@ -5,6 +5,7 @@ import re
 from astropy.time import Time
 from astropy import units as u
 from astropy.coordinates import SkyCoord
+from astropy.table.table import Table
 from .fluxes import ApertureFluxes
 from . import viz
 from astropy.io import fits
@@ -26,8 +27,10 @@ import shutil
 from pathlib import Path
 from . import twirl
 import io
-from .utils import fast_binning, z_scale
+from .utils import fast_binning, z_scale, cleanup_host
 from .search_db import search_db
+from ldtk import LDPSetCreator, BoxcarFilter, TabulatedFilter
+from ldtk.filters import sdss_r
 
 warnings.simplefilter('ignore', category=VerifyWarning)
 
@@ -56,6 +59,8 @@ class Observation(ApertureFluxes):
         self.wcs = WCS(utils.remove_arrays(self.xarray.attrs))
         self._meridian_flip = None
         self.transit_params = None
+        self.host_data = None
+        self.quad_limb = None
 
         has_bjd = hasattr(self.xarray, "bjd_tdb")
         if has_bjd:
@@ -158,7 +163,7 @@ class Observation(ApertureFluxes):
 
     # Convenience
     # -----------
-
+    
     @property
     def skycoord(self):
         """astropy SkyCoord object for the target
@@ -259,7 +264,42 @@ class Observation(ApertureFluxes):
 
     @property
     def tfop_prefix(self):
-        return f"TIC{self.tic_id}_{self.date}_{self.telescope.name}_{self.filter}"
+        if any(["TIC" in self.name, "TOI" in self.name]):
+            return f"TIC{self.tic_id}-{self.name.split('.')[1]}_{self.date}_{self.telescope.name}_{self.filter}"
+
+    @property
+    def t0(self):
+        """
+        Predicted midtime of the transit in BJD
+        """
+        _t0 = (float(self.FIELDINF.split(',')[1])-float(self.FIELDINF.split(',')[0]))/2 + float(self.FIELDINF.split(',')[0])
+        if _t0 < 2450000:
+            _t0+= 2450000
+        return _t0
+
+    @property
+    def duration(self):
+        """
+        Predicted duration of the transit in days
+        """
+        _duration = (float(self.FIELDINF.split(',')[1])-float(self.FIELDINF.split(',')[0]))
+        return _duration
+
+    @property
+    def period(self):
+        """
+        Orbital period of the planet in dats
+        """
+        _period = float(self.FIELDINF.split(',')[3])
+        return _period
+    
+    @property
+    def depth(self):
+        """
+        Predicted depth of the transit.
+        """
+        _depth = float(self.FIELDINF.split(',')[2])/1000
+        return _depth
 
     # Methods
     # -------
@@ -1139,10 +1179,6 @@ class Observation(ApertureFluxes):
                 TIC=int(TIC)
             # getting all TICs
             tics = self.tic_data["ID"].data
-            #print(tics)
-            #print(type(tics[0]))
-            #tics.fill_value = 0
-            #tics = tics.data.astype(int)
 
             # Finding the one
             i = np.argwhere(tics == TIC).flatten()
@@ -1157,6 +1193,31 @@ class Observation(ApertureFluxes):
 
         except KeyError:
             print('TIC ID not found')
+
+    def set_host_data(self, offline=True):
+        """ 
+        Selects the correct row of self.tic_data so that properties of the host can be easily accessed for modelling. Returned as a disctionary.
+        """
+        if type(self.tic_data) != Table:
+            try:
+                self.set_tic_target(offline)
+                tics = self.tic_data["ID"].data
+                TIC = self.tic_id
+                if offline:
+                    TIC = int(TIC)
+                i = np.argwhere(tics == int(TIC)).flatten()
+                i=i[0]
+                self.host_data = cleanup_host(self.tic_data[i])
+            except (AssertionError,KeyError):
+                raise AssertionError(f"Host data not found")
+        else:
+            tics = self.tic_data["ID"].data
+            TIC = self.tic_id
+            if offline:
+                TIC = int(TIC)
+            i = np.argwhere(tics == int(TIC)).flatten()
+            i=i[0]
+            self.host_data = cleanup_host(self.tic_data[i])
 
     def convert_flip(self,keyword):
         self.xarray['flip'] = ('time', (self.flip == keyword).astype(int))
@@ -1211,4 +1272,18 @@ class Observation(ApertureFluxes):
         ax.add_artist(circle)
         plt.annotate(f"radius {arcmin}'", xy=[x, y + search_radius + 15], color="white",
                      ha='center', fontsize=12, va='bottom', alpha=0.6)
+
+    def estimate_LDC(self, offline):
+        """
+        Use PyLDTK to estimate quadratic limb-darkening coefficients.
+        """
+        if self.host_data == None:
+            self.set_host_data()
+        sc = LDPSetCreator(teff=(self.host_data['Teff'],self.host_data['Teff_e']), 
+                            logg=(self.host_data['logg'],self.host_data['logg_e']), 
+                               z=(self.host_data['Z'],self.host_data['Z_e']),
+                       filters=[sdss_r], dataset='vis-lowres', offline_mode=offline)
+        ps = sc.create_profiles(nsamples=2000)
+        ps.resample_linear_z(300)
+        self.quad_limb = ps.coeffs_qd()
 

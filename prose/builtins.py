@@ -141,6 +141,7 @@ ASTEP = {
     "keyword_airmass": "AIRMASS",
     "keyword_observation_date": "DATE-OBS",
     "keyword_start_date": "BEGINOBS",
+    'keyword_field_info': 'FIELDINF',
     "TTF_link": "https://astro.swarthmore.edu/telescope/tess-secure/print_eclipses.cgi?observatory_string=-75.1%3B123.35%3BAntarctica%2FCasey%3BASTEP" 
                 "+0.4m+at+Concordia+Station%2C+Antarctica%3BASTEP+0.4m&use_utc=1&observatory_latitude=-29.2563&observatory_longitude=-70.738&timezone=UTC" 
                 "&start_date={date}&days_to_print=10&days_in_past=0&minimum_start_elevation=23&and_vs_or=or&minimum_end_elevation=23&minimum_ha=-12&maximum" 

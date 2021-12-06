@@ -7,7 +7,21 @@ import astropy.constants as c
 import urllib
 from astropy.time import Time
 from datetime import datetime
+import math as mh
 
+
+sun_data={
+    'R':1,
+    'R_e':1,
+    'M':1,
+    'M_e':1,
+    'Z':0,
+    'Z_e':1,
+    'Teff':5780,
+    'Teff_e':1000,
+    'logg':4.44,
+    'logg_e':1,
+}
 
 earth2sun = (c.R_earth / c.R_sun).value
 
@@ -329,4 +343,24 @@ def sigma_clip(y, sigma=5., return_mask=False, x=None):
         else:
             return x[mask], y[mask]
 
-
+def cleanup_host(host_data):
+    _host_data={
+        'R':host_data['rad'],
+        'R_e':host_data['e_rad'],
+        'M':host_data['mass'],
+        'M_e':host_data['e_mass'],
+        'Z':host_data['MH'],
+        'Z_e':host_data['e_MH'],
+        'Teff':host_data['Teff'],
+        'Teff_e':host_data['e_Teff'],
+        'logg':host_data['logg'],
+        'logg_e':host_data['e_logg'],
+    }
+    ch2sun=[]
+    for k,h in _host_data.items():
+        if mh.isnan(h/sun_data[k]):
+            _host_data[k]=sun_data[k]
+            ch2sun.append(k)
+    if len(ch2sun)!=0:
+        print(f'{ch2sun} values not available in TIC and have been set to solar values')
+    return _host_data

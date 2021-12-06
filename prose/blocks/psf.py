@@ -9,12 +9,11 @@ from astropy.stats import gaussian_sigma_to_fwhm
 from ..core import Block
 import matplotlib.pyplot as plt
 from collections import OrderedDict
-
+from ..utils import fast_binning
 
 def image_psf(image, stars, size=15, normalize=False, return_cutouts=False):
     """
     Get global psf from image using photutils routines
-
     Parameters
     ----------
     image: np.ndarray or path
@@ -24,11 +23,9 @@ def image_psf(image, stars, size=15, normalize=False, return_cutouts=False):
         size of the cuts around stars (in pixels)
     normalize: bool, optional
         weather to normalize the cutout, default is False
-
     Returns
     -------
     np.ndarray of shape (size, size)
-
     """
     _, cuts = cutouts(image, stars, size=size)
     cuts = cuts.data
@@ -42,7 +39,6 @@ def image_psf(image, stars, size=15, normalize=False, return_cutouts=False):
 
 def cutouts(image, stars, size=15):
     """Custom version to extract stars cutouts
-
     Parameters
     ----------
     Parameters
@@ -52,7 +48,6 @@ def cutouts(image, stars, size=15):
         stars positions with shape (n,2)
     size: int
         size of the cuts around stars (in pixels), by default 15
-
     Returns
     -------
     np.ndarray of shape (size, size)
@@ -181,29 +176,24 @@ class PSFModel(Block):
         return self.optimize()
 
 
-class FWHM(Block):
+class FWHM(PSFModel):
     """
-    Fast empirical FWHM (courtesy of Arielle Bertrou-Cantou)
+    Fast empirical FWHM (based on Arielle Bertrou-Cantou's idea)
     """
 
-    def __init__(self, n=15, **kwargs):
-        super().__init__(**kwargs)
-        self.n = n
+    def __init__(self, cutout_size=51, **kwargs):
+        super().__init__(cutout_size=cutout_size, **kwargs)
+        Y, X = np.indices((self.cutout_size,self.cutout_size))
+        x = y = self.cutout_size/2
+        self.radii = (np.sqrt((X - x) ** 2 + (Y - y) ** 2)).flatten()
 
-    def run(self, image, **kwargs):
-        psf = image_psf(image.data, image.stars_coords, self.n)
+    def optimize(self):
+        psf = self.epsf.copy()
         psf -= np.min(psf)
-        mask = psf > np.max(psf) / 2
-        r = np.sqrt(np.sum(mask) / np.pi) * 2
-        image.fwhm = r
-        image.fwhmx = r
-        image.fwhmy = r
-        image.header["FWHM"] = image.fwhm
-        image.header["FWHMX"] = image.fwhmx
-        image.header["FWHMY"] = image.fwhmy
-        image.header["PSFANGLE"] = 0
-        image.header["FWHMALG"] = self.__class__.__name__
-
+        pixels = psf.flatten()
+        binned_radii, binned_pixels, _ = fast_binning(self.radii, pixels, bins=1)
+        fwhm = 2*binned_radii[np.flatnonzero(binned_pixels > np.max(binned_pixels)/2)[-1]]
+        return fwhm, fwhm, 0
 
 class FastGaussian(PSFModel):
     """
