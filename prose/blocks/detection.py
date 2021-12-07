@@ -39,7 +39,7 @@ class StarsDetection(Block):
             self.last_coords = coordinates
 
         else:
-            image.discarded = True
+            image.discard = True
 
     def __call__(self, data):
         coordinates, fluxes = self.single_detection(data)
@@ -62,6 +62,8 @@ class DAOFindStars(StarsDetection):
     """
     DAOPHOT stars detection with :code:`photutils` implementation.
 
+    |write| ``Image.stars_coords``
+    
     Parameters
     ----------
     sigma_clip : float, optional
@@ -77,13 +79,11 @@ class DAOFindStars(StarsDetection):
     sort : bool, optional
         wether to sort stars coordinates from the highest to the lowest intensity, by default True
     """
-    def __init__(self, sigma_clip=2.5, lower_snr=5, fwhm=5, n_stars=None, min_separation=10, sort=True, **kwargs):
-        super().__init__(n_stars=n_stars, sort=sort, **kwargs)
+    def __init__(self, sigma_clip=2.5, lower_snr=5, fwhm=5, **kwargs):
+        super().__init__(**kwargs)
         self.sigma_clip = sigma_clip
         self.lower_snr = lower_snr
         self.fwhm = fwhm
-        self.min_separation = min_separation
-        self.sort = sort
 
     def single_detection(self, data):
         mean, median, std = sigma_clipped_stats(data, sigma=self.sigma_clip)
@@ -107,6 +107,8 @@ class SegmentedPeaks(StarsDetection):
     """
     Stars detection based on image segmentation.
 
+    |write| ``Image.stars_coords``
+
     Parameters
     ----------
     threshold : float, optional
@@ -119,10 +121,9 @@ class SegmentedPeaks(StarsDetection):
         wether to sort stars coordinates from the highest to the lowest intensity, by default True
     """
 
-    def __init__(self, threshold=2, min_separation=None, n_stars=None, sort=True, **kwargs):
-        super().__init__(n_stars=n_stars, sort=sort, **kwargs)
+    def __init__(self, threshold=2, **kwargs):
+        super().__init__(**kwargs)
         self.threshold = threshold
-        self.min_separation = min_separation
 
     def single_detection(self, data):
         threshold = self.threshold*np.nanstd(data.flatten()) + np.median(data.flatten())
@@ -140,6 +141,8 @@ class SEDetection(StarsDetection):
     """
     Source Extractor detection
 
+    |write| ``Image.stars_coords``
+
     Parameters
     ----------
     threshold : float, optional
@@ -151,10 +154,9 @@ class SEDetection(StarsDetection):
     sort : bool, optional
         wether to sort stars coordinates from the highest to the lowest intensity, by default True
     """
-    def __init__(self, threshold=1.5, n_stars=None, min_separation=5.0, sort=True, **kwargs):
-        super().__init__(n_stars=n_stars, sort=True, min_separation=min_separation, **kwargs)
+    def __init__(self, threshold=1.5, **kwargs):
+        super().__init__(**kwargs)
         self.threshold = threshold
-        self.min_separation = min_separation
 
     def single_detection(self, data):
         data = data.byteswap().newbyteorder()

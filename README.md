@@ -2,7 +2,7 @@
 
 <p align="center">
 
-  <img width="400" src="https://github.com/lgrcia/prose/blob/master/docs/source/prose.png">
+  <img width="450" src="https://github.com/lgrcia/prose/blob/0.9.6/docs/source/prose_illustration.png">
   <br>  
   <br>
   A python framework to build FITS images pipelines.
@@ -20,7 +20,7 @@
   </p>
 </p>
 
-Built for Astronomy, *prose* features pipelines to perform common tasks (such as automated calibration, reduction and photometry) and makes building custom ones easy. Documentation at [prose.readthedocs.io](https://prose.readthedocs.io/en/dev)
+ *prose* is a tool to build pipelines dedicated to astronomical images processing, *only based on pip installable dependencies* (e.g. no IRAF, Sextractor or Astrometry.net install needed 🎉). It features default pipelines to perform common tasks (such as automated calibration, reduction and photometry) and makes building custom ones easy.
 
 
 ```python
@@ -54,9 +54,7 @@ Then to locally install prose
 
 ```shell
 git clone https://github.com/lgrcia/prose.git
-
-cd prose_env
-python3.6 -m pip install -e ../prose
+python3.6 -m pip install -e prose
 ```
 
 Applicable to Linux-based and Windows OS

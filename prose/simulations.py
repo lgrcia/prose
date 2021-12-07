@@ -181,7 +181,7 @@ class ObservationSimulation:
 
     def plot(self, n, photon_noise=True, atmosphere=True, **kwargs):
         fluxes = self.fluxes * (self.atmosphere[np.newaxis, :] if atmosphere else 1)
-        viz.plot_lcs([(self.time, np.random.normal(f, np.sqrt(f) if photon_noise else 0, size=len(self.time))) for f in
+        viz.multiplot([(self.time, np.random.normal(f, np.sqrt(f) if photon_noise else 0, size=len(self.time))) for f in
                       fluxes[0:n]], **kwargs)
 
     def clean_around_target(self, radius):

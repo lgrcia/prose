@@ -67,25 +67,15 @@ class Stack(Block):
             stack_hdu = fits.PrimaryHDU(self.stack, header=self.header)
             stack_hdu.writeto(self.destination, overwrite=self.overwrite)
 
-        self.xarray = xr.Dataset()
-
-        self.xarray.attrs.update(utils.header_to_cdf4_dict(self.header))
-        self.xarray.attrs.update(dict(
-            target=-1,
-            aperture=-1,
-            telescope=self.telescope.name,
-            filter=self.header.get(self.telescope.keyword_filter, ""),
-            exptime=self.header.get(self.telescope.keyword_exposure_time, ""),
-            name=self.header.get(self.telescope.keyword_object, ""),
-        ))
-
-        if self.telescope.keyword_observation_date in self.header:
-            self.xarray.attrs.update(
-                dict(date=str(utils.format_iso_date(
-                    self.header[self.telescope.keyword_observation_date])).replace("-", ""),
-                     ))
-        self.xarray.coords["stack"] = (('w', 'h'), self.stack)
-
+    def concat(self, block):
+        if self.stack is not None:
+            if block.stack is not None:
+                self.stack += block.stack
+            else:
+                pass
+        else:
+            self.stack = block.stack
+        self.n_images += block.n_images
 
 class StackStd(Block):
     
@@ -120,6 +110,7 @@ class SaveReduced(Block):
     overwrite : bool, optional
         weather to overwrite file if exists, by default False
     """
+    # TODO rename to SaveFITS and make destination a string like thing with the name of the image...
     def __init__(self, destination, overwrite=False, **kwargs):
 
         super().__init__(**kwargs)
@@ -133,7 +124,8 @@ class SaveReduced(Block):
 
         new_hdu = fits.PrimaryHDU(image.data)
         new_hdu.header = image.header
-
+        
+        # TODO: what the fuck?
         image.header["SEEING"] = image.get(image.telescope.keyword_seeing, "")
         image.header["BZERO"] = 0
         image.header["REDDATE"] = Time.now().to_value("fits")
@@ -146,6 +138,9 @@ class SaveReduced(Block):
 
         new_hdu.writeto(fits_new_path, overwrite=self.overwrite)
         self.files.append(fits_new_path)
+    
+    def concat(self, block):
+        self.files = [*self.files, *block.files]
 
 
 class Video(Block):
@@ -418,11 +413,12 @@ class Get(Block):
 
 class XArray(Block):
 
-    def __init__(self, *names, name="xarray", raise_error=False):
+    def __init__(self, *names, name="xarray", raise_error=True, concat_dim="time"):
         super().__init__(name=name)
         self.variables = {name: (dims, []) for dims, name in names}
         self.raise_error = raise_error
         self.xarray = xr.Dataset()
+        self.concat_dim = concat_dim
 
     def run(self, image, **kwargs):
         for name in self.variables:
@@ -430,7 +426,7 @@ class XArray(Block):
                 self.variables[name][1].append(image.__getattribute__(name))
             except AttributeError:
                 if self.raise_error:
-                    raise - AttributeError()
+                    raise AttributeError()
                 else:
                     pass
 
@@ -443,3 +439,6 @@ class XArray(Block):
 
     def save(self, destination):
         self.xarray.to_netcdf(destination)
+
+    def concat(self, block):
+        self.xarray = xr.concat([self.xarray, block.xarray], dim=self.concat_dim)

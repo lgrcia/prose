@@ -8,6 +8,8 @@ from .psf import cutouts
 
 class Centroid2dg(Block):
     """Centroiding from  ``photutils.centroids.centroid_2dg``
+    
+    |write| ``Image.stars_coords``
     """
 
     def __init__(self, cutout=21, **kwargs):
@@ -59,11 +61,19 @@ class CNNCentroid(Block):
     def run(self, image, **kwargs):
         initial_positions = image.stars_coords.copy()
         stars_in, stars = cutouts(image.data.copy(), initial_positions.copy(), self.cutout)
-        stars_data_reshaped = np.array([
-            (im.data / np.max(im.data)).reshape(self.cutout, self.cutout, 1) for im in stars
-        ])
-        pos_int = np.array([[st.bbox.ixmin, st.bbox.iymin] for st in stars])
-        image.stars_coords[stars_in] = pos_int + self.model(stars_data_reshaped, training=False).numpy()[:, ::-1]
+        if len(stars_in) > 0:
+            stars_data_reshaped = np.array([
+                (im.data / np.max(im.data)).reshape(self.cutout, self.cutout, 1) for im in stars
+            ])
+            pos_int = np.array([[st.bbox.ixmin, st.bbox.iymin] for st in stars])
+            current_stars_coords = image.stars_coords[stars_in].copy()
+            # apply model
+            aligned_stars_coords = pos_int + self.model(stars_data_reshaped, training=False).numpy()[:, ::-1]
+            # if coords is nan (any of x, y), keep old coord
+            nan_mask = np.any(np.isnan(aligned_stars_coords), 1)
+            aligned_stars_coords[nan_mask] = current_stars_coords[nan_mask]
+            # change image.stars_coords
+            image.stars_coords[stars_in] = aligned_stars_coords
 
     @staticmethod
     def citations():
@@ -72,6 +82,8 @@ class CNNCentroid(Block):
 
 class BalletCentroid(CNNCentroid):
     """Centroiding with  `ballet <https://github.com/lgrcia/ballet>`_.
+
+    |write| ``Image.stars_coords``
     """
 
     def __init__(self, **kwargs):

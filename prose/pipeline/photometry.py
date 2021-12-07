@@ -49,6 +49,7 @@ class Photometry:
                  overwrite=False,
                  n_stars=500,
                  psf=blocks.Gaussian2D,
+                 stack_psf=blocks.FWHM,
                  photometry=blocks.PhotutilsAperturePhotometry,
                  centroid=None,
                  show=False,
@@ -71,11 +72,13 @@ class Photometry:
 
         # preparing inputs and outputs
         self.destination = None
-        self.phot_path = None
+        self.phot = None
 
         # check blocks
         assert psf is None or issubclass(psf, Block), "psf must be a subclass of Block"
         self.psf = psf
+        assert stack_psf is None or issubclass(stack_psf, Block), "stack_psf must be a subclass of Block"
+        self.stack_psf = stack_psf
         self.photometry = photometry(**kwargs)
         self.show = show
 
@@ -87,7 +90,7 @@ class Photometry:
         self.detection_s = Sequence([
             blocks.DAOFindStars(n_stars=self.n_stars, name="detection"),
             blocks.Set(stars_coords=self.stars) if self.stars is not None else blocks.Pass(),
-            self.psf(name="fwhm"),
+            self.stack_psf(name="fwhm"),
             blocks.ImageBuffer(name="buffer"),
         ], self.stack)
 
@@ -134,8 +137,8 @@ class Photometry:
         self.save_xarray()
 
     def save_xarray(self):
-        if path.exists(self.phot_path):
-            initial_xarray = xr.load_dataset(self.phot_path, engine="netcdf4")
+        if path.exists(self.phot):
+            initial_xarray = xr.load_dataset(self.phot, engine="netcdf4")
         else:
             initial_xarray = xr.Dataset()
 
@@ -149,7 +152,7 @@ class Photometry:
         xarray["apertures_sky"] = xarray.sky  # mean over stars
         xarray["sky"] = ("time", np.mean(xarray.apertures_sky.values, 0))  # mean over stars
         xarray.attrs["photometry"] = [b.__class__.__name__ for b in self.photometry_s.blocks]
-        xarray.to_netcdf(self.phot_path)
+        xarray.to_netcdf(self.phot)
 
     def _check_phot_path(self, destination):
         destination = Path(destination)
@@ -158,7 +161,7 @@ class Photometry:
         else:
             parent = destination.parent
 
-        self.phot_path = parent / (destination.stem + '.phot')
+        self.phot = parent / (destination.stem + '.phot')
 
     def __repr__(self):
         return f"{self.detection_s}\n{self.photometry_s}"
@@ -301,6 +304,45 @@ class PSFPhotometry(Photometry):
             files=files,
             stack=stack,
             overwrite=overwrite,
+            n_stars=n_stars,
+            psf=psf,
+            photometry=photometry
+        )
+
+
+class ShapeletPhotometry(Photometry):
+    """PSF Photometry pipeline (not tested)
+
+    Parameters
+    ----------
+    files : list of str, optional
+        List of files to process
+    stack: str, optional
+        Path of the stack image
+    overwrite : bool, optional
+        whether to overwrite existing products, by default False
+    n_stars : int, optional
+        max number of stars to take into account, by default 500
+    psf : Block, optional
+        PSF modeling Block (mainly used to estimate fwhm and scale aperture if ``fwhm_scale`` is ``True``), by default :class:`~prose.blocks.Gaussian2D`
+    photometry : Block, optional
+        aperture photometry Block, by default :class:`~prose.blocks.PhotutilsAperturePhotometry`
+    """
+
+    def __init__(self,
+                 files=None,
+                 stack=None,
+                 stars=None,
+                 overwrite=False,
+                 n_stars=500,
+                 psf=blocks.Gaussian2D,
+                 photometry=blocks.Shepard):
+
+        super().__init__(
+            files=files,
+            stack=stack,
+            overwrite=overwrite,
+            stars=stars,
             n_stars=n_stars,
             psf=psf,
             photometry=photometry

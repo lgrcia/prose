@@ -4,7 +4,7 @@ astropy==4.0
 matplotlib
 colorama
 scikit-image
-pandas
+pandas>=1.1
 tqdm
 astroalign
 photutils
@@ -26,3 +26,4 @@ jinja2
 tensorflow
 requests
 ipython
+sphinx-copybutton

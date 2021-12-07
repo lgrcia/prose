@@ -2,7 +2,7 @@ from .. import Sequence, blocks, Block, Image
 import os
 from os import path
 from pathlib import Path
-import xarray as xr
+from .. import utils
 from .photometry import plot_function
 
 
@@ -14,10 +14,13 @@ class Calibration:
 
     Parameters
     ----------
-    destination : str, optional
-        Destination of the newly created folder, by default beside the folder given to FitsManager
-    reference : float, optional
-        Reference image to use for alignment from 0 (first image) to 1 (last image), by default 1/2
+    reference : float or str, optional
+        Reference image to use for alignment:
+         
+        - if ``float``: from 0 (first image) to 1 (last image)
+        - if ``str``: path of the reference image
+        
+        by default 1/2
     overwrite : bool, optional
         whether to overwrite existing products, by default False
     flats : list, optional
@@ -83,8 +86,12 @@ class Calibration:
         self.psf = psf
         
         # set reference file
-        reference_id = int(self._reference * len(self._images))
-        self.reference_fits = self._images[reference_id]
+        if isinstance(self._reference, (int, float)):
+            reference_id = int(self._reference * len(self._images))
+            self.reference_fits = self._images[reference_id]
+        elif isinstance(self._reference, (str, Path)):
+            self.reference_fits = self._reference
+
         self.calibration_block = blocks.Calibration(self.darks, self.flats, self.bias, loader=loader, name="calibration")
 
     def run(self, destination, gif=True):
@@ -119,12 +126,6 @@ class Calibration:
             blocks.SegmentedPeaks(n_stars=self.n, name="detection"),
             blocks.Twirl(ref_stars, n=self.n, name="twirl") if self.twirl else blocks.XYShift(ref_stars),
             self.psf(name="fwhm"),
-            blocks.Cutout2D(ref_image) if not self.twirl else blocks.Pass(),
-            blocks.SaveReduced(self.destination, overwrite=self.overwrite, name="save_reduced"),
-            blocks.AffineTransform(stars=True, data=True) if self.twirl else blocks.Pass(),
-            self.show,
-            blocks.Stack(self.stack_path, header=ref_image.header, overwrite=self.overwrite, name="stack"),
-            blocks.Video(self.gif_path, name="video", from_fits=True),
             blocks.XArray(
                 ("time", "jd_utc"),
                 ("time", "bjd_tdb"),
@@ -135,27 +136,51 @@ class Calibration:
                 ("time", "dx"),
                 ("time", "dy"),
                 ("time", "airmass"),
-                ("time", "exposure")
-            )
+                ("time", "exposure"),
+                ("time", "path")
+            ),
+            blocks.Cutout2D(ref_image) if not self.twirl else blocks.Pass(),
+            blocks.SaveReduced(self.destination, overwrite=self.overwrite, name="save_reduced"),
+            blocks.AffineTransform(stars=True, data=True) if self.twirl else blocks.Pass(),
+            self.show,
+            blocks.Stack(self.stack_path, header=ref_image.header, overwrite=self.overwrite, name="stack"),
+            blocks.Video(self.gif_path, name="video", from_fits=True),
         ], self._images, name="Calibration", loader=self.loader)
 
         self.calibration_s.run(show_progress=self.verbose)
 
         # saving xarray
-        calib_xarray = self.calibration_s.xarray.xarray
-        stack_xarray = self.calibration_s.stack.xarray
-        xarray = xr.merge([calib_xarray, stack_xarray], combine_attrs="no_conflicts")
+        xarray = self.calibration_s.xarray.xarray
+        stack_header = self.calibration_s.stack.header
+        stack_telescope = self.calibration_s.stack.telescope
+        xarray.attrs.update(utils.header_to_cdf4_dict(stack_header))
+        xarray.attrs.update(dict(
+            target=-1,
+            aperture=-1,
+            telescope=stack_telescope.name,
+            filter=stack_header.get(stack_telescope.keyword_filter, ""),
+            exptime=stack_header.get(stack_telescope.keyword_exposure_time, ""),
+            name=stack_header.get(stack_telescope.keyword_object, ""),
+        ))
+
+        if stack_telescope.keyword_observation_date in stack_header:
+            xarray.attrs.update(
+                dict(date=str(utils.format_iso_date(
+                    stack_header[stack_telescope.keyword_observation_date])).replace("-", ""),
+                     ))
+        xarray.coords["stack"] = (('w', 'h'), self.calibration_s.stack.stack)
+
         xarray = xarray.assign_coords(time=xarray.jd_utc)
         xarray.attrs["time_format"] = "jd_utc"
         xarray.attrs["reduction"] = [b.__class__.__name__ for b in self.calibration_s.blocks]
-        xarray.to_netcdf(self.phot_path)
+        xarray.to_netcdf(self.phot)
 
     @property
     def stack_path(self):
         return self.destination / "stack.fits"
 
     @property
-    def phot_path(self):
+    def phot(self):
         return self.destination / (self.destination.name + ".phot")
 
     @property

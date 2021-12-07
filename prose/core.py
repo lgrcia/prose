@@ -24,7 +24,7 @@ class Image:
             self.path = None
 
         self.telescope = None
-        self.discarded = False
+        self.discard = False
         self.__dict__.update(kwargs)
         self.check_telescope()
 
@@ -117,8 +117,26 @@ class Image:
 
 
 class Block:
+    """A ``Block`` is a single unit of processing acting on the ``Image`` object, reading, processing and writing its attributes. When placed in a sequence, it goes through three steps:
+
+        1. :py:meth:`~prose.Block.initialize` method is called before the sequence is run
+        2. *Images* go succesively and sequentially through its :py:meth:`~prose.run` methods
+        3. :py:meth:`~prose.Block.terminate` method is called after the sequence is terminated
+
+        Parameters
+        ----------
+        name : [type], optional
+            [description], by default None
+    """
 
     def __init__(self, name=None):
+        """[summary]
+
+        Parameters
+        ----------
+        name : [type], optional
+            [description], by default None
+        """
         self.name = name
         self.unit_data = None
         self.processing_time = 0
@@ -156,6 +174,9 @@ class Block:
     def doc():
         return ""
 
+    def concat(self, block):
+        return self
+
   
 class Sequence:
     # TODO: add index self.i in image within unit loop
@@ -167,6 +188,7 @@ class Sequence:
         self.loader = loader
 
         self.data = {}
+        self.n_processed_images = None
 
     def __getattr__(self, item):
         return self.blocks_dict[item]
@@ -206,6 +228,8 @@ class Sequence:
             block.set_unit_data(self.data)
             block.initialize()
 
+        self.n_processed_images = 0
+
         # run
         for i, file_or_image in enumerate(progress(self.files_or_images)):
             if isinstance(file_or_image, (str, Path)):
@@ -213,26 +237,36 @@ class Sequence:
             else:
                 image = file_or_image
             image.i = i
+            self._last_image = image
             discard_message = False
-            for block in self.blocks:
-                # This allows to discard image in any blocks
-                if not image.discarded:
+
+            last_block = None
+
+            for b, block in enumerate(self.blocks):
+                # This allows to discard image in any Block
+                if not image.discard:
                     block._run(image)
+                    # except:
+                    #     # TODO
+                    #     if not last_block is None:
+                    #         print(f"{type(last_block).__name__} failed")
                 elif not discard_message:
+                    last_block = self.blocks[b-1]
                     discard_message = True
-                    if isinstance(file_or_image, str):
-                        print(f"Warning: image {i} (...{file_or_image[i]}) discarded in {type(block).__name__}")
-                    else:
-                        print(f"Warning: image {i} discarded in {type(block).__name__}")
+                    print(f"Warning: image {i} discarded in {type(last_block).__name__}")
 
             del image
+            self.n_processed_images += 1
 
         # terminate
         for block in self.blocks:
             block.terminate()
 
     def __str__(self):
-        rows = [[block.name, block.__class__.__name__, f"{block.processing_time:.4f} s"] for block in self.blocks]
+        rows = [[
+            block.name, block.__class__.__name__, f"{block.processing_time:.3f} s ({(block.processing_time/self.processing_time)*100:.0f}%)"] 
+            for block in self.blocks
+            ]
         headers = ["name", "type", "processing"]
 
         return tabulate(rows, headers, tablefmt="fancy_grid")

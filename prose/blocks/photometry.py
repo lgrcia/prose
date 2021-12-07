@@ -53,6 +53,20 @@ class PhotutilsAperturePhotometry(Block):
     Aperture photometry using :code:`photutils`.
     For more details check https://photutils.readthedocs.io/en/stable/aperture.html
 
+    |write| 
+    
+    - ``Image.stars_coords``
+    - ``Image.apertures_area``
+    - ``Image.sky``
+    - ``Image.fluxes``
+    - ``Image.annulus_area``
+    - ``Image.annulus_rin``
+    - ``Image.annulus_rout``
+    - ``Image.apertures_radii``
+    - ``Image.fluxes``
+
+    |modify| 
+
     Parameters
     ----------
     apertures : ndarray or list, optional

@@ -128,7 +128,7 @@ class Calibration(Block):
 
 
 class Trim(Block):
-    """Image trimming
+    """Image trimming. If trim is not specified, triming is taken from the telescope characteristics
 
     Parameters
     ----------

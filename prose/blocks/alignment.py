@@ -7,6 +7,7 @@ from astropy.nddata import Cutout2D as _Cutout2D
 
 class Cutout2D(Block):
     """
+    TODO: change name of this... not explicit
     Align an image to a reference image using ``astropy.nddata.Cutout2D``
 
     Parameters
@@ -15,12 +16,14 @@ class Cutout2D(Block):
         reference image on which alignment is done
     """
 
+    # TODO should take shape as input not an image
     def __init__(self, reference_image, **kwargs):
         super().__init__(**kwargs)
         self.ref_shape = np.array(reference_image.shape)
         self.ref_center = self.ref_shape[::-1] / 2
 
     def run(self, image):
+        # TODO this is shitty, should use image.dx, image.dy
         shift = np.array([image.header["DX"], image.header["DY"]])
 
         aligned_image = _Cutout2D(
@@ -42,11 +45,18 @@ class AffineTransform(Block):
     """
     Apply an affine transformation to image and/or stars
 
-    The affine transformation is expected to be found in the follwing header keywords:
+    |read|
+    
+    - rotation : ``Image.header['TWROT']``
+    - translation : ``Image.header['TWTRANSX']``, ``Image.header['TWTRANSY']``
+    - scale : ``Image.header['TWSCALEX']``, ``Image.header['TWSCALEY']``
 
-    - rotation : ``TWROT``
-    - translation : ``TWTRANSX``, ``TWTRANSY``
-    - scale : ``TWSCALEX``, ``TWSCALEX``
+
+    |write|
+    
+    - ``Image.transform``
+    - ``Image.inverse``
+    - ``Image.stars_coords``
 
     Parameters
     ----------
@@ -61,13 +71,11 @@ class AffineTransform(Block):
 
     """
 
-    def __init__(self, stars=True, data=True, inverse=False, fill="median", **kwargs):
+    def __init__(self, stars=True, data=True, inverse=False, **kwargs):
         super().__init__(**kwargs)
         self.data = data
         self.stars = stars
         self.inverse = inverse
-        if fill == "median":
-            self.fill_function = lambda im: np.median(im.data)
 
     def run(self, image, **kwargs):
         if "transform" not in image.__dict__:
@@ -86,7 +94,10 @@ class AffineTransform(Block):
             transform = transform.inverse
 
         if self.data:
-            image.data = warp(image.data, transform.inverse, cval=self.fill_function(image))
+            try:
+                image.data = warp(image.data, transform.inverse, cval=np.median(image.data))
+            except np.linalg.LinAlgError:
+                image.discard = True
 
         if self.stars:
             image.stars_coords = transform(image.stars_coords)

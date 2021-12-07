@@ -35,7 +35,6 @@ def design_matrix(model_list):
     dm /= np.mean(dm, 0)
     return dm
 
-
 try:
     import theano
     import theano.tensor as tt
@@ -64,4 +63,6 @@ class LinearModel:
         ty = y
         coeffs = reduce(tt.dot, [self.U.T, ty.T, 1.0 / self.S_, self.V])
         return tt.dot(coeffs, self.tX.T)
+
+
 

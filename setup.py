@@ -25,7 +25,7 @@ setup(
         "matplotlib",
         "colorama",
         "scikit-image",
-        "pandas",
+        "pandas>=1.1",
         "tqdm",
         "astroalign",
         "photutils",
@@ -45,7 +45,8 @@ setup(
         "nbsphinx",
         "celerite2",
         "jinja2",
-        "tensorflow"
+        "tensorflow",
+        "sphinx-copybutton"
     ],
     zip_safe=True,
     classifiers=[

@@ -27,6 +27,7 @@ from pathlib import Path
 from . import twirl
 import io
 from .utils import fast_binning, z_scale
+from .console_utils import info
 
 warnings.simplefilter('ignore', category=VerifyWarning)
 
@@ -67,7 +68,7 @@ class Observation(ApertureFluxes):
             except:
                 if not ignore_time:
                     print(f"{INFO_LABEL} Could not convert time to BJD TDB")
-                    
+
     def _check_stack(self):
         assert 'stack' in self.xarray is not None, "No stack found"
 
@@ -124,6 +125,7 @@ class Observation(ApertureFluxes):
             path to phot file, by default None
         """
         self.xarray.to_netcdf(self.phot if destination is None else destination)
+        info(f"saved {self.phot}")
 
     def export_stack(self, destination, **kwargs):
         """Export stack to FITS file
@@ -845,15 +847,24 @@ class Observation(ApertureFluxes):
             _, ylim = plt.ylim()
             plt.text(self.meridian_flip, ylim, "meridian flip ", ha="right", rotation="vertical", va="top", color="0.7")
 
-    def plot(self, star=None, meridian_flip=True):
+    def plot(self, star=None, meridian_flip=True, bins=0.005, color="k", std=True):
         """Plot observation light curve
 
         Parameters
         ----------
+        star : [type], optional
+            [description], by default None
         meridian_flip : bool, optional
             whether to show meridian flip, by default True
+        bins : float, optional
+            bin size in same unit as Observation.time, by default 0.005
+        color : str, optional
+            binned points color, by default "k"
+        std : bool, optional
+            whether to see standard deviation of bins as error bar, by default True, otherwise theoretical error bat is shown
         """
-        super().plot(star=star)
+
+        super().plot(star=star, bins=bins, color=color, std=std)
         if meridian_flip:
             self.plot_meridian_flip()
 
@@ -879,10 +890,12 @@ class Observation(ApertureFluxes):
 
         if isinstance(star, (tuple, list, np.ndarray)):
             x, y = star
-        elif isinstance(star, int):
+        else:
+            if star is None:
+                star = 0
+            assert isinstance(star, int), "star must be star coordinates or integer index"
+        
             x, y = self.stars[star]
-        elif star is None:
-                x, y = self.stars[self.target]
 
         Y, X = np.indices(self.stack.shape)
         cutout_mask = (np.abs(X - x + 0.5) < n) & (np.abs(Y - y + 0.5) < n)
@@ -905,17 +918,15 @@ class Observation(ApertureFluxes):
         plt.ylabel("ADUs")
         _, ylim = plt.ylim()
 
-        if "apertures_radii" in self.xarray or aperture is not None:
-            if "apertures_radii" in self.xarray and aperture is None:
-                apertures = self.apertures_radii[:, 0]
-
-                if apertures is not None:
-                    aperture = apertures[self.aperture]
-
-            plt.xlim(0)
-            plt.text(aperture, ylim, "APERTURE", ha="right", rotation="vertical", va="top")
-            plt.axvline(aperture, c="k", alpha=0.1)
-            plt.axvspan(0, aperture, color="0.9", alpha=0.1)
+        if "apertures_radii" in self and self.aperture != -1:
+            apertures = self.apertures_radii[:, 0]
+            aperture = apertures[self.aperture]
+        
+            if "annulus_rin" in self:
+                if rin is None:
+                    rin = self.annulus_rin.mean()
+                if rout is None:
+                    rout = self.annulus_rout.mean() 
 
         if aperture is not None:
             plt.xlim(0)
@@ -923,20 +934,17 @@ class Observation(ApertureFluxes):
             plt.axvline(aperture, c="k", alpha=0.1)
             plt.axvspan(0, aperture, color="0.9", alpha=0.1)
 
-        if "annulus_rin" in self:
-            if rin is None:
-                rin = self.annulus_rin.mean()
-            if rout is None:
-                rout = self.annulus_rout.mean()
-
         if rin is not None:
-            plt.axvline(rin, color="k", alpha=0.1)
+            plt.axvline(rin, color="k", alpha=0.2)
 
         if rout is not None:
-            plt.axvline(rout, color="k", alpha=0.1)
+            plt.axvline(rout, color="k", alpha=0.2)
             if rin is not None:
-                plt.axvspan(rin, rout, color="0.9", alpha=0.1)
+                plt.axvspan(rin, rout, color="0.9", alpha=0.2)
                 _ = plt.text(rout, ylim, "ANNULUS", ha="right", rotation="vertical", va="top")
+
+        n = np.max([np.max(radii), rout +2 if rout else 0])
+        plt.xlim(0, n)
 
         ax2 = plt.subplot(1, 5, (4, 5))
         im = self.stack[int(y - n):int(y + n), int(x - n):int(x + n)]
@@ -952,10 +960,11 @@ class Observation(ApertureFluxes):
             ax2.add_patch(plt.Circle((n, n), rin, ec='grey', fill=False, lw=2))
         if rout is not None:
             ax2.add_patch(plt.Circle((n, n), rout, ec='grey', fill=False, lw=2))
+        ax2.text(0.05, 0.05, f"{star}", fontsize=12, color="white", transform=ax2.transAxes)
 
         plt.tight_layout()
 
-    def plot_systematics_signal(self, systematics, signal, ylim=None, offset=None, figsize=(6, 7)):
+    def plot_systematics_signal(self, systematics, signal=None, ylim=None, offset=None, figsize=(6, 7)):
         """Plot a systematics and signal model over diff_flux. systeamtics + signal is plotted on top, signal alone on detrended
         data on bottom
 
@@ -971,7 +980,8 @@ class Observation(ApertureFluxes):
             figure size as in in plt.figure, by default (6, 7)
         """
 
-        viz.plot_systematics_signal(self.time, self.diff_flux, systematics, signal, ylim=ylim, offset=offset, figsize=figsize)
+        viz.plot_systematics_signal(self.time, self.diff_flux, systematics, signal, ylim=ylim, offset=offset,
+                                figsize=figsize)
 
         self.plot_meridian_flip()
         plt.legend()
@@ -1156,3 +1166,9 @@ class Observation(ApertureFluxes):
         plt.annotate(f"radius {arcmin}'", xy=[x, y + search_radius + 15], color="white",
                      ha='center', fontsize=12, va='bottom', alpha=0.6)
 
+    def mask_transits(self, epoch, period, duration):
+        xmin, xmax = self.time.min(), self.time.max()
+        n_p = np.round((xmax - epoch) / period)
+        ingress, egress = n_p * period + epoch - duration / 2, n_p * period + epoch + duration / 2
+        mask = (self.time < ingress) | (self.time > egress)
+        return self.mask(mask)

@@ -4,6 +4,7 @@ import numpy as np
 from . import CONFIG
 import astropy.units as u
 from warnings import warn
+from .console_utils import info
 
 def str_to_astropy_unit(unit_string):
     return u.__dict__[unit_string]
@@ -19,7 +20,7 @@ class Telescope:
         telescope dict or description file, by default None which load a "default" telescope
 
     """
-    def __init__(self, telescope_file=None):
+    def __init__(self, telescope_file=None, verbose=True):
 
         # Keywords
         self.keyword_object = "OBJECT"
@@ -58,6 +59,8 @@ class Telescope:
         self.latlong = [None, None]
         self.saturation = 55000
 
+        self.verbose = verbose
+
         if telescope_file is not None:
             success = self.load(telescope_file)
             if success:
@@ -80,7 +83,9 @@ class Telescope:
         elif isinstance(file, str):
             telescope = CONFIG.match_telescope_name(file)
             if telescope is None:
-                warn(f"telescope {file} not found")
+                if self.verbose:
+                    info(f"telescope {file} not found - using default")
+                self.name = file
 
         elif file is None:
             return False
@@ -123,8 +128,8 @@ class Telescope:
         return np.sqrt(_squarred_error)
 
     @staticmethod
-    def from_name(name):
-        telescope = Telescope()
+    def from_name(name, verbose=True):
+        telescope = Telescope(verbose=verbose)
         telescope.load(name)
         return telescope
 
