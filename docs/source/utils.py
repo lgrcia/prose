@@ -36,8 +36,9 @@ def convert_ipynb(filename, destination):
 import inspect
 from os import path
 from prose import blocks, Block
+from glob import glob
 
-rst_docs = get_files(".rst", "blocks")
+rst_docs = glob(path.join("blocks", "*.rst"))
 rst_docs_names = [f.split("/")[-1][0:-4] for f in rst_docs]
 
 for name, obj in inspect.getmembers(blocks):

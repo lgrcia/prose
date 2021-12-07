@@ -4,6 +4,7 @@ from os import path
 from pathlib import Path
 from .. import utils
 from .photometry import plot_function
+from astropy.time import Time
 
 
 class Calibration:
@@ -151,23 +152,27 @@ class Calibration:
 
         # saving xarray
         xarray = self.calibration_s.xarray.xarray
-        stack_header = self.calibration_s.stack.header
-        stack_telescope = self.calibration_s.stack.telescope
-        xarray.attrs.update(utils.header_to_cdf4_dict(stack_header))
+        # first image serve as reference for info (not reference image because it
+        # can be from another observation (we encountered this use case)
+        reference = self.loader(self._images[0])
+        reference_header = reference.header
+        reference_telescope = reference.telescope
+        xarray.attrs.update(utils.header_to_cdf4_dict(reference_header))
         xarray.attrs.update(dict(
             target=-1,
             aperture=-1,
-            telescope=stack_telescope.name,
-            filter=stack_header.get(stack_telescope.keyword_filter, ""),
-            exptime=stack_header.get(stack_telescope.keyword_exposure_time, ""),
-            name=stack_header.get(stack_telescope.keyword_object, ""),
+            telescope=reference_telescope.name,
+            filter=reference_header.get(reference_telescope.keyword_filter, ""),
+            exptime=reference_header.get(reference_telescope.keyword_exposure_time, ""),
+            name=reference_header.get(reference_telescope.keyword_object, ""),
         ))
 
-        if stack_telescope.keyword_observation_date in stack_header:
-            xarray.attrs.update(
-                dict(date=str(utils.format_iso_date(
-                    stack_header[stack_telescope.keyword_observation_date])).replace("-", ""),
-                     ))
+        if reference_telescope.keyword_observation_date in reference_header:
+            date = reference_header[reference_telescope.keyword_observation_date]
+        else:
+            date = Time(reference_header[reference_telescope.keyword_jd], format="jd").datetime
+
+        xarray.attrs.update(dict(date=utils.format_iso_date(date).isoformat()))
         xarray.coords["stack"] = (('w', 'h'), self.calibration_s.stack.stack)
 
         xarray = xarray.assign_coords(time=xarray.jd_utc)
