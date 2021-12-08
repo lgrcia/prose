@@ -175,6 +175,9 @@ class Block:
     def doc():
         return ""
 
+    def concat(self, block):
+        return self
+
   
 class Sequence:
     # TODO: add index self.i in image within unit loop

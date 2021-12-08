@@ -37,6 +37,11 @@ def disorganised_folder(destination):
         data = np.random.random((10, 10))
         fits_image(data, dict(JD=i, TELESCOP="A", FILTER="a"), path.join(destination, f"A-test{i}.fits"))
 
+        # Telescope A with filter a
+    for i in range(5):
+        data = np.random.random((10, 10))
+        fits_image(data, dict(JD=i, TELESCOP="A", FILTER="ab"), path.join(destination, f"A-test{i}-ab.fits"))
+
     # Telescope B
     for i in range(5):
         data = np.random.random((20, 10))
