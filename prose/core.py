@@ -10,7 +10,8 @@ import numpy as np
 from time import time
 from pathlib import Path
 from astropy.time import Time
-
+from functools import partial
+import multiprocessing as mp
 
 class Image:
 
@@ -278,3 +279,97 @@ class Sequence:
     @property
     def processing_time(self):
         return np.sum([block.processing_time for block in self.blocks])
+
+
+class MultiProcessSequence(Sequence):
+    
+    def run(self, show_progress=True):
+        if show_progress:
+            def progress(x, **kwargs): 
+                return tqdm(
+                    x,
+                    desc=self.name,
+                    unit="images",
+                    ncols=80,
+                    bar_format=TQDM_BAR_FORMAT,
+                    **kwargs
+                )
+
+        else:
+            def progress(x, **kwargs): return x
+
+        if isinstance(self.files_or_images, list):
+            if len(self.files_or_images) == 0:
+                raise ValueError("No images to process")
+        elif self.files_or_images is None:
+            raise ValueError("No images to process")
+
+        # initialization
+        for block in self.blocks:
+            block.set_unit_data(self.data)
+            block.initialize()
+            
+        self.n_processed_images = 0
+        
+        processed_blocks = mp.Manager().list(self.blocks)
+        blocks_queue = mp.Manager().Queue()
+        
+        blocks_writing_process = mp.Process(
+            target=partial(
+                _concat_blocks,
+                current_blocks=processed_blocks,
+            ), args=(blocks_queue,)
+        )
+    
+        blocks_writing_process.deamon = True
+        blocks_writing_process.start()
+        
+        with mp.Pool() as pool:
+            for _ in progress(pool.imap(partial(
+                _run_blocks_on_image,
+                blocks_queue=blocks_queue,
+                blocks_list = self.blocks,
+                loader = self.loader
+            ), self.files_or_images), total=len(self.files_or_images)):
+                pass
+            
+        blocks_queue.put("done")
+
+        self.blocks = processed_blocks
+   
+        # terminate
+        for block in self.blocks:
+            block.terminate()
+
+
+def _run_blocks_on_image(file_or_image, blocks_queue=None, blocks_list=None, loader=None):
+
+    if isinstance(file_or_image, (str, Path)):
+        image = loader(file_or_image)
+    else:
+        image = file_or_image
+
+    discard_message = False
+    last_block = None
+
+    for b, block in enumerate(blocks_list):
+        # This allows to discard image in any Block
+        if not image.discard:
+            block._run(image)
+        elif not discard_message:
+            last_block = blocks_list[b-1]
+            discard_message = True
+            print(f"Warning: image ? discarded in {type(last_block).__name__}")
+
+    del image
+    blocks_queue.put(blocks_list)
+    
+def _concat_blocks(blocks_queue, current_blocks=None):
+    while True:
+        new_blocks = blocks_queue.get()
+        if new_blocks == "done":
+            break
+        else:
+            for i, block in enumerate(new_blocks):
+                block.concat(current_blocks[i])
+                current_blocks[i] = block
