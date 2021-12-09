@@ -1203,9 +1203,9 @@ class Observation(ApertureFluxes):
                 self.set_tic_target(offline)
                 tics = self.tic_data["ID"].data
                 TIC = self.tic_id
-                if offline:
+                if offline==True:
                     TIC = int(TIC)
-                i = np.argwhere(tics == int(TIC)).flatten()
+                i = np.argwhere(tics == TIC).flatten()
                 i=i[0]
                 self.host_data = cleanup_host(self.tic_data[i])
             except (AssertionError,KeyError):
@@ -1215,7 +1215,7 @@ class Observation(ApertureFluxes):
             TIC = self.tic_id
             if offline:
                 TIC = int(TIC)
-            i = np.argwhere(tics == int(TIC)).flatten()
+            i = np.argwhere(tics == TIC).flatten()
             i=i[0]
             self.host_data = cleanup_host(self.tic_data[i])
 

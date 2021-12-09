@@ -3,7 +3,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import os
 
-def make_lightcurve(phot_path, offline):
+def make_lightcurve(phot_path, offline=True):
 	obs = load(phot_path)
 	#obs.keep_good_stars()
 	obs.import_stack(os.path.join(Path(phot_path).parent, 'solved.fits')) # This will load the plate solved stack image in the .phot file.
