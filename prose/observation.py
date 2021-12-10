@@ -879,8 +879,9 @@ class Observation(ApertureFluxes):
             cutout width and height, by default 40
         zscale : bool, optional
             whether to apply a zscale to cutout image, by default False
-        aperture : float, optional
-            radius of aperture to display, by default None corresponds to best target aperture
+        aperture : float, int, optional
+            radius of aperture to display, by default None corresponds to best target aperture. If int, it corresponds
+            to the number of the aperture in the photometry. If float, it is in pixels
         rin : [type], optional
             radius of inner annulus to display, by default None corresponds to inner radius saved
         rout : [type], optional
@@ -918,21 +919,25 @@ class Observation(ApertureFluxes):
         plt.ylabel("ADUs")
         _, ylim = plt.ylim()
 
-        if "apertures_radii" in self and self.aperture != -1:
-            apertures = self.apertures_radii[:, 0]
-            aperture = apertures[self.aperture]
-        
-            if "annulus_rin" in self:
-                if rin is None:
-                    rin = self.annulus_rin.mean()
-                if rout is None:
-                    rout = self.annulus_rout.mean() 
+        if isinstance(aperture, int) or aperture is None:
+            if "apertures_radii" in self.xarray:
+                apertures = self.apertures_radii[:, 0]
+                if aperture is None:
+                    ap = apertures[self.aperture]
+                else:
+                    ap = apertures[aperture]
+        if isinstance(aperture, float):
+            ap = aperture
+        plt.xlim(0)
+        plt.text(ap, ylim, "APERTURE", ha="right", rotation="vertical", va="top")
+        plt.axvline(ap, c="k", alpha=0.1)
+        plt.axvspan(0, ap, color="0.9", alpha=0.1)
 
-        if aperture is not None:
-            plt.xlim(0)
-            plt.text(aperture, ylim, "APERTURE", ha="right", rotation="vertical", va="top")
-            plt.axvline(aperture, c="k", alpha=0.1)
-            plt.axvspan(0, aperture, color="0.9", alpha=0.1)
+        if "annulus_rin" in self:
+            if rin is None:
+                rin = self.annulus_rin.mean()
+            if rout is None:
+                rout = self.annulus_rout.mean()
 
         if rin is not None:
             plt.axvline(rin, color="k", alpha=0.2)
@@ -954,8 +959,7 @@ class Observation(ApertureFluxes):
         plt.imshow(im, cmap="Greys_r", aspect="auto", origin="lower")
 
         plt.axis("off")
-        if aperture is not None:
-            ax2.add_patch(plt.Circle((n, n), aperture, ec='grey', fill=False, lw=2))
+        ax2.add_patch(plt.Circle((n, n), ap, ec='grey', fill=False, lw=2))
         if rin is not None:
             ax2.add_patch(plt.Circle((n, n), rin, ec='grey', fill=False, lw=2))
         if rout is not None:
