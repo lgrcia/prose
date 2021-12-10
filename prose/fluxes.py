@@ -65,25 +65,25 @@ def diff(fluxes, errors=None, weights=None, comps=None, alc=False):
     # Formulae
     # https://en.wikipedia.org/wiki/Weighted_arithmetic_mean#Standard_error
 
-    normalized_weights = weights/np.expand_dims(np.sum(weights, -1), -1)
-
-    weighted_fluxes = fluxes * np.expand_dims(normalized_weights, -1)
-    art_lc = sub @ weighted_fluxes
+    weighted_fluxes = fluxes * np.expand_dims(weights, -1)
+    art_lc = (sub @ weighted_fluxes) / np.expand_dims(weights @ sub[0], -1)
     lcs = fluxes / art_lc
 
-    returns = lcs
+    if not alc and errors is None:
+        return lcs
 
     if errors is not None:
-        weighted_errors = errors**2 * np.expand_dims(normalized_weights, -1)**2
-        squarred_art_error = sub @ weighted_errors
+        weighted_errors = errors**2 * np.expand_dims(weights, -1)**2
+        squarred_art_error = (sub @ weighted_errors) / np.expand_dims(weights**2 @ sub[0], -1)
         lcs_errors = np.sqrt(errors ** 2 + squarred_art_error)
         returns = [lcs, lcs_errors]
 
-    if alc:
-        returns.append(art_lc)
-
-    return returns
-
+        if alc:
+            return [lcs, lcs_errors, art_lc]
+        else:
+            return [lcs, lcs_errors]
+    else:
+        return [lcs, art_lc]
 
 def broeg(fluxes, tolerance=1e-2, max_iteration=200, bins=12):
 
