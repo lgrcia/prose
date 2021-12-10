@@ -893,9 +893,8 @@ class Observation(ApertureFluxes):
             x, y = star
         else:
             if star is None:
-                star = 0
+                star = self.target
             assert isinstance(star, int), "star must be star coordinates or integer index"
-        
             x, y = self.stars[star]
 
         Y, X = np.indices(self.stack.shape)
