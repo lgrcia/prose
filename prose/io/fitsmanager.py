@@ -191,7 +191,26 @@ class FilesDataFrame:
 
 class FitsManager(FilesDataFrame):
 
-    def __init__(self, files_df_or_folder, verbose=True, image_kw="light", extension="*.f*ts*", hdu=0, reduced=False, depth=1, **kwargs):
+    def __init__(self, files_df_or_folder, verbose=True, image_kw="light", extension="*.f*ts*", hdu=0, reduced=False, depth=0):
+        """Manage FITS images folders
+
+        Parameters
+        ----------
+        files_df_or_folder : folder path or pandas dataframe
+            Folder containing FITS images
+        verbose : bool, optional
+            whether to be verbose, by default True
+        image_kw : str, optional
+            keyword associated with science images in FITS header (under the Telescope.keyword_light_images), by default "light"
+        extension : str, optional
+            FITS files extension, by default "*.f*ts*"
+        hdu : int, optional
+            data unit to consider for FITS header parsing, by default 0
+        reduced : bool, optional
+            whether to look for prose reduced images, by default False
+        depth : int, optional
+            sub-folder depth to explore, by default 0
+        """
         if reduced:
             image_kw = "reduced"
         if isinstance(files_df_or_folder, pd.DataFrame):
@@ -200,7 +219,7 @@ class FitsManager(FilesDataFrame):
         elif isinstance(files_df_or_folder, (str, Path)):
             folder = files_df_or_folder
             assert path.exists(folder), "Folder does not exist"
-            files = get_files(extension, folder, depth=kwargs.get("depth", 1))
+            files = get_files(extension, folder, depth=depth)
             files_df = fits_to_df(files, verbose=verbose, hdu=hdu)
             self.folder = folder
         else:
