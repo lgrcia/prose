@@ -13,7 +13,7 @@ from . import visualization as viz
 from .io.fitsmanager import FitsManager
 from .fluxes import ApertureFluxes
 from .telescope import Telescope
-from prose.core import Block, Sequence, Image
+from prose.core import Block, Sequence, Image, MultiProcessSequence
 from .observation import Observation
 from .observations import Observations
 
