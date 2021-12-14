@@ -49,7 +49,7 @@ class FilesDataFrame:
 
         for field, value in kwargs.items():
             if isinstance(value, str):
-                conditions = conditions & clean(files_df[field]).str.fullmatch(sub(value)).reset_index(drop=True)
+                conditions = conditions & clean(files_df[field]).str.fullmatch(value, case=False).reset_index(drop=True)
             else:
                 conditions = conditions & (files_df[field] == value).reset_index(drop=True)
 
@@ -321,7 +321,7 @@ class FitsManager(FilesDataFrame):
         dimensions = obs.dimensions
 
         dates_before = (
-                    pd.to_datetime(obs.date) - pd.to_datetime(original_fm.files_df.date) >= timedelta(days=days_limit))
+                pd.to_datetime(obs.date) - pd.to_datetime(original_fm.files_df.date) >= timedelta(days=days_limit))
 
         flats = original_fm.get(
             telescope=telescope + "*", filter=obs["filter"].replace("+", "\+"),
@@ -345,12 +345,14 @@ class FitsManager(FilesDataFrame):
         others = original_fm.get(
             telescope=obs.telescope,
             filter=obs["filter"].replace("+", "\+"),
-            target=obs.target.replace("+", "\+"),
-            date=obs.date)
+            target=obs.target.replace("+", "\+"))
+
+        others = others.loc[others.date == obs.date]
 
         for _type in ["dark", "flat", "bias"]:
             others = others.reset_index(drop=True)
-            others = others.drop(np.argwhere(FilesDataFrame._get(others, type=_type, return_conditions=True).values).flatten())
+            others = others.drop(
+                np.argwhere(FilesDataFrame._get(others, type=_type, return_conditions=True).values).flatten())
 
         dfs.append(others)
 
@@ -360,6 +362,7 @@ class FitsManager(FilesDataFrame):
             return new_df
         else:
             return self.__class__(new_df)
+
 
     @property
     def unique_obs(self):

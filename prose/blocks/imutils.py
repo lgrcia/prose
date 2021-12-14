@@ -67,6 +67,15 @@ class Stack(Block):
             stack_hdu = fits.PrimaryHDU(self.stack, header=self.header)
             stack_hdu.writeto(self.destination, overwrite=self.overwrite)
 
+    def concat(self, block):
+        if self.stack is not None:
+            if block.stack is not None:
+                self.stack += block.stack
+            else:
+                pass
+        else:
+            self.stack = block.stack
+        self.n_images += block.n_images
 
 class StackStd(Block):
     
@@ -129,6 +138,9 @@ class SaveReduced(Block):
 
         new_hdu.writeto(fits_new_path, overwrite=self.overwrite)
         self.files.append(fits_new_path)
+    
+    def concat(self, block):
+        self.files = [*self.files, *block.files]
 
 
 class Video(Block):
@@ -401,11 +413,12 @@ class Get(Block):
 
 class XArray(Block):
 
-    def __init__(self, *names, name="xarray", raise_error=True):
+    def __init__(self, *names, name="xarray", raise_error=True, concat_dim="time"):
         super().__init__(name=name)
         self.variables = {name: (dims, []) for dims, name in names}
         self.raise_error = raise_error
         self.xarray = xr.Dataset()
+        self.concat_dim = concat_dim
 
     def run(self, image, **kwargs):
         for name in self.variables:
@@ -426,3 +439,6 @@ class XArray(Block):
 
     def save(self, destination):
         self.xarray.to_netcdf(destination)
+
+    def concat(self, block):
+        self.xarray = xr.concat([self.xarray, block.xarray], dim=self.concat_dim)

@@ -1,4 +1,4 @@
-from .. import Sequence, blocks, Block, Image
+from .. import Sequence, MultiProcessSequence, blocks, Block, Image
 import os
 from os import path
 from pathlib import Path
@@ -60,6 +60,7 @@ class Calibration:
             twirl=True,
             n=None,
             loader=Image,
+            cores=False,
     ):
         self.destination = None
         self.overwrite = overwrite
@@ -68,6 +69,7 @@ class Calibration:
         self.show = show
         self.n = n if n is not None else (12 if twirl else 50)
         self.twirl = twirl
+        self.cores = cores
 
         if show:
             self.show = blocks.LivePlot(plot_function, size=(10, 10))
@@ -120,7 +122,9 @@ class Calibration:
         ref_image = self.detection_s.buffer.image
         ref_stars = ref_image.stars_coords
 
-        self.calibration_s = Sequence([
+        SequenceObject = MultiProcessSequence if self.cores else Sequence
+
+        self.calibration_s = SequenceObject([
             self.calibration_block,
             blocks.Trim(name="trimming", skip_wcs=True),
             blocks.Flip(ref_image, name="flip"),
@@ -176,6 +180,7 @@ class Calibration:
         xarray.coords["stack"] = (('w', 'h'), self.calibration_s.stack.stack)
 
         xarray = xarray.assign_coords(time=xarray.jd_utc)
+        xarray = xarray.sortby("time")
         xarray.attrs["time_format"] = "jd_utc"
         xarray.attrs["reduction"] = [b.__class__.__name__ for b in self.calibration_s.blocks]
         xarray.to_netcdf(self.phot)

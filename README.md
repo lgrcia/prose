@@ -2,7 +2,7 @@
 
 <p align="center">
 
-  <img width="450" src="https://github.com/lgrcia/prose/blob/0.9.6/docs/source/prose_illustration.png">
+  <img width="450" src="https://github.com/lgrcia/prose/blob/master/docs/source/prose_illustration.png">
   <br>  
   <br>
   A python framework to build FITS images pipelines.
