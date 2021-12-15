@@ -70,6 +70,7 @@ class Calibration:
         self.n = n if n is not None else (12 if twirl else 50)
         self.twirl = twirl
         self.cores = cores
+        self.xarray = None
 
         if show:
             self.show = blocks.LivePlot(plot_function, size=(10, 10))
@@ -183,6 +184,7 @@ class Calibration:
         xarray = xarray.sortby("time")
         xarray.attrs["time_format"] = "jd_utc"
         xarray.attrs["reduction"] = [b.__class__.__name__ for b in self.calibration_s.blocks]
+        self.xarray = xarray
         xarray.to_netcdf(self.phot)
 
     @property
@@ -218,8 +220,3 @@ class Calibration:
 
     def __repr__(self):
         return f"{self.detection_s}\n{self.calibration_s}"
-
-    @property
-    def xarray(self):
-        return self.calibration_s.xarray()
-
