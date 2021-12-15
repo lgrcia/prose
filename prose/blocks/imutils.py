@@ -1,3 +1,4 @@
+from xarray.core import variable
 from ..core import Block
 from astropy.io import fits
 import numpy as np
@@ -441,4 +442,14 @@ class XArray(Block):
         self.xarray.to_netcdf(destination)
 
     def concat(self, block):
-        self.xarray = xr.concat([self.xarray, block.xarray], dim=self.concat_dim)
+        if len(self.variables) > 0:
+            if len(block.variables) > 0:
+                for name, (dims, var) in self.variables.items():
+                    if len(var) > 0 and len(block.variables[name][1]) > 0:
+                        a = np.flatnonzero(np.array(dims) == self.concat_dim)
+                        if len(a) > 0:
+                            self.variables[name] = (dims, np.concatenate([var, block.variables[name][1]], axis=a[0]))
+            else:
+                pass
+        else:
+            self.variables = block.variables.copy()

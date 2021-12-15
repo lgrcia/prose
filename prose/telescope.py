@@ -5,6 +5,7 @@ from . import CONFIG
 import astropy.units as u
 from warnings import warn
 from .console_utils import info
+from .builtins import default
 
 def str_to_astropy_unit(unit_string):
     return u.__dict__[unit_string]
@@ -13,60 +14,33 @@ def str_to_astropy_unit(unit_string):
 # TODO: add exposure time unit
 class Telescope:
     """Object containing telescope information.
-
-    Parameters
-    ----------
-    telescope_file : dict or str, optional
-        telescope dict or description file, by default None which load a "default" telescope
-
     """
-    def __init__(self, telescope_file=None, verbose=True):
+    def __init__(self, telescope=None, verbose=True):
+        """Object containing telescope information.
 
-        # Keywords
-        self.keyword_object = "OBJECT"
-        self.keyword_image_type = "IMAGETYP"
-        self.keyword_light_images = "light"
-        self.keyword_dark_images = "dark"
-        self.keyword_flat_images = "flat"
-        self.keyword_bias_images = "bias"
-        self.keyword_observation_date = "DATE-OBS"
-        self.keyword_exposure_time = "EXPTIME"
-        self.keyword_filter = "FILTER"
-        self.keyword_observatory = "TELESCOP"
-        self.keyword_airmass = "AIRMASS"
-        self.keyword_fwhm = "FWHM"
-        self.keyword_seeing = "SEEING"
-        self.keyword_ra = "RA"
-        self.keyword_dec = "DEC"
-        self.ra_unit = "deg"
-        self.dec_unit = "deg"
-        self.jd_scale = "utc"
-        self.bjd_scale = "utc"
-        self.keyword_jd = "JD"
-        self.mjd = 0
-        self.keyword_bjd = "BJD"
-        self.keyword_flip = "PIERSIDE"
-        self.keyword_observation_time = None
-
-        # Specs
-        self.name = "Unknown"
-        self.trimming = (0, 0)
-        self.read_noise = 9
-        self.gain = 1
-        self.altitude = 2000
-        self.diameter = 100
-        self.pixel_scale = None
-        self.latlong = [None, None]
-        self.saturation = 55000
+        Parameters
+        ----------
+        telescope : dict or str, optional
+            telescope dict ot path of the .telescope file containing the dict in yaml format, by default None
+        verbose : bool, optional
+            whether to talk, by default True
+        """
 
         self.verbose = verbose
 
-        if telescope_file is not None:
-            success = self.load(telescope_file)
-            if success:
-                CONFIG.save_telescope_file(telescope_file)
-                CONFIG.build_telescopes_dict()
-
+        if telescope is not None:
+            if isinstance(telescope, str):
+                success = self.load(telescope)
+                if success:
+                    CONFIG.save_telescope_file(telescope)
+                    CONFIG.build_telescopes_dict()
+            elif isinstance(telescope, dict):
+                self.__dict__.update(telescope)
+            else:
+                raise AssertionError("telescope must be a dict or a path str")
+        else:
+            self.__dict__.update(default)
+                
     def __getattribute__(self, name):
         if name == "ra_unit":
             return str_to_astropy_unit(self.__dict__[name])
