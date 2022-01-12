@@ -33,7 +33,9 @@ class Calibration:
     images : list, optional
         list of images paths to be calibrated, by default None
     psf : `Block`, optional
-        a `Block` to be used to characterise the effective psf, by default blocks.Moffat2D
+        a `Block` to be used to characterise the effective psf, by default None, setting a default blocks.Moffat2D
+    detection: `Block`, optional
+        a `Block` to be used for stars detection, by default None, setting a default blocks.SegmentedPeaks
     show: bool, optional
         within a notebook, whether to show processed image during reduction, by default False 
     verbose: bool, optional
@@ -54,7 +56,8 @@ class Calibration:
             bias=None,
             darks=None,
             images=None,
-            psf=blocks.Moffat2D,
+            psf=None,
+            detection=None,
             verbose=True,
             show=False,
             twirl=True,
@@ -86,9 +89,24 @@ class Calibration:
         self.detection_s = None
         self.calibration_s = None
 
-        assert psf is None or issubclass(psf, Block), "psf must be a subclass of Block"
+        # Checking psf block
+        if psf is None:
+            psf = blocks.Moffat2D(name="fwhm")
+        else:
+            assert isinstance(psf, Block), "psf must be a subclass of Block"
+            psf.name = "fwhm"
+
         self.psf = psf
-        
+
+        # checking detection block
+        if detection is None:
+            detection = blocks.SegmentedPeaks(n_stars=self.n, name="detection")
+        else:
+            assert isinstance(detection, Block), "psf must be a subclass of Block"
+            detection.name = "detection"
+
+        self.detection = detection
+
         # set reference file
         if isinstance(self._reference, (int, float)):
             reference_id = int(self._reference * len(self._images))
@@ -114,7 +132,7 @@ class Calibration:
         self.detection_s = Sequence([
             self.calibration_block,
             blocks.Trim(name="trimming"),
-            blocks.SegmentedPeaks(n_stars=self.n, name="detection"),
+            self.detection,
             blocks.ImageBuffer(name="buffer")
         ], self.reference_fits, loader=self.loader)
 
@@ -123,15 +141,18 @@ class Calibration:
         ref_image = self.detection_s.buffer.image
         ref_stars = ref_image.stars_coords
 
+        if self.twirl:
+            assert len(ref_stars) >= 4, f"Only {len(ref_stars)} stars detected (must be >= 4). See detection kwargs"
+
         SequenceObject = MultiProcessSequence if self.cores else Sequence
 
         self.calibration_s = SequenceObject([
             self.calibration_block,
             blocks.Trim(name="trimming", skip_wcs=True),
             blocks.Flip(ref_image, name="flip"),
-            blocks.SegmentedPeaks(n_stars=self.n, name="detection"),
+            self.detection,
             blocks.Twirl(ref_stars, n=self.n, name="twirl") if self.twirl else blocks.XYShift(ref_stars),
-            self.psf(name="fwhm"),
+            self.psf,
             blocks.XArray(
                 ("time", "jd_utc"),
                 ("time", "bjd_tdb"),
@@ -150,7 +171,7 @@ class Calibration:
             blocks.AffineTransform(stars=True, data=True) if self.twirl else blocks.Pass(),
             self.show,
             blocks.Stack(self.stack_path, header=ref_image.header, overwrite=self.overwrite, name="stack"),
-            blocks.Video(self.gif_path, name="video", from_fits=True),
+            gif_block,
         ], self._images, name="Calibration", loader=self.loader)
 
         self.calibration_s.run(show_progress=self.verbose)
