@@ -32,7 +32,7 @@ def sql_other(kind):
 
 class FitsManager:
     
-    def __init__(self, folder, depth=0, hdu=0, extension=".f*ts.*"):
+    def __init__(self, folder, depth=0, hdu=0, extension=".f*ts*"):
         self.folder = folder
         self.con = sqlite3.connect(':memory:')
         self.cur = self.con.cursor()
@@ -53,7 +53,8 @@ class FitsManager:
             self.con.commit()
         
     
-    def print(self, calib=True):
+    def print(self, calib=True, repr=False):
+        txt = []
         fields = ["date", "telescope", "target", "filter", "type", "quantity"]
         
         observations = self.observations(telescope="*", target="*", date="*", afilter="*", show=False)
@@ -61,8 +62,8 @@ class FitsManager:
         if len(observations):
             for i, obs in enumerate(observations):
                 obs.insert(0, i)
-            print("Observations:")
-            print(tabulate.tabulate(observations, headers=["index", *fields], tablefmt="fancy_grid"))
+            txt.append("Observations:")
+            txt.append(tabulate.tabulate(observations, headers=["index", *fields], tablefmt="fancy_grid"))
             
         calibs = [
             self.observations(telescope="*", target="*", date="*", afilter="*", imtype=imtype, show=False)
@@ -72,13 +73,20 @@ class FitsManager:
 
         if calib:
             if len(calibs):
-                print("Calibrations:")
-                print(tabulate.tabulate(calibs, headers=fields, tablefmt="fancy_grid"))
+                txt.append("Calibrations:")
+                txt.append(tabulate.tabulate(calibs, headers=fields, tablefmt="fancy_grid"))
             
         reduced = self.observations(telescope="*", target="*", date="*", afilter="*", imtype="reduced", show=False)
         if len(reduced):
-            print("Reduced:")
-            print(tabulate.tabulate(reduced, headers=fields, tablefmt="fancy_grid"))
+            txt.append("Reduced:")
+            txt.append(tabulate.tabulate(reduced, headers=fields, tablefmt="fancy_grid"))
+
+        txt = "\n".join(txt)
+        
+        if repr:
+            return txt
+        else:
+            print(txt)
         
     def observations(self, telescope="", target="", date="", afilter="", imtype="light", show=True):
         fields = ["date", "telescope", "target", "filter", "type", "quantity"]
@@ -246,3 +254,6 @@ class FitsManager:
             return self.products_denominator()
         else:
             raise AssertionError("obs_name property is only available for FitsManager containing a unique observation")
+
+    def __repr__(self) -> str:
+        return self.print(repr=True)
