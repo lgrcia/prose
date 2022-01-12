@@ -618,7 +618,7 @@ class Observation(ApertureFluxes):
             idxs = np.argwhere(np.max(np.abs(self.stars - [x, y]), axis=1) < size).squeeze()
             viz.plot_marks(*self.stars[idxs].T, label=idxs)
 
-    def plot_comps_lcs(self, n=15, ylim=(0.98, 1.02)):
+    def plot_comps_lcs(self, n=15, ylim=None):
         """Plot comparison stars light curves along target star light curve
 
         Parameters
@@ -626,7 +626,7 @@ class Observation(ApertureFluxes):
         n : int, optional
             Number max of comparison to show, by default 5
         ylim : tuple, optional
-            ylim of the plot, by default (0.98, 1.02)
+            ylim of the plot, by default None and autoscale
         """
         idxs = [self.target, *self.xarray.comps.isel(apertures=self.aperture).values[0:n]]
         lcs = [self.xarray.diff_fluxes.isel(star=i, apertures=self.aperture).values for i in idxs]
@@ -635,16 +635,16 @@ class Observation(ApertureFluxes):
             ylim = (self.diff_flux.min() * 0.99, self.diff_flux.max() * 1.01)
 
         offset = ylim[1] - ylim[0]
-
+        
         if len(plt.gcf().axes) == 0:
             plt.figure(figsize=(5, 10))
 
         for i, lc in enumerate(lcs):
             color = "grey" if i != 0 else "black"
-            viz.plot(self.time, lc - i * offset, bincolor=color)
-            plt.annotate(idxs[i], (self.time.min() + 0.005, 1 - i * offset + offset / 3))
+            viz.plot(self.time, lc - lc.mean() - i * offset, bincolor=color)
+            plt.annotate(idxs[i], (self.time.min() + 0.005, - i * offset + offset/3))
 
-        plt.ylim(1 - (i + 0.5) * offset, ylim[1])
+        plt.ylim(-len(lcs)*offset + offset/2, offset/2)
         plt.title("Comparison stars", loc="left")
         plt.grid(color="whitesmoke")
         plt.tight_layout()
@@ -892,7 +892,7 @@ class Observation(ApertureFluxes):
             x, y = star
         else:
             if star is None:
-                star = 0
+                star = self.target
             assert isinstance(star, int), "star must be star coordinates or integer index"
         
             x, y = self.stars[star]
