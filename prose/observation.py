@@ -891,11 +891,10 @@ class Observation(ApertureFluxes):
 
         if isinstance(star, (tuple, list, np.ndarray)):
             x, y = star
-        else:
-            if star is None:
-                star = self.target
-            assert isinstance(star, int), "star must be star coordinates or integer index"
+        elif isinstance(star, int):
             x, y = self.stars[star]
+        elif star is None:
+            x, y = self.stars[self.target]
 
         Y, X = np.indices(self.stack.shape)
         cutout_mask = (np.abs(X - x + 0.5) < n) & (np.abs(Y - y + 0.5) < n)
