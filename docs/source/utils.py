@@ -28,10 +28,7 @@ def convert_ipynb(filename, destination):
     for imname, imstring in resources['outputs'].items():
         save_image(path.join(destination, imname), imstring)
 
-    open(path.join(destination, f"{basename}.rst"), "w").write(
-        body.replace("../_static", "../../_static")
-        )
-    
+    open(path.join(destination, f"{basename}.rst"), "w").write(body.replace("../_static", "../../_static"))
     
 import inspect
 from os import path
@@ -48,6 +45,5 @@ for name, obj in inspect.getmembers(blocks):
                 filename = path.join("./blocks/others", "{}.rst".format(name))
                 with open(filename, "w") as f:
                     f.write(":orphan:\n")
-                    f.write(f"{name}\n{'-'*len(name)}")
                     f.write(f"\n\n.. autoclass:: prose.blocks.{name}\n\t:members:")
                     print(name)
