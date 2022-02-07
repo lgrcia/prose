@@ -44,7 +44,7 @@ setup(
         "tensorflow",
     ],
     extras_require={
-        'dev': [
+        'docs': [
             "sphinx",
             "nbsphinx",
             "jupyter-sphinx",
