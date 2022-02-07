@@ -1,7 +1,9 @@
 
 default = dict(
+    name = "Unknown",
     # Keywords
     # --------
+    keyword_telescope = "TELESCOP",
     keyword_object = "OBJECT",
     keyword_image_type = "IMAGETYP",
     keyword_light_images = "light",
@@ -11,7 +13,6 @@ default = dict(
     keyword_observation_date = "DATE-OBS",
     keyword_exposure_time = "EXPTIME",
     keyword_filter = "FILTER",
-    keyword_observatory = "TELESCOP",
     keyword_airmass = "AIRMASS",
     keyword_fwhm = "FWHM",
     keyword_seeing = "SEEING",
@@ -26,16 +27,15 @@ default = dict(
     keyword_bjd = "BJD",
     keyword_flip = "PIERSIDE",
     keyword_observation_time = None,
-    name = "Unknown",
     # Specs
     # -----
-    trimming = (0, 0),
-    read_noise = 9,
-    gain = 1,
-    altitude = 2000,
-    diameter = 100,
-    pixel_scale = None,
-    latlong = [None, None],
+    trimming = (0, 0), # in piwel along y/x
+    read_noise = 9, # in A
+    gain = 1, # in e-/ADU
+    altitude = 2000, # in meters
+    diameter = 100, # in meters
+    pixel_scale = None, # in arcseconds
+    latlong = [None, None], 
     saturation = 55000,
     hdu = 0
 )
@@ -44,7 +44,7 @@ default = dict(
 speculoos_south = dict(
     default,
     name = "SS0",
-    keyword_observatory = "OBSERVAT",
+    keyword_telescope = "OBSERVAT",
     trimming= [8, 22],  # in piwel along y/x
     read_noise= 10,  # in ADU
     gain= 1.02,  # in e-/ADU
@@ -62,7 +62,7 @@ speculoos_south = dict(
 
 callisto = dict(
     speculoos_south,
-    name= "Callisto"
+    name = "Callisto"
 )
 
 io = dict(
@@ -108,8 +108,8 @@ trappist = dict(
 
 trappistN = dict(
     speculoos_south,
-    name= "TRAPPIST-North",
-    names= ["Trappist-North", "ntm"],
+    name = "TRAPPIST-North",
+    names = ["Trappist-North", "ntm"],
     pixel_scale= 0.60,
     ra_unit= "hourangle",
     latlong= [31.2027, -7.8586],
@@ -135,7 +135,9 @@ saintex = dict(
 
 liverpool = dict(
     speculoos_south,
-    name= "Liverpool Telescope",
+    name = "Liverpool",
+    names = ["Liverpool Telescope"],
+    keyword_telescope= "TELESCOP",
     trimming= [8, 22], # pixels
     read_noise= 12, # ADU
     gain= 2.4, # ADU/e-
@@ -149,25 +151,32 @@ liverpool = dict(
     keyword_observation_date= "DATE-OBS",
     keyword_exposure_time= "EXPTIME",
     keyword_filter= "FILTER1",
-    keyword_observatory= "TELESCOP",
     keyword_jd= "JD_UTC",
     keyword_ra= "RA",
     keyword_dec= "DEC",
     TTF_link= None
 )
 
-built_in_telescopes = {
-    "trappist": trappist,
-    "artemis": artemis,
-    "europa": europa,
-    "saintex": saintex,
-    "ganymede": ganymede,
-    "io": io,
-    "callisto": callisto,
-    "ntm": trappistN,
-    "trappist-north": trappistN,
-    "saint-ex": saintex,
-    "liverpool": liverpool
-}
+spirit = dict(
+    speculoos_south,
+    name = "spirit",
+    keyword_telescope = "TELESCOP",
+    names = ["PIRT1280SciCam2"],
+    pixel_scale = 0.306,
+
+)
+
+built_in_telescopes = {telescope["name"].lower(): telescope for telescope in [
+    callisto,
+    io,
+    ganymede,
+    europa,
+    artemis,
+    trappist,
+    trappistN,
+    saintex,
+    liverpool,
+    spirit
+]}
 
 TESS_pixel = 2.5 # arcmin

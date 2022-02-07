@@ -2,8 +2,7 @@ from tqdm import tqdm
 from astropy.io import fits
 from .console_utils import TQDM_BAR_FORMAT
 from astropy.wcs import WCS
-from . import viz
-from . import Telescope
+from . import viz, utils, Telescope
 from collections import OrderedDict
 from tabulate import tabulate
 import numpy as np
@@ -12,6 +11,10 @@ from pathlib import Path
 from astropy.time import Time
 from functools import partial
 import multiprocessing as mp
+import matplotlib.pyplot as plt
+import numpy as np
+from .utils import register_args
+
 
 class Image:
 
@@ -116,6 +119,23 @@ class Image:
     def shape(self):
         return np.array(self.data.shape)
 
+    def show(self, cmap="Greys_r", ax=None, figsize=(10,10), stars=None, stars_labels=True):
+        if ax is None:
+            if not isinstance(figsize, (list, tuple)):
+                if isinstance(figsize, (float, int)):
+                    figsize = (figsize, figsize)
+                else:
+                    raise TypeError("figsize must be tuple or list or float or int")
+            ax = plt.figure(figsize=figsize)
+        plt.imshow(utils.z_scale(self.data), origin="lower", cmap=cmap)
+        
+        if stars is None:
+            stars = "stars_coords" in self.__dict__
+        
+        if stars:
+            label = np.arange(len(self.stars_coords)) if stars_labels else None
+            viz.plot_marks(*self.stars_coords.T, label=label)
+
 
 class Block:
     """A ``Block`` is a single unit of processing acting on the ``Image`` object, reading, processing and writing its attributes. When placed in a sequence, it goes through three steps:
@@ -142,6 +162,9 @@ class Block:
         self.unit_data = None
         self.processing_time = 0
         self.runs = 0
+
+        # recording args and kwargs for reproducibility
+        # when subclassing, use @utils.register_args decorator (see docs)
 
     def initialize(self, *args):
         pass
@@ -178,13 +201,18 @@ class Block:
     def concat(self, block):
         return self
 
+    def __call__(self, image):
+        image_copy = image.copy()
+        self.run(image_copy)
+        return image_copy
+
   
 class Sequence:
     # TODO: add index self.i in image within unit loop
 
-    def __init__(self, blocks, files, name="default", loader=Image, **kwargs):
+    def __init__(self, blocks, name="default", loader=Image, **kwargs):
         self.name = name
-        self.files_or_images = files if not isinstance(files, (str, Path)) else [files]
+        self.files_or_images = []
         self.blocks = blocks
         self.loader = loader
 
@@ -205,7 +233,10 @@ class Sequence:
             for i, block in enumerate(blocks)
         })
 
-    def run(self, show_progress=True):
+    def run(self, images, show_progress=True):
+
+        self.files_or_images = images if not isinstance(images, (str, Path)) else [images]
+
         if show_progress:
             progress = lambda x: tqdm(
                 x,
@@ -282,6 +313,35 @@ class Sequence:
     @property
     def processing_time(self):
         return np.sum([block.processing_time for block in self.blocks])
+
+    def __getitem__(self, item):
+        return self.blocks[item]
+
+    # import/export properties
+    # ------------------------
+
+    @staticmethod
+    def from_dicts(blocks_dicts):
+        blocks = []
+        for block_dict in blocks_dicts:
+            block = block_dict["block"](*block_dict["args"], **block_dict["kwargs"])
+            block.name = block_dict["name"]
+            blocks.append(block)
+            
+        return Sequence(blocks)
+
+    @property
+    def as_dicts(self):
+        blocks = []
+        for block in self.blocks:
+            blocks.append(dict(
+                block=block.__class__,
+                name=block.name,
+                args=block.args,
+                kwargs=block.kwargs
+            ))
+
+        return blocks
 
 
 class MultiProcessSequence(Sequence):

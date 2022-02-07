@@ -134,9 +134,9 @@ class Calibration:
             blocks.Trim(name="trimming"),
             self.detection,
             blocks.ImageBuffer(name="buffer")
-        ], self.reference_fits, loader=self.loader)
+        ], loader=self.loader)
 
-        self.detection_s.run(show_progress=False)
+        self.detection_s.run(self.reference_fits, show_progress=False)
 
         ref_image = self.detection_s.buffer.image
         ref_stars = ref_image.stars_coords
@@ -172,9 +172,9 @@ class Calibration:
             self.show,
             blocks.Stack(self.stack_path, header=ref_image.header, overwrite=self.overwrite, name="stack"),
             gif_block,
-        ], self._images, name="Calibration", loader=self.loader)
+        ], name="Calibration", loader=self.loader)
 
-        self.calibration_s.run(show_progress=self.verbose)
+        self.calibration_s.run(self._images, show_progress=self.verbose)
 
         # saving xarray
         xarray = self.calibration_s.xarray.xarray

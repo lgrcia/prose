@@ -10,6 +10,7 @@ from ..core import Block
 import matplotlib.pyplot as plt
 from collections import OrderedDict
 from ..utils import fast_binning
+from ..utils import register_args
 
 def image_psf(image, stars, size=15, normalize=False, return_cutouts=False):
     """
@@ -185,7 +186,8 @@ class FWHM(PSFModel):
     """
     Fast empirical FWHM (based on Arielle Bertrou-Cantou's idea)
     """
-
+    
+    @register_args
     def __init__(self, cutout_size=51, **kwargs):
         super().__init__(cutout_size=cutout_size, **kwargs)
         Y, X = np.indices((self.cutout_size,self.cutout_size))
@@ -204,6 +206,7 @@ class FastGaussian(PSFModel):
     """
     Fit a symetric 2D Gaussian model to an image effective PSF
     """
+    @register_args
     def __init__(self, cutout_size=21, **kwargs):
         super().__init__(cutout_size=cutout_size, **kwargs)
 
@@ -233,9 +236,28 @@ class FastGaussian(PSFModel):
 
 
 class Gaussian2D(PSFModel):
-    """
+    r"""
     Fit an elliptical 2D Gaussian model to an image effective PSF
+
+    Model is
+
+    .. math::
+
+        f(x, y|A, x_0, y_0, \sigma_x, \sigma_y, \theta, b) = - A \exp\left(\frac{(x'-x'_0)^2}{2\sigma_x^2} \frac{(y'-y'_0)^2}{2\sigma_y^2}\right) + b
+
+    .. math::
+
+        \text{with}\quad \begin{gather*}
+        x' = xcos(\theta) + ysin(\theta) \\
+        y' = -xsin(\theta) + ycos(\theta)
+        \end{gather*}
+
+
+    is fitted from an effective psf. :code:`scipy.optimize.minimize` is used to minimize :math:`\chi ^2` from data. Initial parameters are found using the moments of the `effective psf <https://photutils.readthedocs.io/en/stable/epsf.html>`_. This method is 4 times faster than :code:`photutils.centroids.fit_2dgaussian` and lead to similar results.
+
     """
+
+    @register_args
     def __init__(self, cutout_size=21, **kwargs):
         super().__init__(cutout_size=cutout_size, **kwargs)
 
@@ -276,6 +298,8 @@ class Moffat2D(PSFModel):
     """
     Fit an elliptical 2D Moffat model to an image effective PSF
     """
+
+    @register_args
     def __init__(self, cutout_size=21, **kwargs):
         super().__init__(cutout_size=cutout_size, **kwargs)
 
@@ -320,6 +344,7 @@ class Moffat2D(PSFModel):
 
 class KeepGoodStars(Block):
 
+    @register_args
     def __init__(self, n=-1, **kwargs):
         super().__init__(**kwargs)
         self.n = n

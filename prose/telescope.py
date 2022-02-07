@@ -36,6 +36,7 @@ class Telescope:
                     CONFIG.build_telescopes_dict()
             elif isinstance(telescope, dict):
                 self.__dict__.update(telescope)
+                CONFIG.save_telescope_file(telescope)
             else:
                 raise AssertionError("telescope must be a dict or a path str")
         else:

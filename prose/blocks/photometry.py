@@ -9,6 +9,7 @@ from photutils import CircularAperture, CircularAnnulus
 from .. import FitsManager
 from photutils.psf import IntegratedGaussianPRF, DAOGroup, BasicPSFPhotometry
 from ..core import Block
+from ..utils import register_args
 try:
     import sep
 except:
@@ -21,6 +22,7 @@ except:
 
 class PhotutilsPSFPhotometry(Block):
 
+    @register_args
     def __init__(self, fwhm, **kwargs):
         super().__init__(**kwargs)
 
@@ -77,6 +79,7 @@ class PhotutilsAperturePhotometry(Block):
         radius of the outer annulus in fraction of fwhm, by default 8
     """
 
+    @register_args
     def __init__(
             self,
             apertures=None,
@@ -221,6 +224,7 @@ class SEAperturePhotometry(Block):
         radius of the outer annulus in fraction of fwhm, by default 8
     """
 
+    @register_args
     def __init__(self, apertures=None, r_in=5, r_out=8, fwhm_scale=True, **kwargs):
 
         super().__init__(**kwargs)

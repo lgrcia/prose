@@ -95,9 +95,9 @@ class ObservationSimulation:
         self.beta = beta
         self.theta = theta * np.pi / 180
         self.sigma = np.array(fwhm) / self.sigma_to_fwhm
-        if model is "moffat":
+        if model == "moffat":
             self.psf_model = self.moffat_psf
-        elif model is "gaussian":
+        elif model == "gaussian":
             self.psf_model = self.gaussian_psf
 
     def moffat_psf(self, a, x, y):

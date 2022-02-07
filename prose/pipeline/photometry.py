@@ -92,9 +92,9 @@ class Photometry:
             blocks.Set(stars_coords=self.stars) if self.stars is not None else blocks.Pass(),
             self.stack_psf(name="fwhm"),
             blocks.ImageBuffer(name="buffer"),
-        ], self.stack)
+        ])
 
-        self.detection_s.run(show_progress=False)
+        self.detection_s.run(self.stack, show_progress=False)
         reference = self.detection_s.buffer.image
         self.stars = reference.stars_coords
 
@@ -131,9 +131,9 @@ class Photometry:
                 ("time", "annulus_area"),
                 (("time", "star"), "peaks")
             ),
-        ], self.images, name="Photometry")
+        ], name="Photometry")
 
-        self.photometry_s.run(show_progress=self.verbose)
+        self.photometry_s.run(self.images, show_progress=self.verbose)
         self.save_xarray()
 
     def save_xarray(self):

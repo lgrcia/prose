@@ -129,13 +129,13 @@ class FitsManager:
                 (target LIKE :target || '%' OR target IS NULL) AND 
                 date LIKE :date || '%' AND 
                 filter LIKE :filter || '%'
-                ORDER BY date
+                ORDER BY JD
                 """
                 , {"telescope":telescope, "target":target, "date": date, "filter":afilter, "imtype":imtype}))
         
         return [f[0] for f in files_paths]
         
-    def observation_files(self, i, min_days = 100000, max_days = 0, same_telescope=True):
+    def observation_files(self, i, min_days = 100000, max_days = 0, same_telescope=True, lights="images"):
         obs = self.observations(show=False)
         if len(obs) == 0:
             return None
@@ -156,7 +156,7 @@ class FitsManager:
         images = {}
 
         _lights = np.array(list(self.cur.execute(sql_light, kwargs))).T
-        images["lights"] = _lights[1]
+        images[lights] = _lights[1]
         w = np.unique(_lights[6])[0]
         h = np.unique(_lights[7])[0]
         kwargs.update({"w": w, "h": h})
