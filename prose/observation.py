@@ -5,7 +5,7 @@ import re
 from astropy.time import Time
 from astropy import units as u
 from astropy.coordinates import SkyCoord
-from .fluxes import ApertureFluxes
+from .fluxes import ApertureFluxes, pont2006
 from . import viz
 from astropy.io import fits
 from .telescope import Telescope
@@ -735,7 +735,7 @@ class Observation(ApertureFluxes):
             target=self.target["id"],
             highlights=self.comparison_stars)
 
-    def plot_systematics(self, fields=None):
+    def plot_systematics(self, fields=None, ylim=None):
         """Plot systematics measurements along target light curve
 
         Parameters
@@ -750,28 +750,31 @@ class Observation(ApertureFluxes):
 
         flux = self.diff_flux.copy()
         flux /= np.nanmean(flux)
-        amp = np.percentile(flux, 95) - np.percentile(flux, 5)
-        offset = 2.5*amp
+        _, amplitude = pont2006(self.time, self.diff_flux, plot=False)
+        amplitude *= 3
+        offset = 2.5*amplitude
 
         if len(plt.gcf().axes) == 0:
             plt.figure(figsize=(5 ,10))
 
         viz.plot(self.time, flux, bincolor="black")
-        plt.annotate("diff. flux", (self.time.min() + 0.005, 1 + 1.5*amp))
+        plt.annotate("diff. flux", (self.time.min() + 0.005, 1 + 1.5*amplitude))
 
         for i, field in enumerate(fields):
             if field in self:
                 scaled_data = self.xarray[field].values.copy()
                 off = (i+1)*offset
-                scaled_data = utils.rescale(scaled_data)*amp + 1 - off
+                scaled_data = scaled_data - np.mean(scaled_data)
+                bx, by, be = utils.fast_binning(self.time, scaled_data, 0.005)
+                scaled_data /= np.max([10*np.mean(be), (np.percentile(by, 95) - np.percentile(by, 5))])
+                scaled_data = scaled_data*amplitude + 1 - off
                 viz.plot(self.time, scaled_data, bincolor="grey")
-                plt.annotate(field, (self.time.min() + 0.005, 1 - off + amp / 3))
+                plt.annotate(field, (self.time.min() + 0.005, 1 - off + amplitude / 3))
             else:
                 i -= 1
 
         plt.ylim(1 - off - offset, 1 + offset)
         plt.title("Systematics (scaled to diff. flux)", loc="left")
-        plt.grid(color="whitesmoke")
         plt.tight_layout()
 
     def plot_raw_diff(self):
