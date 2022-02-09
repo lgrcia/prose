@@ -1,0 +1,6 @@
+python:
+  version: 3.9
+  install:
+    - method: pip
+      extra_requirements:
+        - docs

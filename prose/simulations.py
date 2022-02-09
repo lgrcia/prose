@@ -198,7 +198,7 @@ class ObservationSimulation:
             os.makedirs(destination)
 
         for i, time in enumerate(progress(self.time)):
-            date = Time(datetime(2020, 3, 1, int(i / 60), i % 60)).to_value("fits")
+            date = Time(time, format="jd", scale="utc").to_value("fits")
             im = self.image(i, 300)
             fits_image(im,
                        {'TELESCOP': self.telescope.name, 'JD': time, 'DATE-OBS': date, "FILTER": "a"},

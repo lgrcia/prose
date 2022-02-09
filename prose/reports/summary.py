@@ -33,14 +33,14 @@ class Summary(Observation, LatexTemplate):
             ["Images", len(self.time)],
             ["Mean std · fwhm (epsf)",
              f"{np.mean(self.fwhm) / (2 * np.sqrt(2 * np.log(2))):.2f} · {np.mean(self.fwhm):.2f} pixels"],
-            ["Fwhmx · fwhmy (target)", f"{self.plot_star_psf(print_values=False,plot=False)[0]:.2f} · {self.plot_star_psf(print_values=False,plot=False)[1]:.2f} pixels"],
+            # ["Fwhmx · fwhmy (target)", f"{self.plot_star_psf(print_values=False,plot=False)[0]:.2f} · {self.plot_star_psf(print_values=False,plot=False)[1]:.2f} pixels"],
             ["Optimum aperture", f"{np.mean(self.apertures_radii[self.aperture,:]):.2f} pixels"],
             ["Telescope", self.telescope.name],
             ["Filter", self.filter],
             ["Exposure", f"{np.mean(self.exptime)} s"],
         ]
 
-        self.description = f"{self.date[0:4]} {self.date[4:6]} {self.date[6::]} $\cdot$ {self.telescope.name} $\cdot$ {self.filter}"
+        self.description = f"{self.date.strftime('%Y %m %d')} $\cdot$ {self.telescope.name} $\cdot$ {self.filter}"
         self._trend = None
         self._transit = None
         self.dpi = 100
