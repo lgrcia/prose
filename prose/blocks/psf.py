@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from scipy.optimize import minimize
 import warnings
 import numpy as np
@@ -11,35 +12,6 @@ import matplotlib.pyplot as plt
 from collections import OrderedDict
 from ..utils import fast_binning
 from ..utils import register_args
-
-def image_psf(image, stars, size=15, normalize=False, return_cutouts=False):
-    """
-    Get global psf from image using photutils routines
-
-    Parameters
-    ----------
-    image: np.ndarray or path
-    stars: np.ndarray
-        stars positions with shape (n,2)
-    size: int
-        size of the cuts around stars (in pixels)
-    normalize: bool, optional
-        weather to normalize the cutout, default is False
-
-    Returns
-    -------
-    np.ndarray of shape (size, size)
-
-    """
-    _, cuts = cutouts(image, stars, size=size)
-    cuts = cuts.data
-    if normalize:
-        cuts = [c/np.sum(c) for c in cuts]
-    if return_cutouts:
-        return np.median(cuts, axis=0), cuts
-    else:
-        return np.median(cuts, axis=0)
-
 
 def cutouts(image, stars, size=15):
     """Custom version to extract stars cutouts
@@ -126,6 +98,31 @@ def moments(data):
     return height, x, y, width_x, width_y, 0.0, background
 
 
+class PSF(Block):
+    """
+    Get global psf from image using photutils routines
+    """
+
+    def __init__(self, cutout_size=21, save_cutouts=False, **kwargs):
+        super().__init__(**kwargs)
+        self.cutout_size = cutout_size
+        self.save_cutouts = save_cutouts
+        self.x, self.y = np.indices((self.cutout_size, self.cutout_size))
+
+    def run(self, image):
+        data = image.data
+        stars = image.stars_coords.copy()
+        _, cuts = cutouts(data, stars, size=self.cutout_size)
+        cuts = cuts.data
+
+        if True:
+            cuts = [c/np.sum(c) for c in cuts]
+
+        if self.save_cutouts:
+            image.cutouts = cuts
+        
+        image.psf =  np.median(cuts, axis=0)
+
 class PSFModel(Block):
 
     def __init__(self, cutout_size=21, save_cutouts=False, **kwargs):
@@ -133,53 +130,33 @@ class PSFModel(Block):
         self.cutout_size = cutout_size
         self.save_cutouts = save_cutouts
         self.x, self.y = np.indices((self.cutout_size, self.cutout_size))
-        self.epsf = None
 
     @property
     def optimized_model(self):
         return self.model(*self.optimized_params)
 
-    def build_epsf(self, image, stars):
-        return image_psf(image, stars.copy(), size=self.cutout_size, return_cutouts=self.save_cutouts)
-
     def model(self):
         raise NotImplementedError("")
 
-    def nll(self, p):
-        ll = np.sum(np.power((self.model(*p) - self.epsf), 2) * self.epsf)
+    def nll(self, p, psf):
+        ll = np.sum(np.power((self.model(*p) - psf), 2) * psf)
         return ll if np.isfinite(ll) else 1e25
     
-    def optimize(self):
+    def optimize(self, psf):
+        raise NotImplementedError("")
+
+    def fwhm(self, params):
         raise NotImplementedError("")
 
     def sigma_to_fwhm(self, *args):
         return gaussian_sigma_to_fwhm
 
     def run(self, image):
-        if self.save_cutouts:
-            self.epsf, image.cutouts = self.build_epsf(image.data, image.stars_coords)
-        else:
-            self.epsf = self.build_epsf(image.data, image.stars_coords)
-        image.fwhmx, image.fwhmy, image.theta = self.optimize()
+        image.psf_models_params = self.optimize(image.psf)
+        image.psf_model = self.model(*image.psf_models_params)
+        image.fwhmx, image.fwhmy, image.theta = self.fwhm(image.psf_models_params)
         image.fwhm = np.mean([image.fwhmx, image.fwhmy])
-        image.psf_sigma_x = image.fwhmx / self.sigma_to_fwhm()
-        image.psf_sigma_y = image.fwhmy / self.sigma_to_fwhm()
-        image.header["FWHM"] = image.fwhm
-        image.header["FWHMX"] = image.fwhmx
-        image.header["FWHMY"] = image.fwhmy
-        image.header["PSFANGLE"] = image.theta
-        image.header["FWHMALG"] = self.__class__.__name__
-
-    def show_residuals(self):
-        plt.imshow(self.epsf - self.optimized_model)
-        plt.colorbar()
-        ax = plt.gca()
-        plt.text(0.05, 0.05, "$\Delta f=$ {:.2f}%".format(100*np.sum(np.abs(self.epsf - self.optimized_model))/np.sum(self.epsf)), 
-        fontsize=14, horizontalalignment='left', verticalalignment='bottom', transform=ax.transAxes, c="w")
-
-    def __call__(self, data):
-        self.epsf = data
-        return self.optimize()
+        image.psf_model_block = self.__class__.__name__
 
 
 class FWHM(PSFModel):
@@ -194,13 +171,15 @@ class FWHM(PSFModel):
         x = y = self.cutout_size/2
         self.radii = (np.sqrt((X - x) ** 2 + (Y - y) ** 2)).flatten()
 
-    def optimize(self):
-        psf = self.epsf.copy()
+    def fwhm(self, param):
+        return param, param, 0
+
+    def optimize(self, psf):
         psf -= np.min(psf)
         pixels = psf.flatten()
         binned_radii, binned_pixels, _ = fast_binning(self.radii, pixels, bins=1)
         fwhm = 2*binned_radii[np.flatnonzero(binned_pixels > np.max(binned_pixels)/2)[-1]]
-        return fwhm, fwhm, 0
+        return fwhm
 
 class FastGaussian(PSFModel):
     """
@@ -216,20 +195,22 @@ class FastGaussian(PSFModel):
         psf = height * np.exp(-((dx/(2*s))**2 + (dy/(2*s))**2))
         return psf + m
 
-    def optimize(self):
-        p0 = [np.max(self.epsf), 4, np.min(self.epsf)]
+    def fwhm(self, params):
+        return params[1]*self.sigma_to_fwhm(), params[1]*self.sigma_to_fwhm(), 0
+
+    def optimize(self, psf):
+        p0 = [np.max(psf), 4, np.min(psf)]
         min_sigma = 0.5
         bounds = [
             (0, np.infty),
             (min_sigma, np.infty),
-            (0, np.mean(self.epsf)),
+            (0, np.mean(psf)),
         ]
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            params = minimize(self.nll, p0, bounds=bounds).x
-            self.optimized_params = params
-            return params[1]*self.sigma_to_fwhm(), params[1]*self.sigma_to_fwhm(), 0
+            params = minimize(self.nll, p0, bounds=bounds, args=(psf)).x
+            return params
 
     def citations(self):
         return "scipy", "photutils"
@@ -270,8 +251,11 @@ class Gaussian2D(PSFModel):
         psf = height * np.exp(-(a * dx ** 2 + 2 * b * dx * dy + c * dy ** 2))
         return psf + m
 
-    def optimize(self):
-        p0 = moments(self.epsf)
+    def fwhm(self, params):
+        return params[3]*self.sigma_to_fwhm(), params[4]*self.sigma_to_fwhm(), params[-2]
+
+    def optimize(self, psf):
+        p0 = moments(psf)
         x0, y0 = p0[1], p0[2]
         min_sigma = 0.5
         bounds = [
@@ -281,22 +265,34 @@ class Gaussian2D(PSFModel):
             (min_sigma, np.infty),
             (min_sigma, np.infty),
             (0, 4),
-            (0, np.mean(self.epsf)),
+            (0, np.mean(psf)),
         ]
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            params = minimize(self.nll, p0, bounds=bounds).x
-            self.optimized_params = params
-            return params[3]*self.sigma_to_fwhm(), params[4]*self.sigma_to_fwhm(), params[-2]
+            params = minimize(self.nll, p0, bounds=bounds, args=(psf)).x
+            return params
 
     def citations(self):
         return "scipy", "photutils"
 
 
 class Moffat2D(PSFModel):
-    """
-    Fit an elliptical 2D Moffat model to an image effective PSF
+    r"""
+    Fit an elliptical 2D Moffat model expressed as
+
+    .. math::   
+
+        f(x, y|A, x_0, y_0, \sigma_x, \sigma_y, \theta, \beta, b) = \frac{A}{\left(1 + \frac{x'-x'_0}{\sigma_x^2} + \frac{y'-y'_0}{\sigma_y^2}\right)^\beta} + b
+
+    .. math::
+
+        \text{with}\quad \begin{gather*}
+        x' = xcos(\theta) + ysin(\theta) \\
+        y' = -xsin(\theta) + ycos(\theta)
+        \end{gather*}
+
+    is fitted from an effective psf. :code:`scipy.optimize.minimize` is used to minimize :math:`\chi ^2` from data. Initial parameters are found using the moments of the `effective psf <https://photutils.readthedocs.io/en/stable/epsf.html>`_. 
     """
 
     @register_args
@@ -312,11 +308,15 @@ class Moffat2D(PSFModel):
         
         return b + a / np.power(1 + (dx/sx)**2 + (dy/sy)**2, beta) 
 
-    def sigma_to_fwhm(self):
-        return 2*np.sqrt(np.power(2, 1/self.optimized_params[-1]) - 1)
+    def fwhm(self, params):
+        sm = self.sigma_to_fwhm(params[-1])
+        return params[3]*sm, params[4]*sm, params[-2]
+
+    def sigma_to_fwhm(self, beta):
+        return 2*np.sqrt(np.power(2, 1/beta) - 1)
     
-    def optimize(self):
-        p0 = list(moments(self.epsf))
+    def optimize(self, psf):
+        p0 = list(moments(psf))
         p0.append(1)
         x0, y0 = p0[1], p0[2]
         min_sigma = 0.5
@@ -327,16 +327,14 @@ class Moffat2D(PSFModel):
             (min_sigma, np.infty),
             (min_sigma, np.infty),
             (0, 4),
-            (0, np.mean(self.epsf)),
+            (0, np.mean(psf)),
             (1, 8),
         ]
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            params = minimize(self.nll, p0, bounds=bounds).x
-            self.optimized_params = params
-            sm = self.sigma_to_fwhm()
-            return params[3]*sm, params[4]*sm, params[-2]
+            params = minimize(self.nll, p0, bounds=bounds, args=(psf,)).x
+            return params
 
     def citations(self):
         return "scipy", "photutils"

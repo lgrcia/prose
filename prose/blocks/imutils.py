@@ -406,14 +406,22 @@ class LivePlot(Block):
 class Get(Block):
 
     @register_args
-    def __init__(self, *names, name="get"):
-        super().__init__(name=name)
+    def __init__(self, *names):
+        super().__init__()
         self.names = names
         self.values = {name: [] for name in names}
 
     def run(self, image, **kwargs):
         for name in self.names:
-            self.values[name].append(image.__dict__[name])
+            if name in image.__dict__:
+                value = image.__dict__[name]
+            elif name in image.header:
+                value = image.header[name]
+            else:
+                raise AttributeError(f"'{name}' not in Image attributes or Image.header")
+
+            self.values[name].append(value)
+
 
     def __call__(self, *names):
         if len(names) == 0:

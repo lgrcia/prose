@@ -1,6 +1,10 @@
 
 default = dict(
+    # Name(s)
+    # -------
     name = "Unknown",
+    names = [],
+
     # Keywords
     # --------
     keyword_telescope = "TELESCOP",
@@ -18,15 +22,19 @@ default = dict(
     keyword_seeing = "SEEING",
     keyword_ra = "RA",
     keyword_dec = "DEC",
+    keyword_jd = "JD",
+    keyword_bjd = "BJD",
+    keyword_flip = "PIERSIDE",
+    keyword_observation_time = None,
+
+    # Units, formats and scales
+    # -------------------------
     ra_unit = "deg",
     dec_unit = "deg",
     jd_scale = "utc",
     bjd_scale = "utc",
-    keyword_jd = "JD",
     mjd = 0,
-    keyword_bjd = "BJD",
-    keyword_flip = "PIERSIDE",
-    keyword_observation_time = None,
+    
     # Specs
     # -----
     trimming = (0, 0), # in piwel along y/x
