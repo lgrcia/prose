@@ -1,0 +1,859 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>Observation &mdash; prose  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/jupyter-sphinx.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/thebelab.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/clipboard.min.js"></script>
+        <script src="../_static/copybutton.js"></script>
+        <script src="../_static/thebelab-helper.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script src="https://unpkg.com/@jupyter-widgets/html-manager@^0.20.0/dist/embed-amd.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Telescope" href="telescope.html" />
+    <link rel="prev" title="Fits Manager" href="fitsmanager.html" /> 
+</head>
+
+<body class="">
+
+   
+    
+
+  <div class="main">
+    <div id="small-menu">
+      <div id="title">
+        <div class="icon-home">prose</div>
+        <div class="version text-icon">
+          <!-- <i data-feather="git-branch"></i> -->
+          
+            deving
+          
+        </div>
+      </div>
+      <div id="small-menu-button">MENU</div>
+    </div>
+    
+    <nav id="navmenu">
+        <div class="nav-head" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> prose
+          
+
+          
+          </a>
+
+          
+            
+
+                <div class="version text-icon">
+                  <!-- <i data-feather="git-branch"></i> -->
+                  
+                    deving
+                  
+                </div>
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">References</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../core.html">What is a pipeline?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../blocks.html">Blocks</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="fitsmanager.html">Fits Manager</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Observation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#quick-start">Quick start</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#complete-api">Complete API</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="telescope.html">Telescope</a></li>
+<li class="toctree-l2"><a class="reference internal" href="aperturephotometry.html">AperturePhotometry</a></li>
+<li class="toctree-l2"><a class="reference internal" href="calibration.html">Calibration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="converters.html">Converters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="viz.html">Visualization</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/fits_manager.html">Fits manager</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/reduction.html">Photometric reduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/manual_reduction.html">Manual reduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/custom_pipeline.html">Custom pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/modeling.html">Modeling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/reports.html">Reports</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/neb.html">Near Eclipsing Binary diagnostic</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Notes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/phot.html">Data products: <code class="docutils literal notranslate"><span class="pre">.phot</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/extra.html">Useful tips</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      <div class="github-link">
+        <!-- <a href="https://github.com/lgrcia/prose">view on github</a> -->
+      </div>
+    </nav>
+
+    <div class="content">
+      
+      <div class="rst-content">
+      
+        <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+        <div itemprop="articleBody">
+          
+  <section id="observation">
+<h1>Observation<a class="headerlink" href="#observation" title="Permalink to this headline">¶</a></h1>
+<p><em>prose</em> <a class="reference internal" href="#prose.Observation" title="prose.Observation"><code class="xref py py-class docutils literal notranslate"><span class="pre">Observation</span></code></a> class holds methods to manipulate photometric products</p>
+<section id="quick-start">
+<h2>Quick start<a class="headerlink" href="#quick-start" title="Permalink to this headline">¶</a></h2>
+<p class="rubric">Cleaning</p>
+<p>The philosophy of prose it to extract photometry from all images with no prior assumption about their quality. You can decide to exclude some measurements by using the following methods:</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#prose.Observation.where" title="prose.Observation.where"><code class="xref py py-obj docutils literal notranslate"><span class="pre">where</span></code></a></p></td>
+<td><p>return filtered observation given a boolean mask of time</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#prose.Observation.sigma_clip" title="prose.Observation.sigma_clip"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sigma_clip</span></code></a></p></td>
+<td><p>Sigma clipping</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#prose.Observation.keep_good_stars" title="prose.Observation.keep_good_stars"><code class="xref py py-obj docutils literal notranslate"><span class="pre">keep_good_stars</span></code></a></p></td>
+<td><p>Keep only  stars with a median flux higher than <a href="#id1"><span class="problematic" id="id2">`</span></a>threshold`*sky.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Differential photometry</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#prose.Observation.diff" title="prose.Observation.diff"><code class="xref py py-obj docutils literal notranslate"><span class="pre">diff</span></code></a></p></td>
+<td><p>Differential photometry based on a set of comparison stars</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#prose.Observation.broeg2005" title="prose.Observation.broeg2005"><code class="xref py py-obj docutils literal notranslate"><span class="pre">broeg2005</span></code></a></p></td>
+<td><p>The Broeg et al. 2005 differential photometry algorithm.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Plotting</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#prose.Observation.show_stars" title="prose.Observation.show_stars"><code class="xref py py-obj docutils literal notranslate"><span class="pre">show_stars</span></code></a></p></td>
+<td><p>Show detected stars over stack image</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#prose.Observation.show_gaia" title="prose.Observation.show_gaia"><code class="xref py py-obj docutils literal notranslate"><span class="pre">show_gaia</span></code></a></p></td>
+<td><p>Overlay Gaia objects on stack image</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#prose.Observation.show_tic" title="prose.Observation.show_tic"><code class="xref py py-obj docutils literal notranslate"><span class="pre">show_tic</span></code></a></p></td>
+<td><p>Overlay TIC objects on stack image</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#prose.Observation.show_cutout" title="prose.Observation.show_cutout"><code class="xref py py-obj docutils literal notranslate"><span class="pre">show_cutout</span></code></a></p></td>
+<td><p>Show a zoomed cutout around a detected star or coordinates</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#prose.Observation.plot_comps_lcs" title="prose.Observation.plot_comps_lcs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_comps_lcs</span></code></a></p></td>
+<td><p>Plot comparison stars light curves along target star light curve</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#prose.Observation.plot_psf_fit" title="prose.Observation.plot_psf_fit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_psf_fit</span></code></a></p></td>
+<td><p>Plot a 2D gaussian fit of the global psf (extracted from stack fits)</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Modeling</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#prose.Observation.polynomial" title="prose.Observation.polynomial"><code class="xref py py-obj docutils literal notranslate"><span class="pre">polynomial</span></code></a></p></td>
+<td><p>Return a design matrix representing a polynomial model</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#prose.Observation.transit" title="prose.Observation.transit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">transit</span></code></a></p></td>
+<td><p>A simple transit model</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">trend</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#prose.Observation.best_polynomial" title="prose.Observation.best_polynomial"><code class="xref py py-obj docutils literal notranslate"><span class="pre">best_polynomial</span></code></a></p></td>
+<td><p>Return the best systematics polynomial model orders.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="complete-api">
+<h2>Complete API<a class="headerlink" href="#complete-api" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="prose.Observation">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">prose.</span></span><span class="sig-name descname"><span class="pre">Observation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">photfile</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignore_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class to load and analyze photometry products</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>photfile</strong> (<em>str</em>) – path of the <cite>.phot</cite> file to load</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.to_csv">
+<span class="sig-name descname"><span class="pre">to_csv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">destination</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'</span> <span class="pre">'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.to_csv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Export a typical csv of the observation’s data</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>destination</strong> (<em>str</em>) – Path of the csv file to save</p></li>
+<li><p><strong>sep</strong> (<em>str, optional</em>) – separation string within csv, by default ” “</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.save">
+<span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">destination</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save current observation</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>destination</strong> (<em>str, optional</em>) – path to phot file, by default None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.export_stack">
+<span class="sig-name descname"><span class="pre">export_stack</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">destination</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.export_stack" title="Permalink to this definition">¶</a></dt>
+<dd><p>Export stack to FITS file</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>destination</strong> (<em>str</em>) – path of FITS to export</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.import_stack">
+<span class="sig-name descname"><span class="pre">import_stack</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fitsfile</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.import_stack" title="Permalink to this definition">¶</a></dt>
+<dd><p>Import FITS as stack to current obs (including WCS) - do not forget to save to keep it</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>fitsfile</strong> (<em>str</em>) – path of FITS stack to import</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="prose.Observation.skycoord">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">skycoord</span></span><a class="headerlink" href="#prose.Observation.skycoord" title="Permalink to this definition">¶</a></dt>
+<dd><p>astropy SkyCoord object for the target</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="prose.Observation.simbad_url">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">simbad_url</span></span><a class="headerlink" href="#prose.Observation.simbad_url" title="Permalink to this definition">¶</a></dt>
+<dd><p>[notebook feature] clickable simbad query url for specified target</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="prose.Observation.simbad">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">simbad</span></span><a class="headerlink" href="#prose.Observation.simbad" title="Permalink to this definition">¶</a></dt>
+<dd><p>simbad query url for specified target</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="prose.Observation.denominator">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">denominator</span></span><a class="headerlink" href="#prose.Observation.denominator" title="Permalink to this definition">¶</a></dt>
+<dd><p>{telescope}_{date}_{name}_{filter}</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>[description]</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>[type]</p>
+</dd>
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>A conveniant name for the observation</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="prose.Observation.meridian_flip">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">meridian_flip</span></span><a class="headerlink" href="#prose.Observation.meridian_flip" title="Permalink to this definition">¶</a></dt>
+<dd><p>Meridian flip time. Supposing EAST and WEST encode orientation</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="prose.Observation.tic_id">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">tic_id</span></span><a class="headerlink" href="#prose.Observation.tic_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>TIC id from digits found in target name</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="prose.Observation.gaia_from_toi">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">gaia_from_toi</span></span><a class="headerlink" href="#prose.Observation.gaia_from_toi" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gaia id from TOI id if TOI is in target name</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.compute_bjd">
+<span class="sig-name descname"><span class="pre">compute_bjd</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">version</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'prose'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.compute_bjd" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute BJD_tdb based on current time</p>
+<p>Once this is done self.time is BJD tdb and time format can be checked in self.time_format. Note that half the
+exposure time is added to the JD times before conversion. The precision of the returned time is not
+guaranteed, especially with “prose” method (~30ms). “eastman” option accuracy is 20ms. See
+<a class="reference external" href="http://astroutils.astronomy.ohio-state.edu/time/utc2bjd.html">http://astroutils.astronomy.ohio-state.edu/time/utc2bjd.html</a> for more details.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>version</strong> (<em>str, optiona</em>) –</p>
+<ul class="simple">
+<li><p>“prose”: uses an astropy method</p></li>
+<li><p>“eastman”: uses the web applet <a class="reference external" href="http://astroutils.astronomy.ohio-state.edu">http://astroutils.astronomy.ohio-state.edu</a> (Eastman et al. 2010) [requires</p></li>
+</ul>
+<p>an  internet connection]
+by default “prose”</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.query_gaia">
+<span class="sig-name descname"><span class="pre">query_gaia</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cone_radius</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.query_gaia" title="Permalink to this definition">¶</a></dt>
+<dd><p>Query gaia catalog for stars in the field</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.query_tic">
+<span class="sig-name descname"><span class="pre">query_tic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cone_radius</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.query_tic" title="Permalink to this definition">¶</a></dt>
+<dd><p>Query TIC catalog (through MAST) for stars in the field</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.show">
+<span class="sig-name descname"><span class="pre">show</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flip</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zoom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contrast</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wcs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cmap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Greys_r'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigclip</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.show" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show stack image</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>size</strong> (<em>int, optional</em>) – size of the square figure, by default 10</p></li>
+<li><p><strong>flip</strong> (<em>bool, optional</em>) – , by default False</p></li>
+<li><p><strong>zoom</strong> (<em>bool, optional</em>) – whether to include a zoom inlay in the image, by default False</p></li>
+<li><p><strong>contrast</strong> (<em>float, optional</em>) – contrast for the Zscale of image, by default 0.05</p></li>
+<li><p><strong>wcs</strong> (<em>bool, optional</em>) – whether to show grid ans axes to world coordinate</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.show_stars">
+<span class="sig-name descname"><span class="pre">show_stars</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">view</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flip</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">comp_color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'yellow'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[0.51,</span> <span class="pre">0.86,</span> <span class="pre">1.0]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stars</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">legend</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.show_stars" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show detected stars over stack image</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>size</strong> (<em>int, optional</em>) – size of the square figure, by default 10</p></li>
+<li><p><strong>flip</strong> (<em>bool, optional</em>) – whether to flip image, by default False</p></li>
+<li><p><strong>view</strong> (<em>str, optional</em>) – “all” to see all stars OR “reference” to have target and comparison stars hilighted, by default None</p></li>
+<li><p><strong>n</strong> (<em>int, optional</em>) – max number of stars to show, by default None,</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>AssertionError</strong> – [description]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.show_gaia">
+<span class="sig-name descname"><span class="pre">show_gaia</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'yellow'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idxs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fontsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">align</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.show_gaia" title="Permalink to this definition">¶</a></dt>
+<dd><p>Overlay Gaia objects on stack image</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>color</strong> (<em>str, optional</em>) – color of marks and font, by default “lightblue”</p></li>
+<li><p><strong>alpha</strong> (<em>int, optional</em>) – opacity of marks and font, by default 1</p></li>
+<li><p><strong>n</strong> (<em>int, optional</em>) – max number of stars to show, by default None, by default None for all stars</p></li>
+<li><p><strong>idxs</strong> (<em>bool, optional</em>) – wether to show gaia ids, by default True</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.show_tic">
+<span class="sig-name descname"><span class="pre">show_tic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'white'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idxs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">align</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.show_tic" title="Permalink to this definition">¶</a></dt>
+<dd><p>Overlay TIC objects on stack image</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>color</strong> (<em>str, optional</em>) – color of marks and font, by default “lightblue”</p></li>
+<li><p><strong>alpha</strong> (<em>int, optional</em>) – opacity of marks and font, by default 1</p></li>
+<li><p><strong>n</strong> (<em>int, optional</em>) – max number of stars to show, by default None, by default None for all stars</p></li>
+<li><p><strong>idxs</strong> (<em>bool, optional</em>) – wether to show TIC ids, by default True</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.show_cutout">
+<span class="sig-name descname"><span class="pre">show_cutout</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">star</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">marks</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.show_cutout" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show a zoomed cutout around a detected star or coordinates</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>star</strong> (<em>[type], optional</em>) – detected star id or (x, y) coordinate, by default None</p></li>
+<li><p><strong>size</strong> (<em>int, optional</em>) – side size of square cutout in pixel, by default 200</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.plot_comps_lcs">
+<span class="sig-name descname"><span class="pre">plot_comps_lcs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">15</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ylim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.plot_comps_lcs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot comparison stars light curves along target star light curve</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n</strong> (<em>int, optional</em>) – Number max of comparison to show, by default 5</p></li>
+<li><p><strong>ylim</strong> (<em>tuple, optional</em>) – ylim of the plot, by default None and autoscale</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.plot_psf_fit">
+<span class="sig-name descname"><span class="pre">plot_psf_fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">size=21</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cmap='inferno'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c='blueviolet'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model=&lt;class</span> <span class="pre">'prose.blocks.psf.Gaussian2D'&gt;</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.plot_psf_fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot a 2D gaussian fit of the global psf (extracted from stack fits)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>size</strong> (<em>int, optional</em>) – square size of extracted PSF, by default 21</p></li>
+<li><p><strong>cmap</strong> (<em>str, optional</em>) – color map of psf image, by default “inferno”</p></li>
+<li><p><strong>c</strong> (<em>str, optional</em>) – color of model plot line, by default “blueviolet”</p></li>
+<li><p><strong>model</strong> (<em>prose.blocks, optional</em>) – a PsfFit block, by default Gaussian2D</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>PSF fit info (theta, std_x, std_y, fwhm_x, fwhm_y)</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.plot_rms">
+<span class="sig-name descname"><span class="pre">plot_rms</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bins</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.005</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.plot_rms" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot binned rms of lightcurves vs the CCD equation</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>bins</strong> (<em>float, optional</em>) – bin size used to compute error, by default 0.005 (in days)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.plot_systematics">
+<span class="sig-name descname"><span class="pre">plot_systematics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fields</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ylim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.plot_systematics" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot systematics measurements along target light curve</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fields</strong> (<em>list of str, optional</em>) – list of systematic to include (must be in self), by default None</p></li>
+<li><p><strong>ylim</strong> (<em>tuple, optional</em>) – plot ylim, by default (0.98, 1.02)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.plot_raw_diff">
+<span class="sig-name descname"><span class="pre">plot_raw_diff</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.plot_raw_diff" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot raw target flux and differantial flux</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.plot_precision">
+<span class="sig-name descname"><span class="pre">plot_precision</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bins</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.005</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aperture</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.plot_precision" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot observation precision estimate against theorethical error (background noise, photon noise and CCD equation)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>bins</strong> (<em>float, optional</em>) – bin size used to estimate error, by default 0.005 (in days)</p></li>
+<li><p><strong>aperture</strong> (<em>int, optional</em>) – chosen aperture, by default None</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.plot_meridian_flip">
+<span class="sig-name descname"><span class="pre">plot_meridian_flip</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.plot_meridian_flip" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot meridian flip line over existing axe</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.plot">
+<span class="sig-name descname"><span class="pre">plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">star</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">meridian_flip</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bins</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.005</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'k'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">std</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot observation light curve</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>star</strong> (<em>[type], optional</em>) – [description], by default None</p></li>
+<li><p><strong>meridian_flip</strong> (<em>bool, optional</em>) – whether to show meridian flip, by default True</p></li>
+<li><p><strong>bins</strong> (<em>float, optional</em>) – bin size in same unit as Observation.time, by default 0.005</p></li>
+<li><p><strong>color</strong> (<em>str, optional</em>) – binned points color, by default “k”</p></li>
+<li><p><strong>std</strong> (<em>bool, optional</em>) – whether to see standard deviation of bins as error bar, by default True, otherwise theoretical error bat is shown</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.plot_psf">
+<span class="sig-name descname"><span class="pre">plot_psf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">star</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">40</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zscale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aperture</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.plot_psf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot star cutout overalid with aperture and radial flux.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>star</strong> (<em>int or list like, optional</em>) – if int: star to plot cutout on, if list like (tuple, np.ndarray) of size 2: coords of cutout, by default None</p></li>
+<li><p><strong>n</strong> (<em>int, optional</em>) – cutout width and height, by default 40</p></li>
+<li><p><strong>zscale</strong> (<em>bool, optional</em>) – whether to apply a zscale to cutout image, by default False</p></li>
+<li><p><strong>aperture</strong> (<em>float, optional</em>) – radius of aperture to display, by default None corresponds to best target aperture</p></li>
+<li><p><strong>rin</strong> (<em>[type], optional</em>) – radius of inner annulus to display, by default None corresponds to inner radius saved</p></li>
+<li><p><strong>rout</strong> (<em>[type], optional</em>) – radius of outer annulus to display, by default None corresponds to outer radius saved</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.plot_systematics_signal">
+<span class="sig-name descname"><span class="pre">plot_systematics_signal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">systematics</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">signal</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ylim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">figsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(6,</span> <span class="pre">7)</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.plot_systematics_signal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot a systematics and signal model over diff_flux. systeamtics + signal is plotted on top, signal alone on detrended
+data on bottom</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>systematics</strong> (<em>np.ndarray</em>)</p></li>
+<li><p><strong>signal</strong> (<em>np.ndarray</em>)</p></li>
+<li><p><strong>ylim</strong> (<em>tuple, optional</em>) – ylim of the plot, by default None, using the dispersion of y</p></li>
+<li><p><strong>offset</strong> (<em>tuple, optional</em>) – offset between, by default None</p></li>
+<li><p><strong>figsize</strong> (<em>tuple, optional</em>) – figure size as in in plt.figure, by default (6, 7)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.xlabel">
+<span class="sig-name descname"><span class="pre">xlabel</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.xlabel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot xlabel (time) according to its units</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.where">
+<span class="sig-name descname"><span class="pre">where</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">condition</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.where" title="Permalink to this definition">¶</a></dt>
+<dd><p>return filtered observation given a boolean mask of time</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>condition</strong> (<em>[type]</em>) – [description]</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>[description]</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>[type]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.keep_good_stars">
+<span class="sig-name descname"><span class="pre">keep_good_stars</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lower_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upper_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">35000.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.keep_good_stars" title="Permalink to this definition">¶</a></dt>
+<dd><p>Keep only  stars with a median flux higher than <a href="#id3"><span class="problematic" id="id4">`</span></a>threshold`*sky.</p>
+<p>This action will reorganize stars indexes (target id will be recomputed) and reset the differential fluxes to raw.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>lower_threshold</strong> (<em>float</em>) – threshold for which stars with flux/sky &gt; threshold are kept, default is 3</p></li>
+<li><p><strong>trim</strong> (<em>float</em>) – value in pixels above which stars are kept, default is 10 to avoid stars too close to the edge</p></li>
+<li><p><strong>keep</strong> (<em>int or list</em>) – number of stars to exclude (starting from 0 if int).</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em>) – whether to replace current object or return a new one</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.flip_correction">
+<span class="sig-name descname"><span class="pre">flip_correction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.flip_correction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Align all differential fluxes using a step model of the meridian flip</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>inplace</strong> (<em>bool, optional</em>) – wheter to replace the current Observation or return a new one, by default True</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.best_polynomial">
+<span class="sig-name descname"><span class="pre">best_polynomial</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">add</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">orders</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.best_polynomial" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the best systematics polynomial model orders.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>orders</strong> (<em>dict</em>) – dict with keys being the systematic to consider and values are the maximum polynomial order to test</p></li>
+<li><p><strong>add</strong> (<em>np.ndarray, optional</em>) – additional regressor to add to the design matrix, by default None</p></li>
+<li><p><strong>verbose</strong> (<em>bool, optional</em>) – wether to show the progress bar, by default False</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.broeg2005">
+<span class="sig-name descname"><span class="pre">broeg2005</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cut</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nans</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.broeg2005" title="Permalink to this definition">¶</a></dt>
+<dd><p>The Broeg et al. 2005 differential photometry algorithm</p>
+<p>Compute an optimum weighted artificial light curve</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>inplace</strong> (<em>bool, optional</em>) – whether to perform the changes on current Observation or to return a new one, default True</p></li>
+<li><p><strong>cut</strong> (<em>bool or None, optional</em>) – whether to pick the best comparison stars and apply unitary weights, default None which try both and
+cut if beneficial</p></li>
+<li><p><strong>nans</strong> (<em>bool</em>) – whether to keep nans values in fluxes, otherwise set to 1 (arbitrarly low value) before computing the weights, default False, i.e. removing nans</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.diff">
+<span class="sig-name descname"><span class="pre">diff</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">comps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.diff" title="Permalink to this definition">¶</a></dt>
+<dd><p>Differential photometry based on a set of comparison stars</p>
+<p>The artificial light-curve is taken as the mean of comparison stars</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>comps</strong> (<em>list</em>) – indexes of the comparison stars (as shown in <cite>show_stars</cite>, same indexes as <cite>stars</cite>)</p></li>
+<li><p><strong>inplace</strong> (<em>bool, optional</em>) – whether to perform the changes on current Observation or to return a new one, default True</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>[description]</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>[type]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.lstsq">
+<span class="sig-name descname"><span class="pre">lstsq</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">star</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">split</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.lstsq" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given a design matrix return the fitted trend</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X</strong> (<em>np.ndarray</em>) – design matrix of shape (time, n), n being the number of regressors.</p></li>
+<li><p><strong>split</strong> (<em>int or array, optional</em>) – splitting indexes of the design matrix, passed to np.split and used to retrieve splitted models, by default None</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>[description]</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>[type]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.polynomial">
+<span class="sig-name descname"><span class="pre">polynomial</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">orders</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.polynomial" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a design matrix representing a polynomial model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>orders</strong> (<em>dict</em>) – dict which keys are the model variables and values are the polynomial orders use in their model against flux</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>[description]</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>[type]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.sigma_clip">
+<span class="sig-name descname"><span class="pre">sigma_clip</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">star</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.sigma_clip" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sigma clipping</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sigma</strong> (<em>float, optional</em>) – sigma clipping threshold, by default 3.</p></li>
+<li><p><strong>star</strong> (<em>int, optional</em>) – star on which to apply the sigma clip, is target by default</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.step">
+<span class="sig-name descname"><span class="pre">step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.step" title="Permalink to this definition">¶</a></dt>
+<dd><p>Two parameter step model model. f = a if time &lt; t0 else b</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>t0</strong> (<em>float, optional</em>) – time when the step occur, default is None and corresponds to meridian flip</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.Observation.transit">
+<span class="sig-name descname"><span class="pre">transit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duration</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.Observation.transit" title="Permalink to this definition">¶</a></dt>
+<dd><p>A simple transit model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>t0</strong> (<em>float</em>) – transit midtime (in unit of time)</p></li>
+<li><p><strong>duration</strong> (<em>float</em>) – transit duration (in unit of time)</p></li>
+<li><p><strong>depth</strong> (<em>int, optional</em>) – transit depth, by default 1</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+        </div>
+        
+        </div>
+        <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="telescope.html" class="btn btn-neutral float-right" title="Telescope" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="fitsmanager.html" class="btn btn-neutral float-left" title="Fits Manager" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2022, Lionel Garcia.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    modified by <a href="https://github.com/lgrcia">lgrcia</a> from <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+      </div>
+    </div>
+  </div>
+
+   
+  <!-- small screen menu click -->
+  <script>
+    var smb = document.getElementById("small-menu-button")
+    var navmenu = document.getElementById("navmenu")
+    smb.onclick = () => {
+      if (navmenu.style.display == ""){
+        navmenu.style.display = "flex"
+      } else {
+        navmenu.style.display = (navmenu.style.display == "none")?"flex":"none"
+      } 
+      
+    }
+  </script>
+
+</body>
+</html>

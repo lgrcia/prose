@@ -1,0 +1,263 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>Calibration &mdash; prose  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/jupyter-sphinx.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/thebelab.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/clipboard.min.js"></script>
+        <script src="../_static/copybutton.js"></script>
+        <script src="../_static/thebelab-helper.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script src="https://unpkg.com/@jupyter-widgets/html-manager@^0.20.0/dist/embed-amd.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Converters" href="converters.html" />
+    <link rel="prev" title="AperturePhotometry" href="aperturephotometry.html" /> 
+</head>
+
+<body class="">
+
+   
+    
+
+  <div class="main">
+    <div id="small-menu">
+      <div id="title">
+        <div class="icon-home">prose</div>
+        <div class="version text-icon">
+          <!-- <i data-feather="git-branch"></i> -->
+          
+            deving
+          
+        </div>
+      </div>
+      <div id="small-menu-button">MENU</div>
+    </div>
+    
+    <nav id="navmenu">
+        <div class="nav-head" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> prose
+          
+
+          
+          </a>
+
+          
+            
+
+                <div class="version text-icon">
+                  <!-- <i data-feather="git-branch"></i> -->
+                  
+                    deving
+                  
+                </div>
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">References</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../core.html">What is a pipeline?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../blocks.html">Blocks</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="fitsmanager.html">Fits Manager</a></li>
+<li class="toctree-l2"><a class="reference internal" href="observation.html">Observation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="telescope.html">Telescope</a></li>
+<li class="toctree-l2"><a class="reference internal" href="aperturephotometry.html">AperturePhotometry</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Calibration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="converters.html">Converters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="viz.html">Visualization</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/fits_manager.html">Fits manager</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/reduction.html">Photometric reduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/manual_reduction.html">Manual reduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/custom_pipeline.html">Custom pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/modeling.html">Modeling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/reports.html">Reports</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/neb.html">Near Eclipsing Binary diagnostic</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Notes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/phot.html">Data products: <code class="docutils literal notranslate"><span class="pre">.phot</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/extra.html">Useful tips</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      <div class="github-link">
+        <!-- <a href="https://github.com/lgrcia/prose">view on github</a> -->
+      </div>
+    </nav>
+
+    <div class="content">
+      
+      <div class="rst-content">
+      
+        <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+        <div itemprop="articleBody">
+          
+  <section id="calibration">
+<h1>Calibration<a class="headerlink" href="#calibration" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="prose.pipeline.Calibration">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">prose.pipeline.</span></span><span class="sig-name descname"><span class="pre">Calibration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reference=0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overwrite=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flats=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bias=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">darks=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">images=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">psf=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">detection=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">twirl=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loader=&lt;class</span> <span class="pre">'prose.core.Image'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cores=False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.pipeline.Calibration" title="Permalink to this definition">¶</a></dt>
+<dd><p>A calibration unit producing a reduced FITS folder</p>
+<p>The calibration encompass more than simple flat, dark and bias calibration. It contains two sequences whose …
+TODO</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul>
+<li><p><strong>reference</strong> (<em>float or str, optional</em>) – Reference image to use for alignment:</p>
+<ul class="simple">
+<li><p>if <code class="docutils literal notranslate"><span class="pre">float</span></code>: from 0 (first image) to 1 (last image)</p></li>
+<li><p>if <code class="docutils literal notranslate"><span class="pre">str</span></code>: path of the reference image</p></li>
+</ul>
+<p>by default 1/2</p>
+</li>
+<li><p><strong>overwrite</strong> (<em>bool, optional</em>) – whether to overwrite existing products, by default False</p></li>
+<li><p><strong>flats</strong> (<em>list, optional</em>) – list of flats images paths, by default None</p></li>
+<li><p><strong>bias</strong> (<em>list, optional</em>) – list of bias images paths, by default None</p></li>
+<li><p><strong>darks</strong> (<em>list, optional</em>) – list of darks images paths, by default None</p></li>
+<li><p><strong>images</strong> (<em>list, optional</em>) – list of images paths to be calibrated, by default None</p></li>
+<li><p><strong>psf</strong> (<cite>Block</cite>, optional) – a <cite>Block</cite> to be used to characterise the effective psf, by default None, setting a default blocks.Moffat2D</p></li>
+<li><p><strong>detection</strong> (<cite>Block</cite>, optional) – a <cite>Block</cite> to be used for stars detection, by default None, setting a default blocks.SegmentedPeaks</p></li>
+<li><p><strong>show</strong> (<em>bool, optional</em>) – within a notebook, whether to show processed image during reduction, by default False</p></li>
+<li><p><strong>verbose</strong> (<em>bool, optional</em>) – whether to print processing info and loading bars, by default True</p></li>
+<li><p><strong>twirl</strong> (<em>bool, optional,</em>) – whether to use the Twirl block for alignment (see blocks.registration.Twirl)</p></li>
+<li><p><strong>n</strong> (<em>int, optional,</em>) – number of stars used for alignment, by default None leading to 12 if twirl else 50</p></li>
+<li><p><strong>loader</strong> (<em>Image class, optional</em>) – class to load Images, by default Image</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.pipeline.Calibration.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">destination</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gif</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.pipeline.Calibration.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run the calibration pipeline</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>destination</strong> (<em>str</em>) – Destination where to save the calibrated images folder</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+        </div>
+        
+        </div>
+        <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="converters.html" class="btn btn-neutral float-right" title="Converters" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="aperturephotometry.html" class="btn btn-neutral float-left" title="AperturePhotometry" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2022, Lionel Garcia.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    modified by <a href="https://github.com/lgrcia">lgrcia</a> from <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+      </div>
+    </div>
+  </div>
+
+   
+  <!-- small screen menu click -->
+  <script>
+    var smb = document.getElementById("small-menu-button")
+    var navmenu = document.getElementById("navmenu")
+    smb.onclick = () => {
+      if (navmenu.style.display == ""){
+        navmenu.style.display = "flex"
+      } else {
+        navmenu.style.display = (navmenu.style.display == "none")?"flex":"none"
+      } 
+      
+    }
+  </script>
+
+</body>
+</html>

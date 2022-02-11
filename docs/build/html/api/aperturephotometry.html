@@ -1,0 +1,246 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>AperturePhotometry &mdash; prose  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/jupyter-sphinx.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/thebelab.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/clipboard.min.js"></script>
+        <script src="../_static/copybutton.js"></script>
+        <script src="../_static/thebelab-helper.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script src="https://unpkg.com/@jupyter-widgets/html-manager@^0.20.0/dist/embed-amd.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Calibration" href="calibration.html" />
+    <link rel="prev" title="Telescope" href="telescope.html" /> 
+</head>
+
+<body class="">
+
+   
+    
+
+  <div class="main">
+    <div id="small-menu">
+      <div id="title">
+        <div class="icon-home">prose</div>
+        <div class="version text-icon">
+          <!-- <i data-feather="git-branch"></i> -->
+          
+            deving
+          
+        </div>
+      </div>
+      <div id="small-menu-button">MENU</div>
+    </div>
+    
+    <nav id="navmenu">
+        <div class="nav-head" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> prose
+          
+
+          
+          </a>
+
+          
+            
+
+                <div class="version text-icon">
+                  <!-- <i data-feather="git-branch"></i> -->
+                  
+                    deving
+                  
+                </div>
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">References</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../core.html">What is a pipeline?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../blocks.html">Blocks</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="fitsmanager.html">Fits Manager</a></li>
+<li class="toctree-l2"><a class="reference internal" href="observation.html">Observation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="telescope.html">Telescope</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">AperturePhotometry</a></li>
+<li class="toctree-l2"><a class="reference internal" href="calibration.html">Calibration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="converters.html">Converters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="viz.html">Visualization</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/fits_manager.html">Fits manager</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/reduction.html">Photometric reduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/manual_reduction.html">Manual reduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/custom_pipeline.html">Custom pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/modeling.html">Modeling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/reports.html">Reports</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/neb.html">Near Eclipsing Binary diagnostic</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Notes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/phot.html">Data products: <code class="docutils literal notranslate"><span class="pre">.phot</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/extra.html">Useful tips</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      <div class="github-link">
+        <!-- <a href="https://github.com/lgrcia/prose">view on github</a> -->
+      </div>
+    </nav>
+
+    <div class="content">
+      
+      <div class="rst-content">
+      
+        <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+        <div itemprop="articleBody">
+          
+  <section id="aperturephotometry">
+<h1>AperturePhotometry<a class="headerlink" href="#aperturephotometry" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="prose.pipeline.AperturePhotometry">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">prose.pipeline.</span></span><span class="sig-name descname"><span class="pre">AperturePhotometry</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">files=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stack=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overwrite=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_stars=500</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stars=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">apertures=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">r_in=5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">r_out=8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fwhm_scale=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigclip=3.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">psf=&lt;class</span> <span class="pre">'prose.blocks.psf.Gaussian2D'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">photometry=&lt;class</span> <span class="pre">'prose.blocks.photometry.PhotutilsAperturePhotometry'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">centroid=&lt;class</span> <span class="pre">'prose.blocks.centroids.BalletCentroid'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">twirl=True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.pipeline.AperturePhotometry" title="Permalink to this definition">¶</a></dt>
+<dd><p>Aperture Photometry pipeline</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>files</strong> (<em>list of str, optional</em>) – List of files to process.</p></li>
+<li><p><strong>stack</strong> (<em>str, optional</em>) – Path of the stack image.</p></li>
+<li><p><strong>overwrite</strong> (<em>bool, optional</em>) – whether to overwrite existing products, by default False</p></li>
+<li><p><strong>n_stars</strong> (<em>int, optional</em>) – max number of stars to take into account, by default 500</p></li>
+<li><p><strong>apertures</strong> (<em>list or np.ndarray, optional</em>) – Apertures radii to be used. If None, by default np.arange(0.1, 10, 0.25)</p></li>
+<li><p><strong>r_in</strong> (<em>int, optional</em>) – Radius of the inner annulus to be used in pixels, by default 5</p></li>
+<li><p><strong>r_out</strong> (<em>int, optional</em>) – Radius of the outer annulus to be used in pixels, by default 8</p></li>
+<li><p><strong>fwhm_scale</strong> (<em>bool, optional</em>) – whether to multiply <code class="docutils literal notranslate"><span class="pre">apertures</span></code>, <code class="docutils literal notranslate"><span class="pre">r_in</span></code> and <code class="docutils literal notranslate"><span class="pre">r_out</span></code> by the global fwhm, by default True</p></li>
+<li><p><strong>sigclip</strong> (<em>float, optional</em>) – Sigma clipping factor used in the annulus, by default 3. No effect if <a class="reference internal" href="../generated/prose.blocks.SEAperturePhotometry.html#prose.blocks.SEAperturePhotometry" title="prose.blocks.SEAperturePhotometry"><code class="xref py py-class docutils literal notranslate"><span class="pre">SEAperturePhotometry</span></code></a> is used</p></li>
+<li><p><strong>psf</strong> (<em>Block, optional</em>) – PSF modeling Block (mainly used to estimate fwhm and scale aperture if <code class="docutils literal notranslate"><span class="pre">fwhm_scale</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>), by default <a class="reference internal" href="../generated/prose.blocks.Gaussian2D.html#prose.blocks.Gaussian2D" title="prose.blocks.Gaussian2D"><code class="xref py py-class docutils literal notranslate"><span class="pre">Gaussian2D</span></code></a></p></li>
+<li><p><strong>photometry</strong> (<em>Block, optional</em>) – aperture photometry Block, by default <a class="reference internal" href="../generated/prose.blocks.PhotutilsAperturePhotometry.html#prose.blocks.PhotutilsAperturePhotometry" title="prose.blocks.PhotutilsAperturePhotometry"><code class="xref py py-class docutils literal notranslate"><span class="pre">PhotutilsAperturePhotometry</span></code></a></p></li>
+<li><p><strong>centroid</strong> (<em>Block, optional</em>) – centroid computing Block, by default None to keep centroid fixed</p></li>
+<li><p><strong>show</strong> (<em>bool, optional</em>) – within a notebook, whether to show processed image during reduction, by default False</p></li>
+<li><p><strong>verbose</strong> (<em>bool, optional</em>) – whether to print processing info and loading bars, by default True</p></li>
+<li><p><strong>twirl</strong> (<em>bool, optional,</em>) – whether to use the Twirl block for alignment (see blocks.registration.Twirl)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+        </div>
+        
+        </div>
+        <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="calibration.html" class="btn btn-neutral float-right" title="Calibration" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="telescope.html" class="btn btn-neutral float-left" title="Telescope" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2022, Lionel Garcia.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    modified by <a href="https://github.com/lgrcia">lgrcia</a> from <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+      </div>
+    </div>
+  </div>
+
+   
+  <!-- small screen menu click -->
+  <script>
+    var smb = document.getElementById("small-menu-button")
+    var navmenu = document.getElementById("navmenu")
+    smb.onclick = () => {
+      if (navmenu.style.display == ""){
+        navmenu.style.display = "flex"
+      } else {
+        navmenu.style.display = (navmenu.style.display == "none")?"flex":"none"
+      } 
+      
+    }
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,232 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>Gaussian2D &mdash; prose  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/clipboard.min.js"></script>
+        <script src="../_static/copybutton.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="">
+
+   
+    
+
+  <div class="main">
+    <div id="small-menu">
+      <div id="title">
+        <div class="icon-home">prose</div>
+        <div class="version text-icon">
+          <!-- <i data-feather="git-branch"></i> -->
+          
+            deving
+          
+        </div>
+      </div>
+      <div id="small-menu-button">MENU</div>
+    </div>
+    
+    <nav id="navmenu">
+        <div class="nav-head" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> prose
+          
+
+          
+          </a>
+
+          
+            
+
+                <div class="version text-icon">
+                  <!-- <i data-feather="git-branch"></i> -->
+                  
+                    deving
+                  
+                </div>
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">References</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../core.html">What is a pipeline?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../blocks.html">Blocks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/fits_manager.html">Fits manager</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/reduction.html">Photometric reduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/manual_reduction.html">Manual reduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/custom_pipeline.html">Custom pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/modeling.html">Modeling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/reports.html">Reports</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/neb.html">Near Eclipsing Binary diagnostic</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Notes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/phot.html">Data products: <code class="docutils literal notranslate"><span class="pre">.phot</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/extra.html">Useful tips</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      <div class="github-link">
+        <!-- <a href="https://github.com/lgrcia/prose">view on github</a> -->
+      </div>
+    </nav>
+
+    <div class="content">
+      
+      <div class="rst-content">
+      
+        <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+        <div itemprop="articleBody">
+          
+  <section id="gaussian2d">
+<h1>Gaussian2D<a class="headerlink" href="#gaussian2d" title="Permalink to this headline">¶</a></h1>
+<p>An elliptical 2D Gaussian model expressed as</p>
+<div class="math notranslate nohighlight">
+\[f(x, y|A, x_0, y_0, \sigma_x, \sigma_y, \theta, b) = - A \exp\left(\frac{(x'-x'_0)^2}{2\sigma_x^2} \frac{(y'-y'_0)^2}{2\sigma_y^2}\right) + b\]</div>
+<div class="math notranslate nohighlight">
+\[\begin{split}\text{with}\quad \begin{gather*}
+x' = xcos(\theta) + ysin(\theta) \\
+y' = -xsin(\theta) + ycos(\theta)
+\end{gather*}\end{split}\]</div>
+<p>is fitted from an effective psf. <code class="code docutils literal notranslate"><span class="pre">scipy.optimize.minimize</span></code> is used to minimize <span class="math notranslate nohighlight">\(\chi ^2\)</span> from data. Initial parameters are found using the moments of the <a class="reference external" href="https://photutils.readthedocs.io/en/stable/epsf.html">effective psf</a>. This method is 4 times faster than <code class="code docutils literal notranslate"><span class="pre">photutils.centroids.fit_2dgaussian</span></code> and lead to similar results.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="prose.blocks.Gaussian2D">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">prose.blocks.</span></span><span class="sig-name descname"><span class="pre">Gaussian2D</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.blocks.Gaussian2D" title="Permalink to this definition">¶</a></dt>
+<dd><blockquote>
+<div><p>Fit an elliptical 2D Gaussian model to an image effective PSF</p>
+<p>Model is:</p>
+<div class="math notranslate nohighlight">
+\[\]</div>
+<p>f(x, y|A, x_0, y_0, sigma_x, sigma_y,     heta, b) = - A expleft(</p>
+</div></blockquote>
+<p>rac{(x’-x’_0)^2}{2sigma_x^2}
+rac{(y’-y’_0)^2}{2sigma_y^2}
+ight) + b</p>
+<blockquote>
+<div><div class="math notranslate nohighlight">
+\[ext{with}\quad egin{gather*}\]</div>
+<p>x’ = xcos(  heta) + ysin(   heta) y’ = -xsin( heta) + ycos(   heta)
+end{gather*}</p>
+<p>is fitted from an effective psf. <code class="code docutils literal notranslate"><span class="pre">scipy.optimize.minimize</span></code> is used to minimize <span class="math notranslate nohighlight">\(\chi ^2\)</span> from data. Initial parameters are found using the moments of the <a class="reference external" href="https://photutils.readthedocs.io/en/stable/epsf.html">effective psf</a>. This method is 4 times faster than <code class="code docutils literal notranslate"><span class="pre">photutils.centroids.fit_2dgaussian</span></code> and lead to similar results.</p>
+</div></blockquote>
+</dd></dl>
+
+</section>
+
+
+        </div>
+        
+        </div>
+        <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2022, Lionel Garcia.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    modified by <a href="https://github.com/lgrcia">lgrcia</a> from <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+      </div>
+    </div>
+  </div>
+
+   
+  <!-- small screen menu click -->
+  <script>
+    var smb = document.getElementById("small-menu-button")
+    var navmenu = document.getElementById("navmenu")
+    smb.onclick = () => {
+      if (navmenu.style.display == ""){
+        navmenu.style.display = "flex"
+      } else {
+        navmenu.style.display = (navmenu.style.display == "none")?"flex":"none"
+      } 
+      
+    }
+  </script>
+
+</body>
+</html>
