@@ -130,10 +130,10 @@ class ConfigManager:
 
         return telescope_dict
 
-    def create_builtins_telescopes_files(self):
+    def create_builtins_telescopes_files(self, force=False):
         for name, telescope in built_in_telescopes.items():
             telescope_file_name = path.join(self.folder_path, f"{name}.telescope")
-            if not path.exists(telescope_file_name):
+            if (not path.exists(telescope_file_name) and not force) or force:
                 self.save_telescope_file(telescope)
 
     def save_telescope_file(self, file):
@@ -155,7 +155,7 @@ class ConfigManager:
             return None
         available_telescopes_names = list(self.telescopes_dict.keys())
         has_telescope = np.where(
-            [t in name.lower() for t in available_telescopes_names]
+            [t.lower() == name.lower() for t in available_telescopes_names]
         )[0]
         if len(has_telescope) > 0:
             i = np.argmax([len(name) for name in np.array(available_telescopes_names)[has_telescope]])

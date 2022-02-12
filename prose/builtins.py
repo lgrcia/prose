@@ -94,7 +94,8 @@ artemis = dict(
 
 trappist = dict(
     speculoos_south,
-    name= "TRAPPIST-South",
+    name = "TRAPPIST-South",
+    names = ["TRAPPIST-S"],
     trimming= [40, 40],
     pixel_scale= 0.64,
     ra_unit= "deg",
