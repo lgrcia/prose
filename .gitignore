@@ -28,6 +28,8 @@ docs/build/html/_sources
 docs/build/html/notebooks/*.ipynb
 build/lib
 
+test/_*
+
 ## Core latex/pdflatex auxiliary files:
 latex/*.aux
 latex/*.lof
