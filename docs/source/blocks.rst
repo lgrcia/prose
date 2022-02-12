@@ -3,6 +3,10 @@ Blocks
 
 .. currentmodule:: prose.blocks
 
+.. image:: _static/block.png
+   :align: center
+   :width: 200px
+
 
 A ``Block`` is a single unit of processing acting on the ``Image`` object, reading and writing its attributes. Blocks documentation include the following information:
 

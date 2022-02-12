@@ -567,3 +567,15 @@ div.note p.admonition-title:before {
         margin-top:15px;
     }
 }
+
+.block-image{
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 150px;
+    opacity: 0.2;    
+}
+
+.rst-content {
+    position: relative !important;
+}

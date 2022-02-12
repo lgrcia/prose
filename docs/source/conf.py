@@ -24,7 +24,7 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx_copybutton', 
     'nbsphinx',
-    'jupyter_sphinx.execute'
+    'jupyter_sphinx'
     ]
 
 master_doc = 'index'
