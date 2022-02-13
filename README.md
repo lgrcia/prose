@@ -20,7 +20,7 @@
   </p>
 </p>
 
- *prose* is a tool to build pipelines dedicated to astronomical images processing, *only based on pip installable dependencies* (e.g. no IRAF, Sextractor or Astrometry.net install needed 🎉). Beyond providing all the blocks to do so, it features default pipelines to perform common tasks such as automated calibration, reduction and photometry.
+ *prose* is a Python tool to build pipelines dedicated to astronomical images processing (all based on pip packages 📦). Beyond providing all the blocks to do so, it features default pipelines to perform common tasks such as automated calibration, reduction and photometry.
 
 ## Example
 
