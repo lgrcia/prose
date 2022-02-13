@@ -7,7 +7,6 @@ from astropy.table import Table
 from astropy.nddata import NDData
 from photutils.psf import extract_stars
 from astropy.stats import gaussian_sigma_to_fwhm
-from sklearn.preprocessing import normalize
 from ..core import Block
 import matplotlib.pyplot as plt
 from collections import OrderedDict
