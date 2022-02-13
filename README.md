@@ -45,7 +45,7 @@ sequence = Sequence([
 sequence.run([image])
 ```
 
-For more details check (Quickstart)[https://lgrcia.github.io/prose/build/html/notebooks/quickstart.html].
+For more details check [Quickstart](https://lgrcia.github.io/prose/build/html/notebooks/quickstart.html).
 
 ## Default pipelines
 
