@@ -6,6 +6,7 @@ import numba
 import astropy.constants as c
 import urllib
 from astropy.time import Time
+from astropy.table import Table
 from datetime import datetime
 import inspect
 
@@ -340,3 +341,39 @@ def register_args(f):
         self.kwargs = kwargs
         return f(*args, **kwargs)
     return inner
+
+
+def cutouts(image, stars, size=15):
+    """Custom version to extract stars cutouts
+
+    Parameters
+    ----------
+    image: np.ndarray or path
+    stars: np.ndarray
+        stars positions with shape (n,2)
+    size: int
+        size of the cuts around stars (in pixels), by default 15
+
+    Returns
+    -------
+    np.ndarray of shape (size, size)
+    
+    """
+    if isinstance(image, str):
+        image = fits.getdata(image)
+
+    warnings.simplefilter("ignore")
+    if np.shape(stars) > (1,2):
+        stars_tbl = Table(
+            [stars[:, 0], stars[:, 1], np.arange(len(stars))],
+            names=["x", "y", "id"])
+        stars = extract_stars(NDData(data=image), stars_tbl, size=size)
+        idxs = np.array([s.id_label for s in stars])
+        return idxs, stars
+    else:
+        stars_tbl = Table(
+            data=np.array([stars[0][0], stars[0][1]]),
+            names=["x", "y"])
+        stars = extract_stars(NDData(data=image), stars_tbl, size=size)
+        return stars
+

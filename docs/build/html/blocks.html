@@ -119,6 +119,7 @@
               <p class="caption" role="heading"><span class="caption-text">References</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/quickstart.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="core.html">What is a pipeline?</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Blocks</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#detection">Detection</a><ul>
@@ -127,15 +128,21 @@
 <li class="toctree-l3"><a class="reference internal" href="generated/prose.blocks.DAOFindStars.html">DAOFindStars</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#alignment-centroiding-psf">Alignment, Centroiding, PSF</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#psf">PSF</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="generated/prose.blocks.Cutouts.html">Cutouts</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/prose.blocks.MedianPSF.html">MedianPSF</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/prose.blocks.FWHM.html">FWHM</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/prose.blocks.Gaussian2D.html">Gaussian2D</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/prose.blocks.Moffat2D.html">Moffat2D</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/prose.blocks.FastGaussian.html">FastGaussian</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#alignment-centroiding">Alignment, Centroiding</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="generated/prose.blocks.XYShift.html">XYShift</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/prose.blocks.Twirl.html">Twirl</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/prose.blocks.AffineTransform.html">AffineTransform</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/prose.blocks.Cutout2D.html">Cutout2D</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/prose.blocks.AstroAlignShift.html">AstroAlignShift</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/prose.blocks.Gaussian2D.html">Gaussian2D</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/prose.blocks.Moffat2D.html">Moffat2D</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/prose.blocks.FastGaussian.html">FastGaussian</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#photometry">Photometry</a><ul>
@@ -225,8 +232,37 @@
 </tbody>
 </table>
 </section>
-<section id="alignment-centroiding-psf">
-<h2>Alignment, Centroiding, PSF<a class="headerlink" href="#alignment-centroiding-psf" title="Permalink to this headline">¶</a></h2>
+<section id="psf">
+<h2>PSF<a class="headerlink" href="#psf" title="Permalink to this headline">¶</a></h2>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/prose.blocks.Cutouts.html#prose.blocks.Cutouts" title="prose.blocks.Cutouts"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Cutouts</span></code></a></p></td>
+<td><p>Extract square image cutouts centered on <code class="docutils literal notranslate"><span class="pre">Image.stars_coords</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/prose.blocks.MedianPSF.html#prose.blocks.MedianPSF" title="prose.blocks.MedianPSF"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MedianPSF</span></code></a></p></td>
+<td><p>Get median psf from image.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/prose.blocks.FWHM.html#prose.blocks.FWHM" title="prose.blocks.FWHM"><code class="xref py py-obj docutils literal notranslate"><span class="pre">FWHM</span></code></a></p></td>
+<td><p>Fast empirical FWHM</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/prose.blocks.Gaussian2D.html#prose.blocks.Gaussian2D" title="prose.blocks.Gaussian2D"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Gaussian2D</span></code></a></p></td>
+<td><p>Fit an elliptical 2D Gaussian model to an image effective PSF</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/prose.blocks.Moffat2D.html#prose.blocks.Moffat2D" title="prose.blocks.Moffat2D"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Moffat2D</span></code></a></p></td>
+<td><p>Fit an elliptical 2D Moffat model to an image effective PSF</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/prose.blocks.FastGaussian.html#prose.blocks.FastGaussian" title="prose.blocks.FastGaussian"><code class="xref py py-obj docutils literal notranslate"><span class="pre">FastGaussian</span></code></a></p></td>
+<td><p>Fit a symetric 2D Gaussian model to an image effective PSF</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="alignment-centroiding">
+<h2>Alignment, Centroiding<a class="headerlink" href="#alignment-centroiding" title="Permalink to this headline">¶</a></h2>
 <a class="reference internal image-reference" href="_images/matching.png"><img alt="_images/matching.png" class="align-center" src="_images/matching.png" style="height: 220px;" /></a>
 <table class="longtable docutils align-default">
 <colgroup>
@@ -248,15 +284,6 @@
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="generated/prose.blocks.AstroAlignShift.html#prose.blocks.AstroAlignShift" title="prose.blocks.AstroAlignShift"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AstroAlignShift</span></code></a></p></td>
 <td><p>Compute the linear shift between point clouds using <code class="code docutils literal notranslate"><span class="pre">astroalign</span></code></p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="generated/prose.blocks.Gaussian2D.html#prose.blocks.Gaussian2D" title="prose.blocks.Gaussian2D"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Gaussian2D</span></code></a></p></td>
-<td><p>Fit an elliptical 2D Gaussian model to an image effective PSF</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/prose.blocks.Moffat2D.html#prose.blocks.Moffat2D" title="prose.blocks.Moffat2D"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Moffat2D</span></code></a></p></td>
-<td><p>Fit an elliptical 2D Moffat model expressed as</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="generated/prose.blocks.FastGaussian.html#prose.blocks.FastGaussian" title="prose.blocks.FastGaussian"><code class="xref py py-obj docutils literal notranslate"><span class="pre">FastGaussian</span></code></a></p></td>
-<td><p>Fit a symetric 2D Gaussian model to an image effective PSF</p></td>
 </tr>
 </tbody>
 </table>
@@ -295,13 +322,13 @@
 <td><p>Flat, Bias and Dark calibration</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="generated/prose.blocks.Cutouts.html#prose.blocks.Cutouts" title="prose.blocks.Cutouts"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Cutouts</span></code></a></p></td>
-<td><p>Record all cutouts centered on Image.stars_coords</p></td>
+<td><p>Extract square image cutouts centered on <code class="docutils literal notranslate"><span class="pre">Image.stars_coords</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="generated/prose.blocks.Flip.html#prose.blocks.Flip" title="prose.blocks.Flip"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Flip</span></code></a></p></td>
 <td><p>Flip an image according to a reference</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="generated/prose.blocks.ImageBuffer.html#prose.blocks.ImageBuffer" title="prose.blocks.ImageBuffer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ImageBuffer</span></code></a></p></td>
-<td><p>Store the last Image</p></td>
+<td><p>Stores the last Image</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="generated/prose.blocks.Pass.html#prose.blocks.Pass" title="prose.blocks.Pass"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Pass</span></code></a></p></td>
 <td><p>A Block that does nothing</p></td>
@@ -310,7 +337,7 @@
 <td><p>Save reduced FITS images.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="generated/prose.blocks.Set.html#prose.blocks.Set" title="prose.blocks.Set"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Set</span></code></a></p></td>
-<td><p>Set specific attribute to every image</p></td>
+<td><p>Sets specific attribute to every image</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="generated/prose.blocks.Stack.html#prose.blocks.Stack" title="prose.blocks.Stack"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Stack</span></code></a></p></td>
 <td><p>Build a FITS stack image of the observation</p></td>
@@ -322,7 +349,7 @@
 <td><p>Build a video of all <code class="code docutils literal notranslate"><span class="pre">Image.data</span></code>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="generated/prose.blocks.Plot.html#prose.blocks.Plot" title="prose.blocks.Plot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Plot</span></code></a></p></td>
-<td><p>Generate a video/gif given a plotting function</p></td>
+<td><p>TODO</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="generated/prose.blocks.XArray.html#prose.blocks.XArray" title="prose.blocks.XArray"><code class="xref py py-obj docutils literal notranslate"><span class="pre">XArray</span></code></a></p></td>
 <td><p></p></td>

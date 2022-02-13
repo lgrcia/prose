@@ -210,7 +210,7 @@ class Block:
 class Sequence:
     # TODO: add index self.i in image within unit loop
 
-    def __init__(self, blocks, name="default", loader=Image, **kwargs):
+    def __init__(self, blocks, name="", loader=Image, **kwargs):
         self.name = name
         self.files_or_images = []
         self.blocks = blocks

@@ -54,7 +54,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Twirl" href="prose.blocks.Twirl.html" />
-    <link rel="prev" title="DAOFindStars" href="prose.blocks.DAOFindStars.html" /> 
+    <link rel="prev" title="FastGaussian" href="prose.blocks.FastGaussian.html" /> 
 </head>
 
 <body class="">
@@ -121,18 +121,17 @@
               <p class="caption" role="heading"><span class="caption-text">References</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/quickstart.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../core.html">What is a pipeline?</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../blocks.html">Blocks</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../blocks.html#detection">Detection</a></li>
-<li class="toctree-l2 current"><a class="reference internal" href="../blocks.html#alignment-centroiding-psf">Alignment, Centroiding, PSF</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../blocks.html#psf">PSF</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../blocks.html#alignment-centroiding">Alignment, Centroiding</a><ul class="current">
 <li class="toctree-l3 current"><a class="current reference internal" href="#">XYShift</a></li>
 <li class="toctree-l3"><a class="reference internal" href="prose.blocks.Twirl.html">Twirl</a></li>
 <li class="toctree-l3"><a class="reference internal" href="prose.blocks.AffineTransform.html">AffineTransform</a></li>
 <li class="toctree-l3"><a class="reference internal" href="prose.blocks.Cutout2D.html">Cutout2D</a></li>
 <li class="toctree-l3"><a class="reference internal" href="prose.blocks.AstroAlignShift.html">AstroAlignShift</a></li>
-<li class="toctree-l3"><a class="reference internal" href="prose.blocks.Gaussian2D.html">Gaussian2D</a></li>
-<li class="toctree-l3"><a class="reference internal" href="prose.blocks.Moffat2D.html">Moffat2D</a></li>
-<li class="toctree-l3"><a class="reference internal" href="prose.blocks.FastGaussian.html">FastGaussian</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../blocks.html#photometry">Photometry</a></li>
@@ -179,6 +178,7 @@
 <dt class="sig sig-object py" id="prose.blocks.XYShift">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">prose.blocks.</span></span><span class="sig-name descname"><span class="pre">XYShift</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.blocks.XYShift" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute the linear shift between two point clouds. Star coordinates in the image are expected in image.stars_coords</p>
+<p><span class="blockwrite">writes</span>  <code class="docutils literal notranslate"><span class="pre">Image.dx</span></code>, <code class="docutils literal notranslate"><span class="pre">Image.dy</span></code>, <code class="docutils literal notranslate"><span class="pre">Image.header</span></code></p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -223,7 +223,7 @@ x^{ref}_N &amp; y^{ref}_N
         <footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
         <a href="prose.blocks.Twirl.html" class="btn btn-neutral float-right" title="Twirl" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-        <a href="prose.blocks.DAOFindStars.html" class="btn btn-neutral float-left" title="DAOFindStars" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="prose.blocks.FastGaussian.html" class="btn btn-neutral float-left" title="FastGaussian" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>

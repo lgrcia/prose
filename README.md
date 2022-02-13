@@ -22,6 +22,33 @@
 
  *prose* is a tool to build pipelines dedicated to astronomical images processing, *only based on pip installable dependencies* (e.g. no IRAF, Sextractor or Astrometry.net install needed 🎉). It features default pipelines to perform common tasks (such as automated calibration, reduction and photometry) and makes building custom ones easy.
 
+## Example
+
+Here is a quick example consisting in building a pipeline to characterize the point-spread-function (PSF) of an example image
+
+
+```python
+from prose import Sequence, blocks
+from prose.tutorials import example_image
+import matplotlib.pyplot as plt
+
+# getting the example image
+image = example_image()
+
+sequence = Sequence([
+    blocks.SegmentedPeaks(),  # stars detection
+    blocks.Cutouts(size=21),  # cutouts extraction
+    blocks.MedianPSF(),       # PSF building
+    blocks.Moffat2D(),        # PSF modeling
+])
+
+sequence.run([image])
+```
+
+For more details check (Quickstart)[https://lgrcia.github.io/prose/build/html/notebooks/quickstart.html].
+
+## Default pipelines
+
 
 ```python
 

@@ -52,7 +52,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="ImageBuffer" href="prose.blocks.ImageBuffer.html" />
-    <link rel="prev" title="Cutouts" href="prose.blocks.Cutouts.html" /> 
+    <link rel="prev" title="Calibration" href="prose.blocks.Calibration.html" /> 
 </head>
 
 <body class="">
@@ -119,10 +119,12 @@
               <p class="caption" role="heading"><span class="caption-text">References</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/quickstart.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../core.html">What is a pipeline?</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../blocks.html">Blocks</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../blocks.html#detection">Detection</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../blocks.html#alignment-centroiding-psf">Alignment, Centroiding, PSF</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../blocks.html#psf">PSF</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../blocks.html#alignment-centroiding">Alignment, Centroiding</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../blocks.html#photometry">Photometry</a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="../blocks.html#utils">Utils</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="prose.blocks.Calibration.html">Calibration</a></li>
@@ -181,10 +183,10 @@
 <dt class="sig sig-object py" id="prose.blocks.Flip">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">prose.blocks.</span></span><span class="sig-name descname"><span class="pre">Flip</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.blocks.Flip" title="Permalink to this definition">¶</a></dt>
 <dd><p>Flip an image according to a reference</p>
-<p>Telescope.keyword_flip is used. The image is fliped if its flip value differs from the reference</p>
+<p><code class="docutils literal notranslate"><span class="pre">Telescope.keyword_flip</span></code> is used. The image is fliped if its flip value differs from the reference one</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>reference_image</strong> (<cite>Image</cite>) – Image serving as a reference</p>
+<dd class="field-odd"><p><strong>reference_image</strong> (<cite>Image</cite>) – Image serving as a reference for the flip value</p>
 </dd>
 </dl>
 </dd></dl>
@@ -198,7 +200,7 @@
         <footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
         <a href="prose.blocks.ImageBuffer.html" class="btn btn-neutral float-right" title="ImageBuffer" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-        <a href="prose.blocks.Cutouts.html" class="btn btn-neutral float-left" title="Cutouts" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="prose.blocks.Calibration.html" class="btn btn-neutral float-left" title="Calibration" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>

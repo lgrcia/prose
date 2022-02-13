@@ -9,7 +9,7 @@ default = dict(
     # --------
     keyword_telescope = "TELESCOP",
     keyword_object = "OBJECT",
-    keyword_image_type = "IMAGETYP",
+    keyword_image_type = "IMAGETYP", 
     keyword_light_images = "light",
     keyword_dark_images = "dark",
     keyword_flat_images = "flat",
@@ -37,14 +37,14 @@ default = dict(
     
     # Specs
     # -----
-    trimming = (0, 0), # in piwel along y/x
-    read_noise = 9, # in A
-    gain = 1, # in e-/ADU
-    altitude = 2000, # in meters
-    diameter = 100, # in meters
-    pixel_scale = None, # in arcseconds
+    trimming = (0, 0), # pixels along y/x
+    read_noise = 9, # A
+    gain = 1, # e-/ADU
+    altitude = 2000, # meters
+    diameter = 100, # meters
+    pixel_scale = None, # arcseconds
     latlong = [None, None], 
-    saturation = 55000,
+    saturation = 55000, # ADUs
     hdu = 0
 )
 
@@ -53,13 +53,13 @@ speculoos_south = dict(
     default,
     name = "SS0",
     keyword_telescope = "OBSERVAT",
-    trimming= [8, 22],  # in piwel along y/x
-    read_noise= 10,  # in ADU
-    gain= 1.02,  # in e-/ADU
-    altitude= 2000,  # in meters
-    diameter= 100,  # in meters
-    pixel_scale= 0.33,  # in arcseconds
-    latlong= [-24.6275, -70.4044], # [latitude, longitude] in degree
+    trimming= [8, 22], 
+    read_noise= 10, 
+    gain= 1.02, 
+    altitude= 2000, 
+    diameter= 100, 
+    pixel_scale= 0.33,
+    latlong= [-24.6275, -70.4044],
     TTF_link= "https://astro.swarthmore.edu/telescope/tess-secure/print_eclipses.cgi?observatory_string=-24.6272%3B-70.4039%3"
                 "BAmerica%2FSantiago%3BSPECULOOS-South+Observatory+%284x1.0-m%29%3BSPECULOOS+South&use_utc=1&observatory_latitude=-29.2563"
                 "&observatory_longitude=-70.738&timezone=UTC&start_date={date}&days_to_print=90&days_in_past=0&minimum_start_elevation="
@@ -147,13 +147,13 @@ liverpool = dict(
     name = "Liverpool",
     names = ["Liverpool Telescope"],
     keyword_telescope= "TELESCOP",
-    trimming= [8, 22], # pixels
-    read_noise= 12, # ADU
-    gain= 2.4, # ADU/e-
-    altitude= 2363, # m
-    diameter= 200, # cm
-    pixel_scale= 1.0752, # arcsec
-    latlong= [28.7624, -17.8792], # deg
+    trimming= [8, 22],
+    read_noise= 12,
+    gain= 2.4, 
+    altitude= 2363, 
+    diameter= 200, 
+    pixel_scale= 1.0752, 
+    latlong= [28.7624, -17.8792],
     keyword_object= "OBJECT",
     keyword_image_type= "OBSTYPE",
     keyword_light_images= "expose",

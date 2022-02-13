@@ -8,7 +8,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
-  <title>Cutout2D &mdash; prose  documentation</title>
+  <title>FWHM &mdash; prose  documentation</title>
   
 
   
@@ -51,8 +51,8 @@
     
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="AstroAlignShift" href="prose.blocks.AstroAlignShift.html" />
-    <link rel="prev" title="AffineTransform" href="prose.blocks.AffineTransform.html" /> 
+    <link rel="next" title="Gaussian2D" href="prose.blocks.Gaussian2D.html" />
+    <link rel="prev" title="MedianPSF" href="prose.blocks.MedianPSF.html" /> 
 </head>
 
 <body class="">
@@ -123,15 +123,16 @@
 <li class="toctree-l1"><a class="reference internal" href="../core.html">What is a pipeline?</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../blocks.html">Blocks</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../blocks.html#detection">Detection</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../blocks.html#psf">PSF</a></li>
-<li class="toctree-l2 current"><a class="reference internal" href="../blocks.html#alignment-centroiding">Alignment, Centroiding</a><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="prose.blocks.XYShift.html">XYShift</a></li>
-<li class="toctree-l3"><a class="reference internal" href="prose.blocks.Twirl.html">Twirl</a></li>
-<li class="toctree-l3"><a class="reference internal" href="prose.blocks.AffineTransform.html">AffineTransform</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#">Cutout2D</a></li>
-<li class="toctree-l3"><a class="reference internal" href="prose.blocks.AstroAlignShift.html">AstroAlignShift</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../blocks.html#psf">PSF</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="prose.blocks.Cutouts.html">Cutouts</a></li>
+<li class="toctree-l3"><a class="reference internal" href="prose.blocks.MedianPSF.html">MedianPSF</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">FWHM</a></li>
+<li class="toctree-l3"><a class="reference internal" href="prose.blocks.Gaussian2D.html">Gaussian2D</a></li>
+<li class="toctree-l3"><a class="reference internal" href="prose.blocks.Moffat2D.html">Moffat2D</a></li>
+<li class="toctree-l3"><a class="reference internal" href="prose.blocks.FastGaussian.html">FastGaussian</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../blocks.html#alignment-centroiding">Alignment, Centroiding</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../blocks.html#photometry">Photometry</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../blocks.html#utils">Utils</a></li>
 </ul>
@@ -170,18 +171,23 @@
         <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
         <div itemprop="articleBody">
           
-  <section id="cutout2d">
-<h1>Cutout2D<a class="headerlink" href="#cutout2d" title="Permalink to this headline">¶</a></h1>
+  <section id="fwhm">
+<h1>FWHM<a class="headerlink" href="#fwhm" title="Permalink to this headline">¶</a></h1>
 <img src="../_images/block.png" class="block-image"></img><dl class="py class">
-<dt class="sig sig-object py" id="prose.blocks.Cutout2D">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">prose.blocks.</span></span><span class="sig-name descname"><span class="pre">Cutout2D</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reference_image</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.blocks.Cutout2D" title="Permalink to this definition">¶</a></dt>
-<dd><p>TODO: change name of this… not explicit
-Align an image to a reference image using <code class="docutils literal notranslate"><span class="pre">astropy.nddata.Cutout2D</span></code></p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>reference</strong> (<em>np.ndarray</em>) – reference image on which alignment is done</p>
-</dd>
-</dl>
+<dt class="sig sig-object py" id="prose.blocks.FWHM">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">prose.blocks.</span></span><span class="sig-name descname"><span class="pre">FWHM</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.blocks.FWHM" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fast empirical FWHM</p>
+<p>To be used after a PSF building block</p>
+<p><span class="blockread">reads</span> <code class="docutils literal notranslate"><span class="pre">Image.psf</span></code></p>
+<p><span class="blockwrite">writes</span></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Image.psf_models_params</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Image.psf_model</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Image.fwhmx</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Image.fwhm</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Image.psf_model_block</span></code></p></li>
+</ul>
+<p>(based on Arielle Bertrou-Cantou’s idea)</p>
 </dd></dl>
 
 </section>
@@ -192,8 +198,8 @@ Align an image to a reference image using <code class="docutils literal notransl
         </div>
         <footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-        <a href="prose.blocks.AstroAlignShift.html" class="btn btn-neutral float-right" title="AstroAlignShift" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-        <a href="prose.blocks.AffineTransform.html" class="btn btn-neutral float-left" title="AffineTransform" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="prose.blocks.Gaussian2D.html" class="btn btn-neutral float-right" title="Gaussian2D" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="prose.blocks.MedianPSF.html" class="btn btn-neutral float-left" title="MedianPSF" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>

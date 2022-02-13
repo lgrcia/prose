@@ -7,6 +7,7 @@ from astropy.table import Table
 from astropy.nddata import NDData
 from photutils.psf import extract_stars
 from astropy.stats import gaussian_sigma_to_fwhm
+from sklearn.preprocessing import normalize
 from ..core import Block
 import matplotlib.pyplot as plt
 from collections import OrderedDict
@@ -97,45 +98,68 @@ def moments(data):
     width_y /= gaussian_sigma_to_fwhm
     return height, x, y, width_x, width_y, 0.0, background
 
+class Cutouts(Block):
+    """Extract square image cutouts centered on ``Image.stars_coords``
 
-class PSF(Block):
-    """
-    Get global psf from image using photutils routines
-    """
+    |read| ``Image.stars_coords``
 
-    def __init__(self, cutout_size=21, save_cutouts=False, **kwargs):
+    |write| ``Image.cutouts``, ``Image.cutouts_idxs``
+
+    Cutouts are sometimes called "imagette" and represent small square portions of the image centered on specific points.
+
+    Parameters
+    ----------
+    size : int, optional
+       square side length of the cutout in pixel, by default 21
+    """
+    @register_args
+    def __init__(self, size=21, **kwargs):
         super().__init__(**kwargs)
-        self.cutout_size = cutout_size
-        self.save_cutouts = save_cutouts
-        self.x, self.y = np.indices((self.cutout_size, self.cutout_size))
+        self.size = size
 
     def run(self, image):
-        data = image.data
-        stars = image.stars_coords.copy()
-        _, cuts = cutouts(data, stars, size=self.cutout_size)
-        cuts = cuts.data
+        image.cutouts_idxs, image.cutouts = cutouts(image.data, image.stars_coords, size=self.size)
 
-        if True:
-            cuts = [c/np.sum(c) for c in cuts]
+class MedianPSF(Block):
+    """Get median psf from image.
 
-        if self.save_cutouts:
-            image.cutouts = cuts
+    |read| ``Image.cutouts``
+
+    If ``Image.cutouts`` is not present (because a ``Cutouts`` block has not been included in the sequence), set cutout_size, which instantiate a ``Cutouts`` block within this one
+
+    Parameters
+    ----------
+    cutout_size : int, optional
+        size of the cutouts used to compute the global PSF, by default None which mean the Image.cutouts are used
+    """
+    @register_args
+    def __init__(self, cutout_size=None, **kwargs):
+        super().__init__(**kwargs)
+        self.cutout_block = None
+        if cutout_size is not None:
+            self.cutout_block = Cutouts(size=cutout_size)
         
-        image.psf =  np.median(cuts, axis=0)
+    def run(self, image):
+        if self.cutout_block is not None:
+            image = self.cutout_block(image)
+        normalized_cutouts = [c/np.sum(c) for c in image.cutouts]
+        image.psf =  np.median(normalized_cutouts, axis=0)
 
 class PSFModel(Block):
 
-    def __init__(self, cutout_size=21, save_cutouts=False, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.cutout_size = cutout_size
-        self.save_cutouts = save_cutouts
+        self.x = self.y = None
+
+    def from_cutouts(self, image):
+        self.cutout_size = image.cutouts[0].shape[0]
         self.x, self.y = np.indices((self.cutout_size, self.cutout_size))
 
     @property
     def optimized_model(self):
         return self.model(*self.optimized_params)
 
-    def model(self):
+    def model(self, *args):
         raise NotImplementedError("")
 
     def nll(self, p, psf):
@@ -152,8 +176,11 @@ class PSFModel(Block):
         return gaussian_sigma_to_fwhm
 
     def run(self, image):
+        if self.x is None and hasattr(image, "cutouts"):
+            self.from_cutouts(image)
+
         image.psf_models_params = self.optimize(image.psf)
-        image.psf_model = self.model(*image.psf_models_params)
+        image.psf_model = self.model(*np.atleast_1d(image.psf_models_params))
         image.fwhmx, image.fwhmy, image.theta = self.fwhm(image.psf_models_params)
         image.fwhm = np.mean([image.fwhmx, image.fwhmy])
         image.psf_model_block = self.__class__.__name__
@@ -161,15 +188,34 @@ class PSFModel(Block):
 
 class FWHM(PSFModel):
     """
-    Fast empirical FWHM (based on Arielle Bertrou-Cantou's idea)
+    Fast empirical FWHM
+
+    To be used after a PSF building block
+    
+    |read| ``Image.psf``
+
+    |write|
+
+    - ``Image.psf_models_params``
+    - ``Image.psf_model``
+    - ``Image.fwhmx``
+    - ``Image.fwhm``
+    - ``Image.psf_model_block``
+    
+    (based on Arielle Bertrou-Cantou's idea)
     """
     
     @register_args
-    def __init__(self, cutout_size=51, **kwargs):
-        super().__init__(cutout_size=cutout_size, **kwargs)
-        Y, X = np.indices((self.cutout_size,self.cutout_size))
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def from_cutouts(self, image):
+        super().from_cutouts(image)
         x = y = self.cutout_size/2
-        self.radii = (np.sqrt((X - x) ** 2 + (Y - y) ** 2)).flatten()
+        self.radii = (np.sqrt((self.x - x) ** 2 + (self.y - y) ** 2)).flatten()
+
+    def model(self, *args):
+        return None
 
     def fwhm(self, param):
         return param, param, 0
@@ -186,12 +232,12 @@ class FastGaussian(PSFModel):
     Fit a symetric 2D Gaussian model to an image effective PSF
     """
     @register_args
-    def __init__(self, cutout_size=21, **kwargs):
-        super().__init__(cutout_size=cutout_size, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
     def model(self, height, s, m):
         dx = self.x - self.cutout_size/2
-        dy = self.y - self.cutout_size/2
+        dy = self.y -  self.cutout_size/2
         psf = height * np.exp(-((dx/(2*s))**2 + (dy/(2*s))**2))
         return psf + m
 
@@ -220,7 +266,20 @@ class Gaussian2D(PSFModel):
     r"""
     Fit an elliptical 2D Gaussian model to an image effective PSF
 
-    Model is
+    To be used after a PSF building block
+    
+    |read| ``Image.psf``
+
+    |write|
+
+    - ``Image.psf_models_params``
+    - ``Image.psf_model``
+    - ``Image.fwhmx``
+    - ``Image.fwhm``
+    - ``Image.psf_model_block``
+    
+    
+    PSF model is
 
     .. math::
 
@@ -236,11 +295,69 @@ class Gaussian2D(PSFModel):
 
     is fitted from an effective psf. :code:`scipy.optimize.minimize` is used to minimize :math:`\chi ^2` from data. Initial parameters are found using the moments of the `effective psf <https://photutils.readthedocs.io/en/stable/epsf.html>`_. This method is 4 times faster than :code:`photutils.centroids.fit_2dgaussian` and lead to similar results.
 
+    Example
+    -------
+
+    We start by loading an example image and buidling its median psf
+
+    .. jupyter-execute::
+
+        from prose import blocks, Sequence
+        from prose.tutorials import example_image
+
+        # our example image
+        image = example_image()
+
+        # Sequence to build image PSF
+        sequence = Sequence([
+            blocks.SegmentedPeaks(),  # stars detection
+            blocks.Cutouts(),
+            blocks.MedianPSF(),       # building PSF
+        ])
+
+        sequence.run([image])   
+
+    We can now apply the Gaussian2D block to the image in order to model its PSF
+
+    .. jupyter-execute::
+
+        import matplotlib.pyplot as plt
+
+        block = blocks.Gaussian2D()
+        image = block(image)
+
+    and vizualise the result
+
+    .. jupyter-execute::
+
+        from prose import viz
+
+        print(f"model: {image.psf_model_block}")
+        print("fwhmx, fwhmy, theta: " + ", ".join([f"{p:.2f}" for p in block.fwhm(image.psf_models_params)]))
+
+        plt.figure(figsize=(12, 5))
+
+        plt.subplot(131)
+        plt.imshow(image.psf)
+        plt.title("PSF")
+
+        plt.subplot(132)
+        plt.imshow(image.psf_model)
+        plt.title(f"PSF model ({image.psf_model_block})")
+
+        plt.subplot(133)
+        residuals = image.psf - image.psf_model
+        ax = plt.imshow(residuals)
+        plt.title("residuals")
+        viz.add_colorbar(ax)
+
+        plt.tight_layout()
+
     """
 
     @register_args
-    def __init__(self, cutout_size=21, **kwargs):
-        super().__init__(cutout_size=cutout_size, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
     def model(self, height, xo, yo, sx, sy, theta, m):
         dx = self.x - xo
@@ -279,7 +396,22 @@ class Gaussian2D(PSFModel):
 
 class Moffat2D(PSFModel):
     r"""
-    Fit an elliptical 2D Moffat model expressed as
+    Fit an elliptical 2D Moffat model to an image effective PSF
+
+    To be used after a PSF building block
+    
+    |read| ``Image.psf``
+
+    |write|
+
+    - ``Image.psf_models_params``
+    - ``Image.psf_model``
+    - ``Image.fwhmx``
+    - ``Image.fwhm``
+    - ``Image.psf_model_block``
+    
+    
+    PSF model is
 
     .. math::   
 
@@ -293,11 +425,71 @@ class Moffat2D(PSFModel):
         \end{gather*}
 
     is fitted from an effective psf. :code:`scipy.optimize.minimize` is used to minimize :math:`\chi ^2` from data. Initial parameters are found using the moments of the `effective psf <https://photutils.readthedocs.io/en/stable/epsf.html>`_. 
+
+
+    Example
+    -------
+
+    We start by loading an example image and buidling its median psf
+
+    .. jupyter-execute::
+
+        from prose import blocks, Sequence
+        from prose.tutorials import example_image
+
+        # our example image
+        image = example_image()
+
+        # Sequence to build image PSF
+        sequence = Sequence([
+            blocks.SegmentedPeaks(),  # stars detection
+            blocks.Cutouts(),
+            blocks.MedianPSF(),       # building PSF
+        ])
+
+        sequence.run([image])   
+
+    We can now apply the Moffat2D block to the image in order to model its PSF
+
+    .. jupyter-execute::
+
+        import matplotlib.pyplot as plt
+
+        block = blocks.Moffat2D()
+        image = block(image)
+
+    and vizualise the result
+
+    .. jupyter-execute::
+
+        from prose import viz
+
+        print(f"model: {image.psf_model_block}")
+        print("fwhmx, fwhmy, theta: " + ", ".join([f"{p:.2f}" for p in block.fwhm(image.psf_models_params)]))
+
+        plt.figure(figsize=(12, 5))
+
+        plt.subplot(131)
+        plt.imshow(image.psf)
+        plt.title("PSF")
+
+        plt.subplot(132)
+        plt.imshow(image.psf_model)
+        plt.title(f"PSF model ({image.psf_model_block})")
+
+        plt.subplot(133)
+        residuals = image.psf - image.psf_model
+        ax = plt.imshow(residuals)
+        plt.title("residuals")
+        viz.add_colorbar(ax)
+
+        plt.tight_layout()
+
     """
 
     @register_args
-    def __init__(self, cutout_size=21, **kwargs):
-        super().__init__(cutout_size=cutout_size, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
     def model(self, a, x0, y0, sx, sy, theta, b, beta):
     # https://pixinsight.com/doc/tools/DynamicPSF/DynamicPSF.html

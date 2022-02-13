@@ -119,6 +119,7 @@
               <p class="caption" role="heading"><span class="caption-text">References</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/quickstart.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../core.html">What is a pipeline?</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../blocks.html">Blocks</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="../blocks.html#detection">Detection</a><ul class="current">
@@ -127,7 +128,8 @@
 <li class="toctree-l3"><a class="reference internal" href="prose.blocks.DAOFindStars.html">DAOFindStars</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="../blocks.html#alignment-centroiding-psf">Alignment, Centroiding, PSF</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../blocks.html#psf">PSF</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../blocks.html#alignment-centroiding">Alignment, Centroiding</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../blocks.html#photometry">Photometry</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../blocks.html#utils">Utils</a></li>
 </ul>
@@ -172,7 +174,7 @@
 <dt class="sig sig-object py" id="prose.blocks.SegmentedPeaks">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">prose.blocks.</span></span><span class="sig-name descname"><span class="pre">SegmentedPeaks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.blocks.SegmentedPeaks" title="Permalink to this definition">¶</a></dt>
 <dd><p>Stars detection based on image segmentation.</p>
-<p><span class="blockwrite">writes</span> <code class="docutils literal notranslate"><span class="pre">Image.stars_coords</span></code></p>
+<p><span class="blockwrite">writes</span> <code class="docutils literal notranslate"><span class="pre">Image.stars_coords</span></code> and <code class="docutils literal notranslate"><span class="pre">Image.peaks</span></code></p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">

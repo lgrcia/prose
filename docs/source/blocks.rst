@@ -31,7 +31,22 @@ Detection
    DAOFindStars
    
 
-Alignment, Centroiding, PSF
+PSF
+---
+
+.. autosummary::
+   :toctree: generated
+   :template: autosum.rst
+   :nosignatures:
+
+   Cutouts
+   MedianPSF
+   FWHM
+   Gaussian2D
+   Moffat2D
+   FastGaussian
+
+Alignment, Centroiding
 ---------------------------
 
 .. image:: _static/matching.png
@@ -46,13 +61,9 @@ Alignment, Centroiding, PSF
 
    XYShift
    Twirl
-   Align
    AffineTransform
    Cutout2D
    AstroAlignShift
-   Gaussian2D
-   Moffat2D
-   FastGaussian
 
 Photometry
 ----------

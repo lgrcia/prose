@@ -21,6 +21,8 @@ from ..utils import register_args
 class Stack(Block):
     """Build a FITS stack image of the observation
 
+    The stack image is accessible through the ``stack`` attribute
+
     Parameters
     ----------
     destination : str, optional
@@ -105,6 +107,8 @@ class StackStd(Block):
 
 class SaveReduced(Block):
     """Save reduced FITS images.
+
+    |write| ``Image.header``
 
     Parameters
     ----------
@@ -239,7 +243,7 @@ class Pass(Block):
 
 
 class ImageBuffer(Block):
-    """Store the last Image
+    """Stores the last Image
     """
     @register_args
     def __init__(self, **kwargs):
@@ -251,7 +255,7 @@ class ImageBuffer(Block):
 
 
 class Set(Block):
-    """Set specific attribute to every image
+    """Sets specific attribute to every image
 
     For example to set attributes ``a`` with the value 2 on every image (i.e Image.a = 2):
     
@@ -274,35 +278,15 @@ class Set(Block):
     def run(self, image):
         image.__dict__.update(self.kwargs)
 
-
-class Cutouts(Block):
-    """Record all cutouts centered on Image.stars_coords
-
-    Cutouts are sometimes called "imagette" and represent small portions of the image centered on cpecific points.
-
-    Parameters
-    ----------
-    size : int, optional
-        width and height of the cutout, by default 21
-    """
-    @register_args
-    def __init__(self, size=21, **kwargs):
-        super().__init__(**kwargs)
-        self.size = size
-
-    def run(self, image, **kwargs):
-        image.cutouts_idxs, image.cutouts = cutouts(image.data, image.stars_coords, size=self.size)
-
-
 class Flip(Block):
     """Flip an image according to a reference
 
-    Telescope.keyword_flip is used. The image is fliped if its flip value differs from the reference
+    ``Telescope.keyword_flip`` is used. The image is fliped if its flip value differs from the reference one
 
     Parameters
     ----------
     reference_image : `Image`
-        Image serving as a reference
+        Image serving as a reference for the flip value
     """
     @register_args
     def __init__(self, reference_image, **kwargs):
@@ -327,7 +311,7 @@ class Flip(Block):
 
 
 class Plot(Block):
-    """Generate a video/gif given a plotting function
+    """TODO
 
     Parameters
     ----------

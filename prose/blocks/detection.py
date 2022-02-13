@@ -66,7 +66,7 @@ class DAOFindStars(StarsDetection):
     """
     DAOPHOT stars detection with :code:`photutils` implementation.
 
-    |write| ``Image.stars_coords``
+    |write| ``Image.stars_coords`` and ``Image.peaks``
     
     Parameters
     ----------
@@ -112,7 +112,7 @@ class SegmentedPeaks(StarsDetection):
     """
     Stars detection based on image segmentation.
 
-    |write| ``Image.stars_coords``
+    |write| ``Image.stars_coords`` and ``Image.peaks``
 
     Parameters
     ----------
@@ -146,7 +146,7 @@ class SEDetection(StarsDetection):
     """
     Source Extractor detection
 
-    |write| ``Image.stars_coords``
+    |write| ``Image.stars_coords`` and ``Image.peaks``
 
     Parameters
     ----------

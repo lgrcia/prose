@@ -119,18 +119,17 @@
               <p class="caption" role="heading"><span class="caption-text">References</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/quickstart.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../core.html">What is a pipeline?</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../blocks.html">Blocks</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../blocks.html#detection">Detection</a></li>
-<li class="toctree-l2 current"><a class="reference internal" href="../blocks.html#alignment-centroiding-psf">Alignment, Centroiding, PSF</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../blocks.html#psf">PSF</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../blocks.html#alignment-centroiding">Alignment, Centroiding</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="prose.blocks.XYShift.html">XYShift</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">Twirl</a></li>
 <li class="toctree-l3"><a class="reference internal" href="prose.blocks.AffineTransform.html">AffineTransform</a></li>
 <li class="toctree-l3"><a class="reference internal" href="prose.blocks.Cutout2D.html">Cutout2D</a></li>
 <li class="toctree-l3"><a class="reference internal" href="prose.blocks.AstroAlignShift.html">AstroAlignShift</a></li>
-<li class="toctree-l3"><a class="reference internal" href="prose.blocks.Gaussian2D.html">Gaussian2D</a></li>
-<li class="toctree-l3"><a class="reference internal" href="prose.blocks.Moffat2D.html">Moffat2D</a></li>
-<li class="toctree-l3"><a class="reference internal" href="prose.blocks.FastGaussian.html">FastGaussian</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../blocks.html#photometry">Photometry</a></li>
@@ -177,6 +176,7 @@
 <dt class="sig sig-object py" id="prose.blocks.Twirl">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">prose.blocks.</span></span><span class="sig-name descname"><span class="pre">Twirl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.blocks.Twirl" title="Permalink to this definition">¶</a></dt>
 <dd><p>Affine transform computation for images registration</p>
+<p><span class="blockwrite">writes</span> <code class="docutils literal notranslate"><span class="pre">Image.dx</span></code>, <code class="docutils literal notranslate"><span class="pre">Image.dy</span></code>,``Image.header``, <code class="docutils literal notranslate"><span class="pre">Image.transform</span></code></p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">

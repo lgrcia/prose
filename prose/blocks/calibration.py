@@ -133,6 +133,10 @@ class Calibration(Block):
 class Trim(Block):
     """Image trimming. If trim is not specified, triming is taken from the telescope characteristics
 
+    |write| ``Image.header``
+    
+    |modify|
+
     Parameters
     ----------
     skip_wcs : bool, optional

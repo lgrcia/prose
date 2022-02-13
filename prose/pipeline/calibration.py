@@ -152,6 +152,8 @@ class Calibration:
             blocks.Flip(ref_image, name="flip"),
             self.detection,
             blocks.Twirl(ref_stars, n=self.n, name="twirl") if self.twirl else blocks.XYShift(ref_stars),
+            blocks.Cutouts(),
+            blocks.MedianPSF(),
             self.psf,
             blocks.XArray(
                 ("time", "jd_utc"),

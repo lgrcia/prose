@@ -328,13 +328,15 @@ footer {
 
 /* rst code litteral */
 
-.rst-content code {
-    white-space: nowrap;
-    max-width: 100%;
-    background: #fff;
-    border: solid 1px #e1e4e5;
-    font-size: 75%;
-    overflow-x: auto;
+.rst-content code,
+.rst-content dl.py code {
+    white-space: nowrap !important;
+    max-width: 100% !important;
+    background: #fff !important;
+    border: solid 1px #e1e4e5 !important;
+    font-size: 75% !important;
+    overflow-x: auto !important;
+    padding: .1rem .2rem !important;
 }
 
 .rst-content code.xref {

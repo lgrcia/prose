@@ -210,6 +210,8 @@ class DistanceRegistration(Registration):
 class XYShift(Registration):
     r"""Compute the linear shift between two point clouds. Star coordinates in the image are expected in image.stars_coords
 
+    |write|  ``Image.dx``, ``Image.dy``, ``Image.header`` 
+
     Parameters
     ----------
     reference : [type]
@@ -282,6 +284,8 @@ class AstroAlignShift(Registration):
     """
     Compute the linear shift between point clouds using :code:`astroalign`
 
+    |write| ``Image.dx``, ``Image.dy``,``Image.header``
+
     `astroalign <https://astroalign.readthedocs.io/en/latest/>`_ is a python module used to align stellar astronomical images using 3-point asterisms (triangles) similarities. For speed, reference asterisms are computed once at the begining of the reduction and then matched with every images.
     """
 
@@ -345,6 +349,8 @@ class Twirl(Block):
     """
     Affine transform computation for images registration
 
+    |write| ``Image.dx``, ``Image.dy``,``Image.header``, ``Image.transform``
+
     Parameters
     ----------
     ref : (2, n) np.ndarray
@@ -355,15 +361,6 @@ class Twirl(Block):
 
     @register_args
     def __init__(self, ref, n=10, **kwargs):
-        """[summary]
-
-        Parameters
-        ----------
-        ref : [type]
-            [description]
-        n : int, optional
-            [description], by default 10
-        """
         super().__init__(**kwargs)
         self.ref = ref[0:n]
         self.n = n
