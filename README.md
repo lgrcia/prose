@@ -24,7 +24,7 @@
 
 ## Example
 
-Here is a quick example consisting in building a pipeline to characterize the point-spread-function (PSF) of an example image
+Here is a quick example pipeline to characterize the point-spread-function (PSF) of an example image
 
 
 ```python
