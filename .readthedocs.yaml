@@ -9,3 +9,4 @@ python:
         - docs
     - method: setuptools
       path: .
+    system_packages: true
