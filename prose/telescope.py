@@ -6,6 +6,7 @@ import astropy.units as u
 from warnings import warn
 from .console_utils import info
 from .builtins import default
+import astropy.units as u
 
 def str_to_astropy_unit(unit_string):
     return u.__dict__[unit_string]
@@ -109,6 +110,8 @@ class Telescope:
             return str_to_astropy_unit(self.__dict__[name])
         elif name == "dec_unit":
             return str_to_astropy_unit(self.__dict__[name])
+        elif name == "pixel_scale":
+            return self.__dict__[name] * u.arcsec
         return super(Telescope, self).__getattribute__(name)
 
     def load(self, file):

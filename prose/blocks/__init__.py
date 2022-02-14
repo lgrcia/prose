@@ -5,7 +5,7 @@ from .calibration import Calibration, Trim
 from .psf import MedianPSF, Gaussian2D, Moffat2D, FastGaussian, KeepGoodStars, FWHM, Cutouts
 from .centroids import BalletCentroid
 from .photometry import PhotutilsAperturePhotometry, SEAperturePhotometry, PhotutilsPSFPhotometry
-from .imutils import *
+from .utils import *
 from .shepard import  Shepard
 from ..utils import register_args
 

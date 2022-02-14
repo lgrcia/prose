@@ -179,9 +179,6 @@ class Video(Block):
         self.factor = factor
         self.fps = fps
         self.from_fits = from_fits
-
-    def initialize(self, *args):
-        # Check if writer is available (sometimes require extra packages)
         _ = imageio.get_writer(self.destination, mode="I")
 
     def run(self, image):
@@ -300,8 +297,6 @@ class Flip(Block):
         super().__init__(**kwargs)
         self.reference_image = reference_image
         self.reference_flip_value = None
-
-    def initialize(self, *args):
         self.reference_flip_value = self.reference_image.flip
 
     def run(self, image, **kwargs):
@@ -331,9 +326,6 @@ class Plot(Block):
         self.fps = fps
         self._init_alias = plt.rcParams['text.antialiased']
         plt.rcParams['text.antialiased'] = False
-
-    def initialize(self, *args):
-        # Check if writer is available (sometimes require extra packages)
         _ = imageio.get_writer(self.destination, mode="I")
 
     def to_rbg(self):
@@ -369,14 +361,16 @@ class LivePlot(Block):
         self.sleep = sleep
         self.display = None
         self.size = size
-
-    def initialize(self, *args):
-        from IPython import display as disp
-        self.display = disp
-        if isinstance(self.size, tuple):
-            plt.figure(figsize=self.size)
+        self.figure_added = False
 
     def run(self, image):
+        if not self.figure_added:
+            from IPython import display as disp
+            self.display = disp
+            if isinstance(self.size, tuple):
+                plt.figure(figsize=self.size)
+            self.figure_added = True
+
         self.plot_function(image)
         self.display.clear_output(wait=True)
         self.display.display(plt.gcf())

@@ -14,6 +14,8 @@ import multiprocessing as mp
 import matplotlib.pyplot as plt
 import numpy as np
 from .utils import register_args
+from astropy.coordinates import SkyCoord
+import astropy.units as u
 
 
 class Image:
@@ -53,6 +55,10 @@ class Image:
     @property
     def wcs(self):
         return WCS(self.header)
+
+    @wcs.setter
+    def wcs(self, new_wcs):
+        self.header.update(new_wcs.to_header())
 
     @property
     def exposure(self):
@@ -136,6 +142,20 @@ class Image:
             label = np.arange(len(self.stars_coords)) if stars_labels else None
             viz.plot_marks(*self.stars_coords.T, label=label)
 
+    @property
+    def skycoord(self):
+        """astropy SkyCoord object based on header RAn, DEC
+        """
+
+        header = self.header
+        ra, ra_unit = header[self.telescope.keyword_ra], self.telescope.ra_unit
+        dec, dec_unit = header[self.telescope.keyword_dec], self.telescope.dec_unit
+        return SkyCoord(ra, dec, frame='icrs', unit=(ra_unit, dec_unit))
+
+
+    @property
+    def fov(self):
+        return np.array(self.shape) * self.telescope.pixel_scale.to(u.deg)
 
 class Block:
     """A ``Block`` is a single unit of processing acting on the ``Image`` object, reading, processing and writing its attributes. When placed in a sequence, it goes through three steps:
@@ -168,10 +188,7 @@ class Block:
 
     def initialize(self, *args):
         pass
-
-    def set_unit_data(self, unit_data):
-        self.unit_data = unit_data
-
+    
     def _run(self, *args, **kwargs):
         t0 = time()
         self.run(*args, **kwargs)
@@ -254,11 +271,6 @@ class Sequence:
                 raise ValueError("No images to process")
         elif self.files_or_images is None:
             raise ValueError("No images to process")
-
-        # initialization
-        for block in self.blocks:
-            block.set_unit_data(self.data)
-            block.initialize()
 
         self.n_processed_images = 0
 
@@ -367,11 +379,6 @@ class MultiProcessSequence(Sequence):
         elif self.files_or_images is None:
             raise ValueError("No images to process")
 
-        # initialization
-        for block in self.blocks:
-            block.set_unit_data(self.data)
-            block.initialize()
-            
         self.n_processed_images = 0
         
         processed_blocks = mp.Manager().list(self.blocks)

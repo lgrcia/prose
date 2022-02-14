@@ -55,6 +55,13 @@ class Calibration(Block):
 
         self.loader = loader
 
+        if self.master_bias is None:
+            self._produce_master("bias")
+        if self.master_dark is None:
+            self._produce_master("dark")
+        if self.master_flat is None:
+            self._produce_master("flat")
+
     def calibration(self, image, exp_time):
         return (image - (self.master_dark * exp_time + self.master_bias)) / self.master_flat
 
@@ -93,15 +100,6 @@ class Calibration(Block):
             elif image_type == "flat":
                 self.master_flat = med.copy()
             del _master
-
-    def initialize(self):
-        if self.master_bias is None:
-            self._produce_master("bias")
-        if self.master_dark is None:
-            self._produce_master("dark")
-        if self.master_flat is None:
-            self._produce_master("flat")
-        sleep(0.1)
 
     def plot_masters(self):
         plt.figure(figsize=(40, 10))
