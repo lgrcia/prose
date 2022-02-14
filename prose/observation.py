@@ -979,7 +979,10 @@ class Observation(ApertureFluxes):
             ax2.add_patch(plt.Circle((n, n), rin, ec='grey', fill=False, lw=2))
         if rout is not None:
             ax2.add_patch(plt.Circle((n, n), rout, ec='grey', fill=False, lw=2))
-        ax2.text(0.05, 0.05, f"{star}", fontsize=12, color="white", transform=ax2.transAxes)
+        if star is None:
+            ax2.text(0.05, 0.05, f"{self.target}", fontsize=12, color="white", transform=ax2.transAxes)
+        else:
+            ax2.text(0.05, 0.05, f"{star}", fontsize=12, color="white", transform=ax2.transAxes)
 
         plt.tight_layout()
 
