@@ -42,7 +42,7 @@ class Summary(Observation, LatexTemplate):
             ["Exposure", f"{np.mean(self.exptime)} s"],
         ]
 
-        self.description = f"{self.date[0:4]} {self.date[4:6]} {self.date[6::]} $\cdot$ {self.telescope.name} $\cdot$ {self.filter}"
+        self.description = f"{self.date.strftime('%Y %m %d')} $\cdot$ {self.telescope.name} $\cdot$ {self.filter}"
         self._trend = None
         self._transit = None
         self.dpi = 100

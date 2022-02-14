@@ -1,3 +1,4 @@
+from xarray.core import variable
 from ..core import Block
 from astropy.io import fits
 import numpy as np
@@ -14,6 +15,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 import time
 import xarray as xr
+from ..utils import register_args
 
 
 class Stack(Block):
@@ -28,7 +30,7 @@ class Stack(Block):
     overwrite : bool, optional
         weather to overwrite file if exists, by default False
     """
-
+    @register_args
     def __init__(self, destination=None, header=None, overwrite=False, **kwargs):
 
         super(Stack, self).__init__(**kwargs)
@@ -79,6 +81,7 @@ class Stack(Block):
 
 class StackStd(Block):
     
+    @register_args
     def __init__(self, destination=None, overwrite=False, **kwargs):
         super(StackStd, self).__init__(**kwargs)
         self.images = []
@@ -111,6 +114,7 @@ class SaveReduced(Block):
         weather to overwrite file if exists, by default False
     """
     # TODO rename to SaveFITS and make destination a string like thing with the name of the image...
+    @register_args
     def __init__(self, destination, overwrite=False, **kwargs):
 
         super().__init__(**kwargs)
@@ -161,7 +165,7 @@ class Video(Block):
     from_fits : bool, optional
         Wether :code:`Image.data` is a raw fits image, by default False. If True, a z scaling is applied as well as casting to `uint8`
     """
-
+    @register_args
     def __init__(self, destination, overwrite=True, factor=0.25, fps=10, from_fits=False, **kwargs):
 
         super().__init__(**kwargs)
@@ -176,7 +180,7 @@ class Video(Block):
         # Check if writer is available (sometimes require extra packages)
         _ = imageio.get_writer(self.destination, mode="I")
 
-    def run(self, image, **kwargs):
+    def run(self, image):
         if self.from_fits:
             self.images.append(viz.gif_image_array(image.data, factor=self.factor))
         else:
@@ -194,6 +198,7 @@ from astropy.stats import sigma_clipped_stats
 
 class RemoveBackground(Block):
 
+    @register_args
     def __init__(self):
         super().__init__()
         self.stack_data = None
@@ -205,6 +210,7 @@ class RemoveBackground(Block):
 
 class CleanCosmics(Block):
 
+    @register_args
     def __init__(self, threshold=2):
         super().__init__()
         self.stack_data = None
@@ -224,6 +230,7 @@ class CleanCosmics(Block):
 
 class Pass(Block):
     """A Block that does nothing"""
+    @register_args
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
     
@@ -234,6 +241,7 @@ class Pass(Block):
 class ImageBuffer(Block):
     """Store the last Image
     """
+    @register_args
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.image = None
@@ -258,6 +266,7 @@ class Set(Block):
     kwargs : kwargs
         keywords argument and values to be set on every image
     """
+    @register_args
     def __init__(self, name=None, **kwargs):
         super().__init__(name=name)
         self.kwargs = kwargs
@@ -276,6 +285,7 @@ class Cutouts(Block):
     size : int, optional
         width and height of the cutout, by default 21
     """
+    @register_args
     def __init__(self, size=21, **kwargs):
         super().__init__(**kwargs)
         self.size = size
@@ -294,6 +304,7 @@ class Flip(Block):
     reference_image : `Image`
         Image serving as a reference
     """
+    @register_args
     def __init__(self, reference_image, **kwargs):
         """[summary]
 
@@ -327,7 +338,7 @@ class Plot(Block):
     fps : int, optional
         frame per seconds, by default 10
     """
-
+    @register_args
     def __init__(self, plot_function, destination, fps=10, **kwargs):
         super().__init__(**kwargs)
         self.plot_function = plot_function
@@ -361,6 +372,7 @@ class Plot(Block):
 
 
 class LivePlot(Block):
+    @register_args
     def __init__(self, plot_function=None, sleep=0., size=None, **kwargs):
         super().__init__(**kwargs)
         if plot_function is None:
@@ -393,6 +405,7 @@ class LivePlot(Block):
 
 class Get(Block):
 
+    @register_args
     def __init__(self, *names, name="get"):
         super().__init__(name=name)
         self.names = names
@@ -413,6 +426,7 @@ class Get(Block):
 
 class XArray(Block):
 
+    @register_args
     def __init__(self, *names, name="xarray", raise_error=True, concat_dim="time"):
         super().__init__(name=name)
         self.variables = {name: (dims, []) for dims, name in names}
@@ -441,4 +455,14 @@ class XArray(Block):
         self.xarray.to_netcdf(destination)
 
     def concat(self, block):
-        self.xarray = xr.concat([self.xarray, block.xarray], dim=self.concat_dim)
+        if len(self.variables) > 0:
+            if len(block.variables) > 0:
+                for name, (dims, var) in self.variables.items():
+                    if len(var) > 0 and len(block.variables[name][1]) > 0:
+                        a = np.flatnonzero(np.array(dims) == self.concat_dim)
+                        if len(a) > 0:
+                            self.variables[name] = (dims, np.concatenate([var, block.variables[name][1]], axis=a[0]))
+            else:
+                pass
+        else:
+            self.variables = block.variables.copy()

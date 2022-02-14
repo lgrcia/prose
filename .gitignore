@@ -25,6 +25,8 @@ dist
 build
 *.phot*
 
+test/_*
+
 ## Core latex/pdflatex auxiliary files:
 latex/*.aux
 latex/*.lof

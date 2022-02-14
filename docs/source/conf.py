@@ -11,18 +11,20 @@ import sys
 
 sys.path.insert(0, os.path.abspath("../.."))
 
+
 # -- Project information -----------------------------------------------------
 
 project = 'prose'
-copyright = '2020, Lionel Garcia'
+copyright = '2022, Lionel Garcia'
 author = 'Lionel Garcia'
 
 extensions = [
-    "sphinx.ext.autodoc", 
-    "sphinx.ext.napoleon", 
+    'sphinx.ext.autodoc', 
+    'sphinx.ext.napoleon', 
     'sphinx.ext.autosummary',
     'sphinx_copybutton', 
-    'nbsphinx'
+    'nbsphinx',
+    'jupyter_sphinx.execute'
     ]
 
 master_doc = 'index'
@@ -47,7 +49,6 @@ napoleon_use_param = False
 
 
 nbsphinx_execute = 'never'
-
 autodoc_member_order = 'bysource'
 
 
@@ -57,12 +58,14 @@ rst_prolog = """
 .. _scikit-image: https://scikit-image.org/
 
 .. role:: blockread
-.. |read| replace:: :blockread:`read`
+.. |read| replace:: :blockread:`reads`
 
 .. role:: blockwrite
-.. |write| replace:: :blockwrite:`write`
+.. |write| replace:: :blockwrite:`writes`
 
 .. role:: blockmodify
-.. |modify| replace:: :blockmodify:`modify data`
+.. |modify| replace:: :blockmodify:`modifies data`
 
 """
+
+templates_path = ["prosedoc"]

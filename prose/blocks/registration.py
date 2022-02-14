@@ -5,7 +5,7 @@ from ..twirl import find_transform
 from ..twirl import utils as tutils
 from skimage.transform import AffineTransform as skAT
 from ..core import Block
-
+from ..utils import register_args
 
 def distance(p1, p2):
     return np.sqrt(np.power(p1[0] - p2[0], 2) + np.power(p1[1] - p2[1], 2))
@@ -198,6 +198,8 @@ class Registration(Block):
 
 
 class DistanceRegistration(Registration):
+
+    @register_args
     def __init__(self, tolerance=1.5, clean=False, detection=None, reference=1/2, **kwargs):
         super().__init__(detection=detection, **kwargs)
         self.tolerance = tolerance
@@ -219,6 +221,7 @@ class XYShift(Registration):
         Merge coordinates if too close, by default False
     """
 
+    @register_args
     def __init__(self, reference, tolerance=2, clean=False, **kwargs):
 
         super().__init__(**kwargs)
@@ -238,8 +241,11 @@ class XYShift(Registration):
 class AstroAlignShift(Registration):
     """
     Compute the linear shift between point clouds using :code:`astroalign`
+
+    `astroalign <https://astroalign.readthedocs.io/en/latest/>`_ is a python module used to align stellar astronomical images using 3-point asterisms (triangles) similarities. For speed, reference asterisms are computed once at the begining of the reduction and then matched with every images.
     """
 
+    @register_args
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.reference_invariants = None
@@ -276,6 +282,7 @@ class AstroAlignShift(Registration):
 
 class _Twirl(Block):
 
+    @register_args
     def __init__(self, ref, order=0, n=15, **kwargs):
         super(_Twirl, self).__init__(**kwargs)
         self.ref = ref[0:n]
@@ -305,6 +312,8 @@ class Twirl(Block):
     n : int, optional
         number of stars to consider to compute transformation, by default 10
     """
+
+    @register_args
     def __init__(self, ref, n=10, **kwargs):
         """[summary]
 

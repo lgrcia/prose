@@ -116,10 +116,10 @@ def fits_to_df(files, telescope_kw="TELESCOP", verbose=True, hdu=0):
 
     df = pd.DataFrame(df_list)
 
-    df.type.loc[df.type.str.lower().str.contains(telescope.keyword_light_images)] = "light"
-    df.type.loc[df.type.str.lower().str.contains(telescope.keyword_dark_images)] = "dark"
-    df.type.loc[df.type.str.lower().str.contains(telescope.keyword_bias_images)] = "bias"
-    df.type.loc[df.type.str.lower().str.contains(telescope.keyword_flat_images)] = "flat"
+    df.type.loc[df.type.str.lower().str.contains(telescope.keyword_light_images.lower())] = "light"
+    df.type.loc[df.type.str.lower().str.contains(telescope.keyword_dark_images.lower())] = "dark"
+    df.type.loc[df.type.str.lower().str.contains(telescope.keyword_bias_images.lower())] = "bias"
+    df.type.loc[df.type.str.lower().str.contains(telescope.keyword_flat_images.lower())] = "flat"
     df.telescope.loc[df.telescope.str.lower().str.contains("unknown")] = np.nan
     df.date = pd.to_datetime(df.date)
 

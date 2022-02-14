@@ -229,6 +229,21 @@ div.highlight pre, div.nbinput.container div.input_area pre {
     padding: 12px 12px !important;
 }
 
+.rst-content .jupyter_container div[class^="highlight"], .document .jupyter_container div[class^="highlight"],
+.jupyter_container div.code_cell {
+    margin: 0px !important;
+    padding: 0px !important;
+}
+
+div.jupyter_container {
+    background: none !important;
+    box-shadow: none !important;
+    -moz-box-shadow: none !important;
+}
+
+div.jupyter_container {
+    border: none !important;
+}
 /* XARRAY view */
 
 .xr-wrap {

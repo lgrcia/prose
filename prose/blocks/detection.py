@@ -5,11 +5,15 @@ from astropy.stats import sigma_clipped_stats
 from .registration import clean_stars_positions
 from ..core import Block
 from ..blocks.psf import cutouts
+from ..utils import register_args
+
 try:
     from sep import extract
 except:
     raise AssertionError("Please install sep")
 
+
+# TODO: when __call__, if data is prose.Image then run normally (like Block.run(Image)), if data is Image.data return products
 
 class StarsDetection(Block):
     """Base class for stars detection.
@@ -79,6 +83,7 @@ class DAOFindStars(StarsDetection):
     sort : bool, optional
         wether to sort stars coordinates from the highest to the lowest intensity, by default True
     """
+    @register_args
     def __init__(self, sigma_clip=2.5, lower_snr=5, fwhm=5, **kwargs):
         super().__init__(**kwargs)
         self.sigma_clip = sigma_clip
@@ -120,7 +125,7 @@ class SegmentedPeaks(StarsDetection):
     sort : bool, optional
         wether to sort stars coordinates from the highest to the lowest intensity, by default True
     """
-
+    @register_args
     def __init__(self, threshold=2, **kwargs):
         super().__init__(**kwargs)
         self.threshold = threshold
@@ -154,6 +159,7 @@ class SEDetection(StarsDetection):
     sort : bool, optional
         wether to sort stars coordinates from the highest to the lowest intensity, by default True
     """
+    @register_args
     def __init__(self, threshold=1.5, **kwargs):
         super().__init__(**kwargs)
         self.threshold = threshold
@@ -172,6 +178,7 @@ class SEDetection(StarsDetection):
 
 class Peaks(Block):
 
+    @register_args
     def __init__(self, cutout=21, **kwargs):
         super().__init__(**kwargs)
         self.cutout = cutout

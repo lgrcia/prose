@@ -5,7 +5,7 @@ import re
 from astropy.time import Time
 from astropy import units as u
 from astropy.coordinates import SkyCoord
-from .fluxes import ApertureFluxes
+from .fluxes import ApertureFluxes, pont2006
 from . import viz
 from astropy.io import fits
 from .telescope import Telescope
@@ -28,6 +28,7 @@ from . import twirl
 import io
 from .utils import fast_binning, z_scale
 from .console_utils import info
+from dateutil import parser as dparser
 
 warnings.simplefilter('ignore', category=VerifyWarning)
 
@@ -53,7 +54,6 @@ class Observation(ApertureFluxes):
 
         self.gaia_data = None
         self.tic_data = None
-        self.wcs = WCS(utils.remove_arrays(self.xarray.attrs))
         self._meridian_flip = None
 
         has_bjd = hasattr(self.xarray, "bjd_tdb")
@@ -191,7 +191,7 @@ class Observation(ApertureFluxes):
         [type]
             [description]
         """
-        return f"{self.telescope.name}_{self.date}_{self.name}_{self.filter}"
+        return f"{self.telescope.name}_{self.date_ymd}_{self.name}_{self.filter}"
 
     @property
     def meridian_flip(self):
@@ -223,6 +223,14 @@ class Observation(ApertureFluxes):
             else:
                 return None
 
+    @property
+    def date(self):
+        return dparser.parse(self.x.attrs["date"])
+
+    @property
+    def date_ymd(self):
+        return self.date.strftime("%Y%m%d")
+
     # TESS specific methods
     # --------------------
 
@@ -252,7 +260,15 @@ class Observation(ApertureFluxes):
 
     @property
     def tfop_prefix(self):
-        return f"TIC{self.tic_id}_{self.date}_{self.telescope.name}_{self.filter}"
+        return f"TIC{self.tic_id}_{self.date_ymd}_{self.telescope.name}_{self.filter}"
+
+    @property
+    def wcs(self):
+        return WCS(utils.remove_arrays(self.xarray.attrs))
+
+    @wcs.setter
+    def wcs(self, new_wcs):
+        return
 
     # Methods
     # -------
@@ -321,7 +337,7 @@ class Observation(ApertureFluxes):
         self.gaia_data = gaia_query.get_results()
         self.gaia_data.sort("phot_g_mean_flux", reverse=True)
 
-        delta_years = (utils.datetime_to_years(datetime.strptime(self.date, "%Y%m%d")) - \
+        delta_years = (utils.datetime_to_years(self.date) - \
                     self.gaia_data["ref_epoch"].data.data) * u.year
 
         dra = delta_years * self.gaia_data["pmra"].to(u.deg / u.year)
@@ -396,7 +412,7 @@ class Observation(ApertureFluxes):
     # Plot
     # ----
 
-    def show(self, size=10, flip=False, zoom=False, contrast=0.05, wcs=False, cmap="Greys_r", sigclip=None,vmin=None,vmax=None):
+    def show(self, size=10, flip=False, zoom=False, contrast=0.05, wcs=False, cmap="Greys_r", sigclip=None, vmin=None,vmax=None):
         """Show stack image
 
         Parameters
@@ -433,7 +449,12 @@ class Observation(ApertureFluxes):
             ax = plt.subplot(projection=self.wcs, label='overlays')
         else:
             ax = fig.add_subplot(111)
-        if all([vmin, vmax]) is False:
+        if vmin is True or vmax is True:
+            med = np.median(image)
+            vmin = med
+            vmax = 2*np.std(image) + med
+            _ = ax.imshow(image, cmap=cmap, origin="lower",vmin=vmin,vmax=vmax)
+        elif all([vmin, vmax]) is False:
             _ = ax.imshow(utils.z_scale(image,c=contrast), cmap=cmap, origin="lower")
         else:
             _ = ax.imshow(image, cmap=cmap, origin="lower",vmin=vmin,vmax=vmax)
@@ -618,7 +639,7 @@ class Observation(ApertureFluxes):
             idxs = np.argwhere(np.max(np.abs(self.stars - [x, y]), axis=1) < size).squeeze()
             viz.plot_marks(*self.stars[idxs].T, label=idxs)
 
-    def plot_comps_lcs(self, n=15, ylim=(0.98, 1.02)):
+    def plot_comps_lcs(self, n=15, ylim=None):
         """Plot comparison stars light curves along target star light curve
 
         Parameters
@@ -626,7 +647,7 @@ class Observation(ApertureFluxes):
         n : int, optional
             Number max of comparison to show, by default 5
         ylim : tuple, optional
-            ylim of the plot, by default (0.98, 1.02)
+            ylim of the plot, by default None and autoscale
         """
         idxs = [self.target, *self.xarray.comps.isel(apertures=self.aperture).values[0:n]]
         lcs = [self.xarray.diff_fluxes.isel(star=i, apertures=self.aperture).values for i in idxs]
@@ -641,10 +662,10 @@ class Observation(ApertureFluxes):
 
         for i, lc in enumerate(lcs):
             color = "grey" if i != 0 else "black"
-            viz.plot(self.time, lc - i * offset, bincolor=color)
-            plt.annotate(idxs[i], (self.time.min() + 0.005, 1 - i * offset + offset / 3))
+            viz.plot(self.time, lc - lc.mean() - i * offset, bincolor=color)
+            plt.annotate(idxs[i], (self.time.min() + 0.005, - i * offset + offset/3))
 
-        plt.ylim(1 - (i + 0.5) * offset, ylim[1])
+        plt.ylim(-len(lcs)*offset + offset/2, offset/2)
         plt.title("Comparison stars", loc="left")
         plt.grid(color="whitesmoke")
         plt.tight_layout()
@@ -714,7 +735,7 @@ class Observation(ApertureFluxes):
             target=self.target["id"],
             highlights=self.comparison_stars)
 
-    def plot_systematics(self, fields=None, ylim=(0.98, 1.02)):
+    def plot_systematics(self, fields=None, ylim=None):
         """Plot systematics measurements along target light curve
 
         Parameters
@@ -729,34 +750,31 @@ class Observation(ApertureFluxes):
 
         flux = self.diff_flux.copy()
         flux /= np.nanmean(flux)
-
-        if ylim is None:
-            ylim = (flux.nanmin() * 0.99, flux.nanmax() * 1.01)
-
-        offset = ylim[1] - ylim[0]
+        _, amplitude = pont2006(self.time, self.diff_flux, plot=False)
+        amplitude *= 3
+        offset = 2.5*amplitude
 
         if len(plt.gcf().axes) == 0:
             plt.figure(figsize=(5 ,10))
 
         viz.plot(self.time, flux, bincolor="black")
+        plt.annotate("diff. flux", (self.time.min() + 0.005, 1 + 1.5*amplitude))
 
         for i, field in enumerate(fields):
             if field in self:
                 scaled_data = self.xarray[field].values.copy()
-                scaled_data = np.nan_to_num(scaled_data, -1)
-                scaled_data[scaled_data - np.nanmean(scaled_data) > 5*np.nanstd(scaled_data)] = -1
-                scaled_data = scaled_data - np.median(scaled_data)
-                scaled_data = scaled_data / np.std(scaled_data)
-                scaled_data *= np.std(flux)
-                scaled_data += 1 - (i + 1) * offset
+                off = (i+1)*offset
+                scaled_data = scaled_data - np.mean(scaled_data)
+                bx, by, be = utils.fast_binning(self.time, scaled_data, 0.005)
+                scaled_data /= np.max([10*np.mean(be), (np.percentile(by, 95) - np.percentile(by, 5))])
+                scaled_data = scaled_data*amplitude + 1 - off
                 viz.plot(self.time, scaled_data, bincolor="grey")
-                plt.annotate(field, (self.time.min() + 0.005, 1 - (i + 1) * offset + offset / 3))
+                plt.annotate(field, (self.time.min() + 0.005, 1 - off + amplitude / 3))
             else:
                 i -= 1
 
-        plt.ylim(1 - (i + 1.5) * offset, ylim[1])
-        plt.title("Systematics", loc="left")
-        plt.grid(color="whitesmoke")
+        plt.ylim(1 - off - offset, 1 + offset)
+        plt.title("Systematics (scaled to diff. flux)", loc="left")
         plt.tight_layout()
 
     def plot_raw_diff(self):
@@ -879,9 +897,8 @@ class Observation(ApertureFluxes):
             cutout width and height, by default 40
         zscale : bool, optional
             whether to apply a zscale to cutout image, by default False
-        aperture : float, int, optional
-            radius of aperture to display, by default None corresponds to best target aperture. If int, it corresponds
-            to the number of the aperture in the photometry. If float, it is in pixels
+        aperture : float, optional
+            radius of aperture to display, by default None corresponds to best target aperture
         rin : [type], optional
             radius of inner annulus to display, by default None corresponds to inner radius saved
         rout : [type], optional
@@ -917,25 +934,21 @@ class Observation(ApertureFluxes):
         plt.ylabel("ADUs")
         _, ylim = plt.ylim()
 
-        if isinstance(aperture, int) or aperture is None:
-            if "apertures_radii" in self.xarray:
-                apertures = self.apertures_radii[:, 0]
-                if aperture is None:
-                    ap = apertures[self.aperture]
-                else:
-                    ap = apertures[aperture]
-        if isinstance(aperture, float):
-            ap = aperture
-        plt.xlim(0)
-        plt.text(ap, ylim, "APERTURE", ha="right", rotation="vertical", va="top")
-        plt.axvline(ap, c="k", alpha=0.1)
-        plt.axvspan(0, ap, color="0.9", alpha=0.1)
+        if "apertures_radii" in self and self.aperture != -1:
+            apertures = self.apertures_radii[:, 0]
+            aperture = apertures[self.aperture]
+        
+            if "annulus_rin" in self:
+                if rin is None:
+                    rin = self.annulus_rin.mean()
+                if rout is None:
+                    rout = self.annulus_rout.mean() 
 
-        if "annulus_rin" in self:
-            if rin is None:
-                rin = self.annulus_rin.mean()
-            if rout is None:
-                rout = self.annulus_rout.mean()
+        if aperture is not None:
+            plt.xlim(0)
+            plt.text(aperture, ylim, "APERTURE", ha="right", rotation="vertical", va="top")
+            plt.axvline(aperture, c="k", alpha=0.1)
+            plt.axvspan(0, aperture, color="0.9", alpha=0.1)
 
         if rin is not None:
             plt.axvline(rin, color="k", alpha=0.2)
@@ -957,7 +970,8 @@ class Observation(ApertureFluxes):
         plt.imshow(im, cmap="Greys_r", aspect="auto", origin="lower")
 
         plt.axis("off")
-        ax2.add_patch(plt.Circle((n, n), ap, ec='grey', fill=False, lw=2))
+        if aperture is not None:
+            ax2.add_patch(plt.Circle((n, n), aperture, ec='grey', fill=False, lw=2))
         if rin is not None:
             ax2.add_patch(plt.Circle((n, n), rin, ec='grey', fill=False, lw=2))
         if rout is not None:
@@ -1037,7 +1051,7 @@ class Observation(ApertureFluxes):
         final_stars = np.delete(good_stars, bad_stars)
 
         if isinstance(keep,int):
-            final_stars = np.concatenate([final_stars,np.arange(0,keep)],axis=0)
+            final_stars = np.concatenate([final_stars,np.arange(0,keep+1)],axis=0)
             final_stars = np.unique(final_stars)
         if isinstance(keep,list):
             final_stars = np.concatenate([final_stars,keep ], axis=0)

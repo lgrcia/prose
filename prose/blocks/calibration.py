@@ -1,11 +1,12 @@
 import numpy as np
 from ..core import Block, Image
-from .. import utils
+from .. import utils, viz
 import matplotlib.pyplot as plt
-from .. import viz
 from astropy.nddata import Cutout2D
 from ..console_utils import info
 from time import sleep
+from ..utils import register_args
+import matplotlib.patches as patches
 
 np.seterr(divide="ignore")
 
@@ -31,6 +32,8 @@ class Calibration(Block):
     bias : list
         list of bias files paths
     """
+
+    @register_args
     def __init__(self, darks=None, flats=None, bias=None, loader=Image, **kwargs):
 
         super().__init__(**kwargs)
@@ -134,14 +137,55 @@ class Trim(Block):
     ----------
     skip_wcs : bool, optional
         whether to skip applying trim to WCS, by default False
-    trim : tuple, optional
-        (x, y) trim values, by default None
+    trim : tuple, int or flot, optional
+        (x, y) trim values, by default None which uses the ``trim`` value from the image telescope definition. If an int or a float is provided trim will be be applied to both axes.
+    
+
+    Example
+    -------
+
+    In what follows we generate an example image and apply a trimming on it
+
+    .. jupyter-execute::
+
+        from prose.tutorials import example_image
+        from prose.blocks import Trim
+
+        # our example image
+        image = example_image()
+
+        # Creating and applying the Trim block
+        trim = Trim(trim=100)
+        trimmed_image = trim(image)
+
+    We can now see the resulting trimmed image against its original shape
+
+    .. jupyter-execute::
+
+        import matplotlib.pyplot as plt
+
+        plt.figure(figsize=(12, 4))
+
+        ax1 = plt.subplot(121)
+        image.show(ax=ax1)
+        trim.draw_cutout(image)
+        plt.axis("off")
+        _ = plt.title("original image (white = cutout)", loc="left")
+
+        ax2 = plt.subplot(122)
+        trimmed_image.show(ax=ax2)
+        plt.axis("off")
+        _ = plt.title("trimmed image", loc="left")
+
     """
 
+    @register_args
     def __init__(self, skip_wcs=False, trim=None, **kwargs):
 
         super().__init__(**kwargs)
         self.skip_wcs = skip_wcs
+        if isinstance(trim, (int, float)):
+            trim = (trim, trim)
         self.trim = trim
 
     def run(self, image, **kwargs):
@@ -154,7 +198,9 @@ class Trim(Block):
         if not self.skip_wcs:
             image.header.update(trim_image.wcs.to_header())
 
-    def __call__(self, data):
-        trim_x, trim_y = self.trim
-        return data[trim_x:-trim_x, trim_y:-trim_y]
-
+    def draw_cutout(self, image, ax=None, lw=1, c="w"):
+        w, h = image.shape - 2*np.array(self.trim)
+        rect = patches.Rectangle(2*np.array(self.trim)/2, w, h, linewidth=lw, edgecolor=c, facecolor='none')
+        if ax is None:
+            ax = plt.gca()
+        ax.add_patch(rect)

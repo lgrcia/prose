@@ -2,14 +2,18 @@ from tqdm import tqdm
 from astropy.io import fits
 from .console_utils import TQDM_BAR_FORMAT
 from astropy.wcs import WCS
-from . import viz
-from . import Telescope
+from . import viz, utils, Telescope
 from collections import OrderedDict
 from tabulate import tabulate
 import numpy as np
 from time import time
 from pathlib import Path
 from astropy.time import Time
+from functools import partial
+import multiprocessing as mp
+import matplotlib.pyplot as plt
+import numpy as np
+from .utils import register_args
 
 
 class Image:
@@ -115,6 +119,23 @@ class Image:
     def shape(self):
         return np.array(self.data.shape)
 
+    def show(self, cmap="Greys_r", ax=None, figsize=(10,10), stars=None, stars_labels=True):
+        if ax is None:
+            if not isinstance(figsize, (list, tuple)):
+                if isinstance(figsize, (float, int)):
+                    figsize = (figsize, figsize)
+                else:
+                    raise TypeError("figsize must be tuple or list or float or int")
+            ax = plt.figure(figsize=figsize)
+        plt.imshow(utils.z_scale(self.data), origin="lower", cmap=cmap)
+        
+        if stars is None:
+            stars = "stars_coords" in self.__dict__
+        
+        if stars:
+            label = np.arange(len(self.stars_coords)) if stars_labels else None
+            viz.plot_marks(*self.stars_coords.T, label=label)
+
 
 class Block:
     """A ``Block`` is a single unit of processing acting on the ``Image`` object, reading, processing and writing its attributes. When placed in a sequence, it goes through three steps:
@@ -141,6 +162,9 @@ class Block:
         self.unit_data = None
         self.processing_time = 0
         self.runs = 0
+
+        # recording args and kwargs for reproducibility
+        # when subclassing, use @utils.register_args decorator (see docs)
 
     def initialize(self, *args):
         pass
@@ -177,13 +201,18 @@ class Block:
     def concat(self, block):
         return self
 
+    def __call__(self, image):
+        image_copy = image.copy()
+        self.run(image_copy)
+        return image_copy
+
   
 class Sequence:
     # TODO: add index self.i in image within unit loop
 
-    def __init__(self, blocks, files, name="default", loader=Image, **kwargs):
+    def __init__(self, blocks, name="default", loader=Image, **kwargs):
         self.name = name
-        self.files_or_images = files if not isinstance(files, (str, Path)) else [files]
+        self.files_or_images = []
         self.blocks = blocks
         self.loader = loader
 
@@ -204,7 +233,10 @@ class Sequence:
             for i, block in enumerate(blocks)
         })
 
-    def run(self, show_progress=True):
+    def run(self, images, show_progress=True):
+
+        self.files_or_images = images if not isinstance(images, (str, Path)) else [images]
+
         if show_progress:
             progress = lambda x: tqdm(
                 x,
@@ -281,3 +313,126 @@ class Sequence:
     @property
     def processing_time(self):
         return np.sum([block.processing_time for block in self.blocks])
+
+    def __getitem__(self, item):
+        return self.blocks[item]
+
+    # import/export properties
+    # ------------------------
+
+    @staticmethod
+    def from_dicts(blocks_dicts):
+        blocks = []
+        for block_dict in blocks_dicts:
+            block = block_dict["block"](*block_dict["args"], **block_dict["kwargs"])
+            block.name = block_dict["name"]
+            blocks.append(block)
+            
+        return Sequence(blocks)
+
+    @property
+    def as_dicts(self):
+        blocks = []
+        for block in self.blocks:
+            blocks.append(dict(
+                block=block.__class__,
+                name=block.name,
+                args=block.args,
+                kwargs=block.kwargs
+            ))
+
+        return blocks
+
+
+class MultiProcessSequence(Sequence):
+    
+    def run(self, show_progress=True):
+        if show_progress:
+            def progress(x, **kwargs): 
+                return tqdm(
+                    x,
+                    desc=self.name,
+                    unit="images",
+                    ncols=80,
+                    bar_format=TQDM_BAR_FORMAT,
+                    **kwargs
+                )
+
+        else:
+            def progress(x, **kwargs): return x
+
+        if isinstance(self.files_or_images, list):
+            if len(self.files_or_images) == 0:
+                raise ValueError("No images to process")
+        elif self.files_or_images is None:
+            raise ValueError("No images to process")
+
+        # initialization
+        for block in self.blocks:
+            block.set_unit_data(self.data)
+            block.initialize()
+            
+        self.n_processed_images = 0
+        
+        processed_blocks = mp.Manager().list(self.blocks)
+        blocks_queue = mp.Manager().Queue()
+        
+        blocks_writing_process = mp.Process(
+            target=partial(
+                _concat_blocks,
+                current_blocks=processed_blocks,
+            ), args=(blocks_queue,)
+        )
+    
+        blocks_writing_process.deamon = True
+        blocks_writing_process.start()
+        
+        with mp.Pool() as pool:
+            for _ in progress(pool.imap(partial(
+                _run_blocks_on_image,
+                blocks_queue=blocks_queue,
+                blocks_list = self.blocks,
+                loader = self.loader
+            ), self.files_or_images), total=len(self.files_or_images)):
+                pass
+            
+        blocks_queue.put("done")
+
+        self.blocks = processed_blocks
+   
+        # terminate
+        for block in self.blocks:
+            block.terminate()
+
+
+def _run_blocks_on_image(file_or_image, blocks_queue=None, blocks_list=None, loader=None):
+
+    if isinstance(file_or_image, (str, Path)):
+        image = loader(file_or_image)
+    else:
+        image = file_or_image
+
+    discard_message = False
+    last_block = None
+
+    for b, block in enumerate(blocks_list):
+        # This allows to discard image in any Block
+        if not image.discard:
+            block._run(image)
+        elif not discard_message:
+            last_block = blocks_list[b-1]
+            discard_message = True
+            print(f"Warning: image ? discarded in {type(last_block).__name__}")
+
+    del image
+    blocks_queue.put(blocks_list)
+    
+def _concat_blocks(blocks_queue, current_blocks=None):
+    while True:
+        new_blocks = blocks_queue.get()
+        if new_blocks == "done":
+            break
+        else:
+            for i, block in enumerate(new_blocks):
+                block.concat(current_blocks[i])
+                current_blocks[i] = block

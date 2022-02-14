@@ -4,11 +4,11 @@ Blocks
 .. currentmodule:: prose.blocks
 
 
-A ``Block`` is a single unit of processing acting on the ``Image`` object, reading and writing its attributes. Blocks documentation include the following labels:
+A ``Block`` is a single unit of processing acting on the ``Image`` object, reading and writing its attributes. Blocks documentation include the following information:
 
-- |read|: describe the ``Image`` attributes read, hence needed, by the block
-- |write|: describe the ``Image`` attributes written by the block
-- |modify|: indicates that the block directly modify the ``Image.data``
+- |read|: the ``Image`` attributes read by the ``Block``
+- |write|: the ``Image`` attributes written by the ``Block``
+- |modify|: indicates that the ``Image.data`` is modified by the ``Block``
 
 Detection
 ---------
@@ -19,6 +19,7 @@ Detection
 
 .. autosummary::
    :toctree: generated
+   :template: autosum.rst
    :nosignatures:
 
    SegmentedPeaks
@@ -36,6 +37,7 @@ Alignment, Centroiding, PSF
 
 .. autosummary::
    :toctree: generated
+   :template: autosum.rst
    :nosignatures:
 
    XYShift
@@ -58,6 +60,7 @@ Photometry
 
 .. autosummary::
    :toctree: generated
+   :template: autosum.rst
    :nosignatures:
 
    PhotutilsAperturePhotometry
@@ -73,15 +76,14 @@ Utils
    
 .. autosummary::
    :toctree: generated
+   :template: autosum.rst
    :nosignatures:
 
-   Align
    Calibration
    Cutouts
    Flip
    ImageBuffer
    Pass
-   SavePhot
    SaveReduced
    Set
    Stack

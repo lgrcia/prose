@@ -3,6 +3,7 @@ import numpy as np
 from skimage.transform import warp
 from skimage.transform import AffineTransform as skAffineTransform
 from astropy.nddata import Cutout2D as _Cutout2D
+from ..utils import register_args
 
 
 class Cutout2D(Block):
@@ -71,6 +72,7 @@ class AffineTransform(Block):
 
     """
 
+    @register_args
     def __init__(self, stars=True, data=True, inverse=False, **kwargs):
         super().__init__(**kwargs)
         self.data = data

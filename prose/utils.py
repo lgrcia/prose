@@ -7,10 +7,9 @@ import astropy.constants as c
 import urllib
 from astropy.time import Time
 from datetime import datetime
-
+import inspect
 
 earth2sun = (c.R_earth / c.R_sun).value
-
 
 def remove_sip(dict_like):
 
@@ -220,7 +219,7 @@ def check_class(_class, base, default):
     elif isinstance(_class, base):
         return _class
     else:
-        raise TypeError("ubclass of {} expected".format(base.__name__))
+        raise TypeError("subclass of {} expected".format(base.__name__))
 
 
 def divisors(n):
@@ -330,3 +329,14 @@ def sigma_clip(y, sigma=5., return_mask=False, x=None):
             return x[mask], y[mask]
 
 
+def register_args(f):
+    """
+    When used within a class, saves args and kwargs passed to a function
+    (mostly used to record __init__ inputs)
+    """
+    def inner(*args, **kwargs):
+        self = args[0]
+        self.args = args[1::]
+        self.kwargs = kwargs
+        return f(*args, **kwargs)
+    return inner
