@@ -85,6 +85,7 @@ class TransitModel(Observation, LatexTemplate):
         self.plot_lc_model()
         plt.savefig(path.join(destination, "model.png"), dpi=self.dpi)
         plt.close()
+        #TEST
 
     def make(self, destination):
         self.make_report_folder(destination)
