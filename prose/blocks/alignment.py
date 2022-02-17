@@ -3,7 +3,7 @@ import numpy as np
 from skimage.transform import warp
 from skimage.transform import AffineTransform as skAffineTransform
 from astropy.nddata import Cutout2D as _Cutout2D
-from ..utils import register_args
+from ..utils import register_args, nan_gaussian_filter
 
 
 class Cutout2D(Block):
@@ -97,7 +97,9 @@ class AffineTransform(Block):
 
         if self.data:
             try:
-                image.data = warp(image.data, transform.inverse, cval=np.median(image.data))
+                image.data[image.data<0] = np.nan
+                image.data = nan_gaussian_filter(image.data, sigma=1.)
+                image.data = warp(image.data, transform.inverse, cval=np.nanmedian(image.data))
             except np.linalg.LinAlgError:
                 image.discard = True
 

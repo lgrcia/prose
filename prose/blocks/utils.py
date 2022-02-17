@@ -21,7 +21,13 @@ from ..utils import register_args
 class Stack(Block):
     """Build a FITS stack image of the observation
 
-    The stack image is accessible through the ``stack`` attribute
+    The stack image is accessible through the ``stack`` attribute. It is built by accumulating images along creating a pixel weights map. This map allows to ignore bad pixels contributions to the stack, built through a weighted mean.
+    
+    .. note:
+    
+        Not using median stacking is done as to avoid storing a large number of images in the RAM
+
+    The idea of weighting is stolen from https://github.com/lsst/meas_algorithms/blob/main/python/lsst/meas/algorithms/accumulator_mean_stack.py
 
     Parameters
     ----------
@@ -47,14 +53,17 @@ class Stack(Block):
 
         self.reference_image_path = None
 
-    def run(self, image, **kwargs):
-        if self.stack is None:
-            self.stack = image.data
-            # telescope is assumed to be the one of first image
-            self.telescope = image.telescope
+    def run(self, image):
+        #TODO check that all images have same telescope?
 
+        data = image.data.copy()
+
+        if self.stack is None:
+            #first run
+            self.stack = data
+            self.telescope = image.telescope
         else:
-            self.stack += image.data
+            self.stack += data
 
         self.n_images += 1
 
@@ -179,9 +188,13 @@ class Video(Block):
         self.factor = factor
         self.fps = fps
         self.from_fits = from_fits
-        _ = imageio.get_writer(self.destination, mode="I")
-
+        self.checked_writer = False
+        
     def run(self, image):
+        if not self.checked_writer:
+            _ = imageio.get_writer(self.destination, mode="I")
+            self.checked_writer = True
+
         if self.from_fits:
             self.images.append(viz.gif_image_array(image.data, factor=self.factor))
         else:

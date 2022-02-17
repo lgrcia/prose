@@ -34,7 +34,7 @@ class Calibration(Block):
     """
 
     @register_args
-    def __init__(self, darks=None, flats=None, bias=None, loader=Image, **kwargs):
+    def __init__(self, darks=None, flats=None, bias=None, loader=Image, bad_pixels=False, threshold=5, **kwargs):
 
         super().__init__(**kwargs)
         if darks is None:
@@ -61,6 +61,15 @@ class Calibration(Block):
             self._produce_master("dark")
         if self.master_flat is None:
             self._produce_master("flat")
+
+        if bad_pixels:
+            if self.master_dark is not None:
+                outliers = np.abs(self.master_dark - 1) > threshold*np.std(self.master_dark)
+                self.bad_pixels = np.unravel_index(np.flatnonzero(outliers), self.master_dark.shape)
+            else:
+                raise AssertionError("bad pixels can only be computed if darks are provided")
+        else:
+            self.bad_pixels = None
 
     def calibration(self, image, exp_time):
         return (image - (self.master_dark * exp_time + self.master_bias)) / self.master_flat
@@ -121,6 +130,8 @@ class Calibration(Block):
         calibrated_image = self.calibration(data, image.exposure)
         calibrated_image[calibrated_image < 0] = 0.
         calibrated_image[~np.isfinite(calibrated_image)] = -1
+        if self.bad_pixels is not None:
+            calibrated_image[self.bad_pixels] = -1
 
         image.data = calibrated_image
 

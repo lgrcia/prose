@@ -64,6 +64,7 @@ class Calibration:
             n=None,
             loader=Image,
             cores=False,
+            bad_pixels=False,
     ):
         self.destination = None
         self.overwrite = overwrite
@@ -114,7 +115,13 @@ class Calibration:
         elif isinstance(self._reference, (str, Path)):
             self.reference_fits = self._reference
 
-        self.calibration_block = blocks.Calibration(self.darks, self.flats, self.bias, loader=loader, name="calibration")
+        self.calibration_block = blocks.Calibration(
+            self.darks, 
+            self.flats, 
+            self.bias, 
+            loader=loader, 
+            bad_pixels=bad_pixels, 
+            name="calibration")
 
     def run(self, destination, gif=True):
         """Run the calibration pipeline
