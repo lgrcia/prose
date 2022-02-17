@@ -22,10 +22,12 @@ def gaia_query(center, fov, *args, limit=3000):
         else:
             ra_fov = dec_fov = fov.to(u.deg).value
 
+        radius = np.min([ra_fov, dec_fov])/2
+
     job = Gaia.launch_job(f"select top {limit} {','.join(args)} from gaiadr2.gaia_source where "
                           "1=CONTAINS("
                           f"POINT('ICRS', {ra}, {dec}), "
-                          f"CIRCLE('ICRS',ra, dec, {ra_fov/2}))"
+                          f"CIRCLE('ICRS',ra, dec, {radius}))"
                           #f"ra between {ra-ra_fov/2} and {ra+ra_fov/2} and "
                           #f"dec between {dec-dec_fov/2} and {dec+dec_fov/2}"
                           "order by phot_g_mean_mag")
@@ -45,10 +47,12 @@ class GaiaBlock(Block):
         
 class PlateSolve(GaiaBlock):
     
-    def __init__(self, ref_image=None, n_stars=50, **kwargs):
-        super().__init__(n_stars=n_stars, **kwargs)
+    def __init__(self, ref_image=None, n_gaia=50, tolerance=10, n_twirl=15, **kwargs):
+        super().__init__(n_stars=n_gaia, **kwargs)
         self.ref_image = ref_image is not None
-        self.n_stars = n_stars
+        self.n_gaia = n_gaia
+        self.n_twirl = n_twirl
+        self.tolerance = tolerance
         
         if ref_image:
             self.get_radecs(ref_image)
@@ -61,7 +65,7 @@ class PlateSolve(GaiaBlock):
         if not self.ref_image:
             self.get_radecs(image)
             
-        image.wcs = twirl._compute_wcs(image.stars_coords, self.gaias)
+        image.wcs = twirl._compute_wcs(image.stars_coords, self.gaias, n=self.n_twirl, tolerance=self.tolerance)
 
 class GaiaCatalog(GaiaBlock):
     
@@ -78,14 +82,12 @@ class GaiaCatalog(GaiaBlock):
     
     def run(self, image):
         self.get_coords_id(image)
-        gaias = np.array(SkyCoord(self.gaias, unit="deg").to_pixel(image.wcs)).T
-        idxs = twirl.utils.cross_match(image.stars_coords, gaias, return_ixds=True, tolerance=self.tolerance)
-        image.gaia_catalog = pd.DataFrame(index=range(len(image.stars_coords)), 
-                                          columns=["designation", "match_distance", "ra(deg)", "dec(deg)", "x", "y"])
-        for star, gaia_star in idxs:
-            image.gaia_catalog["designation"].at[star] = self.designation[gaia_star]
-            image.gaia_catalog["ra(deg)"].at[star] = self.gaias[gaia_star][0]
-            image.gaia_catalog["dec(deg)"].at[star] = self.gaias[gaia_star][1]
-            image.gaia_catalog["match_distance"].at[star] = np.linalg.norm(gaias[gaia_star] - image.stars_coords[star])
-            image.gaia_catalog["x"].at[star] = image.stars_coords[star][0]
-            image.gaia_catalog["y"].at[star] = image.stars_coords[star][1]
+        image.stars_coords = np.array(SkyCoord(self.gaias, unit="deg").to_pixel(image.wcs)).T
+        
+        image.gaia_catalog = pd.DataFrame({
+            "designation": self.designation,
+            "ra(deg)": self.gaias.T[0],
+            "dec(deg)": self.gaias.T[1],
+            "x": image.stars_coords.T[0],
+            "y": image.stars_coords.T[1],
+        })
