@@ -47,7 +47,13 @@ class Image:
 
     def check_telescope(self):
         if self.header:
-            self.telescope = Telescope.from_name(self.header["TELESCOP"])
+            # we first check by instrument name
+            telescope = Telescope.from_name(self.header["INSTRUME"], strict=True)
+            # if not found we check telescope name
+            if telescope is None:
+                telescope = Telescope.from_name(self.header["TELESCOP"])
+            
+            self.telescope = telescope
 
     def get(self, keyword, default=None):
         return self.header.get(keyword, default)
@@ -141,6 +147,34 @@ class Image:
         if stars:
             label = np.arange(len(self.stars_coords)) if stars_labels else None
             viz.plot_marks(*self.stars_coords.T, label=label)
+
+    def show_cutout(self, star=None, size=200, marks=True, **kwargs):
+        """
+        Show a zoomed cutout around a detected star or coordinates
+
+        Parameters
+        ----------
+        star : [type], optional
+            detected star id or (x, y) coordinate, by default None
+        size : int, optional
+            side size of square cutout in pixel, by default 200
+        """
+
+        if star is None:
+            x, y = self.stars_coords[self.target]
+        elif isinstance(star, int):
+            x, y = self.stars_coords[star]
+        elif isinstance(star, (tuple, list, np.ndarray)):
+            x, y = star
+        else:
+            raise ValueError("star type not understood")
+
+        self.show(**kwargs)
+        plt.xlim(np.array([-size / 2, size / 2]) + x)
+        plt.ylim(np.array([-size / 2, size / 2]) + y)
+        if marks:
+            idxs = np.argwhere(np.max(np.abs(self.stars_coords - [x, y]), axis=1) < size).squeeze()
+            viz.plot_marks(*self.stars_coords[idxs].T, label=idxs)
 
     @property
     def skycoord(self):
