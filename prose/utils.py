@@ -9,6 +9,7 @@ from astropy.time import Time
 from astropy.table import Table
 from datetime import datetime
 import inspect
+from scipy import ndimage
 
 earth2sun = (c.R_earth / c.R_sun).value
 
@@ -377,3 +378,27 @@ def cutouts(image, stars, size=15):
         stars = extract_stars(NDData(data=image), stars_tbl, size=size)
         return stars
 
+
+
+def nan_gaussian_filter(data, sigma=1., truncate=4.):
+    """https://stackoverflow.com/questions/18697532/gaussian-filtering-a-image-with-nan-in-python
+
+    Parameters
+    ----------
+    U : _type_
+        _description_
+    sigma : _type_, optional
+        _description_, by default 1.
+    truncate : _type_, optional
+        _description_, by default 4.
+    """
+
+    V=data.copy()
+    V[np.isnan(data)]=0
+    VV=ndimage.gaussian_filter(V,sigma=sigma,truncate=truncate)
+
+    W=0*data.copy()+1
+    W[np.isnan(data)]=0
+    WW=ndimage.gaussian_filter(W,sigma=sigma,truncate=truncate)
+
+    return VV/WW

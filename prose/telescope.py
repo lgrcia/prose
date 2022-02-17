@@ -114,7 +114,7 @@ class Telescope:
             return self.__dict__[name] * u.arcsec
         return super(Telescope, self).__getattribute__(name)
 
-    def load(self, file):
+    def load(self, file, verbose=True):
         if isinstance(file, str) and path.exists(file):
             with open(file, "r") as f:
                 telescope = yaml.load(f)
@@ -123,9 +123,10 @@ class Telescope:
         elif isinstance(file, str):
             telescope = CONFIG.match_telescope_name(file)
             if telescope is None:
-                if self.verbose:
+                if self.verbose and verbose:
                     info(f"telescope {file} not found - using default")
                 self.name = file
+                return False
 
         elif file is None:
             return False
@@ -168,10 +169,13 @@ class Telescope:
         return np.sqrt(_squarred_error)
 
     @staticmethod
-    def from_name(name, verbose=True):
+    def from_name(name, verbose=True, strict=False):
         telescope = Telescope(verbose=verbose)
-        telescope.load(name)
-        return telescope
+        success = telescope.load(name)
+        if strict and not success:
+            return None
+        else:
+            return telescope
 
     # TODO: explain in documentation
     def date(self, header):
