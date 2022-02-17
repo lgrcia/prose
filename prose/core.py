@@ -48,7 +48,7 @@ class Image:
     def check_telescope(self):
         if self.header:
             # we first check by instrument name
-            telescope = Telescope.from_name(self.header["INSTRUME"], strict=True)
+            telescope = Telescope.from_name(self.header["INSTRUME"], strict=True, verbose=False)
             # if not found we check telescope name
             if telescope is None:
                 telescope = Telescope.from_name(self.header["TELESCOP"])
