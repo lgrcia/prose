@@ -131,15 +131,25 @@ class Image:
     def shape(self):
         return np.array(self.data.shape)
 
-    def show(self, cmap="Greys_r", ax=None, figsize=(10,10), stars=None, stars_labels=True):
+    def show(self, cmap="Greys_r", ax=None, figsize=(10,10), stars=None, stars_labels=True, vmin=True, vmax=None, scale=1.5):
         if ax is None:
             if not isinstance(figsize, (list, tuple)):
                 if isinstance(figsize, (float, int)):
                     figsize = (figsize, figsize)
                 else:
                     raise TypeError("figsize must be tuple or list or float or int")
-            ax = plt.figure(figsize=figsize)
-        plt.imshow(utils.z_scale(self.data), origin="lower", cmap=cmap)
+            fig = plt.figure(figsize=figsize)
+            ax = fig.add_subplot(111)
+
+        if vmin is True or vmax is True:
+            med = np.nanmedian(self.data)
+            vmin = med
+            vmax = scale*np.nanstd(self.data) + med
+            _ = ax.imshow(self.data, cmap=cmap, origin="lower",vmin=vmin,vmax=vmax)
+        elif all([vmin, vmax]) is False:
+            _ = ax.imshow(utils.z_scale(self.data), cmap=cmap, origin="lower")
+        else:
+            _ = ax.imshow(self.data, cmap=cmap, origin="lower",vmin=vmin,vmax=vmax)
         
         if stars is None:
             stars = "stars_coords" in self.__dict__
