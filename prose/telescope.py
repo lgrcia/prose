@@ -177,6 +177,16 @@ class Telescope:
         else:
             return telescope
 
+    @staticmethod
+    def from_names(instrument, telescope):
+        # we first check by instrument name
+        telescope = Telescope.from_name(instrument, strict=True, verbose=False)
+        # if not found we check telescope name
+        if telescope is None:
+            telescope = Telescope.from_name(telescope)
+        
+        return telescope
+
     # TODO: explain in documentation
     def date(self, header):
         _date = header.get(self.keyword_observation_date, None)
