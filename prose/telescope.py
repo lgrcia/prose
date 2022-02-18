@@ -178,12 +178,12 @@ class Telescope:
             return telescope
 
     @staticmethod
-    def from_names(instrument, telescope):
+    def from_names(instrument_name, telescope_name):
         # we first check by instrument name
-        telescope = Telescope.from_name(instrument, strict=True, verbose=False)
+        telescope = Telescope.from_name(instrument_name, strict=True, verbose=False)
         # if not found we check telescope name
         if telescope is None:
-            telescope = Telescope.from_name(telescope)
+            telescope = Telescope.from_name(telescope_name)
         
         return telescope
 
