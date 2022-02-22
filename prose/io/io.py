@@ -91,8 +91,8 @@ def fits_to_df(files, telescope_kw="TELESCOP", instrument_kw="INSTRUME", verbose
 
     for i in progress(files):
         header = fits.getheader(i, hdu)
-        telescope_name = header[telescope_kw]
-        instrument_name = header[instrument_kw]
+        telescope_name = header.get(telescope_kw, "")
+        instrument_name = header.get(instrument_kw, "")
 
         telescope_id = f"{telescope_name}_{instrument_name}"
         if telescope_id not in telescopes_seen:

@@ -47,7 +47,7 @@ class Image:
 
     def check_telescope(self):
         if self.header:
-           self.telescope = Telescope.from_names(self.header["INSTRUME"], self.header["TELESCOP"])
+           self.telescope = Telescope.from_names(self.header.get("INSTRUME", ""), self.header.get("TELESCOP", ""))
 
     def get(self, keyword, default=None):
         return self.header.get(keyword, default)
