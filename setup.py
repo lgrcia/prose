@@ -1,15 +1,15 @@
 from pathlib import Path
-from setuptools import setup
+from setuptools import find_packages, setup
 
 HERE = Path(__file__).parent
 README = (HERE / "README.md").read_text()
 
 setup(
     name="prose",
-    version="0.9.6",
+    version="1.0.1",
     author="Lionel J. Garcia",
     description="Reduction and analysis of FITS telescope observations",
-    py_modules=["prose"],
+    packages=["prose"],
     license="MIT",
     url="https://github.com/lgrcia/prose",
     # entry_points="""
@@ -21,7 +21,7 @@ setup(
     install_requires=[
         "numpy",
         "scipy",
-        "astropy==4.0",
+        "astropy",
         "matplotlib",
         "colorama",
         "scikit-image",
@@ -31,23 +31,30 @@ setup(
         "photutils",
         "astroquery",
         "pyyaml",
-        "sphinx",
-        "nbsphinx",
-        "docutils",
         "tabulate",
         "requests",
-        "sphinx_rtd_theme",
         "imageio",
         "sep",
         "xarray",
         "numba",
         "netcdf4",
-        "nbsphinx",
         "celerite2",
         "jinja2",
         "tensorflow",
-        "sphinx-copybutton"
+        "twirl"
     ],
+    extras_require={
+        'docs': [
+            "sphinx",
+            "nbsphinx",
+            "jupyter-sphinx",
+            "sphinx_rtd_theme",
+            "sphinx-copybutton",        
+            "docutils",
+            "jupyterlab",
+            "twine",
+        ]
+    },
     zip_safe=True,
     classifiers=[
         "Programming Language :: Python :: 3",

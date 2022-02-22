@@ -74,6 +74,8 @@ class ConfigManager:
 
         self.config_file = self.folder_path / "config"
 
+        self.rename_id_files_to_telescopes()
+        self.create_builtins_telescopes_files()
         self.check_config_file(load=True)
         self.telescopes_dict = self.build_telescopes_dict()
         self.check_ballet()
@@ -102,13 +104,22 @@ class ConfigManager:
         self.config[key] = value
         self.save()
 
+    def rename_id_files_to_telescopes(self):
+        """For backward compat with 0.9.6 downward
+        """
+        id_files = list(self.folder_path.glob("*.id"))
+        if len(id_files) > 0:
+            info("Renaming some old .id telescope files")
+            for fpath in id_files:
+                shutil.move(fpath, str(fpath).replace(".id", ".telescope"))
+
     def build_telescopes_dict(self):
-        id_files = self.folder_path.glob("*id")
+        telescope_files = self.folder_path.glob("*.telescope")
 
         telescope_dict = {}
 
-        for id_file in id_files:
-            with id_file.open(mode="r") as f:
+        for telescope_file in telescope_files:
+            with telescope_file.open(mode="r") as f:
                 telescope = yaml.load(f, Loader=yaml.FullLoader)
             telescope_dict[telescope["name"].lower()] = telescope
             if "names" in telescope:
@@ -119,14 +130,20 @@ class ConfigManager:
 
         return telescope_dict
 
+    def create_builtins_telescopes_files(self, force=False):
+        for name, telescope in built_in_telescopes.items():
+            telescope_file_name = path.join(self.folder_path, f"{name}.telescope")
+            if (not path.exists(telescope_file_name) and not force) or force:
+                self.save_telescope_file(telescope)
+
     def save_telescope_file(self, file):
         if isinstance(file, str):
             name = Path(file).stem.lower()
-            shutil.copyfile(file, self.folder_path / f"{name}.id")
+            shutil.copyfile(file, self.folder_path / f"{name}.telescope")
             info("Telescope '{}' saved".format(name))
         elif isinstance(file, dict):
             name = file["name"].lower()
-            telescope_file_path =  self.folder_path / f"{name}.id"
+            telescope_file_path =  self.folder_path / f"{name}.telescope"
             yaml.dump(file, telescope_file_path.open(mode="w"))
             info("Telescope '{}' saved".format(name))
         else:
@@ -138,7 +155,7 @@ class ConfigManager:
             return None
         available_telescopes_names = list(self.telescopes_dict.keys())
         has_telescope = np.where(
-            [t in name.lower() for t in available_telescopes_names]
+            [t.lower() == name.lower() for t in available_telescopes_names]
         )[0]
         if len(has_telescope) > 0:
             i = np.argmax([len(name) for name in np.array(available_telescopes_names)[has_telescope]])

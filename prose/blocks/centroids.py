@@ -4,6 +4,7 @@ import numpy as np
 from os import path
 from prose import CONFIG
 from .psf import cutouts
+from ..utils import register_args
 
 
 class Centroid2dg(Block):
@@ -12,6 +13,7 @@ class Centroid2dg(Block):
     |write| ``Image.stars_coords``
     """
 
+    @register_args
     def __init__(self, cutout=21, **kwargs):
         super().__init__(**kwargs)
         self.cutout = cutout
@@ -29,6 +31,8 @@ class Centroid2dg(Block):
 
 
 class CNNCentroid(Block):
+
+    @register_args
     def __init__(self, cutout=15, filename=None, **kwargs):
         super().__init__(**kwargs)
         self.filename = filename
@@ -86,6 +90,7 @@ class BalletCentroid(CNNCentroid):
     |write| ``Image.stars_coords``
     """
 
+    @register_args
     def __init__(self, **kwargs):
         super().__init__(cutout=15, filename="centroid.h5", **kwargs)
         self.import_and_check_model()
@@ -107,6 +112,7 @@ class BalletCentroid(CNNCentroid):
 
 class OldNNCentroid(CNNCentroid):
 
+    @register_args
     def __init__(self, **kwargs):
         super().__init__(cutout=21, filename="oldcentroid.h5", **kwargs)
         self.import_and_check_model()

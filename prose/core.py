@@ -2,14 +2,20 @@ from tqdm import tqdm
 from astropy.io import fits
 from .console_utils import TQDM_BAR_FORMAT
 from astropy.wcs import WCS
-from . import viz
-from . import Telescope
+from . import viz, utils, Telescope
 from collections import OrderedDict
 from tabulate import tabulate
 import numpy as np
 from time import time
 from pathlib import Path
 from astropy.time import Time
+from functools import partial
+import multiprocessing as mp
+import matplotlib.pyplot as plt
+import numpy as np
+from .utils import register_args
+from astropy.coordinates import SkyCoord
+import astropy.units as u
 
 
 class Image:
@@ -41,7 +47,7 @@ class Image:
 
     def check_telescope(self):
         if self.header:
-            self.telescope = Telescope.from_name(self.header["TELESCOP"])
+           self.telescope = Telescope.from_names(self.header.get("INSTRUME", ""), self.header.get("TELESCOP", ""))
 
     def get(self, keyword, default=None):
         return self.header.get(keyword, default)
@@ -49,6 +55,10 @@ class Image:
     @property
     def wcs(self):
         return WCS(self.header)
+
+    @wcs.setter
+    def wcs(self, new_wcs):
+        self.header.update(new_wcs.to_header())
 
     @property
     def exposure(self):
@@ -115,6 +125,75 @@ class Image:
     def shape(self):
         return np.array(self.data.shape)
 
+    def show(self, cmap="Greys_r", ax=None, figsize=(10,10), stars=None, stars_labels=True, vmin=True, vmax=None, scale=1.5):
+        if ax is None:
+            if not isinstance(figsize, (list, tuple)):
+                if isinstance(figsize, (float, int)):
+                    figsize = (figsize, figsize)
+                else:
+                    raise TypeError("figsize must be tuple or list or float or int")
+            fig = plt.figure(figsize=figsize)
+            ax = fig.add_subplot(111)
+
+        if vmin is True or vmax is True:
+            med = np.nanmedian(self.data)
+            vmin = med
+            vmax = scale*np.nanstd(self.data) + med
+            _ = ax.imshow(self.data, cmap=cmap, origin="lower",vmin=vmin,vmax=vmax)
+        elif all([vmin, vmax]) is False:
+            _ = ax.imshow(utils.z_scale(self.data), cmap=cmap, origin="lower")
+        else:
+            _ = ax.imshow(self.data, cmap=cmap, origin="lower",vmin=vmin,vmax=vmax)
+        
+        if stars is None:
+            stars = "stars_coords" in self.__dict__
+        
+        if stars:
+            label = np.arange(len(self.stars_coords)) if stars_labels else None
+            viz.plot_marks(*self.stars_coords.T, label=label)
+
+    def show_cutout(self, star=None, size=200, marks=True, **kwargs):
+        """
+        Show a zoomed cutout around a detected star or coordinates
+
+        Parameters
+        ----------
+        star : [type], optional
+            detected star id or (x, y) coordinate, by default None
+        size : int, optional
+            side size of square cutout in pixel, by default 200
+        """
+
+        if star is None:
+            x, y = self.stars_coords[self.target]
+        elif isinstance(star, int):
+            x, y = self.stars_coords[star]
+        elif isinstance(star, (tuple, list, np.ndarray)):
+            x, y = star
+        else:
+            raise ValueError("star type not understood")
+
+        self.show(**kwargs)
+        plt.xlim(np.array([-size / 2, size / 2]) + x)
+        plt.ylim(np.array([-size / 2, size / 2]) + y)
+        if marks:
+            idxs = np.argwhere(np.max(np.abs(self.stars_coords - [x, y]), axis=1) < size).squeeze()
+            viz.plot_marks(*self.stars_coords[idxs].T, label=idxs)
+
+    @property
+    def skycoord(self):
+        """astropy SkyCoord object based on header RAn, DEC
+        """
+
+        header = self.header
+        ra, ra_unit = header[self.telescope.keyword_ra], self.telescope.ra_unit
+        dec, dec_unit = header[self.telescope.keyword_dec], self.telescope.dec_unit
+        return SkyCoord(ra, dec, frame='icrs', unit=(ra_unit, dec_unit))
+
+
+    @property
+    def fov(self):
+        return np.array(self.shape) * self.telescope.pixel_scale.to(u.deg)
 
 class Block:
     """A ``Block`` is a single unit of processing acting on the ``Image`` object, reading, processing and writing its attributes. When placed in a sequence, it goes through three steps:
@@ -142,12 +221,12 @@ class Block:
         self.processing_time = 0
         self.runs = 0
 
+        # recording args and kwargs for reproducibility
+        # when subclassing, use @utils.register_args decorator (see docs)
+
     def initialize(self, *args):
         pass
-
-    def set_unit_data(self, unit_data):
-        self.unit_data = unit_data
-
+    
     def _run(self, *args, **kwargs):
         t0 = time()
         self.run(*args, **kwargs)
@@ -177,13 +256,18 @@ class Block:
     def concat(self, block):
         return self
 
+    def __call__(self, image):
+        image_copy = image.copy()
+        self.run(image_copy)
+        return image_copy
+
   
 class Sequence:
     # TODO: add index self.i in image within unit loop
 
-    def __init__(self, blocks, files, name="default", loader=Image, **kwargs):
+    def __init__(self, blocks, name="", loader=Image, **kwargs):
         self.name = name
-        self.files_or_images = files if not isinstance(files, (str, Path)) else [files]
+        self.files_or_images = []
         self.blocks = blocks
         self.loader = loader
 
@@ -204,7 +288,10 @@ class Sequence:
             for i, block in enumerate(blocks)
         })
 
-    def run(self, show_progress=True):
+    def run(self, images, show_progress=True):
+
+        self.files_or_images = images if not isinstance(images, (str, Path)) else [images]
+
         if show_progress:
             progress = lambda x: tqdm(
                 x,
@@ -222,11 +309,6 @@ class Sequence:
                 raise ValueError("No images to process")
         elif self.files_or_images is None:
             raise ValueError("No images to process")
-
-        # initialization
-        for block in self.blocks:
-            block.set_unit_data(self.data)
-            block.initialize()
 
         self.n_processed_images = 0
 
@@ -281,3 +363,121 @@ class Sequence:
     @property
     def processing_time(self):
         return np.sum([block.processing_time for block in self.blocks])
+
+    def __getitem__(self, item):
+        return self.blocks[item]
+
+    # import/export properties
+    # ------------------------
+
+    @staticmethod
+    def from_dicts(blocks_dicts):
+        blocks = []
+        for block_dict in blocks_dicts:
+            block = block_dict["block"](*block_dict["args"], **block_dict["kwargs"])
+            block.name = block_dict["name"]
+            blocks.append(block)
+            
+        return Sequence(blocks)
+
+    @property
+    def as_dicts(self):
+        blocks = []
+        for block in self.blocks:
+            blocks.append(dict(
+                block=block.__class__,
+                name=block.name,
+                args=block.args,
+                kwargs=block.kwargs
+            ))
+
+        return blocks
+
+
+class MultiProcessSequence(Sequence):
+    
+    def run(self, show_progress=True):
+        if show_progress:
+            def progress(x, **kwargs): 
+                return tqdm(
+                    x,
+                    desc=self.name,
+                    unit="images",
+                    ncols=80,
+                    bar_format=TQDM_BAR_FORMAT,
+                    **kwargs
+                )
+
+        else:
+            def progress(x, **kwargs): return x
+
+        if isinstance(self.files_or_images, list):
+            if len(self.files_or_images) == 0:
+                raise ValueError("No images to process")
+        elif self.files_or_images is None:
+            raise ValueError("No images to process")
+
+        self.n_processed_images = 0
+        
+        processed_blocks = mp.Manager().list(self.blocks)
+        blocks_queue = mp.Manager().Queue()
+        
+        blocks_writing_process = mp.Process(
+            target=partial(
+                _concat_blocks,
+                current_blocks=processed_blocks,
+            ), args=(blocks_queue,)
+        )
+    
+        blocks_writing_process.deamon = True
+        blocks_writing_process.start()
+        
+        with mp.Pool() as pool:
+            for _ in progress(pool.imap(partial(
+                _run_blocks_on_image,
+                blocks_queue=blocks_queue,
+                blocks_list = self.blocks,
+                loader = self.loader
+            ), self.files_or_images), total=len(self.files_or_images)):
+                pass
+            
+        blocks_queue.put("done")
+
+        self.blocks = processed_blocks
+   
+        # terminate
+        for block in self.blocks:
+            block.terminate()
+
+
+def _run_blocks_on_image(file_or_image, blocks_queue=None, blocks_list=None, loader=None):
+
+    if isinstance(file_or_image, (str, Path)):
+        image = loader(file_or_image)
+    else:
+        image = file_or_image
+
+    discard_message = False
+    last_block = None
+
+    for b, block in enumerate(blocks_list):
+        # This allows to discard image in any Block
+        if not image.discard:
+            block._run(image)
+        elif not discard_message:
+            last_block = blocks_list[b-1]
+            discard_message = True
+            print(f"Warning: image ? discarded in {type(last_block).__name__}")
+
+    del image
+    blocks_queue.put(blocks_list)
+    
+def _concat_blocks(blocks_queue, current_blocks=None):
+    while True:
+        new_blocks = blocks_queue.get()
+        if new_blocks == "done":
+            break
+        else:
+            for i, block in enumerate(new_blocks):
+                block.concat(current_blocks[i])
+                current_blocks[i] = block

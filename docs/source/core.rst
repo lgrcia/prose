@@ -21,9 +21,9 @@ Image, Block and Sequence
    :width: 280px
 
 
-In an ``Image`` object, the image itself is stored in ``Image.data`` as well as original metadata in ``Image.header``. When being processed, additional data can either be read or written in the object attributes. A ``Block`` is a single unit of processing acting on the ``Image`` object, reading and writing its attributes. Finally a ``Sequence`` is a succesion of ``Block`` intended to sequentially process a set of ``Image``.
+An ``Image`` object contains the ``Image.data`` as well as metadata in ``Image.header``. A ``Block`` is a single unit of processing acting on the ``Image`` object, which can |read| and |write| any of its attributes or |modify|. Finally a ``Sequence`` is a succesion of ``Block``.
 
-With this architecture |prose| can deal with any type of images. To do so, an appropriate loader must be provided to the ``Sequence``, to transform a binary image type into an ``Image`` object. Since |prose| is developped for astronomy, the default loader is intended for the ``FITS`` image format.
+With this architecture |prose| can deal with any type of FITS images (check ``Telescope`` object next).
 
 Example: Hello world
 --------------------
@@ -44,15 +44,18 @@ Here is a block printing hello world and the image mean
 
     class HelloWorld(Block):
         def run(self, image):
-            print(f"Hello world (mean: {np.mean(image.data):.2f})")
+            image.mean = np.mean(image.data)
+            print(f"Hello world (mean: {image.mean:.2f})")
 
 and running a sequence with it
 
 .. code:: python
 
-    sequence = Sequence([HelloWorld()], images, name="Hello world")
-    sequence.run()
+    sequence = Sequence([
+        HelloWorld(),
+    ])
 
+    sequence.run(images)
 
 .. parsed-literal::
 

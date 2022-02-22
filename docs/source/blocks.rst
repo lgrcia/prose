@@ -3,12 +3,16 @@ Blocks
 
 .. currentmodule:: prose.blocks
 
+.. image:: _static/block.png
+   :align: center
+   :width: 200px
 
-A ``Block`` is a single unit of processing acting on the ``Image`` object, reading and writing its attributes. Blocks documentation include the following labels:
 
-- |read|: describe the ``Image`` attributes read, hence needed, by the block
-- |write|: describe the ``Image`` attributes written by the block
-- |modify|: indicates that the block directly modify the ``Image.data``
+A ``Block`` is a single unit of processing acting on the ``Image`` object, reading and writing its attributes. Blocks documentation include the following information:
+
+- |read|: the ``Image`` attributes read by the ``Block``
+- |write|: the ``Image`` attributes written by the ``Block``
+- |modify|: indicates that the ``Image.data`` is modified by the ``Block``
 
 Detection
 ---------
@@ -19,6 +23,7 @@ Detection
 
 .. autosummary::
    :toctree: generated
+   :template: autosum.rst
    :nosignatures:
 
    SegmentedPeaks
@@ -26,7 +31,22 @@ Detection
    DAOFindStars
    
 
-Alignment, Centroiding, PSF
+PSF
+---
+
+.. autosummary::
+   :toctree: generated
+   :template: autosum.rst
+   :nosignatures:
+
+   Cutouts
+   MedianPSF
+   FWHM
+   Gaussian2D
+   Moffat2D
+   FastGaussian
+
+Alignment, Centroiding
 ---------------------------
 
 .. image:: _static/matching.png
@@ -36,17 +56,14 @@ Alignment, Centroiding, PSF
 
 .. autosummary::
    :toctree: generated
+   :template: autosum.rst
    :nosignatures:
 
    XYShift
    Twirl
-   Align
    AffineTransform
    Cutout2D
    AstroAlignShift
-   Gaussian2D
-   Moffat2D
-   FastGaussian
 
 Photometry
 ----------
@@ -58,6 +75,7 @@ Photometry
 
 .. autosummary::
    :toctree: generated
+   :template: autosum.rst
    :nosignatures:
 
    PhotutilsAperturePhotometry
@@ -73,15 +91,14 @@ Utils
    
 .. autosummary::
    :toctree: generated
+   :template: autosum.rst
    :nosignatures:
 
-   Align
    Calibration
    Cutouts
    Flip
    ImageBuffer
    Pass
-   SavePhot
    SaveReduced
    Set
    Stack
