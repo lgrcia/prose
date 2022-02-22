@@ -9,8 +9,7 @@ setup(
     version="1.0.1",
     author="Lionel J. Garcia",
     description="Reduction and analysis of FITS telescope observations",
-    packages=find_packages("prose"),
-    package_dir={"": "prose"},
+    packages=["prose"],
     license="MIT",
     url="https://github.com/lgrcia/prose",
     # entry_points="""
