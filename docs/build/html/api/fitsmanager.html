@@ -176,7 +176,49 @@ associated with specific observations. This class is heavily used and comes hand
 <dl class="py class">
 <dt class="sig sig-object py" id="prose.FitsManager">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">prose.</span></span><span class="sig-name descname"><span class="pre">FitsManager</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">folder</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hdu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extension</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'.f*ts*'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.FitsManager" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="py property">
+<dd><p>Object to parse and retrive FITS files from a folder and its sub-folders</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>folder</strong> (<em>str</em>) – path of the folder to parse</p></li>
+<li><p><strong>depth</strong> (<em>int, optional</em>) – maxiumum depth of the sub-folders to explore, by default 0</p></li>
+<li><p><strong>hdu</strong> (<em>int, optional</em>) – by default 0</p></li>
+<li><p><strong>extension</strong> (<em>str, optional</em>) – by default “.f*ts*”</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="prose.FitsManager.observation_files">
+<span class="sig-name descname"><span class="pre">observation_files</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">i</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_days</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_days</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">same_telescope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lights</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'images'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.FitsManager.observation_files" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a dictionary of all the files (including calibration ones) corresponding to a given observation.</p>
+<p>The index <code class="docutils literal notranslate"><span class="pre">i</span></code> corresponds to the observation index displayed when printing the <code class="docutils literal notranslate"><span class="pre">FitsManager</span></code> object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>i</strong> (<em>int</em>) – index of the observation</p></li>
+<li><p><strong>min_days</strong> (<em>int, optional</em>) – number of days in the past before which calibration files are considered valid, by default 100000</p></li>
+<li><p><strong>max_days</strong> (<em>int, optional</em>) – number of days in the future after which calibration files are considered valid, by default 0. Set to more than 0 to use calibration files taken after the observation date</p></li>
+<li><p><strong>same_telescope</strong> (<em>bool, optional</em>) – Wether the calibration images should come from the same telescope (if its name is written in the headers), by default True</p></li>
+<li><p><strong>lights</strong> (<em>str, optional</em>) – keyword used in the written dictionary for science images, by default “images”</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>The keys of the dictionnary are:</dt><dd><ul class="simple">
+<li><p><cite>images</cite> for the science images</p></li>
+<li><p><cite>flats</cite>, <cite>darks</cite> and <cite>bias</cite> for the corresponding calibration images</p></li>
+</ul>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="prose.FitsManager.unique_obs">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">unique_obs</span></span><a class="headerlink" href="#prose.FitsManager.unique_obs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return whether the object contains a unique observation (observation is defined as a unique combinaison of date, telescope, target and filter).</p>

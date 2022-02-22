@@ -183,7 +183,8 @@
 <dt class="sig sig-object py" id="prose.blocks.Stack">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">prose.blocks.</span></span><span class="sig-name descname"><span class="pre">Stack</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#prose.blocks.Stack" title="Permalink to this definition">¶</a></dt>
 <dd><p>Build a FITS stack image of the observation</p>
-<p>The stack image is accessible through the <code class="docutils literal notranslate"><span class="pre">stack</span></code> attribute</p>
+<p>The stack image is accessible through the <code class="docutils literal notranslate"><span class="pre">stack</span></code> attribute. It is built by accumulating images along creating a pixel weights map. This map allows to ignore bad pixels contributions to the stack, built through a weighted mean.</p>
+<p>The idea of weighting is stolen from <a class="reference external" href="https://github.com/lsst/meas_algorithms/blob/main/python/lsst/meas/algorithms/accumulator_mean_stack.py">https://github.com/lsst/meas_algorithms/blob/main/python/lsst/meas/algorithms/accumulator_mean_stack.py</a></p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
