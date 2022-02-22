@@ -5,7 +5,7 @@ HERE = Path(__file__).parent
 README = (HERE / "README.md").read_text()
 
 setup(
-    fname="prose",
+    name="prose",
     version="1.0.1",
     author="Lionel J. Garcia",
     description="Reduction and analysis of FITS telescope observations",
