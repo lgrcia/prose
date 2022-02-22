@@ -670,6 +670,9 @@ class Observation(ApertureFluxes):
         plt.grid(color="whitesmoke")
         plt.tight_layout()
 
+    # TODO: plot to plot_psf_model, use block.PSFModel
+    # TODO: merge with plot_star_psf, play with kwargs
+
     def plot_psf_fit(self, size=21, cmap="inferno", c="blueviolet", model=Gaussian2D):
         """Plot a 2D gaussian fit of the global psf (extracted from stack fits)
 
@@ -885,6 +888,8 @@ class Observation(ApertureFluxes):
         super().plot(star=star, bins=bins, color=color, std=std)
         if meridian_flip:
             self.plot_meridian_flip()
+
+    # TODO: plot_radial_psf
 
     def plot_psf(self, star=None, n=40, zscale=False, aperture=None, rin=None, rout=None):
         """Plot star cutout overalid with aperture and radial flux.
