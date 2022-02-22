@@ -172,11 +172,11 @@ liverpool = dict(
 
 spirit = dict(
     speculoos_south,
-    name = "spirit",
+    name = "Spirit",
     keyword_telescope = "TELESCOP",
     names = ["PIRT1280SciCam2"],
     pixel_scale = 0.306,
-
+    ra_unit= "hourangle",
 )
 
 built_in_telescopes = {telescope["name"].lower(): telescope for telescope in [

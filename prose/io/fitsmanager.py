@@ -31,6 +31,19 @@ def sql_other(kind):
     """
 
 class FitsManager:
+    """Object to parse and retrive FITS files from a folder and its sub-folders
+
+        Parameters
+        ----------
+        folder : str
+            path of the folder to parse
+        depth : int, optional
+            maxiumum depth of the sub-folders to explore, by default 0
+        hdu : int, optional
+            by default 0
+        extension : str, optional
+            by default ".f*ts*"
+    """
     
     def __init__(self, folder, depth=0, hdu=0, extension=".f*ts*"):
         self.folder = folder
@@ -136,6 +149,30 @@ class FitsManager:
         return [f[0] for f in files_paths]
         
     def observation_files(self, i, min_days = 100000, max_days = 0, same_telescope=True, lights="images"):
+        """Return a dictionary of all the files (including calibration ones) corresponding to a given observation.
+
+        The index ``i`` corresponds to the observation index displayed when printing the ``FitsManager`` object
+
+        Parameters
+        ----------
+        i : int
+            index of the observation
+        min_days : int, optional
+            number of days in the past before which calibration files are considered valid, by default 100000
+        max_days : int, optional
+            number of days in the future after which calibration files are considered valid, by default 0. Set to more than 0 to use calibration files taken after the observation date
+        same_telescope : bool, optional
+            Wether the calibration images should come from the same telescope (if its name is written in the headers), by default True 
+        lights : str, optional
+            keyword used in the written dictionary for science images, by default "images"
+
+        Returns
+        -------
+        dict
+            The keys of the dictionnary are:
+                - ``images` for the science images
+                - ``flats``, ``darks`` and ``bias`` for the corresponding calibration images
+        """
         obs = self.observations(show=False)
         if len(obs) == 0:
             return None

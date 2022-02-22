@@ -69,7 +69,7 @@ class PlateSolve(GaiaBlock):
 
 class GaiaCatalog(GaiaBlock):
     
-    def __init__(self, n_stars=10000, tolerance=10, remove_gaias=False, **kwargs):
+    def __init__(self, n_stars=10000, tolerance=4, **kwargs):
         super().__init__(n_stars=n_stars, **kwargs)
         self.n_stars = n_stars
         self.tolerance = tolerance
