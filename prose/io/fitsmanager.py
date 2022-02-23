@@ -1,6 +1,7 @@
 import sqlite3
 import numpy as np
 import tabulate
+from tqdm import tqdm
 from .io import get_files, fits_to_df
 
 sql_days_between = "date >= date(:date, '-' || :min_days || ' days') AND date <= date(:date, :max_days || ' days')"
@@ -45,27 +46,66 @@ class FitsManager:
             by default ".f*ts*"
     """
     
-    def __init__(self, folder, depth=0, hdu=0, extension=".f*ts*"):
-        self.folder = folder
-        self.con = sqlite3.connect(':memory:')
+    def __init__(self, folder=None, depth=0, hdu=0, extension=".f*ts*", file=None, batch_size=None):
+        if file is None:
+            file = ":memory:"
+
+        self.con = sqlite3.connect(file)
         self.cur = self.con.cursor()
-        self.cur.execute('''CREATE TABLE files (date text, path text UNIQUE, 
-        telescope text, filter text, type text, target text, width int, height int, jd real, observation_id int)''')
-        
-        files = get_files(extension, folder, depth=depth)
-        df = fits_to_df(files, hdu=hdu)
-        for row in df.values:
-            _path, date, telescope, _type, target, _filter, dimensions, _, jd = row
-            if isinstance(_filter, float):
-                _filter = ""
-            width, height = dimensions
-            # or IGNORED to handle the unique constraint
-            self.cur.execute(
-                f"INSERT or IGNORE INTO files VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (date, _path, telescope, _filter, _type, target, width, height, jd, "NULL"))
+
+        # check if file Table exists
+        tables = list(self.cur.execute("SELECT name FROM sqlite_master WHERE type='table';"))
+        if len(tables) == 0:
+            self.cur.execute('''CREATE TABLE files (date text, path text UNIQUE, 
+            telescope text, filter text, type text, target text, width int, height int, 
+            jd real, observation_id int)''')
             self.con.commit()
         
-    
+        if folder is not None:
+            self.scan_files(folder, extension, batch_size=batch_size, depth=depth)
+        else:
+            raise AssertionError(f"No files with extension '{extension}'found")
+
+    def scan_files(self, folder, extension, batch_size=None, verbose=True, depth=0):
+        files = get_files(extension, folder, depth=depth)
+
+        if len(files) > 0:
+            current_files = [v[0] for v in self.cur.execute("SELECT path from files").fetchall()]
+            files_to_scan = np.setdiff1d(files, current_files)
+
+            if len(files_to_scan) > 0:
+                if batch_size is None:
+                    batches = [files_to_scan]
+                else:
+                    assert isinstance(batch_size, int), "batch_size must be an int"
+
+                    if len(files_to_scan) < batch_size:
+                        batches = [files_to_scan]
+                    else:
+                        batches = np.array_split(files_to_scan, len(fits)//batch_size)
+                
+                if verbose:
+                    def progress(x): return tqdm(x, bar_format='Reading fits bacthes {l_bar}{bar}{r_bar}')
+                else:
+                    def progress(x): return x
+
+                for batch in progress(batches):
+                    df = fits_to_df(batch, verbose=False)
+                    for row in df.values:
+                        _path, date, telescope, _type, target, _filter, dimensions, _, jd = row
+                        if isinstance(_filter, float):
+                            _filter = ""
+                        width, height = dimensions
+                        # or IGNORED to handle the unique constraint
+                        self.cur.execute(
+                            f"INSERT or IGNORE INTO files VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                            (date, _path, telescope, _filter, _type, target, width, height, jd, "NULL"))
+                    self.con.commit()
+            else:
+                print(f"No new files to scan")
+        else:
+            raise AssertionError(f"No files with extension '{extension}' found")
+        
     def print(self, calib=True, repr=False):
         txt = []
         fields = ["date", "telescope", "target", "filter", "type", "quantity"]
