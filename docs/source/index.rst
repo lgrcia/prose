@@ -29,6 +29,7 @@ prose
    :maxdepth: 1
 
    installation
+   notebooks/quickstart.ipynb
    core
    blocks
    api

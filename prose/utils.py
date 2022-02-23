@@ -6,11 +6,12 @@ import numba
 import astropy.constants as c
 import urllib
 from astropy.time import Time
+from astropy.table import Table
 from datetime import datetime
-
+import inspect
+from scipy import ndimage
 
 earth2sun = (c.R_earth / c.R_sun).value
-
 
 def remove_sip(dict_like):
 
@@ -220,7 +221,7 @@ def check_class(_class, base, default):
     elif isinstance(_class, base):
         return _class
     else:
-        raise TypeError("ubclass of {} expected".format(base.__name__))
+        raise TypeError("subclass of {} expected".format(base.__name__))
 
 
 def divisors(n):
@@ -330,3 +331,74 @@ def sigma_clip(y, sigma=5., return_mask=False, x=None):
             return x[mask], y[mask]
 
 
+def register_args(f):
+    """
+    When used within a class, saves args and kwargs passed to a function
+    (mostly used to record __init__ inputs)
+    """
+    def inner(*args, **kwargs):
+        self = args[0]
+        self.args = args[1::]
+        self.kwargs = kwargs
+        return f(*args, **kwargs)
+    return inner
+
+
+def cutouts(image, stars, size=15):
+    """Custom version to extract stars cutouts
+
+    Parameters
+    ----------
+    image: np.ndarray or path
+    stars: np.ndarray
+        stars positions with shape (n,2)
+    size: int
+        size of the cuts around stars (in pixels), by default 15
+
+    Returns
+    -------
+    np.ndarray of shape (size, size)
+    
+    """
+    if isinstance(image, str):
+        image = fits.getdata(image)
+
+    warnings.simplefilter("ignore")
+    if np.shape(stars) > (1,2):
+        stars_tbl = Table(
+            [stars[:, 0], stars[:, 1], np.arange(len(stars))],
+            names=["x", "y", "id"])
+        stars = extract_stars(NDData(data=image), stars_tbl, size=size)
+        idxs = np.array([s.id_label for s in stars])
+        return idxs, stars
+    else:
+        stars_tbl = Table(
+            data=np.array([stars[0][0], stars[0][1]]),
+            names=["x", "y"])
+        stars = extract_stars(NDData(data=image), stars_tbl, size=size)
+        return stars
+
+
+
+def nan_gaussian_filter(data, sigma=1., truncate=4.):
+    """https://stackoverflow.com/questions/18697532/gaussian-filtering-a-image-with-nan-in-python
+
+    Parameters
+    ----------
+    U : _type_
+        _description_
+    sigma : _type_, optional
+        _description_, by default 1.
+    truncate : _type_, optional
+        _description_, by default 4.
+    """
+
+    V=data.copy()
+    V[np.isnan(data)]=0
+    VV=ndimage.gaussian_filter(V,sigma=sigma,truncate=truncate)
+
+    W=0*data.copy()+1
+    W[np.isnan(data)]=0
+    WW=ndimage.gaussian_filter(W,sigma=sigma,truncate=truncate)
+
+    return VV/WW

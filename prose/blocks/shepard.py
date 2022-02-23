@@ -5,6 +5,7 @@ from prose.blocks.psf import Gaussian2D
 from itertools import product
 import numpy as np
 from scipy.special import hermite
+from ..utils import register_args
 
 
 def shapelet1d(x, n, b=1):
@@ -20,6 +21,7 @@ def shapelet2d(x, y, n1, n2, b=1):
 
 class Shepard(Block):
 
+    @register_args
     def __init__(self, order=4, size=31, **kwargs):
         super().__init__(**kwargs)
         self.order = order

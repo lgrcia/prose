@@ -5,11 +5,15 @@ from astropy.stats import sigma_clipped_stats
 from .registration import clean_stars_positions
 from ..core import Block
 from ..blocks.psf import cutouts
+from ..utils import register_args
+
 try:
     from sep import extract
 except:
     raise AssertionError("Please install sep")
 
+
+# TODO: when __call__, if data is prose.Image then run normally (like Block.run(Image)), if data is Image.data return products
 
 class StarsDetection(Block):
     """Base class for stars detection.
@@ -23,7 +27,7 @@ class StarsDetection(Block):
 
         self.check_nans = check_nans
 
-    def single_detection(self, data):
+    def detect_stars(self, data):
         """
         Running detection on single or multiple images
         """
@@ -31,7 +35,7 @@ class StarsDetection(Block):
 
     def run(self, image, **kwargs):
         data = np.nan_to_num(image.data, 0) if self.check_nans else image.data
-        coordinates, peaks = self(data)
+        coordinates, peaks = self._detect_stars(data)
 
         if coordinates is not None:
             image.stars_coords = coordinates
@@ -41,8 +45,8 @@ class StarsDetection(Block):
         else:
             image.discard = True
 
-    def __call__(self, data):
-        coordinates, fluxes = self.single_detection(data)
+    def _detect_stars(self, data):
+        coordinates, fluxes = self.detect_stars(data)
 
         if len(coordinates) > 2:
             if self.sort:
@@ -62,7 +66,7 @@ class DAOFindStars(StarsDetection):
     """
     DAOPHOT stars detection with :code:`photutils` implementation.
 
-    |write| ``Image.stars_coords``
+    |write| ``Image.stars_coords`` and ``Image.peaks``
     
     Parameters
     ----------
@@ -79,13 +83,14 @@ class DAOFindStars(StarsDetection):
     sort : bool, optional
         wether to sort stars coordinates from the highest to the lowest intensity, by default True
     """
+    @register_args
     def __init__(self, sigma_clip=2.5, lower_snr=5, fwhm=5, **kwargs):
         super().__init__(**kwargs)
         self.sigma_clip = sigma_clip
         self.lower_snr = lower_snr
         self.fwhm = fwhm
 
-    def single_detection(self, data):
+    def detect_stars(self, data):
         mean, median, std = sigma_clipped_stats(data, sigma=self.sigma_clip)
         finder = DAOStarFinder(fwhm=self.fwhm, threshold=self.lower_snr * std)
         sources = finder(data - median)
@@ -107,7 +112,7 @@ class SegmentedPeaks(StarsDetection):
     """
     Stars detection based on image segmentation.
 
-    |write| ``Image.stars_coords``
+    |write| ``Image.stars_coords`` and ``Image.peaks``
 
     Parameters
     ----------
@@ -141,7 +146,7 @@ class SEDetection(StarsDetection):
     """
     Source Extractor detection
 
-    |write| ``Image.stars_coords``
+    |write| ``Image.stars_coords`` and ``Image.peaks``
 
     Parameters
     ----------
@@ -154,11 +159,12 @@ class SEDetection(StarsDetection):
     sort : bool, optional
         wether to sort stars coordinates from the highest to the lowest intensity, by default True
     """
+    @register_args
     def __init__(self, threshold=1.5, **kwargs):
         super().__init__(**kwargs)
         self.threshold = threshold
 
-    def single_detection(self, data):
+    def detect_stars(self, data):
         data = data.byteswap().newbyteorder()
         sep_data = extract(data, self.threshold*np.median(data))
         coordinates = np.array([sep_data["x"], sep_data["y"]]).T
@@ -172,6 +178,7 @@ class SEDetection(StarsDetection):
 
 class Peaks(Block):
 
+    @register_args
     def __init__(self, cutout=21, **kwargs):
         super().__init__(**kwargs)
         self.cutout = cutout
