@@ -21,7 +21,7 @@ setup(
     install_requires=[
         "numpy",
         "scipy",
-        "astropy==4.0",
+        "astropy",
         "matplotlib",
         "colorama",
         "scikit-image",
