@@ -235,7 +235,7 @@ class FitsManager:
         return self.files(imtype="stack")
 
     @property
-    def calibrated(self):
+    def reduced(self):
         """fits paths of the observation calibrated images if present
 
         Returns
