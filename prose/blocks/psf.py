@@ -105,7 +105,7 @@ class Cutouts(Block):
 
     |write| 
     - ``Image.cutouts``: cutouts images
-    - ``Image.cutouts_idxs``: 
+    - ``Image.cutouts_idxs``: indexes of stars_coords corresponding to each cutout 
 
     Cutouts are sometimes called "imagette" and represent small square portions of the image centered on specific points.
 

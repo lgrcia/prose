@@ -67,17 +67,18 @@ class AffineTransform(Block):
         whether to apply transform to ``Image.data``, by default True
     inverse : bool, optional
         whether to apply inverse transform, by default False
-    fill : str, optional
-        fill value for pixels outside image, by default "median"
+    output_shape : tuple-like, optional
+        shape of the transformed image. By default None, conserving the orignial shape
 
     """
 
     @register_args
-    def __init__(self, stars=True, data=True, inverse=False, **kwargs):
+    def __init__(self, stars=True, data=True, inverse=False, output_shape=None, **kwargs):
         super().__init__(**kwargs)
         self.data = data
         self.stars = stars
         self.inverse = inverse
+        self.output_shape = output_shape
 
     def run(self, image, **kwargs):
         if "transform" not in image.__dict__:
@@ -99,7 +100,12 @@ class AffineTransform(Block):
             try:
                 image.data[image.data<0] = np.nan
                 image.data = nan_gaussian_filter(image.data, sigma=1.)
-                image.data = warp(image.data, transform.inverse, cval=np.nanmedian(image.data))
+                image.data = warp(
+                    image.data, 
+                    transform.inverse, 
+                    cval=np.nanmedian(image.data), 
+                    output_shape=self.output_shape
+                )
             except np.linalg.LinAlgError:
                 image.discard = True
 
