@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from collections import OrderedDict
 from ..utils import fast_binning
 from ..utils import register_args
+from scipy.stats import shapiro
 
 def cutouts(image, stars, size=15):
     """Custom version to extract stars cutouts
@@ -102,7 +103,9 @@ class Cutouts(Block):
 
     |read| ``Image.stars_coords``
 
-    |write| ``Image.cutouts``, ``Image.cutouts_idxs``
+    |write| 
+    - ``Image.cutouts``: cutouts images
+    - ``Image.cutouts_idxs``: 
 
     Cutouts are sometimes called "imagette" and represent small square portions of the image centered on specific points.
 
@@ -534,16 +537,21 @@ class Moffat2D(PSFModel):
 class KeepGoodStars(Block):
 
     @register_args
-    def __init__(self, n=-1, **kwargs):
+    def __init__(self, stat=0, n=-1, **kwargs):
         super().__init__(**kwargs)
         self.n = n
+        if isinstance(stat, int):
+            if stat == 0:
+                def stat(im):
+                    return np.std(im) > 1000 
+            elif stat == 1:
+                def stat(im):
+                    return shapiro(im).statistic > 0.03
+        
+        self.stat = stat
 
     def run(self, image, n=-1):
-        good_stars = self(image.data, image.stars_coords)
+        i, stars = image.cutouts_idxs, image.cutouts
+        good = np.array([self.stat(s.data) for s in stars])
+        good_stars = image.stars_coords[i][np.argwhere(good).squeeze()][0:self.n]
         image.stars_coords = good_stars
-
-    def __call__(self, data, stars):
-        i, _stars = cutouts(data, stars, size=21)
-        #good = np.array([shapiro(s.data).statistic for s in _stars]) > 0.33
-        good = np.array([np.std(s.data) for s in _stars]) > 1000
-        return stars[i][np.argwhere(good).squeeze()][0:self.n]

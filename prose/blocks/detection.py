@@ -18,45 +18,27 @@ except:
 class StarsDetection(Block):
     """Base class for stars detection.
     """
-    def __init__(self, n_stars=None, sort=True, min_separation=None, check_nans=False, **kwargs):
+    def __init__(self, n_stars=None, sort=True, min_separation=None, **kwargs):
         super().__init__(**kwargs)
         self.n_stars = n_stars
         self.sort = sort
         self.min_separation = min_separation
         self.last_coords = None
 
-        self.check_nans = check_nans
-
-    def detect_stars(self, data):
-        """
-        Running detection on single or multiple images
-        """
-        raise NotImplementedError("method needs to be overidden")
-
-    def run(self, image, **kwargs):
-        data = np.nan_to_num(image.data, 0) if self.check_nans else image.data
-        coordinates, peaks = self._detect_stars(data)
-
-        if coordinates is not None:
-            image.stars_coords = coordinates
-            image.peaks = peaks
-            self.last_coords = coordinates
-
-        else:
-            image.discard = True
-
-    def _detect_stars(self, data):
-        coordinates, fluxes = self.detect_stars(data)
+    def clean(self, fluxes, coordinates, *args):
 
         if len(coordinates) > 2:
             if self.sort:
-                coordinates = coordinates[np.argsort(fluxes)[::-1]]
+                idxs = np.argsort(fluxes)[::-1]
+                coordinates = coordinates[idxs]
+                for arg in args:
+                    arg = [arg[i] for i in idxs]
             if self.n_stars is not None:
                 coordinates = coordinates[0:self.n_stars]
             if self.min_separation is not None:
                 coordinates = clean_stars_positions(coordinates, tolerance=self.min_separation)
 
-            return coordinates, fluxes
+            return [coordinates, fluxes, *args]
 
         else:
             return None, None
@@ -90,23 +72,18 @@ class DAOFindStars(StarsDetection):
         self.lower_snr = lower_snr
         self.fwhm = fwhm
 
-    def detect_stars(self, data):
-        mean, median, std = sigma_clipped_stats(data, sigma=self.sigma_clip)
+    def run(self, image):
+        _, median, std = sigma_clipped_stats(image.data, sigma=self.sigma_clip)
         finder = DAOStarFinder(fwhm=self.fwhm, threshold=self.lower_snr * std)
-        sources = finder(data - median)
+        sources = finder(image.data - median)
 
         coordinates = np.transpose(np.array([sources["xcentroid"].data, sources["ycentroid"].data]))
         peaks = sources["peak"]
 
-        return coordinates, peaks
+        image.stars_coords, image.peaks =  self.clean(coordinates, peaks)
 
     def citations(self):
         return "photutils", "numpy"
-
-    @staticmethod
-    def doc():
-        return """photutils_ :code:`DAOStarFinder`."""
-
 
 class SegmentedPeaks(StarsDetection):
     """
@@ -126,17 +103,29 @@ class SegmentedPeaks(StarsDetection):
         wether to sort stars coordinates from the highest to the lowest intensity, by default True
     """
     @register_args
-    def __init__(self, threshold=2, **kwargs):
+    def __init__(self, unit_euler=True, threshold=2, **kwargs):
         super().__init__(**kwargs)
         self.threshold = threshold
+        self.unit_euler = unit_euler
 
-    def detect_stars(self, data):
-        threshold = self.threshold*np.nanstd(data.flatten()) + np.median(data.flatten())
-        regions = regionprops(label(data > threshold), data)
-        coordinates = np.array([region.weighted_centroid[::-1] for region in regions])
+    def run(self, image):
+        threshold = self.threshold*np.nanstd(image.data.flatten()) + np.median(image.data.flatten())
+        regions = regionprops(label(image.data > threshold), image.data)
         fluxes = np.array([np.sum(region.intensity_image) for region in regions])
+        idxs = np.argsort(fluxes)[::-1][0:self.n_stars]
+        regions = [regions[i] for i in idxs]
+        fluxes = fluxes[idxs]
 
-        return coordinates, fluxes
+        if self.unit_euler:
+            idxs = np.flatnonzero([r.euler_number == 1 for r in regions])
+            regions = [regions[i] for i in idxs]
+            fluxes = fluxes[idxs]
+                    
+        coordinates = np.array([region.weighted_centroid[::-1] for region in regions])
+
+        image.stars_coords =  coordinates
+        image.peaks = fluxes
+        image.regions =  regions
 
     def citations(self):
         return "numpy", "skimage"
@@ -164,13 +153,13 @@ class SEDetection(StarsDetection):
         super().__init__(**kwargs)
         self.threshold = threshold
 
-    def detect_stars(self, data):
-        data = data.byteswap().newbyteorder()
-        sep_data = extract(data, self.threshold*np.median(data))
+    def run(self, image):
+        data = image.data.byteswap().newbyteorder()
+        sep_data = extract(image.data, self.threshold*np.median(data))
         coordinates = np.array([sep_data["x"], sep_data["y"]]).T
         fluxes = np.array(sep_data["flux"])
 
-        return coordinates, fluxes
+        image.stars_coords, image.peaks =  self.clean(coordinates, fluxes)
 
     def citations(self):
         return "source extractor", "sep"
