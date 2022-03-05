@@ -8,6 +8,7 @@ from .photometry import PhotutilsAperturePhotometry, SEAperturePhotometry, Photu
 from .utils import *
 from .shepard import  Shepard
 from ..utils import register_args
+from . import catalogs
 
 
 # import prose

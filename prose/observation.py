@@ -44,6 +44,8 @@ class Observation(ApertureFluxes):
 
     """
 
+
+    # TODO initialize stach as an image
     def __init__(self, photfile, ignore_time=False):
         super().__init__(photfile)
 
@@ -159,12 +161,13 @@ class Observation(ApertureFluxes):
     # Convenience
     # -----------
 
+    # TODO replace from stack Image
     @property
     def skycoord(self):
         """astropy SkyCoord object for the target
         """
         return SkyCoord(self.RA, self.DEC, frame='icrs', unit=(self.telescope.ra_unit, self.telescope.dec_unit))
-
+    
     @property
     def simbad_url(self):
         """
@@ -182,6 +185,7 @@ class Observation(ApertureFluxes):
         return f"http://simbad.u-strasbg.fr/simbad/sim-coo?Coord={self.RA}+{self.DEC}&CooFrame=FK5&CooEpoch=2000&CooEqui=" \
                "2000&CooDefinedFrames=none&Radius=2&Radius.unit=arcmin&submit=submit+query&CoordList="
 
+    # TODO add to core Image and replace by stack Image
     @property
     def denominator(self):
         """A conveniant name for the observation: {telescope}_{date}_{name}_{filter}
@@ -227,13 +231,14 @@ class Observation(ApertureFluxes):
     def date(self):
         return dparser.parse(self.x.attrs["date"])
 
+    # TODO add to core Image and replace by stack Image
     @property
     def date_ymd(self):
         return self.date.strftime("%Y%m%d")
 
     # TESS specific methods
     # --------------------
-
+    
     @property
     def tic_id(self):
         """TIC id from digits found in target name
@@ -262,6 +267,10 @@ class Observation(ApertureFluxes):
     def tfop_prefix(self):
         return f"TIC{self.tic_id}_{self.date_ymd}_{self.telescope.name}_{self.filter}"
 
+    # WCS
+    # ----
+
+    # TODO replace by stack Image methods
     @property
     def wcs(self):
         return WCS(utils.remove_arrays(self.xarray.attrs))
@@ -319,6 +328,7 @@ class Observation(ApertureFluxes):
         # Catalog queries
         # ---------------
 
+    # TODO replace using stack Image and GaiaCatalog block
     def query_gaia(self, limit=-1, cone_radius=None):
         """Query gaia catalog for stars in the field
         """
@@ -362,6 +372,7 @@ class Observation(ApertureFluxes):
             warnings.warn("Catalog stars seem out of the field. Check that your stack is solved and that telescope "
                         "'ra_unit' and 'dec_unit' are well set")
 
+    # TODO replace using stack Image and create TIC catalog block
     def query_tic(self,cone_radius=None):
         """Query TIC catalog (through MAST) for stars in the field
         """
@@ -412,6 +423,7 @@ class Observation(ApertureFluxes):
     # Plot
     # ----
 
+    # TODO replace by stack Image
     def show(self, size=10, flip=False, zoom=False, contrast=0.05, wcs=False, cmap="Greys_r", sigclip=None, vmin=None,vmax=None):
         """Show stack image
 
@@ -476,6 +488,7 @@ class Observation(ApertureFluxes):
         if len(axes) == 0:
             self.show(**kwargs)
 
+    # TODO replace by stack Image
     def show_stars(self, size=10, view=None, n=None, flip=False,
                    comp_color="yellow", color=[0.51, 0.86, 1.], stars=None, legend=True, **kwargs):
         """Show detected stars over stack image
@@ -545,6 +558,7 @@ class Observation(ApertureFluxes):
                 texts = ["Comparison stars", "Target"]
                 viz.circles_legend(colors, texts)
 
+    # TODO Keep but use stack Image
     def show_gaia(self, color="yellow", alpha=1, n=None, idxs=True, limit=-1, fontsize=8, align=False):
         """Overlay Gaia objects on stack image
 
@@ -579,6 +593,7 @@ class Observation(ApertureFluxes):
         _ = viz.plot_marks(*gaias.T, labels if idxs else None, color=color, alpha=alpha, n=n, position="top",
                            fontsize=fontsize)
 
+    # TODO Keep but use stack Image
     def show_tic(self, color="white", alpha=1, n=None, idxs=True, align=True):
         """Overlay TIC objects on stack image
 
@@ -611,6 +626,7 @@ class Observation(ApertureFluxes):
 
         _ = viz.plot_marks(*tics.T, ID if idxs else None, color=color, alpha=alpha, n=n, position="top", fontsize=9, offset=10)
 
+    # TODO replace by stack Image
     def show_cutout(self, star=None, size=200, marks=True,**kwargs):
         """
         Show a zoomed cutout around a detected star or coordinates
@@ -1171,6 +1187,7 @@ class Observation(ApertureFluxes):
         skycoords = SkyCoord(ra=ra, dec=dec, unit=unit)
         return np.array(wcsutils.skycoord_to_pixel(skycoords, self.wcs)).T
 
+    # TODO move to core Image?
     def plot_circle(self, center=None, arcmin=2.5):
         if center is None:
             x, y = self.stars[self.target]

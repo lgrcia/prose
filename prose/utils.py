@@ -341,7 +341,7 @@ def register_args(f):
         self.args = args[1::]
         self.kwargs = kwargs
         return f(*args, **kwargs)
-    return inner
+    return f
 
 
 def cutouts(image, stars, size=15):
