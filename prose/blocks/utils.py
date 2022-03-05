@@ -159,8 +159,8 @@ class SaveReduced(Block):
     def concat(self, block):
         self.files = [*self.files, *block.files]
 
-
-class Video(Block):
+# TODO remove and replace in Calibration pipeline
+class _Video(Block):
     """Build a video of all :code:`Image.data`.
 
     Can be either from raw image or a :code:`int8` rgb image.
@@ -317,49 +317,7 @@ class Flip(Block):
         if flip_value != self.reference_flip_value:
             image.data = image.data[::-1, ::-1]
 
-
-class Plot(Block):
-    """TODO
-
-    Parameters
-    ----------
-    plot_function : functio,
-        A plotting function taking an `Image` as argument and using pyplot
-    destination : str path
-        path of the image to be saved
-    fps : int, optional
-        frame per seconds, by default 10
-    """
-    @register_args
-    def __init__(self, plot_function, destination, fps=10, **kwargs):
-        super().__init__(**kwargs)
-        self.plot_function = plot_function
-        self.plots = []
-        self.destination = destination
-        self.fps = fps
-        self._init_alias = plt.rcParams['text.antialiased']
-        plt.rcParams['text.antialiased'] = False
-        _ = imageio.get_writer(self.destination, mode="I")
-
-    def to_rbg(self):
-        fig = plt.gcf()
-        canvas = FigureCanvasAgg(fig)
-        canvas.draw()
-        width, height = fig.canvas.get_width_height()
-        returned = np.fromstring(canvas.tostring_rgb(), dtype='uint8').reshape(height, width, 3)
-        plt.imshow(returned)
-        plt.close()
-        return returned
-
-    def run(self, image):
-        self.plot_function(image)
-        self.plots.append(self.to_rbg())
-
-    def terminate(self):
-        imageio.mimsave(self.destination, self.plots, fps=self.fps)
-        plt.rcParams['text.antialiased'] = self._init_alias
-
-
+# TODO put into vizualisation and test
 class LivePlot(Block):
     @register_args
     def __init__(self, plot_function=None, sleep=0., size=None, **kwargs):
@@ -394,6 +352,7 @@ class LivePlot(Block):
         plt.close()
 
 
+# TODO document
 class Get(Block):
 
     @register_args
@@ -465,3 +424,21 @@ class XArray(Block):
                 pass
         else:
             self.variables = block.variables.copy()
+
+class LocalInterpolation(Block):
+    
+    def __init__(self, **kargs):
+        super().__init__(**kargs)
+    
+    def run(self, image):
+        image.data[image.data<0] = np.nan
+        nans = np.array(np.where(np.isnan(image.data))).T 
+        padded_data = np.pad(image.data, (1, 1), constant_values=np.nan)
+
+        for i, j in nans + 1:
+            image.data[i-1, j-1] = np.nanmean([
+                padded_data[i, j-1],
+                padded_data[i, j+1],
+                padded_data[i-1, j],
+                padded_data[i+1, j],
+            ])

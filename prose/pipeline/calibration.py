@@ -115,6 +115,8 @@ class Calibration:
         elif isinstance(self._reference, (str, Path)):
             self.reference_fits = self._reference
 
+        self.bad_pixels = bad_pixels
+
         self.calibration_block = blocks.Calibration(
             self.darks, 
             self.flats, 
@@ -138,6 +140,7 @@ class Calibration:
 
         self.detection_s = Sequence([
             self.calibration_block,
+            blocks.LocalInterpolation() if self.bad_pixels else blocks.Pass(),
             blocks.Trim(name="trimming"),
             self.detection,
             blocks.ImageBuffer(name="buffer")
@@ -155,6 +158,7 @@ class Calibration:
 
         self.calibration_s = SequenceObject([
             self.calibration_block,
+            blocks.LocalInterpolation() if self.bad_pixels else blocks.Pass(),
             blocks.Trim(name="trimming", skip_wcs=True),
             blocks.Flip(ref_image, name="flip"),
             self.detection,
