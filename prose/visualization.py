@@ -341,7 +341,7 @@ def show_stars(image, stars=None, highlight=None, size=15, options={}, flip=None
         plt.tight_layout()
 
 
-def plot_marks(x, y, label=None, position="bottom", offset=7, fontsize=12, color=[0.51, 0.86, 1.], ms=12, n=None, inside=True, alpha=1):
+def plot_marks(x, y, label=None, position="bottom", offset=7, fontsize=12, color=[0.51, 0.86, 1.], ms=12, n=None, inside=True, alpha=1, ax=None):
     y_offset = ms + offset
 
     if position == "top":
@@ -360,8 +360,12 @@ def plot_marks(x, y, label=None, position="bottom", offset=7, fontsize=12, color
         elif label is not None:
             label = np.array(label)
 
-    if inside:
+
+    if ax is None:
         ax = plt.gcf().axes[0]
+
+    if inside:
+        ax = ax
         xlim, ylim = np.array(ax.get_xlim()), np.array(ax.get_ylim())
         xlim.sort()
         ylim.sort()
