@@ -107,11 +107,17 @@ class Image:
 
     @property
     def ra(self):
-        return self.get(self.telescope.keyword_ra, None)
+        _ra = self.get(self.telescope.keyword_ra, None)
+        if _ra is not None:
+            _ra = (_ra * self.telescope.ra_unit).to(u.deg)
+        return _ra
 
     @property
     def dec(self):
-        return self.get(self.telescope.keyword_dec, None)
+        _dec = self.get(self.telescope.keyword_dec, None)
+        if _dec is not None:
+            _dec = (_dec * self.telescope.dec_unit).to(u.deg)
+        return _dec
 
     @property
     def flip(self):
@@ -125,7 +131,17 @@ class Image:
     def shape(self):
         return np.array(self.data.shape)
 
-    def show(self, cmap="Greys_r", ax=None, figsize=(10,10), stars=None, stars_labels=True, vmin=True, vmax=None, scale=1.5):
+    def show(self, 
+        cmap="Greys_r", 
+        ax=None, 
+        figsize=(10,10), 
+        stars=None, 
+        stars_labels=True, 
+        vmin=True, 
+        vmax=None, 
+        scale=1.5,
+        frame=False
+        ):
         if ax is None:
             if not isinstance(figsize, (list, tuple)):
                 if isinstance(figsize, (float, int)):
@@ -133,7 +149,10 @@ class Image:
                 else:
                     raise TypeError("figsize must be tuple or list or float or int")
             fig = plt.figure(figsize=figsize)
-            ax = fig.add_subplot(111)
+            if frame:
+                ax = fig.add_subplot(111, projection=self.wcs)
+            else:
+                ax = fig.add_subplot(111)
 
         if vmin is True or vmax is True:
             med = np.nanmedian(self.data)
@@ -141,7 +160,7 @@ class Image:
             vmax = scale*np.nanstd(self.data) + med
             _ = ax.imshow(self.data, cmap=cmap, origin="lower",vmin=vmin,vmax=vmax)
         elif all([vmin, vmax]) is False:
-            _ = ax.imshow(utils.z_scale(self.data), cmap=cmap, origin="lower")
+            _ = ax.imshow(utils.z_scale(self.data, 0.05*scale), cmap=cmap, origin="lower")
         else:
             _ = ax.imshow(self.data, cmap=cmap, origin="lower",vmin=vmin,vmax=vmax)
         
@@ -150,7 +169,13 @@ class Image:
         
         if stars:
             label = np.arange(len(self.stars_coords)) if stars_labels else None
-            viz.plot_marks(*self.stars_coords.T, label=label)
+            viz.plot_marks(*self.stars_coords.T, label=label, ax=ax)
+
+        if frame:
+            overlay = ax.get_coords_overlay(self.wcs)
+            overlay.grid(color='white', ls='dotted')
+            overlay[0].set_axislabel('Right Ascension (J2000)')
+            overlay[1].set_axislabel('Declination (J2000)')
 
     def show_cutout(self, star=None, size=200, marks=True, **kwargs):
         """
@@ -176,7 +201,7 @@ class Image:
         self.show(**kwargs)
         plt.xlim(np.array([-size / 2, size / 2]) + x)
         plt.ylim(np.array([-size / 2, size / 2]) + y)
-        if marks:
+        if marks and hasattr(self, "stars_coords"):
             idxs = np.argwhere(np.max(np.abs(self.stars_coords - [x, y]), axis=1) < size).squeeze()
             viz.plot_marks(*self.stars_coords[idxs].T, label=idxs)
 
@@ -184,16 +209,16 @@ class Image:
     def skycoord(self):
         """astropy SkyCoord object based on header RAn, DEC
         """
-
-        header = self.header
-        ra, ra_unit = header[self.telescope.keyword_ra], self.telescope.ra_unit
-        dec, dec_unit = header[self.telescope.keyword_dec], self.telescope.dec_unit
-        return SkyCoord(ra, dec, frame='icrs', unit=(ra_unit, dec_unit))
+        return SkyCoord(self.ra, self.dec, frame='icrs')
 
 
     @property
     def fov(self):
-        return np.array(self.shape) * self.telescope.pixel_scale.to(u.deg)
+        return np.array(self.shape) * self.pixel_scale.to(u.deg)
+
+    @property
+    def pixel_scale(self):
+        return self.telescope.pixel_scale.to(u.arcsec)
 
 class Block:
     """A ``Block`` is a single unit of processing acting on the ``Image`` object, reading, processing and writing its attributes. When placed in a sequence, it goes through three steps:
@@ -290,7 +315,7 @@ class Sequence:
 
     def run(self, images, show_progress=True):
 
-        self.files_or_images = images if not isinstance(images, (str, Path)) else [images]
+        self.files_or_images = images if not isinstance(images, (str, Path, Image)) else [images]
 
         if show_progress:
             progress = lambda x: tqdm(
