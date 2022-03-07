@@ -26,10 +26,8 @@ def clean_stars_positions(positions, tolerance=50, output_id=False):
     )
     for i, _distances in enumerate(distance_to_others):
         _distances[i] = np.inf
-        close_stars = np.argwhere(_distances < tolerance)
-        if len(close_stars) > 0:
-            keep.append(np.min([close_stars[0][0], i]))
-        else:
+        close_stars = np.flatnonzero(_distances < tolerance)
+        if len(close_stars) == 0:
             keep.append(i)
 
     if output_id:

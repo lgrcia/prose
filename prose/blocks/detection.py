@@ -80,7 +80,7 @@ class DAOFindStars(StarsDetection):
         coordinates = np.transpose(np.array([sources["xcentroid"].data, sources["ycentroid"].data]))
         peaks = sources["peak"]
 
-        image.stars_coords, image.peaks =  self.clean(coordinates, peaks)
+        image.stars_coords, image.peaks =  self.clean(peaks, coordinates)
 
     def citations(self):
         return "photutils", "numpy"
@@ -123,9 +123,8 @@ class SegmentedPeaks(StarsDetection):
                     
         coordinates = np.array([region.weighted_centroid[::-1] for region in regions])
 
-        image.stars_coords =  coordinates
-        image.peaks = fluxes
-        image.regions =  regions
+        image.stars_coords, image.fluxes =  self.clean(fluxes, coordinates)
+        #image.regions =  regions
 
     def citations(self):
         return "numpy", "skimage"
@@ -159,7 +158,7 @@ class SEDetection(StarsDetection):
         coordinates = np.array([sep_data["x"], sep_data["y"]]).T
         fluxes = np.array(sep_data["flux"])
 
-        image.stars_coords, image.peaks =  self.clean(coordinates, fluxes)
+        image.stars_coords, image.peaks =  self.clean(fluxes, coordinates)
 
     def citations(self):
         return "source extractor", "sep"
