@@ -6,7 +6,7 @@ README = (HERE / "README.md").read_text()
 
 setup(
     name="prose",
-    version="1.0.1",
+    version="1.0.2",
     author="Lionel J. Garcia",
     description="Reduction and analysis of FITS telescope observations",
     packages=["prose"],

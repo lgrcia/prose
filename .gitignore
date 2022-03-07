@@ -23,7 +23,6 @@ test/*
 dist
 *.phot*
 docs/build/*
-!docs/build/html
 docs/build/html/_sources
 docs/build/html/notebooks/*.ipynb
 build/lib
