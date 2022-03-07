@@ -105,7 +105,8 @@ def fits_to_df(files, telescope_kw="TELESCOP", verbose=True, hdu=0):
             flip=header.get(telescope.keyword_flip, ""),
             jd=header.get(telescope.keyword_jd, ""),
             proper_date=telescope.date(header),
-            exposure=header.get(telescope.keyword_exposure_time, "")
+            exposure=header.get(telescope.keyword_exposure_time, ""),
+            obs_type=header.get(telescope.keyword_obs_type, "")
         ))
 
 

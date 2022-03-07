@@ -11,7 +11,7 @@ from . import viz
 from astropy.io import fits
 from .telescope import Telescope
 from . import utils
-from astroquery.mast import Catalogs
+#from astroquery.mast import Catalogs
 from astropy.wcs import WCS, utils as wcsutils
 import pandas as pd
 from scipy.stats import binned_statistic
@@ -27,10 +27,11 @@ import shutil
 from pathlib import Path
 from . import twirl
 import io
-from .utils import fast_binning, z_scale, cleanup_host
+from .utils import fast_binning, z_scale, cleanup_host, time_limit
 from .search_db import search_db
 from ldtk import LDPSetCreator, BoxcarFilter, TabulatedFilter
 from ldtk.filters import sdss_r
+import matplotlib.patches as mpatches
 
 warnings.simplefilter('ignore', category=VerifyWarning)
 
@@ -55,6 +56,7 @@ class Observation(ApertureFluxes):
         self.telescope = Telescope.from_name(self.telescope)
 
         self.gaia_data = None
+        self.gaia_id = None
         self.tic_data = None
         self.wcs = WCS(utils.remove_arrays(self.xarray.attrs))
         self._meridian_flip = None
@@ -117,6 +119,18 @@ class Observation(ApertureFluxes):
                 "SKYLEVEL": self.sky,
                 "AIRMASS": self.airmass,
                 "EXPOSURE": self.exptime,
+            }
+        )
+
+        df.to_csv(destination, sep=sep, index=False)
+
+    def to_csv_binned(self, destination, sep=","):
+        b=binning(self.time, self.diff_flux, bins=self.EXPTIME/(3600*24)*30)
+
+        df = pd.DataFrame(
+            {
+                "BJD-TDB" if self.time_format == "bjd_tdb" else "JD-UTC": b[0],
+                "DIFF_FLUX": b[1],
             }
         )
 
@@ -272,7 +286,10 @@ class Observation(ApertureFluxes):
         """
         Predicted midtime of the transit in BJD
         """
-        _t0 = (float(self.FIELDINF.split(',')[1])-float(self.FIELDINF.split(',')[0]))/2 + float(self.FIELDINF.split(',')[0])
+        try:
+            _t0 = (float(self.FIELDINF.split(',')[1])-float(self.FIELDINF.split(',')[0]))/2 + float(self.FIELDINF.split(',')[0])
+        except AttributeError:
+            _t0 = (float(self.EVENDBJD) - float(self.EVSTRBJD))/2 + float(self.EVSTRBJD)
         if _t0 < 2450000:
             _t0+= 2450000
         return _t0
@@ -282,7 +299,10 @@ class Observation(ApertureFluxes):
         """
         Predicted duration of the transit in days
         """
-        _duration = (float(self.FIELDINF.split(',')[1])-float(self.FIELDINF.split(',')[0]))
+        try:
+            _duration = (float(self.FIELDINF.split(',')[1])-float(self.FIELDINF.split(',')[0]))
+        except AttributeError:
+            _duration = (float(self.EVENDBJD) - float(self.EVSTRBJD))
         return _duration
 
     @property
@@ -290,7 +310,10 @@ class Observation(ApertureFluxes):
         """
         Orbital period of the planet in dats
         """
-        _period = float(self.FIELDINF.split(',')[3])
+        try:
+            _period = float(self.FIELDINF.split(',')[3])
+        except AttributeError:
+            _period = float(self.EVPERDAY)
         return _period
     
     @property
@@ -298,7 +321,10 @@ class Observation(ApertureFluxes):
         """
         Predicted depth of the transit.
         """
-        _depth = float(self.FIELDINF.split(',')[2])/1000
+        try:
+            _depth = float(self.FIELDINF.split(',')[2])/1000
+        except AttributeError:
+            _depth = float(self.EVDEPPPT)/1000
         return _depth
 
     # Methods
@@ -405,6 +431,7 @@ class Observation(ApertureFluxes):
 
         coord = self.skycoord
         radius = u.Quantity(cone_radius, u.arcminute)
+        print(radius)
         self.tic_data = Catalogs.query_region(coord, radius, "TIC", verbose=False)
         self.tic_data.sort("Jmag")
 
@@ -422,7 +449,7 @@ class Observation(ApertureFluxes):
     def query_tic_offline(self,cone_radius=None):
         """Query TIC catalog (through MAST) for stars in the field
         """
-        from astroquery.mast import Catalogs
+        #from astroquery.mast import Catalogs
 
         header = self.xarray.attrs
         shape = self.stack.shape
@@ -433,14 +460,23 @@ class Observation(ApertureFluxes):
         radius = u.Quantity(cone_radius, u.arcminute)
 
         
+        #wrapping this in a time_limit context manager to ensure that it doesn't go on forever when it finds too much data
+        with time_limit(30, "Search DB"):
         #calculate the min/max ra/decs to search in the TIC
-        maxDec=u.Quantity(coord.dec+radius, u.deg)
-        minDec=u.Quantity(coord.dec-radius, u.deg)
-        maxRa=u.Quantity(coord.ra+radius, u.deg)
-        minRa=u.Quantity(coord.ra-radius, u.deg)
+            try:    
+                maxDec=u.Quantity(coord.dec+radius, u.deg)
+                minDec=u.Quantity(coord.dec-radius, u.deg)
+                maxRa=u.Quantity(coord.ra+radius, u.deg)
+                minRa=u.Quantity(coord.ra-radius, u.deg)
+                self.tic_data=search_db(minRa.value, maxRa.value, minDec.value, maxDec.value, coord.dec.value)
+            except KeyboardInterrupt:
+                maxDec=u.Quantity(coord.dec+(radius/4), u.deg)
+                minDec=u.Quantity(coord.dec-(radius/4), u.deg)
+                maxRa=u.Quantity(coord.ra+(radius/4), u.deg)
+                minRa=u.Quantity(coord.ra-(radius/4), u.deg)
+                self.tic_data=search_db(minRa.value, maxRa.value, minDec.value, maxDec.value, coord.dec.value)
+        
 
-        #self.tic_data = Catalogs.query_region(coord, radius, "TIC", verbose=False)
-        self.tic_data=search_db(minRa.value, maxRa.value, minDec.value, maxDec.value, coord.dec.value)
         self.tic_data.sort("Jmag")
 
         skycoords = SkyCoord(
@@ -700,7 +736,35 @@ class Observation(ApertureFluxes):
             idxs = np.argwhere(np.max(np.abs(self.stars - [x, y]), axis=1) < size).squeeze()
             viz.plot_marks(*self.stars[idxs].T, label=idxs)
 
-    def plot_comps_lcs(self, n=15, ylim=(0.98, 1.02)):
+    def field_zoom(self):
+        self.show_cutout(size=6*60/self.PIXSCALX, marks=False)
+        search_radius = 60 * 2.5 / self.PIXSCALX
+        target_coord = self.stars[self.target]
+        circle = mpatches.Circle(
+            target_coord,
+            search_radius,
+            fill=None,
+            ec="goldenrod",
+            alpha=0.9)
+        circle2 = mpatches.Circle(
+            target_coord,
+            self.aperture*1.3,
+            fill=None,
+            ec="yellowgreen",
+            alpha=0.8)
+
+        ax = plt.gca()
+        ax.add_artist(circle)
+        ax.add_artist(circle2)
+        plt.annotate("radius {}'".format(2.5),
+            xy=[target_coord[0], target_coord[1] + search_radius + 12],
+            color="goldenrod", ha='center', fontsize=18, va='bottom')
+        plt.annotate("T1",
+            xy=[target_coord[0]-15, target_coord[1] + 15],
+            color="yellowgreen", ha='center', fontsize=13, va='bottom')
+        plt.title(f"{self.name} ASTEP-ANTARCTICA Field Zoom 6' x 6'", fontsize=20)
+
+    def plot_comps_lcs(self, n=15, ylim=None):
         """Plot comparison stars light curves along target star light curve
 
         Parameters
@@ -708,7 +772,7 @@ class Observation(ApertureFluxes):
         n : int, optional
             Number max of comparison to show, by default 5
         ylim : tuple, optional
-            ylim of the plot, by default (0.98, 1.02)
+            ylim of the plot, by default None and autoscale
         """
         idxs = [self.target, *self.xarray.comps.isel(apertures=self.aperture).values[0:n]]
         lcs = [self.xarray.diff_fluxes.isel(star=i, apertures=self.aperture).values for i in idxs]
@@ -717,16 +781,16 @@ class Observation(ApertureFluxes):
             ylim = (self.diff_flux.min() * 0.99, self.diff_flux.max() * 1.01)
 
         offset = ylim[1] - ylim[0]
-
+        
         if len(plt.gcf().axes) == 0:
             plt.figure(figsize=(5, 10))
 
         for i, lc in enumerate(lcs):
             color = "grey" if i != 0 else "black"
-            viz.plot(self.time, lc - i * offset, bincolor=color)
-            plt.annotate(idxs[i], (self.time.min() + 0.005, 1 - i * offset + offset / 3))
+            viz.plot(self.time, lc - lc.mean() - i * offset, bincolor=color)
+            plt.annotate(idxs[i], (self.time.min() + 0.005, - i * offset + offset/3))
 
-        plt.ylim(1 - (i + 0.5) * offset, ylim[1])
+        plt.ylim(-len(lcs)*offset + offset/2, offset/2)
         plt.title("Comparison stars", loc="left")
         plt.grid(color="whitesmoke")
         plt.tight_layout()
@@ -788,7 +852,7 @@ class Observation(ApertureFluxes):
         bins : float, optional
             bin size used to compute error, by default 0.005 (in days)
         """
-        self._check_diff()
+        #self._check_diff()
         viz.plot_rms(
             self.diff_fluxes,
             self.lcs,
@@ -1158,15 +1222,15 @@ class Observation(ApertureFluxes):
         if not inplace:
             return new_self
 
-    def set_tic_target(self, offline=True):
+    def set_tic_target(self, offline=True, cone_radius=None):
 
         if self.telescope.name == 'ASTEP':
             if offline==True:
                 self.query_tic_offline()
             else:
-                self.query_tic()
+                self.query_tic(cone_radius)
         else:
-            self.query_tic()
+            self.query_tic(cone_radius)
         try:
             # TOI to TIC
             if self.tic_id==None:
@@ -1208,6 +1272,7 @@ class Observation(ApertureFluxes):
                 i = np.argwhere(tics == TIC).flatten()
                 i=i[0]
                 self.host_data = cleanup_host(self.tic_data[i])
+                self.gaia_id = self.tic_data[i]['GAIA']
             except (AssertionError,KeyError):
                 raise AssertionError(f"Host data not found")
         else:
@@ -1218,6 +1283,7 @@ class Observation(ApertureFluxes):
             i = np.argwhere(tics == TIC).flatten()
             i=i[0]
             self.host_data = cleanup_host(self.tic_data[i])
+            self.gaia_id = self.tic_data[i]['GAIA']
 
     def convert_flip(self,keyword):
         self.xarray['flip'] = ('time', (self.flip == keyword).astype(int))

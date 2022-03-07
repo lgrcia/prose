@@ -73,7 +73,7 @@ class Report(LatexTemplate):
         os.system(f"pdflatex {self.report_name}")
         os.chdir(cwd)
 
-    def make(self, destination):
+    def make(self, destin ation):
         self.make_report_folder(destination, figures=False)
         shutil.copyfile(path.join(template_folder, "prose-report.cls"), path.join(destination, "prose-report.cls"))
         tex_destination = path.join(self.destination, f"{self.report_name}.tex")
@@ -92,6 +92,7 @@ class Report(LatexTemplate):
 def copy_figures(folder, prefix, destination):
     figures = list(Path(folder).glob("**/*.png"))
     texts = list(Path(folder).glob("**/*.txt"))
+    csvs = list(Path(folder).glob("**/*.csv"))
     new_folder = Path(destination)
     new_folder.mkdir(exist_ok=True)
     for fig in figures:
@@ -100,3 +101,6 @@ def copy_figures(folder, prefix, destination):
     for txt in texts:
         if ".ipynb_checkpoints" not in str(txt):
             shutil.copy(txt, new_folder / (prefix + "_" + txt.name))
+    for csv in csvs:
+        if ".ipynb_checkpoints" not in str(csv):
+            shutil.copy(csv, new_folder / (prefix + "_" + csv.name))

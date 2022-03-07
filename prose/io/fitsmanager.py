@@ -36,6 +36,7 @@ class FilesDataFrame:
         assert len(self._original_files_df) != 0, "No data found"
         self.telescope = None
         self.exposure = None
+        self.obs_type = None
         self.sort_by_date()
 
     def restore(self):
@@ -227,7 +228,7 @@ class FitsManager(FilesDataFrame):
         light_rows = self.files_df.loc[self.files_df["type"].str.contains(self.image_kw)].fillna("")
         observations = (
             light_rows.pivot_table(
-                index=["date", "telescope", "target", "dimensions", "filter", "exposure"],
+                index=["date", "telescope", "target", "dimensions", "filter", "exposure", "obs_type"],
                 aggfunc="size",
             )
                 .reset_index()
@@ -335,6 +336,7 @@ class FitsManager(FilesDataFrame):
             dfs.append(bias)
 
         others = original_fm.get(
+            obs_type=obs.obs_type,
             exposure=obs.exposure,
             telescope=obs.telescope,
             filter=obs["filter"].replace("+", "\+"),

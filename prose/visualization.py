@@ -643,6 +643,16 @@ def plot_expected_transit(time, epoch, period, duration, depth=None, color="gain
         model = transit(time, epoch, duration, depth, period=period).flatten()
         plt.plot(time, model + 1., c="#FFA533")
 
+def plot_expected_transit_astep(time, epoch, period, duration, ingress, egress, depth=None,color="gainsboro"):
+    
+    plt.axvspan(ingress, egress, color=color, alpha=0.02, zorder=-1)
+    plt.axvline(ingress, color=color, alpha=0.3, zorder=-1, label="expected transit")
+    plt.axvline(egress, color=color, alpha=0.3, zorder=-1)
+
+    if depth is not None:
+        model = transit(time, epoch, duration, depth, period=period).flatten()
+        plt.plot(time, model + 1., c="#FFA533")
+
 
 def rename_tab(name):
     """Rename a notebook tab
@@ -668,7 +678,7 @@ def plot_section(y, s, t0, duration, c="C0", y0=1, offset=0.002):
 
 # Debugging helpers
 
-from astroquery.mast import Catalogs
+#from astroquery.mast import Catalogs
 import astropy.units as u
 import numpy as np
 from astropy.wcs import WCS, utils as wcsutils

@@ -14,11 +14,13 @@ def make_lightcurve(phot_path, offline=True):
 
 	#Differential photometry + lightcurve plot
 	obs.broeg2005()
+	obs=obs.sigma_clip()
+	obs=obs.sigma_clip()
 	obs.save()
 	plt.figure()
 	obs.plot()
 	plt.ylim(0.98, 1.02)
-	plt.savefig(os.path.join(Path(phot_path).parent, 'lightcurve.png'))
+	plt.savefig(os.path.join(Path(phot_path).parent, 'lightcurve.jpg'))
 
 	#Systematics and comparison stars plots
 	plt.figure(figsize=(8, 7))
@@ -26,12 +28,12 @@ def make_lightcurve(phot_path, offline=True):
 	obs.plot_comps_lcs()
 	plt.subplot(122)
 	obs.plot_systematics()
-	plt.savefig(os.path.join(Path(phot_path).parent, 'systematics.png'))
+	plt.savefig(os.path.join(Path(phot_path).parent, 'systematics.jpg'))
 
 	#Target PSF plot
 	plt.figure()
 	obs.plot_star_psf()
-	plt.savefig(os.path.join(Path(phot_path).parent, 'psf.png'))
+	plt.savefig(os.path.join(Path(phot_path).parent, 'psf.jpg'))
 
 	#Save target data and systematics to csv file
 	obs.to_csv(os.path.join(Path(phot_path).parent, 'measurements.csv'), sep=',')

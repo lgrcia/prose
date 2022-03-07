@@ -64,10 +64,12 @@ class Summary(Observation, LatexTemplate):
         self.header = "Observation report"
 
     def plot_psf_summary(self):
+        plt.figure()
         self.plot_psf()
         self.style()
 
     def plot_stars(self, size=8):
+        plt.figure()
         self.show_stars(size=size)
         plt.tight_layout()
 
@@ -179,10 +181,13 @@ class Summary(Observation, LatexTemplate):
 
 class TESSSummary(Summary):
 
-    def __init__(self, obs, style="paper", expected=None, template_name="summary.tex"):
+    def __init__(self, obs, style="paper", expected=None, template_name="summary.tex", gaia_id=None):
         Summary.__init__(self, obs, style=style, template_name=template_name)
         self.obstable.insert(0, ("TIC id", self.tic_id))
-        self.obstable.insert(4, ("GAIA id", self.gaia_from_toi))
+        if gaia_id == None:
+            self.obstable.insert(4, ("GAIA id", self.gaia_from_toi))
+        else:
+            self.obstable.insert(4, ("GAIA id", gaia_id))
         self.header = "TESS follow-up"
         self.expected = expected
 

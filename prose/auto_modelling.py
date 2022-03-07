@@ -16,6 +16,8 @@ from astropy.constants import G,M_sun,R_sun, R_earth
 from prose.reports import Report, Summary, TESSSummary, TransitModel
 import corner
 from prose.reports.core import copy_figures
+from pathlib import Path
+import os
 
 
 def fill_table(transitmodel,obs, az_sum, opt):
@@ -45,8 +47,11 @@ def fill_table(transitmodel,obs, az_sum, opt):
 
 def auto_model(phot_path, offline=True):
 	obs = load(phot_path)
-	if obs.period == None:
-		return
+	try:
+		if obs.period == None:
+			return
+	except AttributeError:
+		return 
 	print("Searching the TIC to set host data. This can take several minutes...")
 	obs.set_host_data(offline)
 	print("Done.")
@@ -54,12 +59,44 @@ def auto_model(phot_path, offline=True):
 	obs.estimate_LDC(offline)
 	print("Done.")
 	print(f"Limb darkening coefficients estimated as u1={obs.quad_limb[0][0][0]} and u2={obs.quad_limb[0][0][1]}")
-	print("Checking best polynomial coeffients to detrent the data...")
+	print("Checking best polynomial coeffients to detrend the data...")
 	best = obs.best_polynomial(airmass=2, sky=2, dx=5,dy=5,fwhm=5, add=obs.transit(obs.t0,obs.duration))
 	print("Done.")
 	print(f"Best coefficients are {best}")
 	dm = np.hstack([obs.polynomial(**best),obs.transit(obs.t0,obs.duration)])
 	trend,transit = obs.lstsq(dm,split=-1)
+	
+	#fig = plt.figure(figsize=(12,4))
+	#fig.patch.set_facecolor('xkcd:white')
+	#plt.subplot(121)
+	#plt.title(obs.name)
+	#obs.plot()
+	#plt.plot(obs.time, transit + 1, "--", color="0.5", label="transit")
+	#plt.plot(obs.time,trend+transit, label='best')
+	#viz.plot_transit_window(obs.t0, obs.period, obs.duration, color='orange')
+	#plt.ylim(0.96,1.02)
+	#plt.legend()
+
+	summ=Summary(obs)
+	summ.set_transit(transit)
+	summ.set_trend(trend)
+
+	#plt.subplot(122)
+	#plt.title(obs.name)
+	#plt.plot(obs.time,obs.diff_flux,'.',alpha=0.2,color='gray',label='not detrended')
+	#plt.plot(obs.time,obs.diff_flux - trend +1,'.',color='gray',label='detrended')
+	#plt.plot(obs.time,transit+1,color='orange')
+	summ.plot_lc()
+	#viz.plot_transit_window(obs.t0, obs.period, obs.duration, color='orange')
+	#plt.legend()
+
+	plt.savefig(os.path.join(Path(phot_path).parent, 'transit_trend.png'))
+	plt.close() 
+
+	if any(["TIC" in obs.name, "TOI" in obs.name]): 
+		copy_figures(folder=Path(phot_path).parent,prefix=obs.tfop_prefix,
+			destination=f'/data/results/tess_results/2021_reprocessed/{obs.name}-{obs.date[:4]}-{obs.date[4:6]}-{obs.date[-2:]}')
+
 	rp_guess=np.sqrt(obs.depth)*obs.host_data['R']/earth2sun
 	rp_e=rp_guess/2
 
@@ -133,29 +170,28 @@ def auto_model(phot_path, offline=True):
 	depth = (R_p / (obs.host_data['R']*R_sun))**2 
 
 	print("Building transit model and report summary...")
-	summary = TESSSummary(obs,expected=(obs.t0,obs.duration))
+	summary = TESSSummary(obs,expected=(obs.t0,obs.duration), gaia_id=obs.gaia_id)
 	transitmodel = TransitModel(obs,expected =(obs.t0,obs.duration),transit=opt['transit'], trend= opt['mu']-opt['transit'],rms_bin=5/24/60)
 	fill_table(transitmodel, obs, az_summary, opt)
 
 	report = Report([summary,transitmodel])
-	report.make(f"{obs.denominator}_report")
+	report.make(f"/data/results/astep_results/2021_reprocessed/{obs.denominator}_report")
 	transitmodel.to_csv_report()
 
 	plt.figure()
 	transitmodel.plot_lc_model() 
-	viz.plot_expected_transit(obs.time, obs.t0, obs.period, obs.duration, obs.depth, color='#FFA533')
+	viz.plot_expected_transit_astep(obs.time, obs.t0, obs.period, obs.duration,obs.EVSTRBJD, obs.EVENDBJD, obs.depth, color='#FFA533')
 	plt.ylim(0.95,1.045)
-	plt.savefig(f"{obs.denominator}_report/transitmodel/figures/model.png")
+	plt.savefig(f"/data/results/astep_results/2021_reprocessed/{obs.denominator}_report/transitmodel/figures/model.png")
+	plt.close()
 
 	samples = pm.trace_to_dataframe(trace, varnames=["P", "r",'t0','b'])
 	fig = corner.corner(samples,truths=[opt['P'],opt['r'],opt['t0'],opt['b']])
 	fig.patch.set_facecolor('xkcd:white')
-	plt.savefig(f"{obs.denominator}_report/transitmodel/figures/Corner_plot.png")
+	plt.savefig(f"/data/results/astep_results/2021_reprocessed/{obs.denominator}_report/transitmodel/figures/Corner_plot.png")
+	plt.close()
 
-	report.compile()
+	#report.compile()
 	print("Done")
-
-	if "TOI" in obs.name:
-		copy_figures(folder=f'{obs.denominator}_report',prefix=obs.tfop_prefix,destination=f'{obs.denominator}_report/figures')
 
 	print(f"Modelling and reporting complete. All files can be found in {obs.denominator}_report")

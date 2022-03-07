@@ -8,6 +8,25 @@ import urllib
 from astropy.time import Time
 from datetime import datetime
 import math as mh
+from contextlib import contextmanager
+import threading
+import _thread
+
+class TimeoutException(Exception):
+    def __init__(self, msg=""):
+        self.msg = msg
+
+@contextmanager
+def time_limit(seconds, msg=""):
+    timer = threading.Timer(seconds, lambda: _thread.interrupt_main())
+    timer.start()
+    try:
+        yield
+    except KeyboardInterrupt:
+        raise TimeoutException(f"Timed out for operation {msg}")
+    finally:
+        timer.cancel()
+
 
 
 sun_data={
@@ -25,6 +44,41 @@ sun_data={
 
 earth2sun = (c.R_earth / c.R_sun).value
 
+def make_email_table(obs_):
+    table=f"""
+    <table style='font-family:"Source Sans Pro", Helvetica, sans-serif; font-size: 1.2rem;'>
+        <tr><th>Target Name</th> <td>{obs_.name}</td></tr>
+        <tr><th>TIC ID</th> <td>TIC {obs_.SCINAME}</td></tr>
+        <tr><th>Target Coordinates</th> <td>{obs_.SCIDCRD}</td></tr>
+    </table>
+    <hr style="border-style: dashed;">
+    <table style='font-family:"Source Sans Pro", Helvetica, sans-serif; font-size: 1.2rem;'>
+        <tr><th>Observation</th> <td>{obs_.BEGINOBS.split('T')[0]} from {Time(obs_.jd_utc[0], format='jd').strftime('%Y-%m-%d.%H:%M')} to {Time(obs_.jd_utc[-1], format='jd').strftime('%Y-%m-%d.%H:%M')}</td></tr>
+        <tr><th>Airmass</th> <td>{round(obs_.airmass[0], 3)} - {round(obs_.airmass[-1], 3)}</td></tr>
+        <tr><th>Sky Brightness</th> <td>{round(min(obs_.sky), 3)} - {round(max(obs_.sky), 3)} ADU</td></tr>
+        <tr><th>PSF</th> <td>{round(np.mean(obs_.fwhm), 1)} [{round(min(obs_.fwhm), 1)} - {round(max(obs_.fwhm), 1)}] pix</td></tr>
+        <tr><th>Frames</th> <td>{obs_.NIMAGES}</td></tr>
+        <tr><th>Exptime</th> <td>{obs_.EXPTIME} s</td></tr>
+        <tr><th>Phot. aperture</th> <td>{np.mean(obs_.apertures_radii[obs_.aperture,:]):.2f} pix, {np.mean(obs_.apertures_radii[obs_.aperture,:])*obs_.PIXSCALX:.2f} arcsec</td></tr>
+    </table>
+    <hr style="border-style: dashed;">
+    <h5 style='font-family:"Source Sans Pro", Helvetica, sans-serif; font-size: 1.2rem;'>Expected Transit:</h5>
+    <table style='font-family:"Source Sans Pro", Helvetica, sans-serif; font-size: 1.2rem; border: 1px solid white; border-collapse: collapse;'>
+        <tr>
+            <th style='border: 1px solid black;  border-left: 0; border-top: 0;  text-align: center;'> Ingress [TBD] </th>
+            <th style='border: 1px solid black;   border-top: 0; text-align: center;'> Egress [TBD] </th>
+            <th style='border: 1px solid black;   border-top: 0;' text-align: center;> Depth [ppt] </th>
+            <th style='border: 1px solid black; border-top: 0; border-right: 0; text-align: center;'> Period [days] </th>
+        </tr>
+        <tr>
+            <td style='border: 1px solid black;  border-left: 0; border-bottom: 0; text-align: center;'>{round(float(obs_.EVSTRBJD)-2450000, 5)}</td>
+            <td style='border: 1px solid black; border-bottom: 0; text-align: center;'>{round(float(obs_.EVENDBJD)-2450000, 5)}</td>
+            <td style='border: 1px solid black; border-bottom: 0; text-align: center;'>{obs_.EVDEPPPT}</td>
+            <td style='border: 1px solid black; border-bottom: 0; border-right: 0; text-align: center;'>{obs_.EVPERDAY}</td>
+        </tr>
+    </table>
+    """
+    return table
 
 def remove_sip(dict_like):
 

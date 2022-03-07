@@ -49,6 +49,11 @@ class Telescope:
         self.keyword_start_date = "BEGINOBS"
         self.keyword_sci_name = 'SCINAME'
         self.keyword_field_info = 'FIELDINF'
+        self.keyword_event_start = 'EVSTRBJD'
+        self.keyword_event_end = 'EVENDBJD'
+        self.keyword_depth = 'EVDEPPPT'
+        self.keyword_period = 'EVPERDAY'
+        self.keyword_obs_type = 'OBSTYPE'
 
         # Specs
         self.name = "Unknown"
