@@ -134,7 +134,7 @@ class Calibration:
             Destination where to save the calibrated images folder
         """
         self.destination = destination
-        gif_block = blocks.Video(self.gif_path, name="video", from_fits=True) if gif else blocks.Pass()
+        gif_block = blocks.RawVideo("data", self.gif_path, name="video", function=utils.z_scale) if gif else blocks.Pass()
 
         self.make_destination()
 
@@ -146,6 +146,7 @@ class Calibration:
             blocks.ImageBuffer(name="buffer")
         ], loader=self.loader)
 
+        # TODO Convert all images (stack, ref) to Image objects
         self.detection_s.run(self.reference_fits, show_progress=False)
 
         ref_image = self.detection_s.buffer.image
