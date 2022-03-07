@@ -16,7 +16,7 @@ import numpy as np
 from .utils import register_args
 from astropy.coordinates import SkyCoord
 import astropy.units as u
-
+from astropy.coordinates import Angle
 
 class Image:
 
@@ -109,14 +109,14 @@ class Image:
     def ra(self):
         _ra = self.get(self.telescope.keyword_ra, None)
         if _ra is not None:
-            _ra = (_ra * self.telescope.ra_unit).to(u.deg)
+            _ra = Angle(_ra, self.telescope.ra_unit).to(u.deg)
         return _ra
 
     @property
     def dec(self):
         _dec = self.get(self.telescope.keyword_dec, None)
         if _dec is not None:
-            _dec = (_dec * self.telescope.dec_unit).to(u.deg)
+            _dec = Angle(_dec, self.telescope.dec_unit).to(u.deg)
         return _dec
 
     @property
