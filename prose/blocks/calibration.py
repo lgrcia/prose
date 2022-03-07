@@ -16,7 +16,7 @@ def easy_median(images):
     images = np.array(images)
     shape_divisors = utils.divisors(images.shape[1])
     n = shape_divisors[np.argmin(np.abs(50 - shape_divisors))]
-    return np.concatenate([np.median(im, axis=0) for im in np.split(images, n, axis=1)])
+    return np.concatenate([np.nanmedian(im, axis=0) for im in np.split(images, n, axis=1)])
 
 
 class Calibration(Block):
@@ -63,11 +63,19 @@ class Calibration(Block):
             self._produce_master("flat")
 
         if bad_pixels:
-            if self.master_dark is not None:
-                outliers = np.abs(self.master_dark - 1) > threshold*np.std(self.master_dark)
-                self.bad_pixels = np.unravel_index(np.flatnonzero(outliers), self.master_dark.shape)
+            data = self.master_dark
+            if data is not None:
+                outliers = np.abs(data - np.median(data)) > threshold*np.std(data)
+                data[outliers] = np.nan
+            # TEST
             else:
                 raise AssertionError("bad pixels can only be computed if darks are provided")
+            data = self.master_flat
+            if np.shape(data) == 2:
+                outliers = np.abs(data - np.median(data)) > threshold*np.std(data)
+                data[outliers] = np.nan
+            else:
+                pass
         else:
             self.bad_pixels = None
 
@@ -110,29 +118,29 @@ class Calibration(Block):
                 self.master_flat = med.copy()
             del _master
 
-    def plot_masters(self):
-        plt.figure(figsize=(40, 10))
+    def show_masters(self, figsize=(20, 80)):
+        plt.figure(figsize=figsize)
         plt.subplot(131)
         plt.title("Master bias")
-        im = plt.imshow(utils.z_scale(self.master_bias), cmap="Greys_r")
+        im = plt.imshow(utils.z_scale(self.master_bias), cmap="Greys_r", origin="lower")
         viz.add_colorbar(im)
         plt.subplot(132)
         plt.title("Master dark")
-        im = plt.imshow(utils.z_scale(self.master_dark), cmap="Greys_r")
+        im = plt.imshow(utils.z_scale(self.master_dark), cmap="Greys_r", origin="lower")
         viz.add_colorbar(im)
         plt.subplot(133)
         plt.title("Master flat")
-        im = plt.imshow(utils.z_scale(self.master_flat), cmap="Greys_r")
+        im = plt.imshow(utils.z_scale(self.master_flat), cmap="Greys_r", origin="lower")
         viz.add_colorbar(im)
 
-    def run(self, image, **kwargs):
+    def show_bad_pixels(self):
+        pass
+
+    def run(self, image):
         data = image.data
         calibrated_image = self.calibration(data, image.exposure)
-        calibrated_image[calibrated_image < 0] = 0.
+        calibrated_image[calibrated_image < 0] = np.nan
         calibrated_image[~np.isfinite(calibrated_image)] = -1
-        if self.bad_pixels is not None:
-            calibrated_image[self.bad_pixels] = -1
-
         image.data = calibrated_image
 
     def citations(self):

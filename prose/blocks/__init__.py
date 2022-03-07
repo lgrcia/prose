@@ -9,6 +9,7 @@ from .utils import *
 from .shepard import  Shepard
 from ..utils import register_args
 from . import catalogs
+from .vizualisation import RawVideo
 
 
 # import prose

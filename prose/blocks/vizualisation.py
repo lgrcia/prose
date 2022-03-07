@@ -33,8 +33,7 @@ class _Video(Block):
         self.images = []
         self.fps = fps
         self.checked_writer = False
-        _ = imageio.get_writer(self.destination, mode="I")
-
+        
     def run(self, image):
         if not self.checked_writer:
             _ = imageio.get_writer(self.destination, mode="I")

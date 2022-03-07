@@ -433,12 +433,14 @@ class LocalInterpolation(Block):
     def run(self, image):
         image.data[image.data<0] = np.nan
         nans = np.array(np.where(np.isnan(image.data))).T 
-        padded_data = np.pad(image.data, (1, 1), constant_values=np.nan)
+        padded_data = np.pad(image.data.copy(), (1, 1), constant_values=np.nan)
 
         for i, j in nans + 1:
-            image.data[i-1, j-1] = np.nanmean([
+            mean = np.nanmean([
                 padded_data[i, j-1],
                 padded_data[i, j+1],
                 padded_data[i-1, j],
                 padded_data[i+1, j],
             ])
+            padded_data[i, j] = mean
+            image.data[i-1, j-1] = mean

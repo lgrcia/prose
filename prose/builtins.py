@@ -1,4 +1,7 @@
 
+from numpy import trim_zeros
+
+
 default = dict(
     # Name(s)
     # -------
@@ -177,6 +180,7 @@ spirit = dict(
     names = ["PIRT1280SciCam2"],
     pixel_scale = 0.306,
     ra_unit= "hourangle",
+    trimming = (0, 0),
 )
 
 built_in_telescopes = {telescope["name"].lower(): telescope for telescope in [
