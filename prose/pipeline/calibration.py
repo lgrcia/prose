@@ -15,13 +15,6 @@ class Calibration:
 
     Parameters
     ----------
-    reference : float or str, optional
-        Reference image to use for alignment:
-         
-        - if ``float``: from 0 (first image) to 1 (last image)
-        - if ``str``: path of the reference image
-        
-        by default 1/2
     overwrite : bool, optional
         whether to overwrite existing products, by default False
     flats : list, optional
@@ -30,8 +23,6 @@ class Calibration:
         list of bias images paths, by default None
     darks : list, optional
         list of darks images paths, by default None
-    images : list, optional
-        list of images paths to be calibrated, by default None
     psf : `Block`, optional
         a `Block` to be used to characterise the effective psf, by default None, setting a default blocks.Moffat2D
     detection: `Block`, optional
@@ -112,24 +103,35 @@ class Calibration:
             bad_pixels=bad_pixels, 
             name="calibration")
 
-    def run(self, images, reference, destination, gif=True):
+    def run(self, images, destination=None, reference=1/2, gif=True):
         """Run the calibration pipeline
 
         Parameters
         ----------
-        destination : str
-            Destination where to save the calibrated images folder
+        images : list, optional
+            List of images paths to be calibrated
+        destination : str, optional
+            Destination where to save the calibrated images folder, by default reference Image.label
+        reference : float or str, optional
+            Reference image to use for alignment:
+                - if ``float``: from 0 (first image) to 1 (last image)
+                - if ``str``: path of the reference image
+            by default 1/2
+        gif: bool, optional
+            Wether to produce a gif of the sequence
         """
-
-        # Creating reduced image folder
-        self.destination = Path(destination)
-        self.destination.mkdir(exist_ok=True)
 
         # reference image
         if isinstance(reference, (int, float)):
             self.reference = self.loader(images[int(reference * len(images))])
         elif isinstance(self._reference, (str, Path)):
             self.reference = self.loader(reference)
+
+        # Creating reduced image folder
+        if destination is None:
+            destination = self.reference.label
+        self.destination = Path(destination)
+        self.destination.mkdir(exist_ok=True)
 
         # Detection sequence
         # ------------------

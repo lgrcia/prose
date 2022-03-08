@@ -130,8 +130,21 @@ class Image:
 
     @property
     def date(self):
-        dparser.parse(self.header[self.telescope.keyword_observation_date])
+        return dparser.parse(self.header[self.telescope.keyword_observation_date])
 
+    @property
+    def label(self):
+        return "_".join([
+            self.telescope.name,
+            self.date.strftime("%Y%m%d"),
+            self.header.get(self.telescope.keyword_object, "?"),
+            self.filter
+        ])
+
+    @property
+    def filter(self):
+        return self.header.get(self.telescope.keyword_filter, None)
+    
     def show(self, 
         cmap="Greys_r", 
         ax=None, 
