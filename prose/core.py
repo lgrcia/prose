@@ -1,3 +1,4 @@
+from datetime import timedelta
 from tqdm import tqdm
 from astropy.io import fits
 from .console_utils import TQDM_BAR_FORMAT
@@ -131,6 +132,10 @@ class Image:
     @property
     def date(self):
         return dparser.parse(self.header[self.telescope.keyword_observation_date])
+
+    @property
+    def night_date(self):
+        return (dparser.parse(self.header[self.telescope.keyword_observation_date]) - timedelta(hours=-15)).date()
 
     @property
     def label(self):
