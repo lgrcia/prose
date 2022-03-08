@@ -83,6 +83,7 @@ europa = dict(
 artemis = dict(
     speculoos_south,
     name = "Artemis",
+    names = ["Artemis","ACP->Artemis"],
     ra_unit = "hourangle",
     latlong = [28.4754, -16.3089],
     TTF_link = "https://astro.swarthmore.edu/telescope/tess-secure/print_eclipses.cgi?observatory_string=28.2999%3B-16.5058%3BAtlantic%2FCanary%3"
