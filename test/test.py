@@ -29,7 +29,13 @@ class TestReduction(unittest.TestCase):
 
     def test_reduction(self):
         
-        generate_prose_reduction_dataset(RAW, n_images=3)
+        # generate dataset
+        import numpy as np
+        from prose.tutorials import simulate_observation
+
+        time = np.linspace(0, 0.15, 30) + 2450000
+        target_dflux = 1 + np.sin(time*100)*1e-2
+        simulate_observation(time, target_dflux, RAW)
         
         Telescope({
             "name": "fake_telescope",
@@ -39,18 +45,17 @@ class TestReduction(unittest.TestCase):
 
         fm = FitsManager(RAW, depth=2)
         destination = fm.obs_name
-        calib = Calibration(**fm.images_dict, overwrite=True)
-
-        calib.run(destination)
+        calib = Calibration(**fm.observation_files(0), overwrite=True)
+        calib.run(fm.images, 1/2, destination)
 
         photometry = AperturePhotometry(
             files=calib.images,
             stack=calib.stack,
             overwrite=True
         )
-        photometry.run(calib.phot_path)
+        photometry.run(calib.phot)
 
-        o = load(calib.phot_path)
+        o = load(calib.phot)
         o.target = 0
         o.broeg2005(cut=True)
         o.broeg2005(cut=False)

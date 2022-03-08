@@ -48,7 +48,7 @@ class _Video(Block):
 
 class RawVideo(_Video):
     
-    def __init__(self, attribute, destination, fps=10, function=None, **kwargs):
+    def __init__(self, destination, attribute="data", fps=10, function=None, **kwargs):
         super().__init__(destination, fps=fps, **kwargs)
         if function is None:
             def _donothing(data): return data

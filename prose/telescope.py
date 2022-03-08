@@ -7,6 +7,7 @@ from warnings import warn
 from .console_utils import info
 from .builtins import default
 import astropy.units as u
+from dateutil import parser as dparser
 
 def str_to_astropy_unit(unit_string):
     return u.__dict__[unit_string]
@@ -187,16 +188,8 @@ class Telescope:
         
         return telescope
 
-    # TODO: explain in documentation
     def date(self, header):
-        _date = header.get(self.keyword_observation_date, None)
-        if _date is None:
-            _date = "2000-01-01T00:00:00.000"
-        else:
-            if self.keyword_observation_time is not None:
-                _date = _date + "T" + header.get(self.keyword_observation_time, "00:00:00.000")
-
-        return _date
+        return dparser.parse(header.get(self.keyword_observation_date, ""))
 
     def image_type(self, header):
         return header.get(self.keyword_image_type, "").lower()

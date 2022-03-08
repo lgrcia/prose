@@ -102,12 +102,12 @@ def fits_to_df(files, telescope_kw="TELESCOP", instrument_kw="INSTRUME", verbose
             verbose = False
 
         if telescope_id != last_telescope:
-            telescope = Telescope.from_names(header[instrument_kw], header[telescope_kw])
+            telescope = Telescope.from_names(header.get(instrument_kw, ""), header.get(telescope_kw, ""))
             last_telescope = telescope_id
 
         df_list.append(dict(
             path=i,
-            date=telescope.date(header),
+            date=telescope.date(header).isoformat(),
             telescope=telescope.name,
             type=telescope.image_type(header),
             target=header.get(telescope.keyword_object, ""),

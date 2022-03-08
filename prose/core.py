@@ -17,6 +17,7 @@ from .utils import register_args
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 from astropy.coordinates import Angle
+from dateutil import parser as dparser
 
 class Image:
 
@@ -79,10 +80,6 @@ class Image:
             location=self.telescope.earth_location).utc.value
 
     @property
-    def date(self):
-        return self.telescope.date(self.header)
-
-    @property
     def bjd_tdb(self):
         jd_bjd = self.get(self.telescope.keyword_bjd, None)
         if jd_bjd is not None:
@@ -130,6 +127,10 @@ class Image:
     @property
     def shape(self):
         return np.array(self.data.shape)
+
+    @property
+    def date(self):
+        dparser.parse(self.header[self.telescope.keyword_observation_date])
 
     def show(self, 
         cmap="Greys_r", 

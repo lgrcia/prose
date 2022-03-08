@@ -16,6 +16,7 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 import time
 import xarray as xr
 from ..utils import register_args
+from pathlib import Path
 
 
 class Stack(Block):
@@ -131,9 +132,8 @@ class SaveReduced(Block):
     def __init__(self, destination, overwrite=False, **kwargs):
 
         super().__init__(**kwargs)
-        self.destination = destination
-        if not path.exists(self.destination):
-            os.mkdir(self.destination)
+        self.destination = Path(destination)
+        self.destination.mkdir(exist_ok=True)
         self.overwrite = overwrite
         self.files = []
 
