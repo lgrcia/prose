@@ -63,8 +63,11 @@ class FitsManager:
         
         if folder is not None:
             self.scan_files(folder, extension, batch_size=batch_size, depth=depth)
-        else:
-            raise AssertionError(f"No files with extension '{extension}'found")
+        # else:
+        #     raise AssertionError(f"No files with extension '{extension}'found")
+
+        _observations = self.observations(show=False, index=False)
+        self._observations = np.array([f"{o[0]}_{o[1]}_{o[2]}_{o[3]}" for o in _observations])
 
     def scan_files(self, folder, extension, batch_size=None, verbose=True, depth=0):
         files = get_files(extension, folder, depth=depth)
@@ -110,7 +113,7 @@ class FitsManager:
         txt = []
         fields = ["date", "telescope", "target", "filter", "type", "quantity"]
         
-        observations = self.observations(telescope="*", target="*", date="*", afilter="*", show=False)
+        observations = self.observations(telescope="*", target="*", date="*", afilter="*", show=False, index=False)
         observations = [list(o) for o in observations]
         if len(observations):
             for i, obs in enumerate(observations):
@@ -119,7 +122,7 @@ class FitsManager:
             txt.append(tabulate.tabulate(observations, headers=["index", *fields], tablefmt="fancy_grid"))
             
         calibs = [
-            self.observations(telescope="*", target="*", date="*", afilter="*", imtype=imtype, show=False)
+            self.observations(telescope="*", target="*", date="*", afilter="*", imtype=imtype, show=False, index=False)
             for imtype in ["bias", "dark", "flat"]
         ]
         calibs = [c for ca in calibs for c in ca] # flattening
@@ -129,7 +132,7 @@ class FitsManager:
                 txt.append("Calibrations:")
                 txt.append(tabulate.tabulate(calibs, headers=fields, tablefmt="fancy_grid"))
             
-        reduced = self.observations(telescope="*", target="*", date="*", afilter="*", imtype="reduced", show=False)
+        reduced = self.observations(telescope="*", target="*", date="*", afilter="*", imtype="reduced", show=False, index=False)
         if len(reduced):
             txt.append("Reduced:")
             txt.append(tabulate.tabulate(reduced, headers=fields, tablefmt="fancy_grid"))
@@ -141,7 +144,7 @@ class FitsManager:
         else:
             print(txt)
         
-    def observations(self, telescope="", target="", date="", afilter="", imtype="light", show=True):
+    def observations(self, telescope="", target="", date="", afilter="", imtype="light", show=True, index=True):
         fields = ["date", "telescope", "target", "filter", "type", "quantity"]
         telescope=telescope.replace("*", "%")
         target=target.replace("*", "%")
@@ -161,6 +164,15 @@ class FitsManager:
                 GROUP BY date, telescope, target, filter, type ORDER BY date
                 """
                 , {"telescope":telescope, "target":target, "date": date, "filter":afilter, "imtype":imtype}))
+        
+        if index:
+            fields.insert(0, "index")
+            if len(result) > 0:
+                for i, r in enumerate(result):
+                    result[i] = list(r)
+                    j = np.flatnonzero(self._observations == f"{r[0]}_{r[1]}_{r[2]}_{r[3]}")[0]
+                    result[i].insert(0, j)
+        
         if show:
             print(tabulate.tabulate(result, headers=fields, tablefmt="fancy_grid"))
         else: 
@@ -187,7 +199,7 @@ class FitsManager:
                 , {"telescope":telescope, "target":target, "date": date, "filter":afilter, "imtype":imtype}))
         
         return [f[0] for f in files_paths]
-        
+
     def observation_files(self, i, min_days = 100000, max_days = 0, same_telescope=True, lights="images"):
         """Return a dictionary of all the files (including calibration ones) corresponding to a given observation.
 
@@ -213,7 +225,7 @@ class FitsManager:
                 - ``images` for the science images
                 - ``flats``, ``darks`` and ``bias`` for the corresponding calibration images
         """
-        obs = self.observations(show=False)
+        obs = self.observations(show=False, index=False)
         if len(obs) == 0:
             return None
         elif i>len(obs)-1:
@@ -322,7 +334,7 @@ class FitsManager:
         return self.files(imtype="reduced")
     
     def products_denominator(self, i=0):
-        date, telescope, target, afilter, _, _ = self.observations(show=False)[i]
+        date, telescope, target, afilter, _, _ = self.observations(show=False, index=False)[i]
         return f"{telescope}_{date.replace('-', '')}_{target}_{afilter}"
     
     @property
