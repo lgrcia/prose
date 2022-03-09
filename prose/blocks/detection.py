@@ -103,7 +103,7 @@ class SegmentedPeaks(StarsDetection):
         wether to sort stars coordinates from the highest to the lowest intensity, by default True
     """
     @register_args
-    def __init__(self, unit_euler=True, threshold=2, **kwargs):
+    def __init__(self, unit_euler=False, threshold=4, **kwargs):
         super().__init__(**kwargs)
         self.threshold = threshold
         self.unit_euler = unit_euler

@@ -98,8 +98,8 @@ class AffineTransform(Block):
 
         if self.data:
             try:
-                image.data[image.data<0] = np.nan
-                image.data = nan_gaussian_filter(image.data, sigma=1.)
+                #image.data[image.data<0] = np.nan
+                #image.data = nan_gaussian_filter(image.data, sigma=1.)
                 image.data = warp(
                     image.data, 
                     transform.inverse, 

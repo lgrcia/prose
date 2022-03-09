@@ -181,7 +181,7 @@ class Calibration:
             blocks.AffineTransform(stars=True, data=True) if self.twirl else blocks.Pass(),
             blocks.LivePlot(plot_function, size=(10, 10)) if self.show else blocks.Pass(),
             blocks.Stack(self.stack_path, header=self.reference.header, overwrite=self.overwrite, name="stack"),
-            blocks.RawVideo(self.destination / "movie.gif", function=utils.z_scale) if gif else blocks.Pass(),
+            blocks.RawVideo(self.destination / "movie.gif", function=utils.z_scale, scale=0.25) if gif else blocks.Pass(),
         ], name="Calibration", loader=self.loader)
 
         self.calibration.run(images, show_progress=self.verbose)

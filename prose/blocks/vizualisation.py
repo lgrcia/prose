@@ -48,20 +48,20 @@ class _Video(Block):
 
 class RawVideo(_Video):
     
-    def __init__(self, destination, attribute="data", fps=10, function=None, **kwargs):
+    def __init__(self, destination, attribute="data", fps=10, function=None, scale=1, **kwargs):
         super().__init__(destination, fps=fps, **kwargs)
         if function is None:
             def _donothing(data): return data
             function = _donothing
         
         self.function = function
-            
+        self.scale = scale
         self.attribute = attribute
     
     def run(self, image):
         super().run(image)
         data = self.function(image.__dict__[self.attribute])
-        self.images.append(im_to_255(data, factor=1))
+        self.images.append(im_to_255(data, factor=self.scale))
         
         
 class PlotVideo(_Video):
