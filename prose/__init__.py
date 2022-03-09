@@ -20,3 +20,6 @@ from .observations import Observations
 
 def load(photfile):
     return Observation(photfile)
+
+from pkg_resources import get_distribution
+__version__ = get_distribution('prose').version
