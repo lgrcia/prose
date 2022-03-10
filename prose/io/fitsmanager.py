@@ -46,7 +46,7 @@ class FitsManager:
             by default ".f*ts*"
     """
     
-    def __init__(self, folder=None, depth=0, hdu=0, extension=".f*ts*", file=None, batch_size=None):
+    def __init__(self, folder=None, depth=0, hdu=0, extension=".f*t*", file=None, batch_size=None):
         if file is None:
             file = ":memory:"
 

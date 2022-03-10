@@ -1,5 +1,5 @@
 from photutils.centroids import centroid_sources, centroid_2dg
-from prose import Block
+from .. import Block
 import numpy as np
 from os import path
 from prose import CONFIG

@@ -8,7 +8,7 @@ from astropy.modeling.fitting import LevMarLSQFitter
 from photutils import CircularAperture, CircularAnnulus
 from .. import FitsManager
 from photutils.psf import IntegratedGaussianPRF, DAOGroup, BasicPSFPhotometry
-from ..core import Block
+from .. import Block
 from ..utils import register_args
 try:
     import sep

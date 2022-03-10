@@ -4,7 +4,7 @@ from scipy.spatial import KDTree
 from ..twirl import find_transform
 from ..twirl import utils as tutils
 from skimage.transform import AffineTransform as skAT
-from ..core import Block
+from ..block import Block
 from ..utils import register_args
 
 def distance(p1, p2):

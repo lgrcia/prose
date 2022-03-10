@@ -7,7 +7,7 @@ from astropy.table import Table
 from astropy.nddata import NDData
 from photutils.psf import extract_stars
 from astropy.stats import gaussian_sigma_to_fwhm
-from ..core import Block
+from .. import Block
 import matplotlib.pyplot as plt
 from collections import OrderedDict
 from ..utils import fast_binning

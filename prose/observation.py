@@ -1,3 +1,4 @@
+from calendar import c
 from . import Image
 import matplotlib.pyplot as plt
 import numpy as np
@@ -26,9 +27,9 @@ import shutil
 from pathlib import Path
 from . import twirl
 import io
-from .utils import fast_binning, z_scale
+from .utils import fast_binning, z_scale, clean_header
 from .console_utils import info
-from dateutil import parser as dparser
+from . import blocks
 
 warnings.simplefilter('ignore', category=VerifyWarning)
 
@@ -57,6 +58,11 @@ class Observation(ApertureFluxes):
         self.gaia_data = None
         self.tic_data = None
         self._meridian_flip = None
+
+        self._check_stack()
+        self.stack = Image(data=self.x["stack"].values, header=clean_header(self.x.attrs))
+        if "stars" in self.x:
+            self.stack.stars_coords = self.x.stars.values
 
         has_bjd = hasattr(self.xarray, "bjd_tdb")
         if has_bjd:
@@ -126,48 +132,13 @@ class Observation(ApertureFluxes):
         destination : str, optional
             path to phot file, by default None
         """
+        self.xarray.attrs.update(self.stack.header)
         self.xarray.to_netcdf(self.phot if destination is None else destination)
         info(f"saved {self.phot}")
-
-    def export_stack(self, destination, **kwargs):
-        """Export stack to FITS file
-
-        Parameters
-        ----------
-        destination : str
-            path of FITS to export
-        """
-        header = {name: value for name, value in self.xarray.attrs.items() if name.isupper()}
-        data = self.stack
-
-        hdul = fits.HDUList([fits.PrimaryHDU(data=data, header=fits.Header(header))])
-        hdul.writeto(destination, **kwargs)
-
-    def import_stack(self, fitsfile):
-        """Import FITS as stack to current obs (including WCS) - do not forget to save to keep it
-
-        Parameters
-        ----------
-        fitsfile : str
-            path of FITS stack to import
-        """
-        data = fits.getdata(fitsfile)
-        header = fits.getheader(fitsfile)
-
-        self.wcs = WCS(header)
-        self.xarray.attrs.update(utils.header_to_cdf4_dict(header))
-        self.xarray["stack"] = (('w', 'h'), data)
 
     # Convenience
     # -----------
 
-    # TODO replace from stack Image
-    @property
-    def skycoord(self):
-        """astropy SkyCoord object for the target
-        """
-        return SkyCoord(self.RA, self.DEC, frame='icrs', unit=(self.telescope.ra_unit, self.telescope.dec_unit))
-    
     @property
     def simbad_url(self):
         """
@@ -182,12 +153,16 @@ class Observation(ApertureFluxes):
         """
         simbad query url for specified target
         """
-        return f"http://simbad.u-strasbg.fr/simbad/sim-coo?Coord={self.RA}+{self.DEC}&CooFrame=FK5&CooEpoch=2000&CooEqui=" \
+        ra = str(self.stack.ra.to(u.hourangle))
+        dec = str(self.stack.dec.to(u.deg))
+
+        return f"http://simbad.u-strasbg.fr/simbad/sim-coo?Coord={ra}+{dec}&CooFrame=FK5&CooEpoch=2000&CooEqui=" \
                "2000&CooDefinedFrames=none&Radius=2&Radius.unit=arcmin&submit=submit+query&CoordList="
 
     # TODO add to core Image and replace by stack Image
+
     @property
-    def denominator(self):
+    def label(self):
         """A conveniant name for the observation: {telescope}_{date}_{name}_{filter}
 
         Returns
@@ -195,7 +170,7 @@ class Observation(ApertureFluxes):
         [type]
             [description]
         """
-        return f"{self.telescope.name}_{self.date_ymd}_{self.name}_{self.filter}"
+        return self.stack.label
 
     @property
     def meridian_flip(self):
@@ -229,12 +204,11 @@ class Observation(ApertureFluxes):
 
     @property
     def date(self):
-        return dparser.parse(self.x.attrs["date"])
+        return self.stack.date
 
-    # TODO add to core Image and replace by stack Image
     @property
-    def date_ymd(self):
-        return self.date.strftime("%Y%m%d")
+    def night_date(self):
+        return self.stack.night_date
 
     # TESS specific methods
     # --------------------
@@ -273,11 +247,7 @@ class Observation(ApertureFluxes):
     # TODO replace by stack Image methods
     @property
     def wcs(self):
-        return WCS(utils.remove_arrays(self.xarray.attrs))
-    
-    @wcs.setter
-    def wcs(self, new_wcs):
-        return 
+        return self.stack.wcs
 
     # Methods
     # -------
@@ -423,141 +393,6 @@ class Observation(ApertureFluxes):
     # Plot
     # ----
 
-    # TODO replace by stack Image
-    def show(self, size=10, flip=False, zoom=False, contrast=0.05, wcs=False, cmap="Greys_r", sigclip=None, vmin=None,vmax=None):
-        """Show stack image
-
-        Parameters
-        ----------
-        size : int, optional
-           size of the square figure, by default 10
-        flip : bool, optional
-            , by default False
-        zoom : bool, optional
-            whether to include a zoom inlay in the image, by default False
-        contrast : float, optional
-            contrast for the Zscale of image, by default 0.05
-        wcs : bool, optional
-            whether to show grid ans axes to world coordinate
-        """
-        if self.target == -1:
-            zoom = False
-
-        self._check_stack()
-
-        fig = plt.figure(figsize=(size, size))
-        fig.patch.set_facecolor('white')
-
-        image = self.stack.copy()
-
-        if flip:
-            image = image[::-1, ::-1]
-
-        if sigclip is not None:
-            mean, median, std = sigma_clipped_stats(image)
-            image[image - median < 2 * std] = median
-
-        if wcs:
-            ax = plt.subplot(projection=self.wcs, label='overlays')
-        else:
-            ax = fig.add_subplot(111)
-        if vmin is True or vmax is True:
-            med = np.median(image)
-            vmin = med
-            vmax = 2*np.std(image) + med
-            _ = ax.imshow(image, cmap=cmap, origin="lower",vmin=vmin,vmax=vmax)
-        elif all([vmin, vmax]) is False:
-            _ = ax.imshow(utils.z_scale(image,c=contrast), cmap=cmap, origin="lower")
-        else:
-            _ = ax.imshow(image, cmap=cmap, origin="lower",vmin=vmin,vmax=vmax)
-
-        if wcs:
-            ax.coords.grid(True, color='white', ls='solid', alpha=0.3)
-            ax.coords[0].set_axislabel('Galactic Longitude')
-            ax.coords[1].set_axislabel('Galactic Latitude')
-
-            overlay = ax.get_coords_overlay('fk5')
-            overlay.grid(color='white', ls='--', alpha=0.3)
-            overlay[0].set_axislabel('Right Ascension (J2000)')
-            overlay[1].set_axislabel('Declination (J2000)')
-
-    def _check_show(self, **kwargs):
-
-        axes = plt.gcf().axes
-
-        if len(axes) == 0:
-            self.show(**kwargs)
-
-    # TODO replace by stack Image
-    def show_stars(self, size=10, view=None, n=None, flip=False,
-                   comp_color="yellow", color=[0.51, 0.86, 1.], stars=None, legend=True, **kwargs):
-        """Show detected stars over stack image
-
-
-        Parameters
-        ----------
-        size : int, optional
-            size of the square figure, by default 10
-        flip : bool, optional
-            whether to flip image, by default False
-        view : str, optional
-            "all" to see all stars OR "reference" to have target and comparison stars hilighted, by default None
-        n : int, optional
-            max number of stars to show, by default None,
-
-        Raises
-        ------
-        AssertionError
-            [description]
-        """
-
-        self._check_show(flip=flip, size=size, **kwargs)
-
-        if stars is None:
-            stars = self.stars
-
-        if n is not None:
-            if view == "reference":
-                raise AssertionError("'n_stars' kwargs is incompatible with 'reference' view that will display all stars")
-        else:
-            n = len(stars)
-
-        stars = stars[0:n]
-
-        if view is None:
-            view = "reference" if 'comps' in self else "all"
-
-        image_size = np.array(np.shape(self.stack))[::-1]
-
-        if flip:
-            stars = np.array(image_size) - stars
-
-        if view == "all":
-            viz.plot_marks(*stars.T, np.arange(len(stars)), color=color)
-
-            if "stars" in self.xarray:
-                others = np.arange(n, len(self.stars))
-                others = np.setdiff1d(others, self.target)
-                viz.plot_marks(*self.stars[others].T, alpha=0.4, color=color)
-
-        elif view == "reference":
-            x = self.xarray.isel(apertures=self.aperture)
-            assert 'comps' in self, "No differential photometry"
-
-            comps = x.comps.values
-
-            others = np.setdiff1d(np.arange(len(stars)), x.comps.values)
-            others = np.setdiff1d(others, self.target)
-
-            _ = viz.plot_marks(*stars[self.target], self.target, color=color)
-            _ = viz.plot_marks(*stars[comps].T, comps, color=comp_color)
-            _ = viz.plot_marks(*stars[others].T, alpha=0.4, color=color)
-
-            if legend:
-                colors = [comp_color, color]
-                texts = ["Comparison stars", "Target"]
-                viz.circles_legend(colors, texts)
-
     # TODO Keep but use stack Image
     def show_gaia(self, color="yellow", alpha=1, n=None, idxs=True, limit=-1, fontsize=8, align=False):
         """Overlay Gaia objects on stack image
@@ -625,35 +460,6 @@ class Observation(ApertureFluxes):
             tics = twirl.affine_transform(X)(tics)
 
         _ = viz.plot_marks(*tics.T, ID if idxs else None, color=color, alpha=alpha, n=n, position="top", fontsize=9, offset=10)
-
-    # TODO replace by stack Image
-    def show_cutout(self, star=None, size=200, marks=True,**kwargs):
-        """
-        Show a zoomed cutout around a detected star or coordinates
-
-        Parameters
-        ----------
-        star : [type], optional
-            detected star id or (x, y) coordinate, by default None
-        size : int, optional
-            side size of square cutout in pixel, by default 200
-        """
-
-        if star is None:
-            x, y = self.stars[self.target]
-        elif isinstance(star, int):
-            x, y = self.stars[star]
-        elif isinstance(star, (tuple, list, np.ndarray)):
-            x, y = star
-        else:
-            raise ValueError("star type not understood")
-
-        self.show(**kwargs)
-        plt.xlim(np.array([-size / 2, size / 2]) + x)
-        plt.ylim(np.array([-size / 2, size / 2]) + y)
-        if marks:
-            idxs = np.argwhere(np.max(np.abs(self.stars - [x, y]), axis=1) < size).squeeze()
-            viz.plot_marks(*self.stars[idxs].T, label=idxs)
 
     def plot_comps_lcs(self, n=15, ylim=None):
         """Plot comparison stars light curves along target star light curve
@@ -806,7 +612,7 @@ class Observation(ApertureFluxes):
         plt.grid(color="whitesmoke")
 
         plt.subplot(212)
-        plt.title("Normalized flux", loc="left")
+        plt.title("Raw flux", loc="left")
         flux = self.xarray.raw_fluxes.isel(star=self.target, apertures=self.aperture).values
         plt.plot(self.time, flux, ".", ms=3, label="target", c="C0")
         if 'alc' in self:
@@ -1187,24 +993,11 @@ class Observation(ApertureFluxes):
         skycoords = SkyCoord(ra=ra, dec=dec, unit=unit)
         return np.array(wcsutils.skycoord_to_pixel(skycoords, self.wcs)).T
 
-    # TODO move to core Image?
     def plot_circle(self, center=None, arcmin=2.5):
         if center is None:
-            x, y = self.stars[self.target]
-        elif isinstance(center, int):
-            x, y = self.stars[center]
-        elif isinstance(center, (tuple, list, np.ndarray)):
-            x, y = center
-        else:
-            raise ValueError("center type not understood")
-
-        search_radius = 60 * arcmin / self.telescope.pixel_scale
-        circle = plt.Circle((x, y), search_radius, fill=None, ec="white", alpha=0.6)
-
-        ax = plt.gca()
-        ax.add_artist(circle)
-        plt.annotate(f"radius {arcmin}'", xy=[x, y + search_radius + 15], color="white",
-                     ha='center', fontsize=12, va='bottom', alpha=0.6)
+            center = self.target
+        
+        self.stack.plot_circle(center, arcmin)
 
     def mask_transits(self, epoch, period, duration):
         xmin, xmax = self.time.min(), self.time.max()
@@ -1212,3 +1005,21 @@ class Observation(ApertureFluxes):
         ingress, egress = n_p * period + epoch - duration / 2, n_p * period + epoch + duration / 2
         mask = (self.time < ingress) | (self.time > egress)
         return self.mask(mask)
+
+    def plate_solve(self):
+        self.stack = blocks.catalogs.PlateSolve()(self.stack)   
+
+    def query_catalog(self, name, correct_pm=True):
+        if not self.stack.plate_solved:
+            self.plate_solve()
+        if name == "gaia":
+            self.stack = blocks.catalogs.GaiaCatalog(correct_pm=correct_pm)(self.stack)
+
+    def set_catalog_target(self, catalog_name, designation):
+        self.query_catalog(catalog_name, correct_pm=True)
+        target = np.flatnonzero(self.stack.catalogs["gaia"].id == designation)
+
+        if len(target) == 0:
+            self.target = None
+        else:
+            self.target = target[0]

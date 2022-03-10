@@ -342,43 +342,7 @@ def register_args(f):
         self.kwargs = kwargs
         return f(*args, **kwargs)
     return f
-
-
-def cutouts(image, stars, size=15):
-    """Custom version to extract stars cutouts
-
-    Parameters
-    ----------
-    image: np.ndarray or path
-    stars: np.ndarray
-        stars positions with shape (n,2)
-    size: int
-        size of the cuts around stars (in pixels), by default 15
-
-    Returns
-    -------
-    np.ndarray of shape (size, size)
     
-    """
-    if isinstance(image, str):
-        image = fits.getdata(image)
-
-    warnings.simplefilter("ignore")
-    if np.shape(stars) > (1,2):
-        stars_tbl = Table(
-            [stars[:, 0], stars[:, 1], np.arange(len(stars))],
-            names=["x", "y", "id"])
-        stars = extract_stars(NDData(data=image), stars_tbl, size=size)
-        idxs = np.array([s.id_label for s in stars])
-        return idxs, stars
-    else:
-        stars_tbl = Table(
-            data=np.array([stars[0][0], stars[0][1]]),
-            names=["x", "y"])
-        stars = extract_stars(NDData(data=image), stars_tbl, size=size)
-        return stars
-
-
 
 def nan_gaussian_filter(data, sigma=1., truncate=4.):
     """https://stackoverflow.com/questions/18697532/gaussian-filtering-a-image-with-nan-in-python
@@ -402,3 +366,15 @@ def nan_gaussian_filter(data, sigma=1., truncate=4.):
     WW=ndimage.gaussian_filter(W,sigma=sigma,truncate=truncate)
 
     return VV/WW
+
+def clean_header(header_dict):
+    return {key: value for key, value in header_dict.items() if not isinstance(value, (list, tuple))}
+
+
+def easy_median(images):
+    # To avoid memory errors, we split the median computation in 50
+    images = np.array(images)
+    shape_divisors = divisors(images.shape[1])
+    n = shape_divisors[np.argmin(np.abs(50 - shape_divisors))]
+    return np.concatenate([np.nanmedian(im, axis=0) for im in np.split(images, n, axis=1)])
+

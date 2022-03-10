@@ -1,4 +1,4 @@
-from . import Block, Sequence
+from .. import Block, Sequence
 
 
 def get_citations(*args):

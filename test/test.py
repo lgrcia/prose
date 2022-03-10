@@ -191,6 +191,9 @@ class TestReduction(unittest.TestCase):
 
 class TestObservation(unittest.TestCase):
 
+    def test_properties(self):
+        obs = Observation("")
+
     def test_diff(self):
         obs = Observation(PHOT)
         obs.target = 1

@@ -66,13 +66,13 @@ class Telescope:
             # Specs
             # -----
             trimming = (0, 0), # in piwel along y/x
-            read_noise = 9, # in A
+            read_noise = 9, # in ADU
             gain = 1, # in e-/ADU
             altitude = 2000, # in meters
             diameter = 100, # in meters
             pixel_scale = None, # in arcseconds
             latlong = [None, None], 
-            saturation = 55000,
+            saturation = 55000, # in ADU
             hdu = 0
         )
 

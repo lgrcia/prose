@@ -1,11 +1,12 @@
 import twirl
-from prose import Block
+from .. import Block
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 import pandas as pd
 import numpy as np
+from astropy.time import Time
 
-def gaia_query(center, fov, *args, limit=3000):
+def gaia_query(center, fov, *args, limit=10000):
     """
     https://gea.esac.esa.int/archive/documentation/GEDR3/Gaia_archive/chap_datamodel/sec_dm_main_tables/ssec_dm_gaia_source.html
     """
@@ -22,33 +23,68 @@ def gaia_query(center, fov, *args, limit=3000):
         else:
             ra_fov = dec_fov = fov.to(u.deg).value
 
-        radius = np.min([ra_fov, dec_fov])/2
+        radius = np.max([ra_fov, dec_fov])/2
 
-    job = Gaia.launch_job(f"select top {limit} {','.join(args)} from gaiadr2.gaia_source where "
+    job = Gaia.launch_job(f"select top {limit} {','.join(args) if isinstance(args, (tuple, list)) else args} from gaiadr2.gaia_source where "
                           "1=CONTAINS("
                           f"POINT('ICRS', {ra}, {dec}), "
                           f"CIRCLE('ICRS',ra, dec, {radius}))"
-                          #f"ra between {ra-ra_fov/2} and {ra+ra_fov/2} and "
-                          #f"dec between {dec-dec_fov/2} and {dec+dec_fov/2}"
                           "order by phot_g_mean_mag")
 
-    return job.get_results().to_pandas()
+    return job.get_results()
 
 
-class GaiaBlock(Block):
-    
-    def __init__(self, n_stars=50, **kwargs):
+def image_gaia_query(image, *args, limit=3000, correct_pm=True):
+
+    table = gaia_query(image.skycoord, image.fov, "*", limit=limit)
+
+    if correct_pm:
+        skycoord = SkyCoord(
+                ra=table['ra'].quantity, 
+                dec=table['dec'].quantity,
+                pm_ra_cosdec=table['pmra'].quantity,
+                pm_dec=table['pmdec'].quantity, 
+                distance=table['parallax'].quantity,
+                obstime=Time('2015-06-01 00:00:00.0')
+            )
+        skycoord = skycoord.apply_space_motion(Time(image.date))
+
+        table["ra"] = skycoord.ra
+        table["dec"] = skycoord.dec
+
+    return table
+
+class CatalogBlock(Block):
+
+    def __init__(self, name, mode=None, **kwargs):
         super().__init__(**kwargs)
-        self.n_stars = n_stars
-        self.gaia_table = None
+        self.mode = mode
+        self.catalog_name = name
+
+    def get_catalog(self, image):
+        raise NotImplementedError()
     
-    def get_table(self, image, radius, *args):
-        self.gaia_table = gaia_query(image.skycoord, radius*2, *args, limit=self.n_stars)
+    def run(self, image):
+        catalog = self.get_catalog(image)
+        radecs = np.array([catalog["ra"].quantity.to(u.deg), catalog["dec"].quantity.to(u.deg)])
+        stars_coords = np.array(SkyCoord(*radecs, unit="deg").to_pixel(image.wcs))
+        catalog["x"], catalog["y"] = stars_coords
+    
+        if self.mode == "replace":
+            self.stars_coords = stars_coords
+
+        elif self.mode == "crossmatch":
+            x, y = catalog[["x", "y"]].values.T
+            pass
+
+        image.catalogs[self.catalog_name] = catalog.to_pandas()
+
         
-class PlateSolve(GaiaBlock):
+class PlateSolve(Block):
     
     def __init__(self, ref_image=None, n_gaia=50, tolerance=10, n_twirl=15, **kwargs):
-        super().__init__(n_stars=n_gaia, **kwargs)
+        super().__init__(**kwargs)
+        self.n_gaia = n_gaia
         self.ref_image = ref_image is not None
         self.n_gaia = n_gaia
         self.n_twirl = n_twirl
@@ -58,8 +94,9 @@ class PlateSolve(GaiaBlock):
             self.get_radecs(ref_image)
             
     def get_radecs(self, image):
-        self.get_table(image, image.fov/2, "ra", "dec")
-        self.gaias = np.array([self.gaia_table.ra, self.gaia_table.dec]).T
+        table = image_gaia_query(image).to_pandas()
+        self.gaias = np.array([table.ra, table.dec]).T
+        self.gaias[np.any(np.isnan(self.gaias), 1)] = 0
     
     def run(self, image):
         if not self.ref_image:
@@ -67,27 +104,19 @@ class PlateSolve(GaiaBlock):
             
         image.wcs = twirl._compute_wcs(image.stars_coords, self.gaias, n=self.n_twirl, tolerance=self.tolerance)
 
-class GaiaCatalog(GaiaBlock):
+
+class GaiaCatalog(CatalogBlock):
     
-    def __init__(self, n_stars=10000, tolerance=4, **kwargs):
-        super().__init__(n_stars=n_stars, **kwargs)
+    def __init__(self, n_stars=10000, tolerance=4, correct_pm=True, **kwargs):
+        CatalogBlock.__init__(self, "gaia", **kwargs)
         self.n_stars = n_stars
         self.tolerance = tolerance
-        self.remove_gaias = False #TODO
-        
-    def get_coords_id(self, image):
-        self.get_table(image, np.sqrt(2)*image.fov/2, "ra", "dec", "designation")
-        self.gaias = np.array([self.gaia_table.ra, self.gaia_table.dec]).T
-        self.designation = np.array(self.gaia_table.designation.values, dtype='str')
-    
+        self.correct_pm = correct_pm
+
+    def get_catalog(self, image):
+        table =  image_gaia_query(image, correct_pm=self.correct_pm, limit=self.n_stars)
+        table.rename_column('DESIGNATION', 'id')
+        return table
+
     def run(self, image):
-        self.get_coords_id(image)
-        image.stars_coords = np.array(SkyCoord(self.gaias, unit="deg").to_pixel(image.wcs)).T
-        
-        image.gaia_catalog = pd.DataFrame({
-            "designation": self.designation,
-            "ra(deg)": self.gaias.T[0],
-            "dec(deg)": self.gaias.T[1],
-            "x": image.stars_coords.T[0],
-            "y": image.stars_coords.T[1],
-        })
+        CatalogBlock.run(self, image)

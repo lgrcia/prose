@@ -1,4 +1,4 @@
-from ..core import Block
+from .. import Block
 import numpy as np
 from skimage.transform import warp
 from skimage.transform import AffineTransform as skAffineTransform

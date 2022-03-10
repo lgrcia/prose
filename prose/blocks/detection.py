@@ -3,7 +3,7 @@ import numpy as np
 from photutils import DAOStarFinder
 from astropy.stats import sigma_clipped_stats
 from .registration import clean_stars_positions
-from ..core import Block
+from .. import Block
 from ..blocks.psf import cutouts
 from ..utils import register_args
 
