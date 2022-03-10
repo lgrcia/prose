@@ -735,7 +735,7 @@ class Observation(ApertureFluxes):
             target=self.target["id"],
             highlights=self.comparison_stars)
 
-    def plot_systematics(self, fields=None, ylim=None):
+    def plot_systematics(self, fields=None, ylim=None, amplitude_factor = None):
         """Plot systematics measurements along target light curve
 
         Parameters
@@ -751,7 +751,11 @@ class Observation(ApertureFluxes):
         flux = self.diff_flux.copy()
         flux /= np.nanmean(flux)
         _, amplitude = pont2006(self.time, self.diff_flux, plot=False)
-        amplitude *= 3
+
+        if amplitude_factor is None:
+            amplitude *= 3
+        else :
+            amplitude *= amplitude_factor
         offset = 2.5*amplitude
 
         if len(plt.gcf().axes) == 0:
@@ -772,8 +776,10 @@ class Observation(ApertureFluxes):
                 plt.annotate(field, (self.time.min() + 0.005, 1 - off + amplitude / 3))
             else:
                 i -= 1
-
-        plt.ylim(1 - off - offset, 1 + offset)
+        if ylim is None:
+            plt.ylim(1 - off - offset, 1 + offset)
+        else:
+            plt.ylim(ylim)
         plt.title("Systematics (scaled to diff. flux)", loc="left")
         plt.tight_layout()
 

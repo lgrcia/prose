@@ -62,7 +62,8 @@ speculoos_south = dict(
 
 callisto = dict(
     speculoos_south,
-    name = "Callisto"
+    name = "Callisto",
+    names = ["SPECULOOS-CALLISTO","Callisto"]
 )
 
 io = dict(
@@ -124,7 +125,8 @@ trappistN = dict(
 
 saintex = dict(
     speculoos_south,
-    name= "Saint-Ex",  
+    name= "Saint-Ex",
+    names = ["SAINT-Ex","ACP->SAINT-EX"],
     ra_unit= "hourangle",
     latlong= [31.0439, -115.4637],
     TTF_link= "https://astro.swarthmore.edu/telescope/tess-secure/print_eclipses.cgi?observatory_string=31.04342%3B-115.45476%3BPST8PDT%3"
