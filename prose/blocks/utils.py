@@ -18,6 +18,7 @@ from pathlib import Path
 from . import Cutout2D
 import matplotlib.patches as patches
 from ..image import Image
+from astropy.nddata import Cutout2D as astopy_Cutout2D
 
 
 class Stack(Block):
@@ -516,7 +517,7 @@ class Trim(Block):
         center = shape[::-1] / 2
         trim = self.trim if self.trim is not None else image.telescope.trimming[::-1]
         dimension = shape - 2 * np.array(trim)
-        trim_image = Cutout2D(image.data, center, dimension, wcs=None if self.skip_wcs else image.wcs)
+        trim_image = astopy_Cutout2D(image.data, center, dimension, wcs=None if self.skip_wcs else image.wcs)
         image.data = trim_image.data
         if not self.skip_wcs:
             image.header.update(trim_image.wcs.to_header())

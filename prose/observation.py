@@ -1017,9 +1017,11 @@ class Observation(ApertureFluxes):
 
     def set_catalog_target(self, catalog_name, designation):
         self.query_catalog(catalog_name, correct_pm=True)
-        target = np.flatnonzero(self.stack.catalogs["gaia"].id == designation)
+        gaia_i = np.flatnonzero(self.stack.catalogs[catalog_name].id == designation)
 
-        if len(target) == 0:
+        if len(gaia_i) == 0:
             self.target = None
         else:
-            self.target = target[0]
+            gaia_i = gaia_i[0]
+            gxy = self.stack.catalogs[catalog_name][["x", "y"]].values[gaia_i]
+            self.target = int(np.argmin(np.linalg.norm(self.stars - gxy, axis=1)))
