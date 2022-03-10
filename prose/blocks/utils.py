@@ -604,6 +604,8 @@ class Calibration(Block):
                 self.master_bias = 0
             elif image_type == "flat":
                 self.master_flat = 1
+        else:
+            info(f"Building master {image_type}")
 
         for image_path in images:
             image = self.loader(image_path)

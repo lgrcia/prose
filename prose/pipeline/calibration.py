@@ -95,13 +95,11 @@ class Calibration:
         self.detection_block = detection_block
         self.bad_pixels = bad_pixels
 
-        self.calibration_block = blocks.Calibration(
-            self.darks, 
-            self.flats, 
-            self.bias, 
-            loader=loader, 
-            bad_pixels=bad_pixels, 
-            name="calibration")
+        self.calibration_blocks = [
+            blocks.Calibration(self.darks,  self.flats,  self.bias,  loader=loader, name="calibration"),
+            blocks.CleanBadPixels(darks=self.darks, flats=self.flats) if self.bad_pixels else blocks.Pass(),
+            blocks.Trim(name="trimming", skip_wcs=True),
+        ]
 
     def run(self, images, destination=None, reference=1/2, gif=True):
         """Run the calibration pipeline
@@ -136,9 +134,7 @@ class Calibration:
         # Detection sequence
         # ------------------
         self.detection = Sequence([
-            self.calibration_block,
-            blocks.LocalInterpolation() if self.bad_pixels else blocks.Pass(),
-            blocks.Trim(name="trimming"),
+            *self.calibration_blocks,
             self.detection_block,
             blocks.ImageBuffer(name="buffer")
         ], loader=self.loader)
@@ -153,9 +149,7 @@ class Calibration:
         # Calibration sequence
         # --------------------
         self.calibration = Sequence([
-            self.calibration_block,
-            blocks.LocalInterpolation() if self.bad_pixels else blocks.Pass(),
-            blocks.Trim(name="trimming", skip_wcs=True),
+            *self.calibration_blocks,
             blocks.Flip(self.reference, name="flip"),
             self.detection_block,
             blocks.Twirl(self.reference.stars_coords, n=self.n, name="twirl") if self.twirl 
