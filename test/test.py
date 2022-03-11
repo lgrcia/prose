@@ -51,6 +51,17 @@ class TestReport(unittest.TestCase):
 
 class TestReduction(unittest.TestCase):
 
+    def test_fits_manager(self):
+        from prose import tutorials
+        destination = TEST_FODLER / "fake_observations"
+        tutorials.disorganised_folder(destination)
+
+        fm = FitsManager(destination)
+        result_file = TEST_FODLER / "test_fits_manager.txt"
+        file = open(result_file, "w")
+        file.write(fm.print(repr=True))
+        file.close()
+
     def test_reduction(self):
         
         # generate dataset
