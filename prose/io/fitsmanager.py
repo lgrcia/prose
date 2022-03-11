@@ -22,15 +22,16 @@ date = (
 )
 """
 
-def sql_other(kind, exposure=None, tolerance=1000000):
-    exposure_constraint = f"exposure between {exposure-tolerance} and {exposure+tolerance} AND" if exposure is not None else ""
+def exposure_constraint(exposure=0, tolerance=1000000):
+    return f"exposure between {exposure-tolerance} and {exposure+tolerance}"
 
+def sql_other(kind, exposure=None, tolerance=1000000):
     return f"""
     SELECT path FROM files WHERE
     type = '{kind}' AND telescope LIKE :telescope || '%' AND width = :w AND height = :h AND date = (
         SELECT MAX(date) FROM files WHERE 
         type = '{kind}' AND telescope LIKE :telescope || '%' AND width = :w AND height = :h AND
-        {exposure_constraint}
+        {exposure_constraint(exposure, tolerance)} AND
         {sql_days_between}
     )
     """
@@ -207,13 +208,15 @@ class FitsManager:
         date="", 
         afilter="", 
         imtype="",
+        exposure=0,
+        exposure_tolerance=10000000000, 
     ):
         telescope=telescope.replace("*", "%")
         target=target.replace("*", "%")
         date=date.replace("*", "%")
         afilter=afilter.replace("*", "%")
         imtype=imtype.replace("*", "%")
-        
+
         files_paths = list(
             self.cur.execute(
                 f"""
@@ -222,7 +225,8 @@ class FitsManager:
                 (telescope LIKE :telescope || '%' OR telescope IS NULL) AND 
                 (target LIKE :target || '%' OR target IS NULL) AND 
                 date LIKE :date || '%' AND 
-                filter LIKE :filter || '%'
+                filter LIKE :filter || '%' AND
+                {exposure_constraint(exposure, exposure_tolerance)}
                 ORDER BY JD
                 """
                 , {"telescope":telescope, "target":target, "date": date, "filter":afilter, "imtype":imtype}))

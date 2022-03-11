@@ -76,6 +76,12 @@ def disorganised_folder(destination):
             data,
             dict(JD=i, TELESCOP="A", FILTER="c", IMAGETYP="flat"), path.join(destination, f"A-bis-testf2_{i}.fits"))
 
+    for i in range(2):
+        data = np.random.random((10, 10))
+        fits_image(
+            data,
+            dict(JD=i, TELESCOP="A", FILTER="c", IMAGETYP="dark", EXPTIME=8), path.join(destination, f"A-bis-testf2_{i}_8s_dark.fits"))
+
 
 def moving_object(time, destination):
 
