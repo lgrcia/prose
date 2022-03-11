@@ -183,7 +183,7 @@ class FitsManager:
                 (target LIKE :target || '%' OR target IS NULL) AND 
                 date LIKE :date || '%' AND 
                 filter LIKE :filter || '%'
-                GROUP BY date, telescope, target, filter, type ORDER BY date
+                GROUP BY date, telescope, target, filter, exposure type ORDER BY date
                 """
                 , {"telescope":telescope, "target":target, "date": date, "filter":afilter, "imtype":imtype}))
         
