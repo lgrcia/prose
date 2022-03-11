@@ -25,7 +25,7 @@ date = (
 def exposure_constraint(exposure=0, tolerance=1000000):
     return f"exposure between {exposure-tolerance} and {exposure+tolerance}"
 
-def sql_other(kind, exposure=None, tolerance=1000000):
+def sql_other(kind, exposure=0, tolerance=1000000):
     return f"""
     SELECT path FROM files WHERE
     type = '{kind}' AND telescope LIKE :telescope || '%' AND width = :w AND height = :h AND date = (

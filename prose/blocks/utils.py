@@ -545,7 +545,7 @@ class Calibration(Block):
     """
 
     @register_args
-    def __init__(self, darks=None, flats=None, bias=None, loader=Image, bad_pixels=False, threshold=5, **kwargs):
+    def __init__(self, darks=None, flats=None, bias=None, loader=Image, easy_ram=True, **kwargs):
 
         super().__init__(**kwargs)
         if darks is None:
@@ -566,29 +566,20 @@ class Calibration(Block):
 
         self.loader = loader
 
+        def _median(im):
+            if easy_ram:
+                return easy_median(im)
+            else:
+                return np.median(im, 0)
+
+        self.median =_median
+
         if self.master_bias is None:
             self._produce_master("bias")
         if self.master_dark is None:
             self._produce_master("dark")
         if self.master_flat is None:
             self._produce_master("flat")
-
-        if bad_pixels:
-            data = self.master_dark
-            if data is not None:
-                outliers = np.abs(data - np.median(data)) > threshold*np.std(data)
-                data[outliers] = np.nan
-            # TEST
-            else:
-                raise AssertionError("bad pixels can only be computed if darks are provided")
-            data = self.master_flat
-            if np.shape(data) == 2:
-                outliers = np.abs(data - np.median(data)) > threshold*np.std(data)
-                data[outliers] = np.nan
-            else:
-                pass
-        else:
-            self.bad_pixels = None
 
     def calibration(self, image, exp_time):
         return (image - (self.master_dark * exp_time + self.master_bias)) / self.master_flat
@@ -622,7 +613,7 @@ class Calibration(Block):
                 del image
 
         if len(_master) > 0:
-            med = easy_median(_master)
+            med = self.median(_master)
             if image_type == "dark":
                 self.master_dark = med.copy()
             elif image_type == "bias":
@@ -729,3 +720,16 @@ class CleanBadPixels(Block):
     
     def run(self, image):
         image.data = self.clean(image.data.copy())
+
+
+class MedianStack(Block):
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.images = []
+
+    def run(self, image):
+        self.images.append(image.data)
+        
+    def terminate(self):
+        self.stack = Image(data=np.median(self.images, 0))
