@@ -368,7 +368,7 @@ def nan_gaussian_filter(data, sigma=1., truncate=4.):
     return VV/WW
 
 def clean_header(header_dict):
-    return {key: value for key, value in header_dict.items() if not isinstance(value, (list, tuple))}
+    return {key: value for key, value in header_dict.items() if not isinstance(value, (list, tuple)) and key.isupper()}
 
 
 def easy_median(images):

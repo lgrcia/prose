@@ -127,9 +127,10 @@ class Observation(ApertureFluxes):
         destination : str, optional
             path to phot file, by default None
         """
+        destination = self.phot if destination is None else destination
         self.xarray.attrs.update(self.stack.header)
-        self.xarray.to_netcdf(self.phot if destination is None else destination)
-        info(f"saved {self.phot}")
+        self.xarray.to_netcdf(destination)
+        info(f"saved {Path(destination).absolute}")
 
     # Convenience
     # -----------

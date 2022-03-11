@@ -70,7 +70,7 @@ class TestReduction(unittest.TestCase):
         fm = FitsManager(RAW, depth=2)
         destination = fm.obs_name
         calib = Calibration(**fm.observation_files(0), overwrite=True)
-        calib.run(fm.images, destination)
+        calib.run(fm.images, TEST_FODLER / destination)
 
         photometry = AperturePhotometry(
             files=calib.images,
