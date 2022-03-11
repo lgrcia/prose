@@ -174,5 +174,7 @@ class Peaks(Block):
     def run(self, image, **kwargs):
         idxs, cuts = cutouts(image.data, image.stars_coords, size=self.cutout)
         image.peaks = np.ones(len(image.stars_coords)) * -1
-        for i, cut in zip(idxs, cuts):
-            image.peaks[i] = np.max(cut.data)
+        for j, i in enumerate(idxs):
+            cut = cuts[j]
+            if cut is not None:
+                image.peaks[i] = np.max(cut.data)

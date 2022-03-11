@@ -11,7 +11,7 @@
     <a href="https://github.com/lgrcia/prose">
       <img src="https://img.shields.io/badge/github-lgrcia/prose-blue.svg?style=flat" alt="github"/>
     </a>
-    <a href="https://prose.readthedocs.io/en/latest/">
+    <a href="https://lgrcia.github.io/prose-docs">
       <img src="https://img.shields.io/badge/read-thedoc-black.svg?style=flat" alt="read the doc"/>
     </a>
     <a href="">

@@ -283,6 +283,10 @@ class ApertureFluxes:
         return self.xarray
 
     @property
+    def has_diff(self):
+        return hasattr(self, "diff_flux")
+
+    @property
     def diff_flux(self):
         return self.xarray.diff_fluxes.isel(apertures=self.aperture, star=self.target).values
 

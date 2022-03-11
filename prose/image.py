@@ -136,7 +136,7 @@ class Image:
     def label(self):
         return "_".join([
             self.telescope.name,
-            self.date.strftime("%Y%m%d"),
+            self.night_date.strftime("%Y%m%d"),
             self.header.get(self.telescope.keyword_object, "?"),
             self.filter
         ])

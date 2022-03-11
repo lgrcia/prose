@@ -41,7 +41,7 @@ setup(
         "celerite2",
         "jinja2",
         "tensorflow",
-        "twirl"
+        "twirl",
     ],
     extras_require={
         'docs': [

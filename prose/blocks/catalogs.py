@@ -91,16 +91,13 @@ class PlateSolve(Block):
         self.tolerance = tolerance
         
         if ref_image:
-            self.get_radecs(ref_image)
-            
-    def get_radecs(self, image):
-        table = image_gaia_query(image).to_pandas()
-        self.gaias = np.array([table.ra, table.dec]).T
-        self.gaias[np.any(np.isnan(self.gaias), 1)] = 0
+            self.ref_image = self(ref_image)
     
     def run(self, image):
         if not self.ref_image:
-            self.get_radecs(image)
+            table = image_gaia_query(image).to_pandas()
+            self.gaias = np.array([table.ra, table.dec]).T
+            self.gaias[np.any(np.isnan(self.gaias), 1)] = 0
             
         image.wcs = twirl._compute_wcs(image.stars_coords, self.gaias, n=self.n_twirl, tolerance=self.tolerance)
 

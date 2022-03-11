@@ -53,7 +53,7 @@ class Summary(Observation, LatexTemplate):
         self.header = "Observation report"
 
     def plot_psf_summary(self):
-        self.plot_psf()
+        self.plot_radial_psf()
         self.style()
 
     def plot_stars(self, size=8):

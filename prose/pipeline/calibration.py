@@ -54,6 +54,7 @@ class Calibration:
             loader=Image,
             cores=False,
             bad_pixels=False,
+            save_masters=True,
             **kwargs
     ):
         self.destination = None
@@ -101,7 +102,10 @@ class Calibration:
             blocks.Trim(name="trimming", skip_wcs=True),
         ]
 
-    def run(self, images, destination=None, reference=1/2, gif=True):
+        if save_masters:
+            pass
+
+    def run(self, images, destination=None, reference=1/2, movie="gif"):
         """Run the calibration pipeline
 
         Parameters
@@ -115,14 +119,15 @@ class Calibration:
                 - if ``float``: from 0 (first image) to 1 (last image)
                 - if ``str``: path of the reference image
             by default 1/2
-        gif: bool, optional
-            Wether to produce a gif of the sequence
+        movie: str or False, optional
+            - if str, produce a movie of the sequence with format 'movie'
+            - if False movie not produced
         """
 
         # reference image
         if isinstance(reference, (int, float)):
             self.reference = self.loader(images[int(reference * len(images))])
-        elif isinstance(self._reference, (str, Path)):
+        elif isinstance(reference, (str, Path)):
             self.reference = self.loader(reference)
 
         # Creating reduced image folder
@@ -175,7 +180,7 @@ class Calibration:
             blocks.AffineTransform(stars=True, data=True) if self.twirl else blocks.Pass(),
             blocks.LivePlot(plot_function, size=(10, 10)) if self.show else blocks.Pass(),
             blocks.Stack(self.stack_path, header=self.reference.header, overwrite=self.overwrite, name="stack"),
-            blocks.RawVideo(self.destination / "movie.gif", function=utils.z_scale, scale=0.25) if gif else blocks.Pass(),
+            blocks.RawVideo(self.destination / f"movie.{movie}", function=utils.z_scale, scale=0.5) if movie is not False else blocks.Pass(),
         ], name="Calibration", loader=self.loader)
 
         self.calibration.run(images, show_progress=self.verbose)

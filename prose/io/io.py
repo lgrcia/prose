@@ -115,6 +115,7 @@ def fits_to_df(files, telescope_kw="TELESCOP", instrument_kw="INSTRUME", verbose
             dimensions=(header.get("NAXIS1", 1), header.get("NAXIS2", 1)),
             flip=header.get(telescope.keyword_flip, ""),
             jd=header.get(telescope.keyword_jd, ""),
+            exposure=header.get(telescope.keyword_exposure_time, None)
         ))
 
     df = pd.DataFrame(df_list)

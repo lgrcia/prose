@@ -40,9 +40,12 @@ def cutouts(image, stars, size=15):
         stars_tbl = Table(
             [stars[:, 0], stars[:, 1], np.arange(len(stars))],
             names=["x", "y", "id"])
+        _stars = [None]*len(stars)
         stars = extract_stars(NDData(data=image), stars_tbl, size=size)
         idxs = np.array([s.id_label for s in stars])
-        return idxs, stars
+        for i, s in enumerate(stars):
+            _stars[idxs[i]] = s
+        return idxs, _stars
     else:
         stars_tbl = Table(
             data=np.array([stars[0][0], stars[0][1]]),
@@ -135,17 +138,26 @@ class MedianPSF(Block):
         size of the cutouts used to compute the global PSF, by default None which mean the Image.cutouts are used
     """
     @register_args
-    def __init__(self, cutout_size=None, **kwargs):
+    def __init__(self, cutout_size=None, stars=None, n=None, **kwargs):
         super().__init__(**kwargs)
         self.cutout_block = None
         if cutout_size is not None:
             self.cutout_block = Cutouts(size=cutout_size)
+        self.stars = stars
+        self.n = n
         
     def run(self, image):
         if self.cutout_block is not None:
             image = self.cutout_block(image)
-        normalized_cutouts = [c/np.sum(c) for c in image.cutouts]
-        image.psf =  np.median(normalized_cutouts, axis=0)
+        normalized_cutouts = [c/np.sum(c) for c in image.cutouts if c is not None]
+        if self.stars is None:
+            image.psf =  np.median(normalized_cutouts, axis=0)
+        elif self.n is not None:
+            assert self.stars is None, "Either 'n' or 'stars' must be set, not both"
+            image.psf =  np.median(normalized_cutouts, axis=0)
+        else:
+            image.psf =  np.median(normalized_cutouts[0:self.n], axis=0)
+
 
 class PSFModel(Block):
 

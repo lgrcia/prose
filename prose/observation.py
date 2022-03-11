@@ -8,18 +8,15 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord
 from .fluxes import ApertureFluxes, pont2006
 from . import viz
-from astropy.io import fits
 from .telescope import Telescope
 from . import utils
 from astroquery.mast import Catalogs
-from astropy.wcs import WCS, utils as wcsutils
+from astropy.wcs import utils as wcsutils
 import pandas as pd
 from scipy.stats import binned_statistic
 from .blocks.psf import Gaussian2D, Moffat2D,cutouts
 from .console_utils import INFO_LABEL
-from astropy.stats import sigma_clipped_stats
 from astropy.io.fits.verify import VerifyWarning
-from datetime import datetime
 import warnings
 from .blocks.registration import distances
 import requests
@@ -30,6 +27,8 @@ import io
 from .utils import fast_binning, z_scale, clean_header
 from .console_utils import info
 from . import blocks
+from prose import Sequence
+from matplotlib import gridspec
 
 warnings.simplefilter('ignore', category=VerifyWarning)
 
@@ -45,8 +44,6 @@ class Observation(ApertureFluxes):
 
     """
 
-
-    # TODO initialize stach as an image
     def __init__(self, photfile, ignore_time=False):
         super().__init__(photfile)
 
@@ -86,9 +83,7 @@ class Observation(ApertureFluxes):
         copied = Observation(self.xarray.copy(), ignore_time=True)
         copied.phot = self.phot
         copied.telescope = self.telescope
-        copied.gaia_data = self.gaia_data
-        copied.tic_data = self.tic_data
-        copied.wcs = self.wcs
+        copied.stack.wcs = self.wcs
 
         return copied
 
@@ -210,6 +205,14 @@ class Observation(ApertureFluxes):
     def night_date(self):
         return self.stack.night_date
 
+    @property
+    def target(self):
+        return self.x.attrs.target
+
+    @target.setter
+    def target(self, i):
+        self.x.attrs["target"] = i
+
     # TESS specific methods
     # --------------------
     
@@ -239,7 +242,7 @@ class Observation(ApertureFluxes):
 
     @property
     def tfop_prefix(self):
-        return f"TIC{self.tic_id}_{self.date_ymd}_{self.telescope.name}_{self.filter}"
+        return f"TIC{self.tic_id}_{self.stack.night_date}_{self.telescope.name}_{self.filter}"
 
     # WCS
     # ----
@@ -298,50 +301,6 @@ class Observation(ApertureFluxes):
         # Catalog queries
         # ---------------
 
-    # TODO replace using stack Image and GaiaCatalog block
-    def query_gaia(self, limit=-1, cone_radius=None):
-        """Query gaia catalog for stars in the field
-        """
-        from astroquery.gaia import Gaia
-
-        Gaia.ROW_LIMIT = limit
-
-        header = self.xarray.attrs
-        shape = self.stack.shape
-        if cone_radius is None:
-            cone_radius = np.sqrt(2) * np.max(shape) * self.telescope.pixel_scale / 120
-
-        coord = self.skycoord
-        radius = u.Quantity(cone_radius, u.arcminute)
-        gaia_query = Gaia.cone_search_async(coord, radius, verbose=False, )
-        self.gaia_data = gaia_query.get_results()
-        self.gaia_data.sort("phot_g_mean_flux", reverse=True)
-
-        delta_years = (utils.datetime_to_years(self.date) - \
-                    self.gaia_data["ref_epoch"].data.data) * u.year
-
-        dra = delta_years * self.gaia_data["pmra"].to(u.deg / u.year)
-        ddec = delta_years * self.gaia_data["pmdec"].to(u.deg / u.year)
-
-        skycoords = SkyCoord(
-            ra=self.gaia_data['ra'].quantity + dra,
-            dec=self.gaia_data['dec'].quantity + ddec,
-            pm_ra_cosdec=self.gaia_data['pmra'],
-            pm_dec=self.gaia_data['pmdec'],
-            radial_velocity=self.gaia_data['radial_velocity'],
-            obstime=Time(2015.0, format='decimalyear'))
-
-        gaias = np.array(wcsutils.skycoord_to_pixel(skycoords, self.wcs)).T
-        gaias[np.any(np.isnan(gaias), 1), :] = [0, 0]
-        self.gaia_data["x"], self.gaia_data["y"] = gaias.T
-        inside = np.all((np.array([0, 0]) < gaias) & (gaias < np.array(self.stack.shape)), 1)
-        self.gaia_data = self.gaia_data[np.argwhere(inside).squeeze()]
-        
-        w, h = self.stack.shape
-        if np.abs(np.mean(self.gaia_data["x"])) > w or np.abs(np.mean(self.gaia_data["y"])) > h:
-            warnings.warn("Catalog stars seem out of the field. Check that your stack is solved and that telescope "
-                        "'ra_unit' and 'dec_unit' are well set")
-
     # TODO replace using stack Image and create TIC catalog block
     def query_tic(self,cone_radius=None):
         """Query TIC catalog (through MAST) for stars in the field
@@ -369,97 +328,8 @@ class Observation(ApertureFluxes):
             warnings.warn("Catalog stars seem out of the field. Check that your stack is solved and that telescope "
                           "'ra_unit' and 'dec_unit' are well set")
 
-    @property
-    def gaia_target(self):
-        return None
-
-    @gaia_target.setter
-    def gaia_target(self, gaia_id):
-        """Set target with a gaia id
-
-        Parameters
-        ----------
-        gaia_id : int
-            gaia id
-        """
-        if self.gaia_data is None:
-            self.query_gaia()
-        _ = self.gaia_data.to_pandas()[["source_id", "x", "y"]].to_numpy()
-        ids = _[:, 0]
-        positions = _[:, 1:3]
-        gaia_i = np.argmin(np.abs(gaia_id - ids))
-        self.target = np.argmin(np.power(positions[gaia_i, :] - self.stars[:, ::-1], 2).sum(1))
-
     # Plot
     # ----
-
-    # TODO Keep but use stack Image
-    def show_gaia(self, color="yellow", alpha=1, n=None, idxs=True, limit=-1, fontsize=8, align=False):
-        """Overlay Gaia objects on stack image
-
-
-        Parameters
-        ----------
-        color : str, optional
-            color of marks and font, by default "lightblue"
-        alpha : int, optional
-            opacity of marks and font, by default 1
-        n : int, optional
-            max number of stars to show, by default None, by default None for all stars
-        idxs : bool, optional
-            wether to show gaia ids, by default True
-        """
-
-        self._check_show()
-
-        if self.gaia_data is None:
-            self.query_gaia(limit=limit)
-
-        gaias = np.vstack([self.gaia_data["x"].data, self.gaia_data["y"].data]).T
-        defined = ~np.any(np.isnan(gaias), 1)
-        gaias = gaias[defined]
-        labels = self.gaia_data["source_id"].data.astype(str)[defined]
-
-        if align:
-            X = twirl.find_transform(gaias[0:30], self.stars, n=15)
-            gaias = twirl.affine_transform(X)(gaias)
-
-        labels = [f"{_id[0:len(_id) // 2]}\n{_id[len(_id) // 2::]}" for _id in labels]
-        _ = viz.plot_marks(*gaias.T, labels if idxs else None, color=color, alpha=alpha, n=n, position="top",
-                           fontsize=fontsize)
-
-    # TODO Keep but use stack Image
-    def show_tic(self, color="white", alpha=1, n=None, idxs=True, align=True):
-        """Overlay TIC objects on stack image
-
-
-        Parameters
-        ----------
-        color : str, optional
-            color of marks and font, by default "lightblue"
-        alpha : int, optional
-            opacity of marks and font, by default 1
-        n : int, optional
-            max number of stars to show, by default None, by default None for all stars
-        idxs : bool, optional
-            wether to show TIC ids, by default True
-        """
-
-        self._check_show()
-
-        if self.tic_data is None:
-            self.query_tic()
-
-        x = self.tic_data["x"].data
-        y = self.tic_data["y"].data
-        tics = np.vstack([x, y]).T
-        ID = self.tic_data["ID"].data
-
-        if align:
-            X = twirl.find_transform(tics[0:30], self.stars, n=15)
-            tics = twirl.affine_transform(X)(tics)
-
-        _ = viz.plot_marks(*tics.T, ID if idxs else None, color=color, alpha=alpha, n=n, position="top", fontsize=9, offset=10)
 
     def plot_comps_lcs(self, n=15, ylim=None):
         """Plot comparison stars light curves along target star light curve
@@ -492,14 +362,30 @@ class Observation(ApertureFluxes):
         plt.grid(color="whitesmoke")
         plt.tight_layout()
 
-    # TODO: plot to plot_psf_model, use block.PSFModel
-    # TODO: merge with plot_star_psf, play with kwargs
+    def compute_psf_model(self, star=None, size=21, model=Gaussian2D):
+        self.stack = blocks.Cutouts(size=size)(self.stack)
+        
+        if star is None:
+            Sequence([
+                blocks.MedianPSF(),
+                model()
+            ]).run(self.stack, show_progress=False)
+        else:
+            assert star in self.stack.cutouts_idxs, "star seems out of frame"
+            self.stack.psf = self.stack.cutouts[star].data
+            self.stack = model()(self.stack)
 
-    def plot_psf_fit(self, size=21, cmap="inferno", c="blueviolet", model=Gaussian2D):
-        """Plot a 2D gaussian fit of the global psf (extracted from stack fits)
+    def plot_psf_model(self, star=None, size=21, cmap="inferno", c="blueviolet", model=Gaussian2D, figsize=(5, 5)):
+        """Plot a PSF model fit of the a PSF
+
+        After this method is called, the model parameters are accessible through the Observation.stack Image attributes
+
+        If star is None, the model is evaluated on a median PSF from all stars.
 
         Parameters
         ----------
+        star : int, optional
+            star for which to show psf model, default is None which shows the model of the Median PSF over the stack
         size : int, optional
             square size of extracted PSF, by default 21
         cmap : str, optional
@@ -508,41 +394,47 @@ class Observation(ApertureFluxes):
             color of model plot line, by default "blueviolet"
         model : prose.blocks, optional
             a PsfFit block, by default Gaussian2D
-
+        figsize : tuple, optional
+            size of the pyplot figure, default (5, 5)
         Returns
         -------
         dict
             PSF fit info (theta, std_x, std_y, fwhm_x, fwhm_y)
         """
+        
+        # Extracting and computing PSF model
+        # ---------------------------------    
+        self.compute_psf_model(star=star, model=model, size=size)
+        
+        # Plotting
+        # --------
+        data = self.stack.psf
+        model = self.stack.psf_model
+        
+        plt.figure(figsize=figsize)
+        gs = gridspec.GridSpec(2, 2, width_ratios=[9, 2], height_ratios=[2, 9])
+        gs.update(wspace=0, hspace=0)
+        #axtt = plt.subplot(gs[1, 1])
+        ax = plt.subplot(gs[1, 0])
+        axr = plt.subplot(gs[1, 1], sharey=ax)
+        axt = plt.subplot(gs[0, 0], sharex=ax)
 
-        psf_fit = model()
-        image = Image(data=self.stack, stars_coords=self.stars, header=self.xarray.attrs)
-        psf_fit.run(image)
+        ax.imshow(self.stack.psf, alpha=1, cmap=cmap, origin="lower")
+        ax.contour(self.stack.psf_model, colors="w", alpha=0.7)
 
-        if len(plt.gcf().get_axes()) == 0:
-            plt.figure(figsize=(12, 4))
-        viz.plot_marginal_model(psf_fit.epsf, psf_fit.optimized_model, cmap=cmap, c=c)
+        x, y = np.indices(data.shape)
 
-        return {"theta": image.theta,
-                "std_x": image.psf_sigma_x,
-                "std_y": image.psf_sigma_y,
-                "fwhm_x": image.fwhmx,
-                "fwhm_y": image.fwhmy }
+        axt.plot(y[0], np.mean(data, axis=0), c=c)
+        axt.plot(y[0], np.mean(model, axis=0), "--", c="k")
+        axt.axis("off")
+        axt.set_title(f"{'Median' if star is None else f'Star {star}'} PSF Model ({self.stack.psf_model_block})", loc="left")
 
-    def plot_star_psf(self,star=None,cutout_size=21,print_values=True,plot=True):
-        if star is None:
-            star = self.target
-        cutout = cutouts(self.stack, [self.stars[star]], size=cutout_size)
-        psf_fit = Moffat2D(cutout_size=cutout_size)
-        params = ['fwhmx =', 'fwhmy =', 'theta =']
-        values = []
-        for i in range(len(params)):
-            if print_values is True:
-                print(params[i], psf_fit(cutout.data[0])[i])
-            values.append(psf_fit(cutout.data[0])[i])
-            if plot is True:
-                viz.plot_marginal_model(psf_fit.epsf, psf_fit.optimized_model)
-        return values
+        axr.plot(np.mean(data, axis=1), y[0], c=c)
+        axr.plot(np.mean(model, axis=1), y[0], "--", c="k")
+        axr.axis("off")
+        ax.text(1, 1, f"FWHM x: {self.stack.fwhmx:.2f} pix\n"
+                    f"FWHM y: {self.stack.fwhmy:.2f} pix\n"
+                    f"angle: {self.stack.theta/np.pi*180:.2f}°", c="w")
 
     def plot_rms(self, bins=0.005):
         """Plot binned rms of lightcurves vs the CCD equation
@@ -552,7 +444,7 @@ class Observation(ApertureFluxes):
         bins : float, optional
             bin size used to compute error, by default 0.005 (in days)
         """
-        self._check_diff()
+        assert self.has_diff, "No differential fluxes built"
         viz.plot_rms(
             self.diff_fluxes,
             self.lcs,
@@ -713,7 +605,7 @@ class Observation(ApertureFluxes):
 
     # TODO: plot_radial_psf
 
-    def plot_psf(self, star=None, n=40, zscale=False, aperture=None, rin=None, rout=None):
+    def plot_radial_psf(self, star=None, n=40, zscale=False, aperture=None, rin=None, rout=None):
         """Plot star cutout overalid with aperture and radial flux.
 
         Parameters
@@ -731,7 +623,6 @@ class Observation(ApertureFluxes):
         rout : [type], optional
             radius of outer annulus to display, by default None corresponds to outer radius saved
         """
-        n /= np.sqrt(2)
 
         if isinstance(star, (tuple, list, np.ndarray)):
             x, y = star
@@ -739,7 +630,7 @@ class Observation(ApertureFluxes):
             if star is None:
                 star = self.target
             assert np.issubdtype(star, np.integer), "star must be star coordinates or integer index"
-        
+
             x, y = self.stars[star]
 
         Y, X = np.indices(self.stack.shape)
@@ -748,7 +639,7 @@ class Observation(ApertureFluxes):
         radii = (np.sqrt((X - x) ** 2 + (Y - y) ** 2)).flatten()[inside]
         idxs = np.argsort(radii)
         radii = radii[idxs]
-        pixels = self.stack.flatten()[inside]
+        pixels = self.stack.data.flatten()[inside]
         pixels = pixels[idxs]
 
         binned_radii, binned_pixels, _ = fast_binning(radii, pixels, bins=1)
@@ -766,7 +657,7 @@ class Observation(ApertureFluxes):
         if "apertures_radii" in self and self.aperture != -1:
             apertures = self.apertures_radii[:, 0]
             aperture = apertures[self.aperture]
-        
+
             if "annulus_rin" in self:
                 if rin is None:
                     rin = self.annulus_rin.mean()
@@ -792,7 +683,7 @@ class Observation(ApertureFluxes):
         plt.xlim(0, n)
 
         ax2 = plt.subplot(1, 5, (4, 5))
-        im = self.stack[int(y - n):int(y + n), int(x - n):int(x + n)]
+        im = self.stack.data[int(y - n):int(y + n), int(x - n):int(x + n)]
         if zscale:
             im = z_scale(im)
 
@@ -830,15 +721,16 @@ class Observation(ApertureFluxes):
 
         self.plot_meridian_flip()
         plt.legend()
-        self.xlabel()
+        plt.xlabel(self.xlabel)
         plt.ylabel("diff. flux")
         plt.tight_layout()
         viz.paper_style()
 
+    @property
     def xlabel(self):
         """Plot xlabel (time) according to its units
         """
-        plt.xlabel(self.time_format.upper().replace("_", "-"))
+        return self.time_format.upper().replace("_", "-")
 
     def where(self, condition):
         """return filtered observation given a boolean mask of time
@@ -856,6 +748,72 @@ class Observation(ApertureFluxes):
         new_obs = self.copy()
         new_obs.xarray = new_obs.xarray.sel(time=self.time[condition])
         return new_obs
+
+
+    def show_stars(self, size=10, view=None, n=None, flip=False,
+               comp_color="yellow", color=[0.51, 0.86, 1.], stars=None, legend=True, **kwargs):
+        """Show detected stars over stack image
+        Parameters
+        ----------
+        size : int, optional
+            size of the square figure, by default 10
+        flip : bool, optional
+            whether to flip image, by default False
+        view : str, optional
+            "all" to see all stars OR "reference" to have target and comparison stars hilighted, by default None
+        n : int, optional
+            max number of stars to show, by default None,
+        Raises
+        ------
+        AssertionError
+            [description]
+        """
+        self.stack.show(stars=False)
+        
+        if stars is None:
+            stars = self.stars
+
+        if n is not None:
+            if view == "reference":
+                raise AssertionError("'n_stars' kwargs is incompatible with 'reference' view that will display all stars")
+        else:
+            n = len(stars)
+
+        stars = stars[0:n]
+
+        if view is None:
+            view = "reference" if 'comps' in self else "all"
+
+        image_size = np.array(np.shape(self.stack))[::-1]
+
+        if flip:
+            stars = np.array(image_size) - stars
+
+        if view == "all":
+            viz.plot_marks(*stars.T, np.arange(len(stars)), color=color)
+
+            if "stars" in self.xarray:
+                others = np.arange(n, len(self.stars))
+                others = np.setdiff1d(others, self.target)
+                viz.plot_marks(*self.stars[others].T, alpha=0.4, color=color)
+
+        elif view == "reference":
+            x = self.xarray.isel(apertures=self.aperture)
+            assert 'comps' in self, "No differential photometry"
+
+            comps = x.comps.values
+
+            others = np.setdiff1d(np.arange(len(stars)), x.comps.values)
+            others = np.setdiff1d(others, self.target)
+
+            _ = viz.plot_marks(*stars[self.target], self.target, color=color)
+            _ = viz.plot_marks(*stars[comps].T, comps, color=comp_color)
+            _ = viz.plot_marks(*stars[others].T, alpha=0.4, color=color)
+
+            if legend:
+                colors = [comp_color, color]
+                texts = ["Comparison stars", "Target"]
+                viz.circles_legend(colors, texts)
 
     def keep_good_stars(self, lower_threshold=3., upper_threshold=35000., trim=10, keep=None, inplace=True):
         """Keep only  stars with a median flux higher than `threshold`*sky. 

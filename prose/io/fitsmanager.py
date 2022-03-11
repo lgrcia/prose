@@ -2,6 +2,7 @@ import sqlite3
 import numpy as np
 import tabulate
 from tqdm import tqdm
+from pathlib import Path
 from .io import get_files, fits_to_df
 
 sql_days_between = "date >= date(:date, '-' || :min_days || ' days') AND date <= date(:date, :max_days || ' days')"
@@ -21,12 +22,15 @@ date = (
 )
 """
 
-def sql_other(kind):
+def sql_other(kind, exposure=None, tolerance=1000000):
+    exposure_constraint = f"exposure between {exposure-tolerance} and {exposure+tolerance} AND" if exposure is not None else ""
+
     return f"""
     SELECT path FROM files WHERE
     type = '{kind}' AND telescope LIKE :telescope || '%' AND width = :w AND height = :h AND date = (
         SELECT MAX(date) FROM files WHERE 
         type = '{kind}' AND telescope LIKE :telescope || '%' AND width = :w AND height = :h AND
+        {exposure_constraint}
         {sql_days_between}
     )
     """
@@ -46,7 +50,7 @@ class FitsManager:
             by default ".f*ts*"
     """
     
-    def __init__(self, folder=None, depth=0, hdu=0, extension=".f*t*", file=None, batch_size=None):
+    def __init__(self, folder=None, depth=0, hdu=0, extension=".f*t*", file=None, batch_size=False):
         if file is None:
             file = ":memory:"
 
@@ -58,7 +62,7 @@ class FitsManager:
         if len(tables) == 0:
             self.cur.execute('''CREATE TABLE files (date text, path text UNIQUE, 
             telescope text, filter text, type text, target text, width int, height int, 
-            jd real, observation_id int)''')
+            jd real, observation_id int, exposure real)''')
             self.con.commit()
         
         if folder is not None:
@@ -69,7 +73,17 @@ class FitsManager:
         _observations = self.observations(show=False, index=False)
         self._observations = np.array([f"{o[0]}_{o[1]}_{o[2]}_{o[3]}" for o in _observations])
 
-    def scan_files(self, folder, extension, batch_size=None, verbose=True, depth=0):
+    def insert(self, _path, date, telescope, _type, target, _filter, dimensions, _, jd, exposure):
+        if isinstance(_filter, float):
+            _filter = ""
+        width, height = dimensions
+        # or IGNORED to handle the unique constraint
+        self.cur.execute(
+            f"INSERT or IGNORE INTO files VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (date, _path, telescope, _filter, _type, target, width, height, jd, "NULL", exposure))
+
+    def scan_files(self, folder, extension, batch_size=False, verbose=True, depth=0):
+        assert Path(folder).exists(), "Folder does not exists"
         files = get_files(extension, folder, depth=depth)
 
         if len(files) > 0:
@@ -79,30 +93,34 @@ class FitsManager:
             if len(files_to_scan) > 0:
                 if batch_size is None:
                     batches = [files_to_scan]
+                elif batch_size is False:
+                    pass
+                elif batch_size is True:
+                    batches = [files_to_scan]
                 else:
                     assert isinstance(batch_size, int), "batch_size must be an int"
 
                     if len(files_to_scan) < batch_size:
                         batches = [files_to_scan]
                     else:
-                        batches = np.array_split(files_to_scan, len(fits)//batch_size)
+                        batches = np.array_split(files_to_scan, len(files_to_scan)//batch_size)
                 
                 if verbose:
-                    def progress(x): return tqdm(x, bar_format='Reading fits bacthes {l_bar}{bar}{r_bar}')
+                    if batch_size is not False:
+                        def progress(x): return tqdm(x, bar_format='Reading fits {l_bar}{bar}{r_bar}')
                 else:
                     def progress(x): return x
 
-                for batch in progress(batches):
-                    df = fits_to_df(batch, verbose=False)
+                if batch_size is not False:
+                    for batch in progress(batches):
+                        df = fits_to_df(batch, verbose=False)
+                        for row in df.values:
+                            self.insert(*row)
+                        self.con.commit()
+                else:
+                    df = fits_to_df(files_to_scan, verbose=True)
                     for row in df.values:
-                        _path, date, telescope, _type, target, _filter, dimensions, _, jd = row
-                        if isinstance(_filter, float):
-                            _filter = ""
-                        width, height = dimensions
-                        # or IGNORED to handle the unique constraint
-                        self.cur.execute(
-                            f"INSERT or IGNORE INTO files VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                            (date, _path, telescope, _filter, _type, target, width, height, jd, "NULL"))
+                        self.insert(*row)
                     self.con.commit()
             else:
                 print(f"No new files to scan")
@@ -111,13 +129,13 @@ class FitsManager:
         
     def print(self, calib=True, repr=False):
         txt = []
-        fields = ["date", "telescope", "target", "filter", "type", "quantity"]
-        
+        fields = ["date", "telescope", "target", "filter", "exposure", "type", "quantity"]
+
         observations = self.observations(telescope="*", target="*", date="*", afilter="*", show=False, index=False)
-        observations = [list(o) for o in observations]
+        _observations = observations.copy()
         if len(observations):
             for i, obs in enumerate(observations):
-                obs.insert(0, i)
+                observations[i] = (i, ) + obs
             txt.append("Observations:")
             txt.append(tabulate.tabulate(observations, headers=["index", *fields], tablefmt="fancy_grid"))
             
@@ -132,10 +150,14 @@ class FitsManager:
                 txt.append("Calibrations:")
                 txt.append(tabulate.tabulate(calibs, headers=fields, tablefmt="fancy_grid"))
             
-        reduced = self.observations(telescope="*", target="*", date="*", afilter="*", imtype="reduced", show=False, index=False)
-        if len(reduced):
-            txt.append("Reduced:")
-            txt.append(tabulate.tabulate(reduced, headers=fields, tablefmt="fancy_grid"))
+        others = set(self.observations(telescope="*", target="*", date="*", afilter="*", imtype="*", show=False, index=False))
+        obs_and_calibs = set(_observations)
+        obs_and_calibs.update(calibs)
+        others = others.difference(obs_and_calibs)
+
+        if len(others):
+            txt.append("Others:")
+            txt.append(tabulate.tabulate(others, headers=fields, tablefmt="fancy_grid"))
 
         txt = "\n".join(txt)
         
@@ -145,7 +167,7 @@ class FitsManager:
             print(txt)
         
     def observations(self, telescope="", target="", date="", afilter="", imtype="light", show=True, index=True):
-        fields = ["date", "telescope", "target", "filter", "type", "quantity"]
+        fields = ["date", "telescope", "target", "filter", "exposure", "type", "quantity"]
         telescope=telescope.replace("*", "%")
         target=target.replace("*", "%")
         date=date.replace("*", "%")
@@ -178,7 +200,14 @@ class FitsManager:
         else: 
             return result
     
-    def files(self, telescope="", target="", date="", afilter="", imtype=""):
+    def files(
+        self,
+        telescope="", 
+        target="", 
+        date="", 
+        afilter="", 
+        imtype="",
+    ):
         telescope=telescope.replace("*", "%")
         target=target.replace("*", "%")
         date=date.replace("*", "%")
@@ -200,7 +229,15 @@ class FitsManager:
         
         return [f[0] for f in files_paths]
 
-    def observation_files(self, i, min_days = 100000, max_days = 0, same_telescope=True, lights="images"):
+    def observation_files(
+        self, 
+        i, 
+        min_days = 100000, 
+        max_days = 0, 
+        same_telescope=True, 
+        lights="images", 
+        darkexp_tolerance=100000000
+    ):
         """Return a dictionary of all the files (including calibration ones) corresponding to a given observation.
 
         The index ``i`` corresponds to the observation index displayed when printing the ``FitsManager`` object
@@ -231,7 +268,7 @@ class FitsManager:
         elif i>len(obs)-1:
             raise AssertionError(f"observation {i} out of range ({len(obs)} found)")
         else:
-            date, telescope, target, afilter, _, _ = obs[i]
+            date, telescope, target, afilter, exposure, _, _ = obs[i]
 
         kwargs = {
             "min_days": min_days,
@@ -251,7 +288,7 @@ class FitsManager:
         kwargs.update({"w": w, "h": h})
 
         images["bias"] = np.array(list(self.cur.execute(sql_other("bias"), kwargs)))
-        images["darks"]  = np.array(list(self.cur.execute(sql_other("dark"), kwargs)))
+        images["darks"]  = np.array(list(self.cur.execute(sql_other("dark", exposure, darkexp_tolerance), kwargs)))
         images["flats"]  = np.array(list(self.cur.execute(sql_flat, kwargs)))
         
         if len(images["bias"]):
@@ -324,7 +361,7 @@ class FitsManager:
         return self.files(imtype="stack")
 
     @property
-    def calibrated(self):
+    def reduced(self):
         """fits paths of the observation calibrated images if present
 
         Returns
@@ -334,7 +371,7 @@ class FitsManager:
         return self.files(imtype="reduced")
     
     def products_denominator(self, i=0):
-        date, telescope, target, afilter, _, _ = self.observations(show=False, index=False)[i]
+        date, telescope, target, afilter, _, _, _ = self.observations(show=False, index=False)[i]
         return f"{telescope}_{date.replace('-', '')}_{target}_{afilter}"
     
     @property
