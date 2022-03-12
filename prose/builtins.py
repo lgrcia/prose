@@ -181,6 +181,9 @@ spirit = dict(
     pixel_scale = 0.306,
     ra_unit= "hourangle",
     trimming = (0, 0),
+    saturation = 14500,
+    read_noise = 17,
+    gain = 5,
 )
 
 built_in_telescopes = {telescope["name"].lower(): telescope for telescope in [
