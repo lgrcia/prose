@@ -86,7 +86,7 @@ io = dict(
 ganymede = dict(
     speculoos_south,
     name = "Ganymede",
-    names = ["SPECULOOS-GANYMEDE"]
+    names = ["SPECULOOS-GANYMEDE", "ACP->Ganymede"]
 )
 
 europa = dict(
