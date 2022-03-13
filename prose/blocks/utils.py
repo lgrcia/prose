@@ -19,6 +19,7 @@ from . import Cutout2D
 import matplotlib.patches as patches
 from ..image import Image
 from astropy.nddata import Cutout2D as astopy_Cutout2D
+from astropy.units.quantity import Quantity
 
 
 class Stack(Block):
@@ -394,10 +395,13 @@ class XArray(Block):
         self.xarray = xr.Dataset()
         self.concat_dim = concat_dim
 
-    def run(self, image, **kwargs):
+    def run(self, image):
         for name in self.variables:
             try:
-                self.variables[name][1].append(image.__getattribute__(name))
+                value = image.__getattribute__(name)
+                if isinstance(image.__getattribute__(name), Quantity):
+                    value = value.value
+                self.variables[name][1].append(value)
             except AttributeError:
                 if self.raise_error:
                     raise AttributeError()
@@ -582,7 +586,8 @@ class Calibration(Block):
             self._produce_master("flat")
 
     def calibration(self, image, exp_time):
-        return (image - (self.master_dark * exp_time + self.master_bias)) / self.master_flat
+        with np.errstate(divide='ignore'):
+            return (image - (self.master_dark * exp_time + self.master_bias)) / self.master_flat
 
     def _produce_master(self, image_type):
         _master = []
@@ -602,12 +607,12 @@ class Calibration(Block):
         for image_path in images:
             image = self.loader(image_path)
             if image_type == "dark":
-                _dark = (image.data - self.master_bias) / image.exposure
+                _dark = (image.data - self.master_bias) / image.exposure.value
                 _master.append(_dark)
             elif image_type == "bias":
                 _master.append(image.data)
             elif image_type == "flat":
-                _flat = image.data - self.master_bias - self.master_dark*image.exposure
+                _flat = image.data - self.master_bias - self.master_dark*image.exposure.value
                 _flat /= np.mean(_flat)
                 _master.append(_flat)
                 del image
@@ -642,7 +647,7 @@ class Calibration(Block):
 
     def run(self, image):
         data = image.data
-        calibrated_image = self.calibration(data, image.exposure)
+        calibrated_image = self.calibration(data, image.exposure.value)
         calibrated_image[calibrated_image < 0] = np.nan
         calibrated_image[~np.isfinite(calibrated_image)] = -1
         image.data = calibrated_image
@@ -659,8 +664,7 @@ class CleanBadPixels(Block):
         self.loader = loader
         
         assert darks is not None or bad_pixels_map is not None, "bad_pixels_map or darks must be specified"
-        
-        if darks or flats:
+        if darks is not None:
             info("buidling bad pixels map")
             if darks is not None:
                 max_dark = self.loader(darks[0]).data
@@ -695,11 +699,20 @@ class CleanBadPixels(Block):
                         np.hstack([self.bad_pixels[0], bad_flats[0]]),
                         np.hstack([self.bad_pixels[1], bad_flats[1]])
                     )
+
+            self.bad_pixels_map[self.bad_pixels] = 1
         
-        if bad_pixels_map is not None:
-            pass
-        self.bad_pixels_map[self.bad_pixels] = 1
+        elif bad_pixels_map is not None:
+            if isinstance(bad_pixels_map, (str, Path)):
+                bad_pixels_map = Image(bad_pixels_map).data
+            elif isinstance(bad_pixels_map, Image):
+                bad_pixels_map = bad_pixels_map.data
+            else:
+                bad_pixels_map = bad_pixels_map
             
+            self.bad_pixels_map = bad_pixels_map
+            self.bad_pixels = np.where(bad_pixels_map == 1)
+
     def clean(self, data):
         data[self.bad_pixels] = np.nan
         data[data<0] = np.nan
