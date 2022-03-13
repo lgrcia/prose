@@ -5,6 +5,7 @@ import astropy.units as u
 import pandas as pd
 import numpy as np
 from astropy.time import Time
+import warnings
 
 def gaia_query(center, fov, *args, limit=10000):
     """
@@ -23,7 +24,7 @@ def gaia_query(center, fov, *args, limit=10000):
         else:
             ra_fov = dec_fov = fov.to(u.deg).value
 
-        radius = np.max([ra_fov, dec_fov])/2
+        radius = np.min([ra_fov, dec_fov])/2
 
     job = Gaia.launch_job(f"select top {limit} {','.join(args) if isinstance(args, (tuple, list)) else args} from gaiadr2.gaia_source where "
                           "1=CONTAINS("
@@ -47,7 +48,9 @@ def image_gaia_query(image, *args, limit=3000, correct_pm=True):
                 distance=table['parallax'].quantity,
                 obstime=Time('2015-06-01 00:00:00.0')
             )
-        skycoord = skycoord.apply_space_motion(Time(image.date))
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            skycoord = skycoord.apply_space_motion(Time(image.date))
 
         table["ra"] = skycoord.ra
         table["dec"] = skycoord.dec
