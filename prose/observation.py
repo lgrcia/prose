@@ -36,15 +36,17 @@ warnings.simplefilter('ignore', category=VerifyWarning)
 class Observation(ApertureFluxes):
     """
     Class to load and analyze photometry products
-
-    Parameters
-    ----------
-    photfile : str
-        path of the `.phot` file to load
-
     """
 
-    def __init__(self, photfile, ignore_time=False):
+    def __init__(self, photfile, time_verbose=False):
+        """
+        Parameters
+        ----------
+        photfile : str
+            path of the `.phot` file to load
+        time_verbose: bool, optional
+            wether time conversion success should be verbose
+        """
         super().__init__(photfile)
 
         utils.remove_sip(self.xarray.attrs)
@@ -68,10 +70,10 @@ class Observation(ApertureFluxes):
         if not has_bjd:
             try:
                 self.compute_bjd()
-                if not ignore_time:
+                if not time_verbose:
                     print(f"{INFO_LABEL} Time converted to BJD TDB")
             except:
-                if not ignore_time:
+                if not time_verbose:
                     print(f"{INFO_LABEL} Could not convert time to BJD TDB")
 
     def _check_stack(self):
@@ -80,7 +82,7 @@ class Observation(ApertureFluxes):
     # Loaders and savers (files and data)
     # ------------------------------------
     def __copy__(self):
-        copied = Observation(self.xarray.copy(), ignore_time=True)
+        copied = Observation(self.xarray.copy(), time_verbose=True)
         copied.phot = self.phot
         copied.telescope = self.telescope
         copied.stack.wcs = self.wcs
@@ -754,6 +756,7 @@ class Observation(ApertureFluxes):
     def show_stars(self, size=10, view=None, n=None, flip=False,
                comp_color="yellow", color=[0.51, 0.86, 1.], stars=None, legend=True, **kwargs):
         """Show detected stars over stack image
+        
         Parameters
         ----------
         size : int, optional
