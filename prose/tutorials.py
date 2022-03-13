@@ -7,6 +7,16 @@ from os import path
 import shutil
 from . import Telescope, Image
 from .simulations import fits_image, ObservationSimulation
+from .finderchart import sdss_image
+from astropy.coordinates import SkyCoord
+from astropy import units as u
+
+
+def image_sample(*coords):
+    # example: "05 38 44.851", "+04 32 47.68",
+    skycoord = SkyCoord(*coords, unit=["hourangle", "deg"])
+    fov = [12, 12]*u.arcmin
+    return sdss_image(skycoord, fov)
 
 def example_image(seed=43):
     np.random.seed(seed)
