@@ -15,8 +15,48 @@ from astropy.io import fits
 from datetime import timedelta
 
 class Image:
+    r"""Base object containing FITS image data and metadata
+
+    When a FITS path (or header) is provided, keyword values are used to identify and instantiate a :py:class:`~prose.Telescope` object. Image attributes then use this object to retrieve specific image information such as ra, dec, untis... etc
+
+    Parameters
+    ----------
+    fitspath : str or Path, optional
+        file path , by default None
+    data : numpy.ndarray, optional
+        image data, by default None
+    header : dict-like, optional
+        image metadata, by default None 
+
+    Example
+    -------
+
+    .. jupyter-execute::
+
+        from prose.tutorials import image_sample
+
+        # loading and showing an example image
+        image = image_sample("05 38 44.851", "+04 32 47.68")
+        image.show()
+
+    .. jupyter-execute::
+        
+        image.header[0:10] # the 10 first lines
+
+    Once this object is instantiated, its parameters are mapped to the ones of the telescope, detected from the header information. This exposes conveniant attributres, for example:
+
+    .. jupyter-execute::
+
+        print(f"pixel scale : {image.pixel_scale:.2f}\nFOV: {image.fov}\nnight: {image.night_date}\n")
+
+    some of them being directly translated into astropy Quantity or datetime object.
+
+    """
 
     def __init__(self, fitspath=None, data=None, header=None, **kwargs):
+        """
+        Image instanciation
+        """
         if fitspath is not None:
             self.path = fitspath
             self.get_data_header()
@@ -32,10 +72,24 @@ class Image:
         self.catalogs = {}
 
     def get_data_header(self):
+        """Retrieve data and metadata from an image
+        """
         self.data = fits.getdata(self.path).astype(float)
         self.header = fits.getheader(self.path)
 
     def copy(self, data=True):
+        """Copy of image object
+
+        Parameters
+        ----------
+        data : bool, optional
+            wether to copy data, by default True
+
+        Returns
+        -------
+        Image
+            copied object
+        """
         new_self = self.__class__(**self.__dict__)
         if not data:
             del new_self.__dict__["data"]
@@ -43,14 +97,26 @@ class Image:
         return new_self
 
     def check_telescope(self):
+        """Instantiate ``self.telescope`` from ``INSTRUME`` and or ``TELESCOP`` keywords
+        """
         if self.header:
            self.telescope = Telescope.from_names(self.header.get("INSTRUME", ""), self.header.get("TELESCOP", ""))
 
-    def get(self, keyword, default=None):
-        return self.header.get(keyword, default)
+    def get(self, key, default=None):
+        """Return cooresponding value from header, similar to ``dict.get``
+
+        Parameters
+        ----------
+        key : str
+        default : any, optional
+            value to return if key not in ``Image.header``, by default None
+        """
+        return self.header.get(key, default)
 
     @property
     def wcs(self):
+        """astropy.wcs.WCS object associated with the FITS ``Image.header``
+        """
         return WCS(self.header)
 
     @wcs.setter
@@ -59,10 +125,22 @@ class Image:
 
     @property
     def exposure(self):
-        return self.get(self.telescope.keyword_exposure_time, None)
+        """Image exposure time in seconds
+
+        Returns
+        -------
+        astropy.units.quantity.Quantity
+        """
+        return self.get(self.telescope.keyword_exposure_time, None) * u.s
 
     @property
     def jd_utc(self):
+        """JD UTC time of the observation
+
+        Returns
+        -------
+        astropy.time.Time
+        """
         # if jd keyword not in header compute jd from date
         if self.telescope.keyword_jd in self.header:
             jd = self.get(self.telescope.keyword_jd, None) + self.telescope.mjd
@@ -77,6 +155,12 @@ class Image:
 
     @property
     def bjd_tdb(self):
+        """BJD TDB time of the observation
+
+        Returns
+        -------
+        astropy.time.Time
+        """
         jd_bjd = self.get(self.telescope.keyword_bjd, None)
         if jd_bjd is not None:
             jd_bjd += self.telescope.mjd
@@ -96,10 +180,18 @@ class Image:
 
     @property
     def seeing(self):
+        """Seeing of the image as written is header
+        """
         return self.get(self.telescope.keyword_seeing, None)
 
     @property
     def ra(self):
+        """RA of the image as written in header
+
+        Returns
+        -------
+        astropy.coordinates.angles.Angle
+        """
         _ra = self.get(self.telescope.keyword_ra, None)
         if _ra is not None:
             _ra = Angle(_ra, self.telescope.ra_unit).to(u.deg)
@@ -107,6 +199,12 @@ class Image:
 
     @property
     def dec(self):
+        """DEC of the image as written in header
+
+        Returns
+        -------
+        astropy.coordinates.angles.Angle
+        """
         _dec = self.get(self.telescope.keyword_dec, None)
         if _dec is not None:
             _dec = Angle(_dec, self.telescope.dec_unit).to(u.deg)
@@ -114,26 +212,55 @@ class Image:
 
     @property
     def flip(self):
+        """Telescope flip as written in image header
+        """
         return self.get(self.telescope.keyword_flip, None)
 
     @property
     def airmass(self):
+        """Observation airmass as written in image header
+        """
         return self.get(self.telescope.keyword_airmass, None)
 
     @property
     def shape(self):
+        """Shape of the image data np.ndarray
+
+        Returns
+        -------
+        2D tuple
+        """
         return np.array(self.data.shape)
 
     @property
     def date(self):
+        """datetime of the observation
+
+        Returns
+        -------
+        datetime.datetime
+        """
         return dparser.parse(self.header[self.telescope.keyword_observation_date])
 
     @property
     def night_date(self):
+        """date of the night when night started.
+
+        Returns
+        -------
+        datetime.date
+        """
+        # TODO: do according to last astronomical twilight?
         return (dparser.parse(self.header[self.telescope.keyword_observation_date]) - timedelta(hours=15)).date()
 
     @property
     def label(self):
+        """A conveniant {Telescope}_{Date}_{Object}_{Filter} string
+
+        Returns
+        -------
+        str
+        """
         return "_".join([
             self.telescope.name,
             self.night_date.strftime("%Y%m%d"),
@@ -143,6 +270,8 @@ class Image:
 
     @property
     def filter(self):
+        """Observation filter as written in image header
+        """
         return self.header.get(self.telescope.keyword_filter, None)
     
     def show(self, 
@@ -151,11 +280,40 @@ class Image:
         figsize=(10,10), 
         stars=None, 
         stars_labels=True, 
-        vmin=True, 
-        vmax=None, 
-        scale=1.5,
-        frame=False
+        zscale=True,
+        frame=False,
+        contrast=0.1,
         ):
+        """Show image data
+
+        Parameters
+        ----------
+        cmap : str, optional
+            matplotlib colormap, by default "Greys_r"
+        ax : subplot, optional
+            matplotlbib Axes in which to plot, by default None
+        figsize : tuple, optional
+            matplotlib figure size if ax not sepcified, by default (10,10)
+        stars : bool, optional
+            wether to show ``Image.stars_coords``, by default None
+        stars_labels : bool, optional
+            wether top show stars indexes, by default True
+        zscale : bool, optional
+            wether to apply a z scale to plotted image data, by default False
+        frame : bool, optional
+            wether to show astronomical coordinates axes, by default False
+        contrast : float, optional
+            image contrast used in image scaling, by default 0.1
+
+        See also
+        --------
+        show_cutout :
+            Show a specific star cutout
+        plot_catalog :
+            Plot catalog stars on an image
+        plot_circle :
+            Plot circle with radius in astronomical units  
+        """
         if ax is None:
             if not isinstance(figsize, (list, tuple)):
                 if isinstance(figsize, (float, int)):
@@ -168,15 +326,12 @@ class Image:
             else:
                 ax = fig.add_subplot(111)
 
-        if vmin is True or vmax is True:
-            med = np.nanmedian(self.data)
-            vmin = med
-            vmax = scale*np.nanstd(self.data) + med
+        if zscale is False:
+            vmin = np.nanmedian(self.data)
+            vmax = vmax = vmin*(1+contrast)/(1-contrast)
             _ = ax.imshow(self.data, cmap=cmap, origin="lower",vmin=vmin,vmax=vmax)
-        elif all([vmin, vmax]) is False:
-            _ = ax.imshow(utils.z_scale(self.data, 0.05*scale), cmap=cmap, origin="lower")
         else:
-            _ = ax.imshow(self.data, cmap=cmap, origin="lower",vmin=vmin,vmax=vmax)
+            _ = ax.imshow(utils.z_scale(self.data, contrast), cmap=cmap, origin="lower")
         
         if stars is None:
             stars = "stars_coords" in self.__dict__
@@ -192,8 +347,7 @@ class Image:
             overlay[1].set_axislabel('Declination (J2000)')
 
     def show_cutout(self, star=None, size=200, marks=True, **kwargs):
-        """
-        Show a zoomed cutout around a detected star or coordinates
+        """Show a zoomed cutout around a detected star or coordinates
 
         Parameters
         ----------
@@ -261,3 +415,4 @@ class Image:
         """Return wether the image is plate solved
         """
         return self.wcs.has_celestial
+
