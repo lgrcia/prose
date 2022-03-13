@@ -103,14 +103,17 @@ class SegmentedPeaks(StarsDetection):
         wether to sort stars coordinates from the highest to the lowest intensity, by default True
     """
     @register_args
-    def __init__(self, unit_euler=False, threshold=4, **kwargs):
+    def __init__(self, unit_euler=False, threshold=4, min_area=3, **kwargs):
         super().__init__(**kwargs)
         self.threshold = threshold
         self.unit_euler = unit_euler
+        self.min_area = min_area
 
     def run(self, image):
         threshold = self.threshold*np.nanstd(image.data.flatten()) + np.median(image.data.flatten())
         regions = regionprops(label(image.data > threshold), image.data)
+        if self.min_area is not None:
+            regions = [r for r in regions if r.area > self.min_area]
         fluxes = np.array([np.sum(region.intensity_image) for region in regions])
         idxs = np.argsort(fluxes)[::-1][0:self.n_stars]
         regions = [regions[i] for i in idxs]
