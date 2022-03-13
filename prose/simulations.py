@@ -256,13 +256,8 @@ def observation_to_model(time, t0=0.1, r=0.06417):
     return Observation(x)
 
 
-try:
-    import exoplanet as xo
-except:
-    pass
-
-
 def xo_lightcurve(time, period=3, r=0.1, t0=0, plot=False):
+    import exoplanet as xo
     orbit = xo.orbits.KeplerianOrbit(period=0.7, t0=0.1)
     light_curve = xo.LimbDarkLightCurve([0.1, 0.4]).get_light_curve(orbit=orbit, r=r, t=time).eval() + 1
 
