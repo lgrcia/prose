@@ -241,6 +241,24 @@ class FWHM(PSFModel):
         fwhm = 2*binned_radii[np.flatnonzero(binned_pixels > np.max(binned_pixels)/2)[-1]]
         return fwhm
 
+    def plot_radial_psf(self, psf):
+        x, y = np.array(psf.shape)/2
+        Y, X = np.indices(psf.shape)
+        radii = (np.sqrt((X - x) ** 2 + (Y - y) ** 2)).flatten()
+        idxs = np.argsort(radii)
+        radii = radii[idxs]
+        pixels = psf.flatten()
+        pixels = pixels[idxs]
+
+        binned_radii, binned_pixels, _ = fast_binning(radii, pixels, bins=1)
+
+        fig = plt.figure(figsize=(9.5, 4))
+        plt.plot(radii, pixels, "o", fillstyle='none', c="0.7", ms=4)
+        plt.plot(binned_radii, binned_pixels, c="k")
+        plt.xlabel("distance from center (pixels)")
+        plt.ylabel("ADUs")
+        f = 0
+
 class FastGaussian(PSFModel):
     """
     Fit a symetric 2D Gaussian model to an image effective PSF
@@ -567,3 +585,38 @@ class KeepGoodStars(Block):
         good = np.array([self.stat(s.data) for s in stars])
         good_stars = image.stars_coords[i][np.argwhere(good).squeeze()][0:self.n]
         image.stars_coords = good_stars
+
+
+class HFD(FWHM):
+
+    # https://www.focusmax.org/Documents_V4/ITS%20Paper.pdf
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.sorted_idxs = None
+
+    def from_cutouts(self, image):
+        super().from_cutouts(image)
+        self.sorted_idxs = np.argsort(self.radii)
+        self.sorted_radii = self.radii[self.sorted_idxs]
+
+    def optimize(self, psf):
+        psf -= np.percentile(psf, 10)
+        pixels = psf.flatten()[self.sorted_idxs]
+        cumsum = np.cumsum(pixels)
+        cum_radii = np.arange(len(self.sorted_radii))
+        bkg_idxs = np.flatnonzero(pixels < np.percentile(pixels, 5))
+        # removing background in cumsum
+        bkg_X = np.array([
+            np.ones_like(bkg_idxs),
+            cum_radii[bkg_idxs]
+        ])
+        w = np.linalg.lstsq(bkg_X.T, cumsum[bkg_idxs])[0]
+        X = np.array([
+            np.ones_like(cumsum),
+            cum_radii
+        ])
+        cumsum -= w@X
+        cumsum = cumsum - cumsum[0]
+        fwhm = self.sorted_radii[np.argmin(np.abs(cumsum - np.max(cumsum)/2))]
+        return fwhm
