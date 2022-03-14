@@ -1,9 +1,10 @@
-from .. import Sequence, blocks, Block, Image
+from .. import Sequence, MultiProcessSequence, blocks, Block, Image
 import os
 from os import path
 from pathlib import Path
 from .. import utils
 from .photometry import plot_function
+from astropy.time import Time
 
 
 class Calibration:
@@ -14,13 +15,6 @@ class Calibration:
 
     Parameters
     ----------
-    reference : float or str, optional
-        Reference image to use for alignment:
-         
-        - if ``float``: from 0 (first image) to 1 (last image)
-        - if ``str``: path of the reference image
-        
-        by default 1/2
     overwrite : bool, optional
         whether to overwrite existing products, by default False
     flats : list, optional
@@ -29,10 +23,10 @@ class Calibration:
         list of bias images paths, by default None
     darks : list, optional
         list of darks images paths, by default None
-    images : list, optional
-        list of images paths to be calibrated, by default None
     psf : `Block`, optional
-        a `Block` to be used to characterise the effective psf, by default blocks.Moffat2D
+        a `Block` to be used to characterise the effective psf, by default None, setting a default blocks.Moffat2D
+    detection: `Block`, optional
+        a `Block` to be used for stars detection, by default None, setting a default blocks.SegmentedPeaks
     show: bool, optional
         within a notebook, whether to show processed image during reduction, by default False 
     verbose: bool, optional
@@ -47,85 +41,127 @@ class Calibration:
 
     def __init__(
             self,
-            reference=1/2,
             overwrite=False,
             flats=None,
             bias=None,
             darks=None,
-            images=None,
-            psf=blocks.Moffat2D,
+            psf_block=None,
+            detection_block=None,
             verbose=True,
             show=False,
             twirl=True,
             n=None,
             loader=Image,
+            cores=False,
+            bad_pixels=False,
+            save_masters=True,
+            **kwargs
     ):
         self.destination = None
         self.overwrite = overwrite
-        self._reference = reference
         self.verbose = verbose
         self.show = show
         self.n = n if n is not None else (12 if twirl else 50)
         self.twirl = twirl
-
-        if show:
-            self.show = blocks.LivePlot(plot_function, size=(10, 10))
-        else:
-            self.show = blocks.Pass()
+        self.cores = cores
+        self.xarray = None
+        self.loader = loader
+        self.show = show
 
         self.flats = flats
         self.bias = bias
         self.darks = darks
-        self._images = images
         self.loader = loader
 
-        self.detection_s = None
-        self.calibration_s = None
+        # The two sequences
+        self.detection = None
+        self.calibration = None
 
-        assert psf is None or issubclass(psf, Block), "psf must be a subclass of Block"
-        self.psf = psf
-        
-        # set reference file
-        if isinstance(self._reference, (int, float)):
-            reference_id = int(self._reference * len(self._images))
-            self.reference_fits = self._images[reference_id]
-        elif isinstance(self._reference, (str, Path)):
-            self.reference_fits = self._reference
+        # Checking psf block
+        if psf_block is None:
+            psf_block = blocks.Moffat2D(name="fwhm")
+        else:
+            assert isinstance(psf_block, Block), "psf must be a subclass of Block"
+            psf_block.name = "fwhm"
 
-        self.calibration_block = blocks.Calibration(self.darks, self.flats, self.bias, loader=loader, name="calibration")
+        self.psf = psf_block
 
-    def run(self, destination, gif=True):
+        # checking detection block
+        if detection_block is None:
+            detection_block = blocks.SegmentedPeaks(n_stars=self.n, name="detection")
+        else:
+            assert isinstance(detection_block, Block), "detection must be a subclass of Block"
+            detection_block.name = "detection"
+
+        self.detection_block = detection_block
+        self.bad_pixels = bad_pixels
+
+        self.calibration_blocks = [
+            blocks.Calibration(self.darks,  self.flats,  self.bias,  loader=loader, name="calibration"),
+            blocks.CleanBadPixels(darks=self.darks, flats=self.flats) if self.bad_pixels else blocks.Pass(),
+            blocks.Trim(name="trimming", skip_wcs=True),
+        ]
+
+        if save_masters:
+            pass
+
+    def run(self, images, destination=None, reference=1/2, movie="gif"):
         """Run the calibration pipeline
 
         Parameters
         ----------
-        destination : str
-            Destination where to save the calibrated images folder
+        images : list, optional
+            List of images paths to be calibrated
+        destination : str, optional
+            Destination where to save the calibrated images folder, by default reference Image.label
+        reference : float or str, optional
+            Reference image to use for alignment:
+                - if ``float``: from 0 (first image) to 1 (last image)
+                - if ``str``: path of the reference image
+            by default 1/2
+        movie: str or False, optional
+            - if str, produce a movie of the sequence with format 'movie'
+            - if False movie not produced
         """
-        self.destination = destination
-        gif_block = blocks.Video(self.gif_path, name="video", from_fits=True) if gif else blocks.Pass()
 
-        self.make_destination()
+        # reference image
+        if isinstance(reference, (int, float)):
+            self.reference = self.loader(images[int(reference * len(images))])
+        elif isinstance(reference, (str, Path)):
+            self.reference = self.loader(reference)
 
-        self.detection_s = Sequence([
-            self.calibration_block,
-            blocks.Trim(name="trimming"),
-            blocks.SegmentedPeaks(n_stars=self.n, name="detection"),
+        # Creating reduced image folder
+        if destination is None:
+            destination = self.reference.label
+        self.destination = Path(destination)
+        self.destination.mkdir(exist_ok=True)
+
+        # Detection sequence
+        # ------------------
+        self.detection = Sequence([
+            *self.calibration_blocks,
+            self.detection_block,
             blocks.ImageBuffer(name="buffer")
-        ], self.reference_fits, loader=self.loader)
+        ], loader=self.loader)
 
-        self.detection_s.run(show_progress=False)
+        self.detection.run(self.reference, show_progress=False)
 
-        ref_image = self.detection_s.buffer.image
-        ref_stars = ref_image.stars_coords
+        # Checking enough reference stars are found
+        if self.twirl:
+            n_reference_stars = len(self.reference.stars_coords)
+            assert n_reference_stars >= 4, f"Only {n_reference_stars} stars detected (must be >= 4). See detection kwargs"
 
-        self.calibration_s = Sequence([
-            self.calibration_block,
-            blocks.Trim(name="trimming", skip_wcs=True),
-            blocks.Flip(ref_image, name="flip"),
-            blocks.SegmentedPeaks(n_stars=self.n, name="detection"),
-            blocks.Twirl(ref_stars, n=self.n, name="twirl") if self.twirl else blocks.XYShift(ref_stars),
-            self.psf(name="fwhm"),
+        # Calibration sequence
+        # --------------------
+        self.calibration = Sequence([
+            *self.calibration_blocks,
+            blocks.Flip(self.reference, name="flip"),
+            self.detection_block,
+            blocks.Twirl(self.reference.stars_coords, n=self.n, name="twirl") if self.twirl 
+            else blocks.XYShift(self.reference.stars_coords),
+            blocks.Cutouts(),
+            blocks.MedianPSF(),
+            self.psf,
             blocks.XArray(
                 ("time", "jd_utc"),
                 ("time", "bjd_tdb"),
@@ -139,41 +175,21 @@ class Calibration:
                 ("time", "exposure"),
                 ("time", "path")
             ),
-            blocks.Cutout2D(ref_image) if not self.twirl else blocks.Pass(),
-            blocks.SaveReduced(self.destination, overwrite=self.overwrite, name="save_reduced"),
+            blocks.Cutout2D(self.reference) if not self.twirl else blocks.Pass(),
+            blocks.SaveReduced(destination, overwrite=self.overwrite, name="save_reduced"),
             blocks.AffineTransform(stars=True, data=True) if self.twirl else blocks.Pass(),
-            self.show,
-            blocks.Stack(self.stack_path, header=ref_image.header, overwrite=self.overwrite, name="stack"),
-            blocks.Video(self.gif_path, name="video", from_fits=True),
-        ], self._images, name="Calibration", loader=self.loader)
+            blocks.LivePlot(plot_function, size=(10, 10)) if self.show else blocks.Pass(),
+            blocks.Stack(self.stack_path, header=self.reference.header, overwrite=self.overwrite, name="stack"),
+            blocks.RawVideo(self.destination / f"movie.{movie}", function=utils.z_scale, scale=0.5) if movie is not False else blocks.Pass(),
+        ], name="Calibration", loader=self.loader)
 
-        self.calibration_s.run(show_progress=self.verbose)
+        self.calibration.run(images, show_progress=self.verbose)
 
-        # saving xarray
-        xarray = self.calibration_s.xarray.xarray
-        stack_header = self.calibration_s.stack.header
-        stack_telescope = self.calibration_s.stack.telescope
-        xarray.attrs.update(utils.header_to_cdf4_dict(stack_header))
-        xarray.attrs.update(dict(
-            target=-1,
-            aperture=-1,
-            telescope=stack_telescope.name,
-            filter=stack_header.get(stack_telescope.keyword_filter, ""),
-            exptime=stack_header.get(stack_telescope.keyword_exposure_time, ""),
-            name=stack_header.get(stack_telescope.keyword_object, ""),
-        ))
-
-        if stack_telescope.keyword_observation_date in stack_header:
-            xarray.attrs.update(
-                dict(date=str(utils.format_iso_date(
-                    stack_header[stack_telescope.keyword_observation_date])).replace("-", ""),
-                     ))
-        xarray.coords["stack"] = (('w', 'h'), self.calibration_s.stack.stack)
-
-        xarray = xarray.assign_coords(time=xarray.jd_utc)
-        xarray.attrs["time_format"] = "jd_utc"
-        xarray.attrs["reduction"] = [b.__class__.__name__ for b in self.calibration_s.blocks]
-        xarray.to_netcdf(self.phot)
+        # Saving outpout
+        # first image serves as reference for info (not reference image because it
+        # can be from another observation (we encountered this use case)
+        self.stack = self.loader(self.stack_path)
+        self.save()
 
     @property
     def stack_path(self):
@@ -184,32 +200,40 @@ class Calibration:
         return self.destination / (self.destination.name + ".phot")
 
     @property
-    def stack(self):
-        return self.stack_path
-
-    @property
     def images(self):
-        return self.calibration_s.save_reduced.files
-
-    @property
-    def gif_path(self):
-        prepend = "movie.gif"
-        return path.join(self.destination, prepend)
+        return self.calibration.save_reduced.files
 
     @property
     def processing_time(self):
-        return self.calibration_s.processing_time + self.detection_s.processing_time
-
-    def make_destination(self):
-        self.destination = Path(self.destination)
-        self.destination.mkdir(exist_ok=True)
-        if not path.exists(self.destination):
-            os.mkdir(self.destination)
-
+        return self.calibration.processing_time + self.detection.processing_time
+        
     def __repr__(self):
-        return f"{self.detection_s}\n{self.calibration_s}"
+        return f"{self.detection}\n{self.calibration}"
 
-    @property
-    def xarray(self):
-        return self.calibration_s.xarray()
+    def save(self):
+        xarray = self.calibration.xarray.xarray
+        xarray.attrs.update(utils.header_to_cdf4_dict(self.stack.header))
+        xarray.attrs.update(dict(
+            target=-1,
+            aperture=-1,
+            telescope=self.stack.telescope.name,
+            filter=self.stack.header.get(self.stack.telescope.keyword_filter, ""),
+            exptime=self.stack.header.get(self.stack.telescope.keyword_exposure_time, ""),
+            name=self.stack.header.get(self.stack.telescope.keyword_object, ""),
+        ))
+
+        if self.stack.telescope.keyword_observation_date in self.stack.header:
+            date = self.stack.header[self.stack.telescope.keyword_observation_date]
+        else:
+            date = Time(self.stack.header[self.stack.telescope.keyword_jd], format="jd").datetime
+
+        xarray.attrs.update(dict(date=utils.format_iso_date(date).isoformat()))
+        xarray.coords["stack"] = (('w', 'h'), self.calibration.stack.stack)
+
+        xarray = xarray.assign_coords(time=xarray.jd_utc)
+        xarray = xarray.sortby("time")
+        xarray.attrs["time_format"] = "jd_utc"
+        xarray.attrs["reduction"] = [b.__class__.__name__ for b in self.calibration.blocks]
+        self.xarray = xarray
+        xarray.to_netcdf(self.phot)
 

@@ -1,350 +1,390 @@
-import shutil
-from os import path
-import pandas as pd
+import sqlite3
 import numpy as np
-from tabulate import tabulate
-from collections import OrderedDict
-from ..telescope import Telescope
-from .. import CONFIG
-from datetime import timedelta
-import os
-from pathlib import Path
+import tabulate
 from tqdm import tqdm
-from .io import fits_to_df, get_files
-import re
+from pathlib import Path
+from .io import get_files, fits_to_df
 
+sql_days_between = "date >= date(:date, '-' || :min_days || ' days') AND date <= date(:date, :max_days || ' days')"
 
-def sub(s):
-    return re.sub("[\W_]+", "", s).lower()
+sql_light = f"""
+SELECT * FROM files WHERE
+type = 'light' AND telescope LIKE :telescope || '%' AND target LIKE :target AND date = :date AND filter LIKE :filter || '%' ORDER BY jd
+"""
 
+sql_flat = f"""
+SELECT path FROM files WHERE
+type = 'flat' AND telescope LIKE :telescope || '%' AND filter = :filter AND width = :w AND height = :h AND
+date = (
+    SELECT MAX(date) FROM files WHERE 
+    type = 'flat' AND telescope LIKE :telescope || '%' AND filter = :filter AND width = :w AND height = :h AND
+    {sql_days_between} 
+)
+"""
 
-def clean(df):
-    return df.astype(str).apply(lambda s: sub(s))
+def exposure_constraint(exposure=0, tolerance=1000000):
+    return f"exposure between {exposure-tolerance} and {exposure+tolerance}"
 
-
-class FilesDataFrame:
+def sql_other(kind, exposure=0, tolerance=1000000):
+    return f"""
+    SELECT path FROM files WHERE
+    type = '{kind}' AND telescope LIKE :telescope || '%' AND width = :w AND height = :h AND date = (
+        SELECT MAX(date) FROM files WHERE 
+        type = '{kind}' AND telescope LIKE :telescope || '%' AND width = :w AND height = :h AND
+        {exposure_constraint(exposure, tolerance)} AND
+        {sql_days_between}
+    )
     """
-    TODO: should use https://pandas.pydata.org/pandas-docs/stable/development/extending.html
+
+class FitsManager:
+    """Object to parse and retrieve FITS files from folder and sub-folders
+
+    This object scans files in a folder and stores the data in a mysql database for conveniance (but all products can be accessed without knowledge of the SQL language)
+
+    Parameters
+    ----------
+    folder : str
+        path of the folder to parse
+    depth : int, optional
+        maxiumum depth of the sub-folders to explore, by default 0
+    hdu : int, optional
+        by default 0
+    extension : str, optional
+        by default ".f*ts*"
+    file : _type_, optional
+        _description_, by default None
+    batch_size : bool or int, optional
+        - if False: update database after all FITS files are parsed
+        - if int: update database every time ``batch_size`` FITS files are parsed
+
+        by default False
     """
-    def __init__(self, files_df, verbose=True):
-        self.files_df = None
-        self.verbose = verbose
+    
+    def __init__(self, folder=None, depth=0, hdu=0, extension=".f*t*", file=None, batch_size=False):
+        if file is None:
+            file = ":memory:"
 
-        self.files_df = files_df.reset_index(drop=True)
-        self._original_files_df = self.files_df.copy()
+        self.con = sqlite3.connect(file)
+        self.cur = self.con.cursor()
 
-        assert len(self._original_files_df) != 0, "No data found"
-        self.telescope = None
-        self.sort_by_date()
+        # check if file Table exists
+        tables = list(self.cur.execute("SELECT name FROM sqlite_master WHERE type='table';"))
+        if len(tables) == 0:
+            self.cur.execute('''CREATE TABLE files (date text, path text UNIQUE, 
+            telescope text, filter text, type text, target text, width int, height int, 
+            jd real, observation_id int, exposure real)''')
+            self.con.commit()
+        
+        if folder is not None:
+            self.scan_files(folder, extension, batch_size=batch_size, depth=depth)
+        # else:
+        #     raise AssertionError(f"No files with extension '{extension}'found")
 
-    def restore(self):
-        self.files_df = self._original_files_df.copy()
-        self.sort_by_date()
+        _observations = self.observations(show=False, index=False)
+        self._observations = np.array([f"{o[0]}_{o[1]}_{o[2]}_{o[3]}" for o in _observations])
 
-    #     def __getattribute__(self)
+    def _insert(self, _path, date, telescope, _type, target, _filter, dimensions, _, jd, exposure):
+        """Insert FITS data to object database
+        """
+        if isinstance(_filter, float):
+            _filter = ""
+        width, height = dimensions
+        # or IGNORED to handle the unique constraint
+        self.cur.execute(
+            f"INSERT or IGNORE INTO files VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (date, _path, telescope, _filter, _type, target, width, height, jd, "NULL", exposure))
 
-    @staticmethod
-    def _get(files_df, return_conditions=False, **kwargs):
-        conditions = pd.Series(np.ones(len(files_df)).astype(bool))
+    def scan_files(self, folder, extension, batch_size=False, verbose=True, depth=0):
+        """Scan a folder and add data to database
 
-        for field, value in kwargs.items():
-            if isinstance(value, str):
-                conditions = conditions & clean(files_df[field]).str.fullmatch(value, case=False).reset_index(drop=True)
+        Parameters
+        ----------
+        folder : str ot Path
+            path of folder
+        extension : str, optional
+            by default ".f*ts*"
+        batch_size : bool or int, optional
+            - if False: update database after all FITS files are parsed
+            - if int: update database every time ``batch_size`` FITS files are parse
+
+            by default False
+        verbose : bool, optional
+            whether to show progress bar during parsing, by default True
+        depth : int, optional
+            maxiumum depth of the sub-folders to explore, by default 0
+        """
+        assert Path(folder).exists(), "Folder does not exists"
+        files = get_files(extension, folder, depth=depth)
+
+        if len(files) > 0:
+            current_files = [v[0] for v in self.cur.execute("SELECT path from files").fetchall()]
+            files_to_scan = np.setdiff1d(files, current_files)
+
+            if len(files_to_scan) > 0:
+                if batch_size is None:
+                    batches = [files_to_scan]
+                elif batch_size is False:
+                    pass
+                elif batch_size is True:
+                    batches = [files_to_scan]
+                else:
+                    assert isinstance(batch_size, int), "batch_size must be an int"
+
+                    if len(files_to_scan) < batch_size:
+                        batches = [files_to_scan]
+                    else:
+                        batches = np.array_split(files_to_scan, len(files_to_scan)//batch_size)
+                
+                if verbose:
+                    if batch_size is not False:
+                        def progress(x): return tqdm(x, bar_format='Reading fits {l_bar}{bar}{r_bar}')
+                else:
+                    def progress(x): return x
+
+                if batch_size is not False:
+                    for batch in progress(batches):
+                        df = fits_to_df(batch, verbose=False)
+                        for row in df.values:
+                            self._insert(*row)
+                        self.con.commit()
+                else:
+                    df = fits_to_df(files_to_scan, verbose=True)
+                    for row in df.values:
+                        self._insert(*row)
+                    self.con.commit()
             else:
-                conditions = conditions & (files_df[field] == value).reset_index(drop=True)
-
-        if return_conditions:
-            return conditions.reset_index(drop=True)
+                print(f"No new files to scan")
         else:
-            return files_df.reset_index(drop=True).loc[conditions]
-
-    def get(self, return_conditions=False, **kwargs):
-        """Filter the current dataframe by values of its columns
+            raise AssertionError(f"No files with extension '{extension}' found")
+        
+    def print(self, calib=True, repr=False):
+        """Print database observations, calibrations and other files in nice table
 
         Parameters
         ----------
-        return_conditions : bool, optional
-            Wether to return a bool DataArray matching the filters, by default False
-        **kwargs: dict
-            dict of column-value filters to be applied. Example: telescope="A", filter="I" ... etc
-
-        Returns
-        -------
-        dataframe
+        calib : bool, optional
+            whether to show calibration files, by default True
+        repr : bool, optional
+            whether to return a str of the table, by default False
         """
-        return self._get(self.files_df, return_conditions=return_conditions, **kwargs)
+        txt = []
+        fields = ["date", "telescope", "target", "filter", "exposure", "type", "quantity"]
 
-    def keep(self, inplace=True, **kwargs):
-        """Same as get but can replace the inplace dataframe with filtered values and sort by date
+        observations = self.observations(telescope="*", target="*", date="*", afilter="*", show=False, index=False)
+        _observations = observations.copy()
+        if len(observations):
+            for i, obs in enumerate(observations):
+                observations[i] = (i, ) + obs
+            txt.append("Observations:")
+            txt.append(tabulate.tabulate(observations, headers=["index", *fields], tablefmt="fancy_grid"))
+            
+        calibs = [
+            self.observations(telescope="*", target="*", date="*", afilter="*", imtype=imtype, show=False, index=False)
+            for imtype in ["bias", "dark", "flat"]
+        ]
+        calibs = [c for ca in calibs for c in ca] # flattening
+
+        if calib:
+            if len(calibs):
+                txt.append("Calibrations:")
+                txt.append(tabulate.tabulate(calibs, headers=fields, tablefmt="fancy_grid"))
+            
+        others = set(self.observations(telescope="*", target="*", date="*", afilter="*", imtype="*", show=False, index=False))
+        obs_and_calibs = set(_observations)
+        obs_and_calibs.update(calibs)
+        others = others.difference(obs_and_calibs)
+
+        if len(others):
+            txt.append("Others:")
+            txt.append(tabulate.tabulate(others, headers=fields, tablefmt="fancy_grid"))
+
+        txt = "\n".join(txt)
+        
+        if repr:
+            return txt
+        else:
+            print(txt)
+        
+    def observations(
+        self, 
+        telescope="", 
+        target="", 
+        date="", 
+        afilter="", 
+        imtype="light", 
+        show=True, 
+        index=True
+    ):
+        """
+        Print of return current observations
+
+        An observation is defined as a unique set of images with common date, telescope, target, filter and exposure.
 
         Parameters
-        ----------
-        inplace : bool, optional
-            weather to replace dataframe inplace, by default True
+        ---------- 
+        telescope: str, optional
+        target: str, optional
+        date: str, optional
+        afilter: str, optional
+        imtype: str, optional
+        show: bool, optional
+            whether to print the table (otherwise return it as a string), default True
+        index: bool, optional
+            whether to show observation index, default True       
         """
+        fields = ["date", "telescope", "target", "filter", "exposure", "type", "quantity"]
+        telescope=telescope.replace("*", "%")
+        target=target.replace("*", "%")
+        date=date.replace("*", "%")
+        afilter=afilter.replace("*", "%")
+        imtype=imtype.replace("*", "%")
 
-        new_df = self.get(**kwargs)
-        if inplace:
-            self.files_df = new_df
-        else:
-            return self.__class__(new_df)
-
-        self.sort_by_date()
-
-    def sort_by_date(self):
-        if "jd" in self.files_df:
-            self.sort_by("jd")
-
-    def sort_by(self, field, inplace=True):
-        """Sort dataframe with a specific keyword
+        result = list(
+            self.cur.execute(
+                f"""
+                SELECT {",".join(fields[0:-1])}, COUNT(date) FROM files WHERE
+                type LIKE :imtype || '%' AND 
+                (telescope LIKE :telescope || '%' OR telescope IS NULL) AND 
+                (target LIKE :target || '%' OR target IS NULL) AND 
+                date LIKE :date || '%' AND 
+                filter LIKE :filter || '%'
+                GROUP BY date, telescope, target, filter, exposure, type ORDER BY date
+                """
+                , {"telescope":telescope, "target":target, "date": date, "filter":afilter, "imtype":imtype}))
+        
+        if index:
+            fields.insert(0, "index")
+            if len(result) > 0:
+                for i, r in enumerate(result):
+                    result[i] = list(r)
+                    j = np.flatnonzero(self._observations == f"{r[0]}_{r[1]}_{r[2]}_{r[3]}")[0]
+                    result[i].insert(0, j)
+        
+        if show:
+            print(tabulate.tabulate(result, headers=fields, tablefmt="fancy_grid"))
+        else: 
+            return result
+    
+    def files(
+        self,
+        telescope="", 
+        target="", 
+        date="", 
+        afilter="", 
+        imtype="",
+        exposure=0,
+        exposure_tolerance=10000000000, 
+        ):
+        """
+        Returns files given criteria
 
         Parameters
-        ----------
-        field : string
-            keyword to sort by
-        inplace : bool, optional
-            weather to replace current datframe by a the filtered one, by default True. If False, filtered will be returned
-
-        """
-        if field in self.files_df:
-            new_df = self.files_df.sort_values([field]).reset_index(drop=True)
-            if inplace:
-                self.files_df = new_df
-            else:
-                return new_df
-        else:
-            raise KeyError("'{}' is not in files_df".format(field))
-
-    def description_table(self, *fields, original=False, unique=True, index=False, hide=None,
-                          **kwargs):
-        """Print a table description of dataframe
-
-        Parameters
-        ----------
-        return_string : bool, optional
-            weather to return str of the table, by default False. If False table is printed.
-        original : bool, optional
-            weather to describe the original dataframe, by default False. If false, this is applied on current.
-        unique : bool, optional
-            wether to show rows of unique values, by default True
-        index : bool, optional
-            wether to show indexes as first table header, by default False
-        hide : [type], optional
-            fields to hide, by default None. If one is specified, dataframe will be filtered for this values but they will not be shown
-        **kwargs: dict
-            filters to be applied. Example: telescope="A", filter="I" ... etc
-
-        Returns
-        -------
-        [type]
-            [description]
+        ---------- 
+        telescope: str, optional
+        target: str, optional
+        date: str, optional
+        afilter: str, optional
+        imtype: str, optional
+        exposure: float, optional
+            exposure of the files to retrieve, as specified in their headers, defaut is 0 (see next kwarg)
+        exposure_tolerance: float, optional
+            tolerance of the exposure. Files with exposure - exposure_tolerance < exposure < exposure + exposure_tolerance will be retrieve, default 10000000000, which account with potentially all exposures
         """
 
-        if original:
-            files_df = self._original_files_df.copy()
-        else:
-            files_df = self.files_df.copy()
+        telescope=telescope.replace("*", "%")
+        target=target.replace("*", "%")
+        date=date.replace("*", "%")
+        afilter=afilter.replace("*", "%")
+        imtype=imtype.replace("*", "%")
 
-        files_df = files_df.fillna("")
+        files_paths = list(
+            self.cur.execute(
+                f"""
+                SELECT path FROM files WHERE
+                type LIKE :imtype || '%' AND 
+                (telescope LIKE :telescope || '%' OR telescope IS NULL) AND 
+                (target LIKE :target || '%' OR target IS NULL) AND 
+                date LIKE :date || '%' AND 
+                filter LIKE :filter || '%' AND
+                {exposure_constraint(exposure, exposure_tolerance)}
+                ORDER BY JD
+                """
+                , {"telescope":telescope, "target":target, "date": date, "filter":afilter, "imtype":imtype}))
+        
+        return [f[0] for f in files_paths]
 
-        if len(kwargs) > 0:
-            files_df = self._get(files_df, **kwargs)
-            headers = list(fields) + list(kwargs.keys())
+    def observation_files(
+        self, 
+        i, 
+        min_days = 100000, 
+        max_days = 0, 
+        same_telescope=True, 
+        lights="images", 
+        darkexp_tolerance=100000000
+    ):
+        """Return a dictionary of all the files (including calibration ones) corresponding to a given observation.
 
-        else:
-            headers = list(fields)
-
-        if hide is not None:
-            assert isinstance(hide, list), "hide must be a list of string"
-            for h in hide:
-                headers.remove(h)
-
-        if unique:
-            multi_index_obs = files_df.pivot_table(index=headers, aggfunc="size")
-            if index:
-                headers.insert(0, "index")
-            single_index_obs = multi_index_obs.reset_index().rename(columns={0: 'quantity'}).reset_index(level=0)
-            return single_index_obs[[*headers, "quantity"]]
-        else:
-            return files_df[headers]
-
-    def move_to(self, dirname):
-        if not path.exists(dirname):
-            os.mkdir(dirname)
-
-        for file in self.files_df["path"].values:
-            shutil.move(file, dirname)
-
-    def copy_to(self, dirname):
-        if not path.exists(dirname):
-            os.mkdir(dirname)
-
-        for file in tqdm(self.files_df["path"].values):
-            shutil.copy(file, dirname)
-
-    def __repr__(self):
-        return self.files_df.__repr__()
-
-    def _repr_html_(self):
-        return self.files_df._repr_html_()
-
-
-class FitsManager(FilesDataFrame):
-
-    def __init__(self, files_df_or_folder, verbose=True, image_kw="light", extension="*.f*ts*", hdu=0, reduced=False, depth=1, **kwargs):
-        if reduced:
-            image_kw = "reduced"
-        if isinstance(files_df_or_folder, pd.DataFrame):
-            files_df = files_df_or_folder
-            self.folder = None
-        elif isinstance(files_df_or_folder, (str, Path)):
-            folder = files_df_or_folder
-            assert path.exists(folder), "Folder does not exist"
-            files = get_files(extension, folder, depth=kwargs.get("depth", 1))
-            files_df = fits_to_df(files, verbose=verbose, hdu=hdu)
-            self.folder = folder
-        else:
-            raise AssertionError("input must be pd.DataFrame or folder path")
-
-        super().__init__(files_df, verbose=verbose)
-        self.image_kw = image_kw
-
-    @property
-    def observations(self):
-        """
-        Print a table of observations (observation is defined as a unique combinaison of date, telescope, target and filter)
-        Only for reverse compatibility
-        """
-        headers = ["date", "telescope", "target", "filter"]
-        table = self.description_table(*headers, index=True, type=self.image_kw, hide=["type"])
-        rows = OrderedDict(table.to_dict(orient="list"))
-        table_string = tabulate(rows, tablefmt="fancy_grid", headers="keys")
-        print(table_string)
-        return None
-
-    @property
-    def _observations(self):
-        light_rows = self.files_df.loc[self.files_df["type"].str.contains(self.image_kw)].fillna("")
-        observations = (
-            light_rows.pivot_table(
-                index=["date", "telescope", "target", "dimensions", "filter"],
-                aggfunc="size",
-            )
-                .reset_index()
-                .rename(columns={0: "quantity"})
-                .reset_index(level=0)
-        )
-
-        return observations
-
-    @property
-    def calib(self):
-        """Print a table of observations and calibration files (observation is defined as a unique combinaison of date, telescope, target and filter)
-
-        """
-        headers = ["date", "telescope", "target", "filter", "type"]
-        table = self.description_table(*headers, index=False)
-        rows = OrderedDict(table.to_dict(orient="list"))
-        table_string = tabulate(rows, tablefmt="fancy_grid", headers="keys")
-        print(table_string)
-        return None
-
-    def describe(self, calib=True):
-        """
-       display a table of available observations (defined as a unique date, telescope, target, and filter)
-        Returns:
-
-        """
-        headers = ["date", "telescope", "target", "filter"]
-        _observations = self._observations[headers]
-        table = self.description_table(*headers, "type", index=True)
-
-        for i, row in table.iterrows():
-            match = np.all((_observations == row[headers]).values, 1)
-            if np.any(match):
-                table["index"][i] = np.flatnonzero(match)[0]
-            else:
-                table["index"][i] = ""
-
-        if not calib:
-            table = table[table["type"] == self.image_kw][["index", *headers]]
-
-        stable = OrderedDict(table.to_dict(orient="list"))
-        table_string = tabulate(stable, tablefmt="fancy_grid", headers="keys")
-        print(table_string)
-
-    def set_observation(self, i, future=0, past=None, same_telescope=False):
-        """Set the unique observation to use by its id. Observation indexes are specified in `self.observations`
+        The index ``i`` corresponds to the observation index displayed when printing with :py:meth:`print`
 
         Parameters
         ----------
         i : int
-            index of the observation as displayed in `self.observations`
+            index of the observation
+        min_days : int, optional
+            number of days in the past before which calibration files are considered valid, by default 100000
+        max_days : int, optional
+            number of days in the future after which calibration files are considered valid, by default 0. Set to more than 0 to use calibration files taken after the observation date
+        same_telescope : bool, optional
+            Wether the calibration images should come from the same telescope (if its name is written in the headers), by default True 
+        lights : str, optional
+            keyword used in the written dictionary for science images, by default "images"
+
+        Returns
+        -------
+        dict
+            The keys of the dictionnary are:
+                - ``images`` for the science images
+                - ``flats``, ``darks`` and ``bias`` for the corresponding calibration images
+
         """
-        self.files_df = self.get_observation(i, future=future, past=past, same_telescope=same_telescope, return_df=True)
-        assert self.unique_obs, "observation should be unique, please use set_observation"
-        obs = self._observations.loc[0]
-        self.telescope = Telescope.from_name(obs.telescope)
-        self.sort_by_date()
-
-    def get_observation(self, i, future=0, past=None, same_telescope=False, return_df=False):
-
-        original_fm = FitsManager(self._original_files_df.fillna(""))
-        obs = self._observations.loc[i]
-
-        days_limit = (1 if future is not None else -1)
-        if future is not None:
-            days_limit = -future
-        elif past is not None:
-            days_limit = past
-
-        telescope = obs.telescope if same_telescope else "."
-        dimensions = obs.dimensions
-
-        dates_before = (
-                pd.to_datetime(obs.date) - pd.to_datetime(original_fm.files_df.date) >= timedelta(days=days_limit))
-
-        flats = original_fm.get(
-            telescope=telescope + "*", filter=obs["filter"].replace("+", "\+"),
-            type="flat",
-            dimensions=dimensions).loc[dates_before]
-        darks = original_fm.get(telescope=telescope + "*", type="dark", dimensions=dimensions).loc[dates_before]
-        bias = original_fm.get(telescope=telescope + "*", type="bias", dimensions=dimensions).loc[dates_before]
-        dfs = []
-
-        # To keep only calibration from a single day (the most recent possible)
-        if len(flats) > 0:
-            flats = flats.loc[flats.date == flats.date.max()]
-            dfs.append(flats)
-        if len(darks) > 0:
-            darks = darks.loc[darks.date == darks.date.max()]
-            dfs.append(darks)
-        if len(bias) > 0:
-            bias = bias.loc[bias.date == bias.date.max()]
-            dfs.append(bias)
-
-        others = original_fm.get(
-            telescope=obs.telescope,
-            filter=obs["filter"].replace("+", "\+"),
-            target=obs.target.replace("+", "\+"))
-
-        others = others.loc[others.date == obs.date]
-
-        for _type in ["dark", "flat", "bias"]:
-            others = others.reset_index(drop=True)
-            others = others.drop(
-                np.argwhere(FilesDataFrame._get(others, type=_type, return_conditions=True).values).flatten())
-
-        dfs.append(others)
-
-        new_df = pd.concat([pd.concat(dfs)])
-
-        if return_df:
-            return new_df
+        obs = self.observations(show=False, index=False)
+        if len(obs) == 0:
+            return None
+        elif i>len(obs)-1:
+            raise AssertionError(f"observation {i} out of range ({len(obs)} found)")
         else:
-            return self.__class__(new_df)
+            date, telescope, target, afilter, exposure, _, _ = obs[i]
 
+        kwargs = {
+            "min_days": min_days,
+            "max_days": max_days,
+            "target": target,
+            "date": date,
+            "telescope": telescope if same_telescope else '',
+            "filter": afilter
+        }
 
+        images = {}
+
+        _lights = np.array(list(self.cur.execute(sql_light, kwargs))).T
+        images[lights] = _lights[1]
+        w = np.unique(_lights[6])[0]
+        h = np.unique(_lights[7])[0]
+        kwargs.update({"w": w, "h": h})
+
+        images["bias"] = np.array(list(self.cur.execute(sql_other("bias"), kwargs)))
+        images["darks"]  = np.array(list(self.cur.execute(sql_other("dark", exposure, darkexp_tolerance), kwargs)))
+        images["flats"]  = np.array(list(self.cur.execute(sql_flat, kwargs)))
+        
+        if len(images["bias"]):
+            images["bias"] = [im for ims in images["bias"] for im in ims]
+        if len(images["flats"]):
+            images["flats"] = [im for ims in images["flats"] for im in ims]
+        if len(images["darks"]):
+            images["darks"] = [im for ims in images["darks"] for im in ims]
+
+        return images
+    
     @property
     def unique_obs(self):
         """Return whether the object contains a unique observation (observation is defined as a unique combinaison of date, telescope, target and filter).
@@ -353,7 +393,7 @@ class FitsManager(FilesDataFrame):
         -------
         bool
         """
-        return len(self._observations) == 1
+        return len(self.observations(show=False)) == 1
 
     @property
     def images(self):
@@ -363,7 +403,7 @@ class FitsManager(FilesDataFrame):
         -------
         list of str
         """
-        return self.get(type=self.image_kw).path.values.astype(str)
+        return self.files(imtype="light")
 
     @property
     def darks(self):
@@ -373,7 +413,7 @@ class FitsManager(FilesDataFrame):
         -------
         list of str
         """
-        return self.get(type="dark").path.values.astype(str)
+        return self.files(imtype="dark")
 
     @property
     def bias(self):
@@ -383,7 +423,7 @@ class FitsManager(FilesDataFrame):
         -------
         list of str
         """
-        return self.get(type="bias").path.values.astype(str)
+        return self.files(imtype="bias")
 
     @property
     def flats(self):
@@ -393,7 +433,7 @@ class FitsManager(FilesDataFrame):
         -------
         list of str
         """
-        return self.get(type="flat").path.values.astype(str)
+        return self.files(imtype="flat")
 
     @property
     def stack(self):
@@ -403,53 +443,37 @@ class FitsManager(FilesDataFrame):
         -------
         list of str
         """
-        return self.get(type="stack").path.values.astype(str)
+        return self.files(imtype="stack")
 
     @property
-    def calibrated(self):
+    def reduced(self):
         """fits paths of the observation calibrated images if present
 
         Returns
         -------
         list of str
         """
-        return self.get(type="reduced").path.values.astype(str)
+        return self.files(imtype="reduced")
+    
+    def label(self, i=0):
+        """Return '{telescope}_{date}_{target}_{filter}' string
 
-    @property
-    def products_denominator(self):
-        assert self.unique_obs, "observation should be unique, please use set_observation"
-        obs = self._observations.loc[0]
-        return f"{obs.telescope}_{obs.date.replace('-', '')}_{obs.target}_{obs['filter']}"
-
-    @property
-    def images_dict(self):
-        return {
-            "flats": self.flats,
-            "darks": self.darks,
-            "bias": self.bias,
-            "images": self.images,
-        }
-
+        Parameters
+        ----------
+        i : int, optional
+            index of the observation as showin in :py:meth:`print`, by default 0
+        """
+        date, telescope, target, afilter, _, _, _ = self.observations(show=False, index=False)[i]
+        return f"{telescope}_{date.replace('-', '')}_{target}_{afilter}"
+    
     @property
     def obs_name(self):
+        """Observation name ({telescope}_{date}_{target}_{filter}) if a single observation is present
+        """
         if self.unique_obs:
-            return self.products_denominator
+            return self.label()
         else:
             raise AssertionError("obs_name property is only available for FitsManager containing a unique observation")
 
-    def observation_id(self, target, date, telescope='', error=True):
-        obs = self._observations
-        there = np.argwhere((
-                    clean(obs.date).str.contains(sub(date)) &
-                    clean(obs.target).str.contains(sub(target)) &
-                    clean(obs.telescope).str.contains(sub(telescope))
-            ).values).flatten()
-
-        if len(there) > 0:
-            if len(there) == 1 or not error:
-                i = there[0]
-                return i
-            elif error:
-                raise AssertionError(f"multiple observations found {there}")
-        else:
-            return None
+    def __repr__(self) -> str:
+        return self.print(repr=True)

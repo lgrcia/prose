@@ -27,20 +27,23 @@ class Summary(Observation, LatexTemplate):
         obs_duration = f"{min_datetime.strftime('%H:%M')} - {max_datetime.strftime('%H:%M')} " \
             f"[{obs_duration_hours}h{obs_duration_mins if obs_duration_mins != 0 else ''}]"
 
+        # TODO: adapt to use PSF model block here (se we don't use the plot_... method from Observation)
+
+
         self.obstable = [
             ["Time", obs_duration],
             ["RA - DEC", f"{self.RA} {self.DEC}"],
             ["Images", len(self.time)],
             ["Mean std · fwhm (epsf)",
              f"{np.mean(self.fwhm) / (2 * np.sqrt(2 * np.log(2))):.2f} · {np.mean(self.fwhm):.2f} pixels"],
-            ["Fwhmx · fwhmy (target)", f"{self.plot_star_psf(print_values=False,plot=False)[0]:.2f} · {self.plot_star_psf(print_values=False,plot=False)[1]:.2f} pixels"],
+            # ["Fwhmx · fwhmy (target)", f"{self.plot_star_psf(print_values=False,plot=False)[0]:.2f} · {self.plot_star_psf(print_values=False,plot=False)[1]:.2f} pixels"],
             ["Optimum aperture", f"{np.mean(self.apertures_radii[self.aperture,:]):.2f} pixels"],
             ["Telescope", self.telescope.name],
             ["Filter", self.filter],
             ["Exposure", f"{np.mean(self.exptime)} s"],
         ]
 
-        self.description = f"{self.date[0:4]} {self.date[4:6]} {self.date[6::]} $\cdot$ {self.telescope.name} $\cdot$ {self.filter}"
+        self.description = f"{self.date.strftime('%Y %m %d')} $\cdot$ {self.telescope.name} $\cdot$ {self.filter}"
         self._trend = None
         self._transit = None
         self.dpi = 100
@@ -50,7 +53,7 @@ class Summary(Observation, LatexTemplate):
         self.header = "Observation report"
 
     def plot_psf_summary(self):
-        self.plot_psf()
+        self.plot_radial_psf()
         self.style()
 
     def plot_stars(self, size=8):

@@ -1,7 +1,7 @@
 <script src="https://cdn.plot.ly/plotly-1.58.4.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/underscore@1.13.1/underscore-umd-min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/vue@2.6.12"></script>
-<script src="https://unpkg.com/feather-icons"></script>
+<script id="view" src="https://cdn.jsdelivr.net/npm/vue@2.6.12"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.28.0/feather.min.js"></script>
 
 <!-- Functions for plotting and binning -->
 <!-- ---------------------------------- -->
@@ -417,31 +417,34 @@
 </style>
 
 <script>
-    var __divid__ = new Vue({
-        el: '#prose__divid__',
-        data: {
-            fluxes: __fluxes__,
-            time: __time__,
-            best: __best__,
-            apertures: __apertures__,
-            divid: '__divid__',
+    var script = document.querySelector('#view');
+    script.addEventListener('load', function() {
+        var __divid__ = new Vue({
+            el: '#prose__divid__',
+            data: {
+                fluxes: __fluxes__,
+                time: __time__,
+                best: __best__,
+                apertures: __apertures__,
+                divid: '__divid__',
 
-            aperture: undefined,
-            binning: 0.005,
-        },
-        mounted: function () {
-            feather.replace()
-            this.reset()
-        },
-        methods: {
-            reset: function () {
-                this.aperture = this.best
-                this.binning = 0.005
-                this.plot_lc()
+                aperture: undefined,
+                binning: 0.005,
             },
-            plot_lc: function (aperture = this.aperture, binning = this.binning) {
-                plot(this.time, this.fluxes[aperture], this.divid, binning, color = "black")
+            mounted: function () {
+                feather.replace()
+                this.reset()
             },
-        }
+            methods: {
+                reset: function () {
+                    this.aperture = this.best
+                    this.binning = 0.005
+                    this.plot_lc()
+                },
+                plot_lc: function (aperture = this.aperture, binning = this.binning) {
+                    plot(this.time, this.fluxes[aperture], this.divid, binning, color = "black")
+                },
+            }
+        })
     })
 </script>

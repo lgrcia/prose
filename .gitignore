@@ -2,7 +2,6 @@
 Pipfile.lock
 *egg-info*
 *checkpoint.ipynb
-docs/build
 docs/source/_build
 .DS_STORE
 .idea
@@ -22,8 +21,13 @@ docs/source/notebooks/*
 test/*
 !test/*.py
 dist
-build
 *.phot*
+docs/build/*
+docs/build/html/_sources
+docs/build/html/notebooks/*.ipynb
+build/lib
+
+test/_*
 
 ## Core latex/pdflatex auxiliary files:
 latex/*.aux

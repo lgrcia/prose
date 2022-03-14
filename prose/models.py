@@ -35,13 +35,6 @@ def design_matrix(model_list):
     dm /= np.mean(dm, 0)
     return dm
 
-try:
-    import theano
-    import theano.tensor as tt
-    theano.config.compute_test_value = "warn"
-except:
-    print("Could not import theano, try 'import theano' for more details")
-
 
 class LinearModel:
 
