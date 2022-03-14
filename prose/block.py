@@ -2,25 +2,24 @@ from time import time
 
 
 class Block:
-    """A ``Block`` is a single unit of processing acting on the ``Image`` object, reading, processing and writing its attributes. When placed in a sequence, it goes through three steps:
+    """Single unit of processing acting on the :py:class:`~prose.Image` object
+    
+    Reading, processing and writing :py:class:`~prose.Image` attributes. When placed in a sequence, it goes through two steps:
 
-        1. :py:meth:`~prose.Block.initialize` method is called before the sequence is run
-        2. *Images* go succesively and sequentially through its :py:meth:`~prose.run` methods
-        3. :py:meth:`~prose.Block.terminate` method is called after the sequence is terminated
+        1. :py:meth:`~prose.Block.run` on each image fed to the :py:class:`~prose.Sequence`
+        2. :py:meth:`~prose.Block.terminate` called after the :py:class:`~prose.Sequence` is terminated
 
-        Parameters
-        ----------
-        name : [type], optional
-            [description], by default None
+
+    Parameters
+    ----------
+    name : str, optional
+        name of the block, by default None
+
+    All prose blocks must be child of this parent class
     """
 
     def __init__(self, name=None):
-        """[summary]
-
-        Parameters
-        ----------
-        name : [type], optional
-            [description], by default None
+        """Instanciation
         """
         self.name = name
         self.unit_data = None
@@ -30,9 +29,6 @@ class Block:
         # recording args and kwargs for reproducibility
         # when subclassing, use @utils.register_args decorator (see docs)
 
-    def initialize(self, *args):
-        pass
-    
     def _run(self, *args, **kwargs):
         t0 = time()
         self.run(*args, **kwargs)
@@ -40,12 +36,18 @@ class Block:
         self.runs += 1
 
     def run(self, image, **kwargs):
+        """Running on a image (must be overwritten when subclassed)
+
+        Parameters
+        ----------
+        image : prose.Image
+            image to be processed
+        """
         raise NotImplementedError()
 
     def terminate(self):
-        pass
-
-    def stack_method(self, image):
+        """Method called after block's :py:class:`~prose.Sequence` is finished (if any)
+        """
         pass
 
     @staticmethod
@@ -53,7 +55,7 @@ class Block:
         return None
 
     @staticmethod
-    def doc():
+    def _doc():
         return ""
 
     def concat(self, block):

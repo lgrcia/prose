@@ -38,7 +38,7 @@ TEST_FODLER.mkdir(exist_ok=True)
 
 class TestReport(unittest.TestCase):
 
-    def test_manual_reduction(self):
+    def test_summary_report(self):
 
         # The summary template
         summary = Summary(OBS)
@@ -82,7 +82,7 @@ class TestReduction(unittest.TestCase):
         import numpy as np
         from prose.tutorials import simulate_observation
 
-        time = np.linspace(0, 0.15, 100) + 2450000
+        time = np.linspace(0, 0.15, 10) + 2450000
         target_dflux = 1 + np.sin(time*100)*1e-2
         simulate_observation(time, target_dflux, RAW)
         
@@ -210,7 +210,7 @@ class TestObservation(unittest.TestCase):
         OBS.plate_solve()
         OBS.query_catalog('gaia')
         gaias = OBS.stack.catalogs["gaia"][["x", "y"]].values
-        OBS.stack.show(vmin=False, frame=True)
+        OBS.stack.show(frame=True)
         viz.plot_marks(*gaias.T, color="y")
         plt.savefig(result_file)
         plt.close()

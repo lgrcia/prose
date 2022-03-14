@@ -37,18 +37,27 @@ def sql_other(kind, exposure=0, tolerance=1000000):
     """
 
 class FitsManager:
-    """Object to parse and retrive FITS files from a folder and its sub-folders
+    """Object to parse and retrieve FITS files from folder and sub-folders
 
-        Parameters
-        ----------
-        folder : str
-            path of the folder to parse
-        depth : int, optional
-            maxiumum depth of the sub-folders to explore, by default 0
-        hdu : int, optional
-            by default 0
-        extension : str, optional
-            by default ".f*ts*"
+    This object scans files in a folder and stores the data in a mysql database for conveniance (but all products can be accessed without knowledge of the SQL language)
+
+    Parameters
+    ----------
+    folder : str
+        path of the folder to parse
+    depth : int, optional
+        maxiumum depth of the sub-folders to explore, by default 0
+    hdu : int, optional
+        by default 0
+    extension : str, optional
+        by default ".f*ts*"
+    file : _type_, optional
+        _description_, by default None
+    batch_size : bool or int, optional
+        - if False: update database after all FITS files are parsed
+        - if int: update database every time ``batch_size`` FITS files are parsed
+
+        by default False
     """
     
     def __init__(self, folder=None, depth=0, hdu=0, extension=".f*t*", file=None, batch_size=False):
@@ -74,7 +83,9 @@ class FitsManager:
         _observations = self.observations(show=False, index=False)
         self._observations = np.array([f"{o[0]}_{o[1]}_{o[2]}_{o[3]}" for o in _observations])
 
-    def insert(self, _path, date, telescope, _type, target, _filter, dimensions, _, jd, exposure):
+    def _insert(self, _path, date, telescope, _type, target, _filter, dimensions, _, jd, exposure):
+        """Insert FITS data to object database
+        """
         if isinstance(_filter, float):
             _filter = ""
         width, height = dimensions
@@ -84,6 +95,24 @@ class FitsManager:
             (date, _path, telescope, _filter, _type, target, width, height, jd, "NULL", exposure))
 
     def scan_files(self, folder, extension, batch_size=False, verbose=True, depth=0):
+        """Scan a folder and add data to database
+
+        Parameters
+        ----------
+        folder : str ot Path
+            path of folder
+        extension : str, optional
+            by default ".f*ts*"
+        batch_size : bool or int, optional
+            - if False: update database after all FITS files are parsed
+            - if int: update database every time ``batch_size`` FITS files are parse
+
+            by default False
+        verbose : bool, optional
+            wether to show progress bar during parsing, by default True
+        depth : int, optional
+            maxiumum depth of the sub-folders to explore, by default 0
+        """
         assert Path(folder).exists(), "Folder does not exists"
         files = get_files(extension, folder, depth=depth)
 
@@ -116,12 +145,12 @@ class FitsManager:
                     for batch in progress(batches):
                         df = fits_to_df(batch, verbose=False)
                         for row in df.values:
-                            self.insert(*row)
+                            self._insert(*row)
                         self.con.commit()
                 else:
                     df = fits_to_df(files_to_scan, verbose=True)
                     for row in df.values:
-                        self.insert(*row)
+                        self._insert(*row)
                     self.con.commit()
             else:
                 print(f"No new files to scan")
@@ -129,6 +158,15 @@ class FitsManager:
             raise AssertionError(f"No files with extension '{extension}' found")
         
     def print(self, calib=True, repr=False):
+        """Print database observations, calibrations and other files in nice table
+
+        Parameters
+        ----------
+        calib : bool, optional
+            wether to show calibration files, by default True
+        repr : bool, optional
+            wether to return a str of the table, by default False
+        """
         txt = []
         fields = ["date", "telescope", "target", "filter", "exposure", "type", "quantity"]
 
@@ -167,7 +205,33 @@ class FitsManager:
         else:
             print(txt)
         
-    def observations(self, telescope="", target="", date="", afilter="", imtype="light", show=True, index=True):
+    def observations(
+        self, 
+        telescope="", 
+        target="", 
+        date="", 
+        afilter="", 
+        imtype="light", 
+        show=True, 
+        index=True
+    ):
+        """
+        Print of return current observations
+
+        An observation is defined as a unique set of images with common date, telescope, target, filter and exposure.
+
+        Parameters
+        ---------- 
+        telescope: str, optional
+        target: str, optional
+        date: str, optional
+        afilter: str, optional
+        imtype: str, optional
+        show: bool, optional
+            wether to print the table (otherwise return it as a string), default True
+        index: bool, optional
+            wether to show observation index, default True       
+        """
         fields = ["date", "telescope", "target", "filter", "exposure", "type", "quantity"]
         telescope=telescope.replace("*", "%")
         target=target.replace("*", "%")
@@ -210,7 +274,23 @@ class FitsManager:
         imtype="",
         exposure=0,
         exposure_tolerance=10000000000, 
-    ):
+        ):
+        """
+        Returns files given criteria
+
+        Parameters
+        ---------- 
+        telescope: str, optional
+        target: str, optional
+        date: str, optional
+        afilter: str, optional
+        imtype: str, optional
+        exposure: float, optional
+            exposure of the files to retrieve, as specified in their headers, defaut is 0 (see next kwarg)
+        exposure_tolerance: float, optional
+            tolerance of the exposure. Files with exposure - exposure_tolerance < exposure < exposure + exposure_tolerance will be retrieve, default 10000000000, which account with potentially all exposures
+        """
+
         telescope=telescope.replace("*", "%")
         target=target.replace("*", "%")
         date=date.replace("*", "%")
@@ -244,7 +324,7 @@ class FitsManager:
     ):
         """Return a dictionary of all the files (including calibration ones) corresponding to a given observation.
 
-        The index ``i`` corresponds to the observation index displayed when printing the ``FitsManager`` object
+        The index ``i`` corresponds to the observation index displayed when printing with :py:meth:`print`
 
         Parameters
         ----------
@@ -263,8 +343,9 @@ class FitsManager:
         -------
         dict
             The keys of the dictionnary are:
-                - ``images` for the science images
+                - ``images`` for the science images
                 - ``flats``, ``darks`` and ``bias`` for the corresponding calibration images
+
         """
         obs = self.observations(show=False, index=False)
         if len(obs) == 0:
@@ -374,14 +455,23 @@ class FitsManager:
         """
         return self.files(imtype="reduced")
     
-    def products_denominator(self, i=0):
+    def label(self, i=0):
+        """Return '{telescope}_{date}_{target}_{filter}' string
+
+        Parameters
+        ----------
+        i : int, optional
+            index of the observation as showin in :py:meth:`print`, by default 0
+        """
         date, telescope, target, afilter, _, _, _ = self.observations(show=False, index=False)[i]
         return f"{telescope}_{date.replace('-', '')}_{target}_{afilter}"
     
     @property
     def obs_name(self):
+        """Observation name ({telescope}_{date}_{target}_{filter}) if a single observation is present
+        """
         if self.unique_obs:
-            return self.products_denominator()
+            return self.label()
         else:
             raise AssertionError("obs_name property is only available for FitsManager containing a unique observation")
 

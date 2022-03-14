@@ -59,7 +59,7 @@ class Image:
         """
         if fitspath is not None:
             self.path = fitspath
-            self.get_data_header()
+            self._get_data_header()
         else:
             self.data = data
             self.header = header if header is not None else {}
@@ -68,10 +68,10 @@ class Image:
         self.telescope = None
         self.discard = False
         self.__dict__.update(kwargs)
-        self.check_telescope()
+        self._check_telescope()
         self.catalogs = {}
 
-    def get_data_header(self):
+    def _get_data_header(self):
         """Retrieve data and metadata from an image
         """
         self.data = fits.getdata(self.path).astype(float)
@@ -96,14 +96,14 @@ class Image:
 
         return new_self
 
-    def check_telescope(self):
+    def _check_telescope(self):
         """Instantiate ``self.telescope`` from ``INSTRUME`` and or ``TELESCOP`` keywords
         """
         if self.header:
            self.telescope = Telescope.from_names(self.header.get("INSTRUME", ""), self.header.get("TELESCOP", ""))
 
     def get(self, key, default=None):
-        """Return cooresponding value from header, similar to ``dict.get``
+        """Return corresponding value from header, similar to ``dict.get``
 
         Parameters
         ----------
@@ -382,13 +382,37 @@ class Image:
 
     @property
     def fov(self):
+        """Field of view of the image in degrees
+
+        Returns
+        -------
+        astropy.units Quantity
+        """
         return np.array(self.shape) * self.pixel_scale.to(u.deg)
 
     @property
     def pixel_scale(self):
+        """Pixel scale (or plate scale) in arcseconds
+
+        Returns
+        -------
+        astropy.units Quantity
+        """
         return self.telescope.pixel_scale.to(u.arcsec)
 
-    def plot_circle(self, center, arcmin=2.5):
+    def plot_aperture(self, center, arcmin=2.5):
+        """Plot an aperture with radius defined in arcmin
+
+        must be over :py:class:`Image.show` or :py:class:`Image.show_cutout` plot)
+
+        Parameters
+        ----------
+        center : int or tuple-like
+            center of the aperture
+            - if int: index of ``Image.stars_coords`` serving as center
+        arcmin : float, optional
+            radius of the aperture in arcminutes, by default 2.5
+        """
         if isinstance(center, int):
             x, y = self.stars[center]
         elif isinstance(center, (tuple, list, np.ndarray)):
@@ -405,6 +429,21 @@ class Image:
                      ha='center', fontsize=12, va='bottom', alpha=0.6)
 
     def plot_catalog(self, name, color="y", label=False, n=100000):
+        """Plot catalog stars 
+        
+        must be over :py:class:`Image.show` or :py:class:`Image.show_cutout` plot
+
+        Parameters
+        ----------
+        name : str
+            catalog name as stored in :py:class:Image.catalog`
+        color : str, optional
+            color of stars markers, by default "y"
+        label : bool, optional
+            wether to show stars catalogs ids, by default False
+        n : int, optional
+            number of brightest catalog stars to show, by default 100000
+        """
         assert name in self.catalogs, f"Catalog '{name}' not present, consider using ..."
         x, y = self.catalogs[name][["x", "y"]].values[0:n].T
         labels = self.catalogs[name]["id"].values if label else None

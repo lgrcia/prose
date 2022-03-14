@@ -13,6 +13,7 @@ from collections import OrderedDict
 from ..utils import fast_binning
 from ..utils import register_args
 from scipy.stats import shapiro
+from scipy.interpolate import interp1d
 
 def cutouts(image, stars, size=15):
     """Custom version to extract stars cutouts
@@ -227,6 +228,7 @@ class FWHM(PSFModel):
         super().from_cutouts(image)
         x = y = self.cutout_size/2
         self.radii = (np.sqrt((self.x - x) ** 2 + (self.y - y) ** 2)).flatten()
+        self.interp_radii = np.linspace(0, np.max(self.radii), 500)
 
     def model(self, *args):
         return None
@@ -237,8 +239,10 @@ class FWHM(PSFModel):
     def optimize(self, psf):
         psf -= np.min(psf)
         pixels = psf.flatten()
-        binned_radii, binned_pixels, _ = fast_binning(self.radii, pixels, bins=1)
-        fwhm = 2*binned_radii[np.flatnonzero(binned_pixels > np.max(binned_pixels)/2)[-1]]
+        bin_radii, bin_pixels, _ = fast_binning(self.radii, pixels, bins=1)
+        interp_bin_pixels = interp1d(bin_radii, bin_pixels,fill_value="extrapolate")(self.interp_radii)
+        interp_bin_pixels -= np.min(interp_bin_pixels)
+        fwhm = 2*self.interp_radii[np.flatnonzero(interp_bin_pixels > np.max(interp_bin_pixels)/2)[-1]]
         return fwhm
 
     def plot_radial_psf(self, psf):
@@ -591,32 +595,34 @@ class HFD(FWHM):
 
     # https://www.focusmax.org/Documents_V4/ITS%20Paper.pdf
 
-    def __init__(self, **kwargs):
+    def __init__(self, order=4, **kwargs):
         super().__init__(**kwargs)
         self.sorted_idxs = None
+        self.order = order
 
     def from_cutouts(self, image):
         super().from_cutouts(image)
         self.sorted_idxs = np.argsort(self.radii)
         self.sorted_radii = self.radii[self.sorted_idxs]
+        self.cum_radii = np.arange(len(self.sorted_radii))
+        self.X_radii_bkg = np.array([
+            np.ones_like(self.sorted_radii),
+            self.cum_radii
+        ])
 
     def optimize(self, psf):
         psf -= np.percentile(psf, 10)
         pixels = psf.flatten()[self.sorted_idxs]
         cumsum = np.cumsum(pixels)
-        cum_radii = np.arange(len(self.sorted_radii))
         bkg_idxs = np.flatnonzero(pixels < np.percentile(pixels, 5))
         # removing background in cumsum
-        bkg_X = np.array([
+        bkg_X = np.vstack([
             np.ones_like(bkg_idxs),
-            cum_radii[bkg_idxs]
+            bkg_idxs
         ])
         w = np.linalg.lstsq(bkg_X.T, cumsum[bkg_idxs])[0]
-        X = np.array([
-            np.ones_like(cumsum),
-            cum_radii
-        ])
-        cumsum -= w@X
+        cumsum -= w@self.X_radii_bkg
         cumsum = cumsum - cumsum[0]
+        w = np.linalg.lstsq(self.X_radii, self.sorted_radii)[0]
         fwhm = self.sorted_radii[np.argmin(np.abs(cumsum - np.max(cumsum)/2))]
         return fwhm

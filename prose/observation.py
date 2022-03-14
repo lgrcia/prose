@@ -210,7 +210,7 @@ class Observation(ApertureFluxes):
 
     @property
     def target(self):
-        return self.x.attrs.target
+        return int(self.x.attrs.target)
 
     @target.setter
     def target(self, i):
@@ -959,7 +959,7 @@ class Observation(ApertureFluxes):
         if center is None:
             center = self.target
         
-        self.stack.plot_circle(center, arcmin)
+        self.stack.plot_aperture(center, arcmin)
 
     def mask_transits(self, epoch, period, duration):
         xmin, xmax = self.time.min(), self.time.max()
