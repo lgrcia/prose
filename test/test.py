@@ -1,22 +1,14 @@
 from prose import Observation, Telescope, FitsManager, viz
 from prose.pipeline import Calibration, AperturePhotometry
 import matplotlib.pyplot as plt
-import os
 import shutil
-from os import path
 import unittest
-from prose.datasets import generate_prose_reduction_dataset
-from prose.blocks.centroids import BalletCentroid, OldNNCentroid
-from astropy.time import Time
-from astropy.io.fits import Header
-import datetime
 import os
 import shutil
 from os import path
 import shutil
 from pathlib import Path
-from prose import Telescope, blocks, Sequence, load
-from prose.simulations import fits_image, ObservationSimulation
+from prose import Telescope, blocks, load
 from prose.reports import Report, Summary
 
 
@@ -47,8 +39,6 @@ class TestReport(unittest.TestCase):
         report = Report([summary])
         report.make(TEST_FODLER / "report")
         report.compile()
-
-
 
 class TestFitsManager(unittest.TestCase):
 

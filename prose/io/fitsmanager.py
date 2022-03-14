@@ -109,7 +109,7 @@ class FitsManager:
 
             by default False
         verbose : bool, optional
-            wether to show progress bar during parsing, by default True
+            whether to show progress bar during parsing, by default True
         depth : int, optional
             maxiumum depth of the sub-folders to explore, by default 0
         """
@@ -163,9 +163,9 @@ class FitsManager:
         Parameters
         ----------
         calib : bool, optional
-            wether to show calibration files, by default True
+            whether to show calibration files, by default True
         repr : bool, optional
-            wether to return a str of the table, by default False
+            whether to return a str of the table, by default False
         """
         txt = []
         fields = ["date", "telescope", "target", "filter", "exposure", "type", "quantity"]
@@ -228,9 +228,9 @@ class FitsManager:
         afilter: str, optional
         imtype: str, optional
         show: bool, optional
-            wether to print the table (otherwise return it as a string), default True
+            whether to print the table (otherwise return it as a string), default True
         index: bool, optional
-            wether to show observation index, default True       
+            whether to show observation index, default True       
         """
         fields = ["date", "telescope", "target", "filter", "exposure", "type", "quantity"]
         telescope=telescope.replace("*", "%")

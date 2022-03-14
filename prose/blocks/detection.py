@@ -63,7 +63,7 @@ class DAOFindStars(StarsDetection):
     min_separation : float, optional
         minimum separation between sources, by default 5.0. If less than that, close sources are merged 
     sort : bool, optional
-        wether to sort stars coordinates from the highest to the lowest intensity, by default True
+        whether to sort stars coordinates from the highest to the lowest intensity, by default True
     """
     @register_args
     def __init__(self, sigma_clip=2.5, lower_snr=5, fwhm=5, **kwargs):
@@ -100,7 +100,7 @@ class SegmentedPeaks(StarsDetection):
     min_separation : float, optional
         minimum separation between sources, by default 5.0. If less than that, close sources are merged 
     sort : bool, optional
-        wether to sort stars coordinates from the highest to the lowest intensity, by default True
+        whether to sort stars coordinates from the highest to the lowest intensity, by default True
     """
     @register_args
     def __init__(self, unit_euler=False, threshold=4, min_area=3, **kwargs):
@@ -148,7 +148,7 @@ class SEDetection(StarsDetection):
     min_separation : float, optional
         minimum separation between sources, by default 5.0. If less than that, close sources are merged 
     sort : bool, optional
-        wether to sort stars coordinates from the highest to the lowest intensity, by default True
+        whether to sort stars coordinates from the highest to the lowest intensity, by default True
     """
     @register_args
     def __init__(self, threshold=1.5, **kwargs):

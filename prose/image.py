@@ -83,7 +83,7 @@ class Image:
         Parameters
         ----------
         data : bool, optional
-            wether to copy data, by default True
+            whether to copy data, by default True
 
         Returns
         -------
@@ -295,13 +295,13 @@ class Image:
         figsize : tuple, optional
             matplotlib figure size if ax not sepcified, by default (10,10)
         stars : bool, optional
-            wether to show ``Image.stars_coords``, by default None
+            whether to show ``Image.stars_coords``, by default None
         stars_labels : bool, optional
-            wether top show stars indexes, by default True
+            whether top show stars indexes, by default True
         zscale : bool, optional
-            wether to apply a z scale to plotted image data, by default False
+            whether to apply a z scale to plotted image data, by default False
         frame : bool, optional
-            wether to show astronomical coordinates axes, by default False
+            whether to show astronomical coordinates axes, by default False
         contrast : float, optional
             image contrast used in image scaling, by default 0.1
 
@@ -440,7 +440,7 @@ class Image:
         color : str, optional
             color of stars markers, by default "y"
         label : bool, optional
-            wether to show stars catalogs ids, by default False
+            whether to show stars catalogs ids, by default False
         n : int, optional
             number of brightest catalog stars to show, by default 100000
         """
@@ -451,7 +451,7 @@ class Image:
 
     @property
     def plate_solved(self):
-        """Return wether the image is plate solved
+        """Return whether the image is plate solved
         """
         return self.wcs.has_celestial
 

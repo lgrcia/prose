@@ -1,7 +1,5 @@
-from .datasets import *
 from astropy.time import Time
 from astropy.io.fits import Header
-import datetime
 import os
 from os import path
 import shutil
@@ -10,7 +8,9 @@ from .simulations import fits_image, ObservationSimulation
 from .finderchart import sdss_image
 from astropy.coordinates import SkyCoord
 from astropy import units as u
+import numpy as np
 
+example_phot = "/Users/lgrcia/data/test_data_prose/Io_2021-11-28_TOI-4508.01_g'.phot"
 
 def image_sample(*coords):
     # example: "05 38 44.851", "+04 32 47.68",

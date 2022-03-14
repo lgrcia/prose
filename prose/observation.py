@@ -45,7 +45,7 @@ class Observation(ApertureFluxes):
         photfile : str
             path of the `.phot` file to load
         time_verbose: bool, optional
-            wether time conversion success should be verbose
+            whether time conversion success should be verbose
         """
         super().__init__(photfile)
 
@@ -59,7 +59,7 @@ class Observation(ApertureFluxes):
         self._meridian_flip = None
 
         self._check_stack()
-        self.stack = Image(data=self.x["stack"].values, header=clean_header(self.x.attrs))
+        self._stack = Image(data=self.x["stack"].values, header=clean_header(self.x.attrs))
         if "stars" in self.x:
             self.stack.stars_coords = self.x.stars.values
 
@@ -138,6 +138,14 @@ class Observation(ApertureFluxes):
     # -----------
 
     @property
+    def stack(self):
+        return self._stack
+
+    @stack.setter
+    def stack(self, new):
+        self._stack = new
+
+    @property
     def simbad_url(self):
         """
         [notebook feature] clickable simbad query url for specified target
@@ -210,7 +218,7 @@ class Observation(ApertureFluxes):
 
     @property
     def target(self):
-        return int(self.x.attrs.target)
+        return int(self.x.attrs['target'])
 
     @target.setter
     def target(self, i):
@@ -365,7 +373,18 @@ class Observation(ApertureFluxes):
         plt.grid(color="whitesmoke")
         plt.tight_layout()
 
-    def compute_psf_model(self, star=None, size=21, model=Gaussian2D):
+    def _compute_psf_model(self, star=None, size=21, model=Gaussian2D):
+        """Compute a PSF model stored in ``stack`` (see ``prose.blocks``) 
+
+        Parameters
+        ----------
+        star : int, optional
+            star psf, by default None which evaluates a model on a Median PSF based on all stars in the field
+        size : int, optional
+            cutout size, by default 21
+        model : _type_, optional
+            psf block to be used, by default Gaussian2D
+        """
         self.stack = blocks.Cutouts(size=size)(self.stack)
         
         if star is None:
@@ -403,11 +422,23 @@ class Observation(ApertureFluxes):
         -------
         dict
             PSF fit info (theta, std_x, std_y, fwhm_x, fwhm_y)
+
+
+        Example
+        -------
+        .. jupyter-execute::
+
+            from prose import Observation
+            from prose.tutorials import example_phot
+        
+            obs = Observation(example_phot)
+            obs.plot_psf_model()
+            
         """
         
         # Extracting and computing PSF model
         # ---------------------------------    
-        self.compute_psf_model(star=star, model=model, size=size)
+        self._compute_psf_model(star=star, model=model, size=size)
         
         # Plotting
         # --------
@@ -427,10 +458,11 @@ class Observation(ApertureFluxes):
 
         x, y = np.indices(data.shape)
 
-        axt.plot(y[0], np.mean(data, axis=0), c=c)
-        axt.plot(y[0], np.mean(model, axis=0), "--", c="k")
+        axt.plot(y[0], np.mean(data, axis=0), c=c, label="data")
+        axt.plot(y[0], np.mean(model, axis=0), "--", c="k", label="model")
         axt.axis("off")
         axt.set_title(f"{'Median' if star is None else f'Star {star}'} PSF Model ({self.stack.psf_model_block})", loc="left")
+        axt.legend()
 
         axr.plot(np.mean(data, axis=1), y[0], c=c)
         axr.plot(np.mean(model, axis=1), y[0], "--", c="k")
@@ -439,21 +471,6 @@ class Observation(ApertureFluxes):
                     f"FWHM y: {self.stack.fwhmy:.2f} pix\n"
                     f"angle: {self.stack.theta/np.pi*180:.2f}°", c="w")
 
-    def plot_rms(self, bins=0.005):
-        """Plot binned rms of lightcurves vs the CCD equation
-
-        Parameters
-        ----------
-        bins : float, optional
-            bin size used to compute error, by default 0.005 (in days)
-        """
-        assert self.has_diff, "No differential fluxes built"
-        viz.plot_rms(
-            self.diff_fluxes,
-            self.lcs,
-            bins=bins,
-            target=self.target["id"],
-            highlights=self.comparison_stars)
 
     def plot_systematics(self, fields=None, ylim=None):
         """Plot systematics measurements along target light curve
@@ -464,6 +481,16 @@ class Observation(ApertureFluxes):
             list of systematic to include (must be in self), by default None
         ylim : tuple, optional
             plot ylim, by default (0.98, 1.02)
+
+        Example
+        -------
+        .. jupyter-execute::
+
+            from prose import Observation
+            from prose.tutorials import example_phot
+        
+            obs = Observation(example_phot)
+            obs.plot_systematics()
         """
         if fields is None:
             fields = ["dx", "dy", "fwhm", "airmass", "sky"]
@@ -499,6 +526,18 @@ class Observation(ApertureFluxes):
 
     def plot_raw_diff(self):
         """Plot raw target flux and differantial flux 
+
+
+        Example
+        -------
+        .. jupyter-execute::
+
+            from prose import Observation
+            from prose.tutorials import example_phot
+        
+            obs = Observation(example_phot)
+            obs.plot_raw_diff()
+
         """
 
         plt.subplot(211)
@@ -527,6 +566,17 @@ class Observation(ApertureFluxes):
             bin size used to estimate error, by default 0.005 (in days)
         aperture : int, optional
             chosen aperture, by default None
+
+        Example
+        -------
+        .. jupyter-execute::
+
+            from prose import Observation
+            from prose.tutorials import example_phot
+        
+            obs = Observation(example_phot)
+            obs.plot_precision()
+
         """
 
         n_bin = int(bins / (np.mean(self.exptime) / (60 * 60 * 24)))
@@ -578,7 +628,7 @@ class Observation(ApertureFluxes):
         plt.title("Photometric precision (raw fluxes)", loc="left")
 
     def plot_meridian_flip(self):
-        """Plot meridian flip line over existing axe
+        """Plot vertical line marking the meridian flip time if any
         """
         if self.meridian_flip is not None:
             plt.axvline(self.meridian_flip, c="k", alpha=0.15)
@@ -625,6 +675,17 @@ class Observation(ApertureFluxes):
             radius of inner annulus to display, by default None corresponds to inner radius saved
         rout : [type], optional
             radius of outer annulus to display, by default None corresponds to outer radius saved
+
+        Example
+        -------
+        .. jupyter-execute::
+
+            from prose import Observation
+            from prose.tutorials import example_phot
+        
+            obs = Observation(example_phot)
+            obs.plot_radial_psf()
+
         """
 
         if isinstance(star, (tuple, list, np.ndarray)):
@@ -632,7 +693,7 @@ class Observation(ApertureFluxes):
         else:
             if star is None:
                 star = self.target
-            assert np.issubdtype(star, np.integer), "star must be star coordinates or integer index"
+            assert isinstance(star, int), "star must be star coordinates or integer index"
 
             x, y = self.stars[star]
 
@@ -716,8 +777,9 @@ class Observation(ApertureFluxes):
         offset : tuple, optional
             offset between, by default None
         figsize : tuple, optional
-            figure size as in in plt.figure, by default (6, 7)
+            figure size as in in plt.figure, by default (6, 7)            
         """
+        
 
         viz.plot_systematics_signal(self.time, self.diff_flux, systematics, signal, ylim=ylim, offset=offset,
                                 figsize=figsize)
@@ -767,10 +829,18 @@ class Observation(ApertureFluxes):
             "all" to see all stars OR "reference" to have target and comparison stars hilighted, by default None
         n : int, optional
             max number of stars to show, by default None,
-        Raises
-        ------
-        AssertionError
-            [description]
+
+        Example
+        -------
+        .. jupyter-execute::
+
+            from prose import Observation
+            from prose.tutorials import example_phot
+        
+            obs = Observation(example_phot)
+            obs.show_stars()
+            
+
         """
         self.stack.show(stars=False)
         
@@ -861,9 +931,6 @@ class Observation(ApertureFluxes):
         if not inplace:
             return new_self
 
-    def plot_flip(self):
-        plt.axvline(self.meridian_flip, ls="--", c="k", alpha=0.5)
-
     def flip_correction(self, inplace=True):
         """Align all differential fluxes using a step model of the meridian flip
 
@@ -919,10 +986,19 @@ class Observation(ApertureFluxes):
         except KeyError:
             print('TIC ID not found')
 
-    def convert_flip(self,keyword):
+    def _convert_flip(self,keyword):
         self.xarray['flip'] = ('time', (self.flip == keyword).astype(int))
 
     def folder_to_phot(self, confirm=True):
+        """replace all the ``phot`` file parent folder content by the ``phot`` file
+
+        Warning: this erases all the parent folder content
+
+        Parameters
+        ----------
+        confirm : bool, optional
+            whether to show a prompt to confirm, by default True
+        """
         if confirm:
             confirm = str(input("Will erase all but .phot, enter 'y' to continue: "))
         else:
@@ -935,6 +1011,24 @@ class Observation(ApertureFluxes):
             shutil.rmtree(str(folder.absolute()))
 
     def lc_widget(self, width=500):
+        """[notebook/jupyter feature] displays a widget to play with light curve aperture and binning
+
+        Parameters
+        ----------
+        width : int, optional
+            pixel width of the html widget, by default 500
+
+        Example
+        -------
+
+         .. jupyter-execute::
+
+            from prose import Observation
+            from prose.tutorials import example_phot
+
+            obs = Observation(example_phot)
+            obs.lc_widget()
+        """
         from IPython.core.display import display, HTML
         import json
         from pathlib import Path
@@ -950,25 +1044,9 @@ class Observation(ApertureFluxes):
         widget = widget.replace("__divid__", i)
         display(HTML(widget))
 
-    def radec_to_pixel(self, radecs, unit=(u.deg, u.deg)):
-        ra, dec = radecs.T
-        skycoords = SkyCoord(ra=ra, dec=dec, unit=unit)
-        return np.array(wcsutils.skycoord_to_pixel(skycoords, self.wcs)).T
-
-    def plot_circle(self, center=None, arcmin=2.5):
-        if center is None:
-            center = self.target
-        
-        self.stack.plot_aperture(center, arcmin)
-
-    def mask_transits(self, epoch, period, duration):
-        xmin, xmax = self.time.min(), self.time.max()
-        n_p = np.round((xmax - epoch) / period)
-        ingress, egress = n_p * period + epoch - duration / 2, n_p * period + epoch + duration / 2
-        mask = (self.time < ingress) | (self.time > egress)
-        return self.mask(mask)
-
     def plate_solve(self):
+        """Plate solve the current py::stack``
+        """
         self.stack = blocks.catalogs.PlateSolve()(self.stack)   
 
     def query_catalog(self, name, correct_pm=True):

@@ -686,7 +686,7 @@ class ApertureFluxes:
         add : np.ndarray, optional
             additional regressor to add to the design matrix, by default None
         verbose : bool, optional
-            wether to show the progress bar, by default False
+            whether to show the progress bar, by default False
         """
         def progress(x):
             return tqdm(x) if verbose else x
