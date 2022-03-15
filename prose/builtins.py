@@ -68,17 +68,20 @@ callisto = dict(
 
 io = dict(
     speculoos_south,
-    name = "Io"
+    name = "Io",
+    names = ["SPECULOOS-IO","Io"]
 )
 
 ganymede = dict(
     speculoos_south,
-    name = "Ganymede"
+    name = "Ganymede",
+    names = ["SPECULOOS-GANYMEDE","Ganymede"]
 )
 
 europa = dict(
     speculoos_south,
-    name = "Europa"
+    name = "Europa",
+    names = ["SPECULOOS-EUROPA","Europa"]
 )
 
 artemis = dict(
