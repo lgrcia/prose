@@ -60,7 +60,7 @@ class TransitModel(Observation, LatexTemplate):
             ["u1", f"{self.posteriors['u[0]']}" "$\pm$" f"{self.posteriors['u[0]_e']}", "-"],
             ["u2", f"{self.posteriors['u[1]']}" "$\pm$" f"{self.posteriors['u[1]_e']}", "-"],
             ["R*", f"{self.posteriors['r_s']}" "$\pm$" f"{self.posteriors['r_s_e']}""R$_{\odot}$", f"{self.priors['rad_s']:.4f}" "$\pm$" f"{self.priors['rad_s_e']:.4f}" "R$_{\odot}$"],
-            ["M*", f"{self.posteriors['m_s']}" "$\pm$" f"{self.posteriors['m_s_e']}""M$_{\odot}$",  "M$_{\odot}$"],
+            ["M*", f"{self.posteriors['m_s']}" "$\pm$" f"{self.posteriors['m_s_e']}""M$_{\odot}$", f"{self.priors['mass_s']:.4f}" "$\pm$" f"{self.priors['mass_s_e']:.4f}" "M$_{\odot}$"],
             ["P",f"{self.posteriors['P']}" "$\pm$" f"{self.posteriors['P_e']}""d", f"{self.priors['period']:.4f}" "$\pm$" f"{self.priors['period_e']:.4f}""d"],
             ["Rp", f"{self.posteriors['r']}" "$\pm$" f"{self.posteriors['r_e']}""R$_{\oplus}$", f"{self.priors['rad_p']:.4f}" "$\pm$" f"{self.priors['rad_p_e']:.4f}" "R$_{\oplus}$"],
             ["Tc", f"{self.posteriors['t0']}" "$\pm$" f"{self.posteriors['t0_e']}" , None],
@@ -177,6 +177,8 @@ class TransitModel(Observation, LatexTemplate):
             self.priors['rad_p_e'] = df['Planet Radius (R_Earth) err'][0]
             self.priors['rad_s'] = df['Stellar Radius (R_Sun)'][0]
             self.priors['rad_s_e'] = df['Stellar Radius (R_Sun) err'][0]
+            self.priors['mass_s'] = df['Stellar Mass (M_Sun)'][0]
+            self.priors['mass_s_e'] = df['Stellar Mass (M_Sun) err'][0]
             self.priors['period'] = df['Period (days)'][0]
             self.priors['period_e'] = df['Period (days) err'][0]
             self.priors['duration'] = df['Duration (hours)'][0] * 60
@@ -188,6 +190,8 @@ class TransitModel(Observation, LatexTemplate):
             self.priors['rad_p_e'] = np.nan
             self.priors['rad_s'] = np.nan
             self.priors['rad_s_e'] = np.nan
+            self.priors['mass_s'] = np.nan
+            self.priors['mass_s_e'] = np.nan
             self.priors['period'] = np.nan
             self.priors['period_e'] = np.nan
             self.priors['duration'] = np.nan
