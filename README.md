@@ -18,7 +18,7 @@
       <img src="https://img.shields.io/badge/paper-yellow.svg?style=flat" alt="paper"/>
     </a>
     <a href="https://lgrcia.github.io/prose-docs">
-      <img src="https://img.shields.io/badge/doc-black.svg?style=flat" alt="doc"/>
+      <img src="https://img.shields.io/badge/documentation-black.svg?style=flat" alt="documentation"/>
     </a>
   </p>
 </p>
