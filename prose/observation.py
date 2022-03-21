@@ -14,7 +14,7 @@ from astroquery.mast import Catalogs
 from astropy.wcs import utils as wcsutils
 import pandas as pd
 from scipy.stats import binned_statistic
-from .blocks.psf import Gaussian2D, Moffat2D,cutouts
+from .blocks.psf import Gaussian2D
 from .console_utils import INFO_LABEL
 from astropy.io.fits.verify import VerifyWarning
 import warnings
@@ -22,7 +22,6 @@ from .blocks.registration import distances
 import requests
 import shutil
 from pathlib import Path
-from . import twirl
 import io
 from .utils import fast_binning, z_scale, clean_header
 from .console_utils import info

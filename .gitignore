@@ -28,6 +28,7 @@ docs/build/html/notebooks/*.ipynb
 build/lib
 
 test/_*
+test_results
 
 ## Core latex/pdflatex auxiliary files:
 latex/*.aux
