@@ -586,7 +586,7 @@ class Calibration(Block):
             self._produce_master("flat")
 
     def calibration(self, image, exp_time):
-        with np.errstate(divide='ignore'):
+        with np.errstate(divide='ignore', invalid='ignore'):
             return (image - (self.master_dark * exp_time + self.master_bias)) / self.master_flat
 
     def _produce_master(self, image_type):

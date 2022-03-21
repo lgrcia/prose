@@ -60,7 +60,7 @@ class FitsManager:
         by default False
     """
     
-    def __init__(self, folder=None, depth=0, hdu=0, extension=".f*t*", file=None, batch_size=False):
+    def __init__(self, folders=None, depth=0, hdu=0, extension=".f*t*", file=None, batch_size=False):
         if file is None:
             file = ":memory:"
 
@@ -75,8 +75,8 @@ class FitsManager:
             jd real, observation_id int, exposure real)''')
             self.con.commit()
         
-        if folder is not None:
-            self.scan_files(folder, extension, batch_size=batch_size, depth=depth)
+        if folders is not None:
+            self.scan_files(folders, extension, batch_size=batch_size, depth=depth)
         # else:
         #     raise AssertionError(f"No files with extension '{extension}'found")
 
@@ -94,13 +94,13 @@ class FitsManager:
             f"INSERT or IGNORE INTO files VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (date, _path, telescope, _filter, _type, target, width, height, jd, "NULL", exposure))
 
-    def scan_files(self, folder, extension, batch_size=False, verbose=True, depth=0):
+    def scan_files(self, folders, extension, batch_size=False, verbose=True, depth=0):
         """Scan a folder and add data to database
 
         Parameters
         ----------
         folder : str ot Path
-            path of folder
+            path of folder (or list of folders as of prose 2.0.1)
         extension : str, optional
             by default ".f*ts*"
         batch_size : bool or int, optional
@@ -113,8 +113,14 @@ class FitsManager:
         depth : int, optional
             maxiumum depth of the sub-folders to explore, by default 0
         """
-        assert Path(folder).exists(), "Folder does not exists"
-        files = get_files(extension, folder, depth=depth)
+        if isinstance(folders, (list, tuple)):
+            files = [] 
+            for folder in folders:
+                assert Path(folder).exists(), f"Folder {folder} does not exists"
+                files += get_files(extension, folder, depth=depth)
+        else:
+            assert Path(folders).exists(), f"Folder {folder} does not exists"
+            files = get_files(extension, folders, depth=depth)
 
         if len(files) > 0:
             current_files = [v[0] for v in self.cur.execute("SELECT path from files").fetchall()]
