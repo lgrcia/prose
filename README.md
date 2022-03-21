@@ -66,22 +66,19 @@ photometry.run()
 
 ## Installation
 
-prose runs more safely in its own [virtual environment](https://docs.python.org/3/tutorial/venv.html) and is tested on Python 3.6.
-
-### example on OSX
-
-create your [virtualenv](https://docs.python.org/3/tutorial/venv.html) and activate it
+prose is written for python 3 and can be installed from pypi with:
 
 ```shell
-python3.6 -m venv prose_env
-source prose_env/bin/activate.bin
+pip install prose
 ```
 
-Then to locally install prose
+To install it through conda, once in your newly created environment, go with:
+
 
 ```shell
-git clone https://github.com/lgrcia/prose.git
-python3.6 -m pip install -e prose
-```
+conda install numpy scipy tensorflow netcdf4 numba
 
-Applicable to Linux-based and Windows OS
+# then 
+
+pip install prose
+```
