@@ -11,11 +11,14 @@
     <a href="https://github.com/lgrcia/prose">
       <img src="https://img.shields.io/badge/github-lgrcia/prose-blue.svg?style=flat" alt="github"/>
     </a>
-    <a href="https://lgrcia.github.io/prose-docs">
-      <img src="https://img.shields.io/badge/read-thedoc-black.svg?style=flat" alt="read the doc"/>
-    </a>
     <a href="">
       <img src="https://img.shields.io/badge/license-MIT-lightgray.svg?style=flat" alt="license"/>
+    </a>
+    <a href="https://arxiv.org/abs/2111.02814">
+      <img src="https://img.shields.io/badge/paper-yellow.svg?style=flat" alt="paper"/>
+    </a>
+    <a href="https://lgrcia.github.io/prose-docs">
+      <img src="https://img.shields.io/badge/doc-black.svg?style=flat" alt="doc"/>
     </a>
   </p>
 </p>
@@ -82,3 +85,7 @@ conda install numpy scipy tensorflow netcdf4 numba
 
 pip install prose
 ```
+
+## Helping us
+
+We are interested in seeing how you use prose, as well in helping you in creating blocks for your own need. Do not hesitate to reach us out! ☎️
