@@ -170,15 +170,15 @@ def trapphot_to_prose(folder, destination=None):
     fm.set_observation(0)
 
     if destination is None:
-        new_folder = path.join(path.dirname(folder), fm.products_denominator)
+        new_folder = path.join(path.dirname(folder), fm.label)
     else:
         new_folder = destination
 
     if not path.exists(new_folder):
         os.mkdir(new_folder)
-    shutil.copyfile(stack_fits, path.join(new_folder, "{}_stack.fits".format(fm.products_denominator)))
+    shutil.copyfile(stack_fits, path.join(new_folder, "{}_stack.fits".format(fm.label)))
 
-    hdu_list.writeto(path.join(new_folder, "{}.phots".format(fm.products_denominator)), overwrite=True)
+    hdu_list.writeto(path.join(new_folder, "{}.phots".format(fm.label)), overwrite=True)
 
     print("Conversion done to {}".format(new_folder))
 
