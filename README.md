@@ -88,4 +88,4 @@ pip install prose
 
 ## Helping us
 
-We are interested in seeing how you use prose, as well in helping you in creating blocks for your own need. Do not hesitate to reach us out! ☎️
+We are interested in seeing how you use prose, as well as helping creating blocks you need. Do not hesitate to reach us out! ☎️
