@@ -246,7 +246,7 @@ class FitsManager:
     
     def products_denominator(self, i=0):
         date, telescope, target, afilter, _, _ = self.observations(show=False)[i]
-        return f"{telescope}_{date.replace('-', '')}_{target}_{afilter}"
+        return f"{date.replace('-', '')}_{telescope}_{target}_{afilter}"
     
     @property
     def obs_name(self):
