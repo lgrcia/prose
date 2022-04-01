@@ -63,13 +63,13 @@ speculoos_south = dict(
 callisto = dict(
     speculoos_south,
     name = "Callisto",
-    names = ["SPECULOOS-CALLISTO","Callisto","ACP-IO"]
+    names = ["SPECULOOS-CALLISTO","Callisto","ACP->CALLISTO"]
 )
 
 io = dict(
     speculoos_south,
     name = "Io",
-    names = ["SPECULOOS-IO","Io","ACP-IO"]
+    names = ["SPECULOOS-IO","Io","ACP->IO"]
 )
 
 ganymede = dict(
