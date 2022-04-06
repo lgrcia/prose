@@ -282,7 +282,7 @@ class Observation(ApertureFluxes):
             by default "prose"
         """
         assert self.telescope is not None
-        assert self.skycoord is not None
+        assert self.stack.skycoord is not None
 
         exposure_days = self.xarray.exposure.values/60/60/24
 
@@ -298,11 +298,11 @@ class Observation(ApertureFluxes):
 
         if version == "prose":
             time = Time(self.jd_utc + exposure_days/2, format="jd", scale="utc", location=self.telescope.earth_location).tdb
-            light_travel_tbd = time.light_travel_time(self.skycoord, location=self.telescope.earth_location)
+            light_travel_tbd = time.light_travel_time(self.stack.skycoord, location=self.telescope.earth_location)
             bjd_time = (time + light_travel_tbd).value
 
         elif version == "eastman":
-            bjd_time = utils.jd_to_bjd(self.jd_utc + exposure_days/2, self.skycoord.ra.deg, self.skycoord.dec.deg)
+            bjd_time = utils.jd_to_bjd(self.jd_utc + exposure_days/2, self.stack.skycoord.ra.deg, self.stack.skycoord.dec.deg)
 
         self.xarray = self.xarray.assign_coords(time=bjd_time)
         self.xarray["bjd_tdb"] = ("time", bjd_time)
@@ -322,7 +322,7 @@ class Observation(ApertureFluxes):
         if cone_radius is None:
             cone_radius = np.sqrt(2) * np.max(shape) * self.telescope.pixel_scale / 120
 
-        coord = self.skycoord
+        coord = self.stack.skycoord
         radius = u.Quantity(cone_radius, u.arcminute)
         self.tic_data = Catalogs.query_region(coord, radius, "TIC", verbose=False)
         self.tic_data.sort("Jmag")
