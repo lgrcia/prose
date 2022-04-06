@@ -283,6 +283,10 @@ class ApertureFluxes:
         return self.xarray
 
     @property
+    def has_diff(self):
+        return hasattr(self, "diff_flux")
+
+    @property
     def diff_flux(self):
         return self.xarray.diff_fluxes.isel(apertures=self.aperture, star=self.target).values
 
@@ -682,7 +686,7 @@ class ApertureFluxes:
         add : np.ndarray, optional
             additional regressor to add to the design matrix, by default None
         verbose : bool, optional
-            wether to show the progress bar, by default False
+            whether to show the progress bar, by default False
         """
         def progress(x):
             return tqdm(x) if verbose else x

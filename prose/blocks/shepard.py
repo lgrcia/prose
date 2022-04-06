@@ -1,4 +1,4 @@
-from . import Block
+from .. import Block
 from .psf import good_cutouts, cutouts
 from astropy.stats import gaussian_sigma_to_fwhm
 from prose.blocks.psf import Gaussian2D

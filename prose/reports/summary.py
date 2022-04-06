@@ -27,6 +27,9 @@ class Summary(Observation, LatexTemplate):
         obs_duration = f"{min_datetime.strftime('%H:%M')} - {max_datetime.strftime('%H:%M')} " \
             f"[{obs_duration_hours}h{obs_duration_mins if obs_duration_mins != 0 else ''}]"
 
+        # TODO: adapt to use PSF model block here (se we don't use the plot_... method from Observation)
+
+
         self.obstable = [
             ["Time", obs_duration],
             ["RA - DEC", f"{self.RA} {self.DEC}"],
@@ -52,7 +55,7 @@ class Summary(Observation, LatexTemplate):
         self.header = "Observation report"
 
     def plot_psf_summary(self):
-        self.plot_psf()
+        self.plot_radial_psf()
         self.style()
 
     def plot_stars(self, size=8,**kwargs):

@@ -6,8 +6,10 @@ import numba
 import astropy.constants as c
 import urllib
 from astropy.time import Time
+from astropy.table import Table
 from datetime import datetime
 import inspect
+from scipy import ndimage
 
 earth2sun = (c.R_earth / c.R_sun).value
 
@@ -339,4 +341,40 @@ def register_args(f):
         self.args = args[1::]
         self.kwargs = kwargs
         return f(*args, **kwargs)
-    return inner
+    return f
+    
+
+def nan_gaussian_filter(data, sigma=1., truncate=4.):
+    """https://stackoverflow.com/questions/18697532/gaussian-filtering-a-image-with-nan-in-python
+
+    Parameters
+    ----------
+    U : _type_
+        _description_
+    sigma : _type_, optional
+        _description_, by default 1.
+    truncate : _type_, optional
+        _description_, by default 4.
+    """
+
+    V=data.copy()
+    V[np.isnan(data)]=0
+    VV=ndimage.gaussian_filter(V,sigma=sigma,truncate=truncate)
+
+    W=0*data.copy()+1
+    W[np.isnan(data)]=0
+    WW=ndimage.gaussian_filter(W,sigma=sigma,truncate=truncate)
+
+    return VV/WW
+
+def clean_header(header_dict):
+    return {key: value for key, value in header_dict.items() if not isinstance(value, (list, tuple)) and key.isupper()}
+
+
+def easy_median(images):
+    # To avoid memory errors, we split the median computation in 50
+    images = np.array(images)
+    shape_divisors = divisors(images.shape[1])
+    n = shape_divisors[np.argmin(np.abs(50 - shape_divisors))]
+    return np.concatenate([np.nanmedian(im, axis=0) for im in np.split(images, n, axis=1)])
+

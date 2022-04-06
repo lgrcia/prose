@@ -1,5 +1,5 @@
 from photutils.centroids import centroid_sources, centroid_2dg
-from prose import Block
+from .. import Block
 import numpy as np
 from os import path
 from prose import CONFIG
@@ -66,10 +66,15 @@ class CNNCentroid(Block):
         initial_positions = image.stars_coords.copy()
         stars_in, stars = cutouts(image.data.copy(), initial_positions.copy(), self.cutout)
         if len(stars_in) > 0:
-            stars_data_reshaped = np.array([
-                (im.data / np.max(im.data)).reshape(self.cutout, self.cutout, 1) for im in stars
-            ])
-            pos_int = np.array([[st.bbox.ixmin, st.bbox.iymin] for st in stars])
+            # Take normalised and reshaped data of stars that are not None
+            stars_data_reshaped = []
+            pos_int = []
+            for i in stars_in:
+                im = stars[i]
+                stars_data_reshaped.append((im.data / np.max(im.data)).reshape(self.cutout, self.cutout, 1))
+                pos_int.append([im.bbox.ixmin, im.bbox.iymin])
+            stars_data_reshaped = np.array(stars_data_reshaped)
+            pos_int = np.array(pos_int)
             current_stars_coords = image.stars_coords[stars_in].copy()
             # apply model
             aligned_stars_coords = pos_int + self.model(stars_data_reshaped, training=False).numpy()[:, ::-1]

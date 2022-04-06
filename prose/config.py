@@ -126,7 +126,7 @@ class ConfigManager:
                 for name in telescope["names"]:
                     telescope_dict[name.lower()] = telescope
 
-        telescope_dict.update(built_in_telescopes)
+        # telescope_dict.update(built_in_telescopes)
 
         return telescope_dict
 

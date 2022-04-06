@@ -6,11 +6,10 @@ README = (HERE / "README.md").read_text()
 
 setup(
     name="prose",
-    version="1.0.0",
+    version="2.0.1",
     author="Lionel J. Garcia",
     description="Reduction and analysis of FITS telescope observations",
-    packages=find_packages("prose"),
-    package_dir={"": "prose"},
+    packages=find_packages(exclude=["test"]),
     license="MIT",
     url="https://github.com/lgrcia/prose",
     # entry_points="""
@@ -42,6 +41,7 @@ setup(
         "celerite2",
         "jinja2",
         "tensorflow",
+        "twirl",
     ],
     extras_require={
         'docs': [

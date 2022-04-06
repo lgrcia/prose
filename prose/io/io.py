@@ -78,7 +78,7 @@ def set_hdu(hdu_list, value):
         hdu_list.append(value)
 
 
-def fits_to_df(files, telescope_kw="TELESCOP", verbose=True, hdu=0):
+def fits_to_df(files, telescope_kw="TELESCOP", instrument_kw="INSTRUME", verbose=True, hdu=0):
     assert len(files) > 0, "Files not provided"
 
     last_telescope = "_"
@@ -92,19 +92,22 @@ def fits_to_df(files, telescope_kw="TELESCOP", verbose=True, hdu=0):
     for i in progress(files):
         header = fits.getheader(i, hdu)
         telescope_name = header.get(telescope_kw, "")
-        if telescope_name not in telescopes_seen:
-            telescopes_seen.append(telescope_name)
+        instrument_name = header.get(instrument_kw, "")
+
+        telescope_id = f"{telescope_name}_{instrument_name}"
+        if telescope_id not in telescopes_seen:
+            telescopes_seen.append(telescope_id)
             verbose = True
         else:
             verbose = False
 
-        if telescope_name != last_telescope:
-            telescope = Telescope.from_name(telescope_name, verbose=verbose)
-            last_telescope = telescope_name
+        if telescope_id != last_telescope:
+            telescope = Telescope.from_names(header.get(instrument_kw, ""), header.get(telescope_kw, ""))
+            last_telescope = telescope_id
 
         df_list.append(dict(
             path=i,
-            date=telescope.date(header),
+            date=telescope.date(header).isoformat(),
             telescope=telescope.name,
             type=telescope.image_type(header),
             target=header.get(telescope.keyword_object, ""),
@@ -112,6 +115,7 @@ def fits_to_df(files, telescope_kw="TELESCOP", verbose=True, hdu=0):
             dimensions=(header.get("NAXIS1", 1), header.get("NAXIS2", 1)),
             flip=header.get(telescope.keyword_flip, ""),
             jd=header.get(telescope.keyword_jd, ""),
+            exposure=header.get(telescope.keyword_exposure_time, None)
         ))
 
     df = pd.DataFrame(df_list)

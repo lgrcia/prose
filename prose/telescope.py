@@ -6,6 +6,8 @@ import astropy.units as u
 from warnings import warn
 from .console_utils import info
 from .builtins import default
+import astropy.units as u
+from dateutil import parser as dparser
 
 def str_to_astropy_unit(unit_string):
     return u.__dict__[unit_string]
@@ -14,6 +16,68 @@ def str_to_astropy_unit(unit_string):
 # TODO: add exposure time unit
 class Telescope:
     """Object containing telescope information.
+
+    Once a new telescope is instantiated its dictionary is permanantly saved by prose and automatically used whenever the telescope name is encountered in a fits header. Saved telescopesare located in ``~/.prose`` as ``.telescope`` files (yaml format).
+
+
+    Example
+    -------
+
+    .. jupyter-execute::
+
+        from prose import Telescope
+
+        telescope_dict = dict(
+            # Name(s)
+            # -------
+            name = "Unknown",
+            names = [],
+
+            # Keywords
+            # --------
+            keyword_telescope = "TELESCOP",
+            keyword_object = "OBJECT",
+            keyword_image_type = "IMAGETYP",
+            keyword_light_images = "light",
+            keyword_dark_images = "dark",
+            keyword_flat_images = "flat",
+            keyword_bias_images = "bias",
+            keyword_observation_date = "DATE-OBS",
+            keyword_exposure_time = "EXPTIME",
+            keyword_filter = "FILTER",
+            keyword_airmass = "AIRMASS",
+            keyword_fwhm = "FWHM",
+            keyword_seeing = "SEEING",
+            keyword_ra = "RA",
+            keyword_dec = "DEC",
+            keyword_jd = "JD",
+            keyword_bjd = "BJD",
+            keyword_flip = "PIERSIDE",
+            keyword_observation_time = None,
+
+            # Units, formats and scales
+            # -------------------------
+            ra_unit = "deg",
+            dec_unit = "deg",
+            jd_scale = "utc",
+            bjd_scale = "utc",
+            mjd = 0,
+            
+            # Specs
+            # -----
+            trimming = (0, 0), # in piwel along y/x
+            read_noise = 9, # in ADU
+            gain = 1, # in e-/ADU
+            altitude = 2000, # in meters
+            diameter = 100, # in meters
+            pixel_scale = None, # in arcseconds
+            latlong = [None, None], 
+            saturation = 55000, # in ADU
+            hdu = 0
+        )
+
+        telescope = Telescope(telescope_dict)
+
     """
     def __init__(self, telescope=None, verbose=True):
         """Object containing telescope information.
@@ -47,9 +111,11 @@ class Telescope:
             return str_to_astropy_unit(self.__dict__[name])
         elif name == "dec_unit":
             return str_to_astropy_unit(self.__dict__[name])
+        elif name == "pixel_scale":
+            return self.__dict__[name] * u.arcsec
         return super(Telescope, self).__getattribute__(name)
 
-    def load(self, file):
+    def load(self, file, verbose=True):
         if isinstance(file, str) and path.exists(file):
             with open(file, "r") as f:
                 telescope = yaml.load(f)
@@ -58,9 +124,10 @@ class Telescope:
         elif isinstance(file, str):
             telescope = CONFIG.match_telescope_name(file)
             if telescope is None:
-                if self.verbose:
+                if self.verbose and verbose:
                     info(f"telescope {file} not found - using default")
                 self.name = file
+                return False
 
         elif file is None:
             return False
@@ -103,21 +170,26 @@ class Telescope:
         return np.sqrt(_squarred_error)
 
     @staticmethod
-    def from_name(name, verbose=True):
+    def from_name(name, verbose=True, strict=False):
         telescope = Telescope(verbose=verbose)
-        telescope.load(name)
+        success = telescope.load(name)
+        if strict and not success:
+            return None
+        else:
+            return telescope
+
+    @staticmethod
+    def from_names(instrument_name, telescope_name):
+        # we first check by instrument name
+        telescope = Telescope.from_name(instrument_name, strict=True, verbose=False)
+        # if not found we check telescope name
+        if telescope is None:
+            telescope = Telescope.from_name(telescope_name)
+        
         return telescope
 
-    # TODO: explain in documentation
     def date(self, header):
-        _date = header.get(self.keyword_observation_date, None)
-        if _date is None:
-            _date = "2000-01-01T00:00:00.000"
-        else:
-            if self.keyword_observation_time is not None:
-                _date = _date + "T" + header.get(self.keyword_observation_time, "00:00:00.000")
-
-        return _date
+        return dparser.parse(header.get(self.keyword_observation_date, ""))
 
     def image_type(self, header):
         return header.get(self.keyword_image_type, "").lower()

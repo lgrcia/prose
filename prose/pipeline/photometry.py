@@ -90,6 +90,8 @@ class Photometry:
         self.detection_s = Sequence([
             blocks.DAOFindStars(n_stars=self.n_stars, name="detection"),
             blocks.Set(stars_coords=self.stars) if self.stars is not None else blocks.Pass(),
+            blocks.Cutouts(size=51),
+            blocks.MedianPSF(),
             self.stack_psf(name="fwhm"),
             blocks.ImageBuffer(name="buffer"),
         ])

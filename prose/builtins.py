@@ -1,6 +1,13 @@
 
+from numpy import trim_zeros
+
+
 default = dict(
+    # Name(s)
+    # -------
     name = "Unknown",
+    names = [],
+
     # Keywords
     # --------
     keyword_telescope = "TELESCOP",
@@ -18,25 +25,29 @@ default = dict(
     keyword_seeing = "SEEING",
     keyword_ra = "RA",
     keyword_dec = "DEC",
+    keyword_jd = "JD",
+    keyword_bjd = "BJD",
+    keyword_flip = "PIERSIDE",
+    keyword_observation_time = None,
+
+    # Units, formats and scales
+    # -------------------------
     ra_unit = "deg",
     dec_unit = "deg",
     jd_scale = "utc",
     bjd_scale = "utc",
-    keyword_jd = "JD",
     mjd = 0,
-    keyword_bjd = "BJD",
-    keyword_flip = "PIERSIDE",
-    keyword_observation_time = None,
+
     # Specs
     # -----
-    trimming = (0, 0), # in piwel along y/x
-    read_noise = 9, # in A
-    gain = 1, # in e-/ADU
-    altitude = 2000, # in meters
-    diameter = 100, # in meters
-    pixel_scale = None, # in arcseconds
+    trimming = (0, 0), # pixels along y/x
+    read_noise = 9, # A
+    gain = 1, # e-/ADU
+    altitude = 2000, # meters
+    diameter = 100, # meters
+    pixel_scale = None, # arcseconds
     latlong = [None, None], 
-    saturation = 55000,
+    saturation = 55000, # ADUs
     hdu = 0
 )
 
@@ -45,7 +56,7 @@ speculoos_south = dict(
     default,
     name = "SS0",
     keyword_telescope = "OBSERVAT",
-    trimming= [8, 22],  # in piwel along y/x
+    trimming= [8, 22],  # in pixel along y/x
     read_noise= 10,  # in ADU
     gain= 1.02,  # in e-/ADU
     altitude= 2000,  # in meters
@@ -166,11 +177,15 @@ liverpool = dict(
 
 spirit = dict(
     speculoos_south,
-    name = "spirit",
+    name = "Spirit",
     keyword_telescope = "TELESCOP",
     names = ["PIRT1280SciCam2"],
     pixel_scale = 0.306,
-
+    ra_unit= "hourangle",
+    trimming = (0, 0),
+    saturation = 14500,
+    read_noise = 17,
+    gain = 5,
 )
 
 built_in_telescopes = {telescope["name"].lower(): telescope for telescope in [
