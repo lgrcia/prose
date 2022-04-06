@@ -10,6 +10,7 @@ from os import path
 from astropy.time import Time
 from .. import viz
 from .core import LatexTemplate
+import astropy.units as u
 
 
 class Summary(Observation, LatexTemplate):
@@ -29,17 +30,20 @@ class Summary(Observation, LatexTemplate):
 
         # TODO: adapt to use PSF model block here (se we don't use the plot_... method from Observation)
 
+        mean_fwhm = np.mean(self.x.fwhm.values)
+        self._compute_psf_model(star=self.target)
+        mean_target_fwhm = np.mean([self.stack.fwhmx, self.stack.fwhmy])
+        optimal_aperture = np.mean(self.apertures_radii[self.aperture,:])
 
         self.obstable = [
             ["Time", obs_duration],
             ["RA - DEC", f"{self.RA} {self.DEC}"],
             ["Images", len(self.time)],
             ["Mean std · fwhm (epsf)",
-             f"{np.mean(self.fwhm) / (2 * np.sqrt(2 * np.log(2))):.2f} · {np.mean(self.fwhm):.2f} pixels"],
-            ["Fwhm (target)", f"{np.mean(self.plot_star_psf(print_values=False,plot=False)[0:2]):.2f} pixels · "
-                              f"{np.mean(self.plot_star_psf(print_values=False,plot=False)[0:2])*self.telescope.pixel_scale:.2f} arcsec"],
-            ["Optimum aperture", f"{np.mean(self.apertures_radii[self.aperture,:]):.2f} pixels · "
-                                 f"{np.mean(self.apertures_radii[self.aperture,:])*self.telescope.pixel_scale:.2f} arcsec"],
+             f"{mean_fwhm / (2 * np.sqrt(2 * np.log(2))):.2f} · {mean_fwhm:.2f} pixels"],
+            ["Fwhm (target)", f"{mean_target_fwhm:.2f} pixels · {(mean_target_fwhm*self.telescope.pixel_scale.to(u.arcsec)):.2f}"],
+            ["Optimum aperture", f"{optimal_aperture:.2f} pixels · "
+                                 f"{(optimal_aperture*self.telescope.pixel_scale.to(u.arcsec)):.2f}"],
             ["Telescope", self.telescope.name],
             ["Filter", self.filter],
             ["Exposure", f"{np.mean(self.exptime)} s"],
