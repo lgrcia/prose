@@ -12,7 +12,7 @@ default = dict(
     # --------
     keyword_telescope = "TELESCOP",
     keyword_object = "OBJECT",
-    keyword_image_type = "IMAGETYP", 
+    keyword_image_type = "IMAGETYP",
     keyword_light_images = "light",
     keyword_dark_images = "dark",
     keyword_flat_images = "flat",
@@ -37,7 +37,7 @@ default = dict(
     jd_scale = "utc",
     bjd_scale = "utc",
     mjd = 0,
-    
+
     # Specs
     # -----
     trimming = (0, 0), # pixels along y/x
@@ -56,13 +56,13 @@ speculoos_south = dict(
     default,
     name = "SS0",
     keyword_telescope = "OBSERVAT",
-    trimming= [8, 22], 
-    read_noise= 10, 
-    gain= 1.02, 
-    altitude= 2000, 
-    diameter= 100, 
-    pixel_scale= 0.33,
-    latlong= [-24.6275, -70.4044],
+    trimming= [8, 22],  # in pixel along y/x
+    read_noise= 10,  # in ADU
+    gain= 1.02,  # in e-/ADU
+    altitude= 2000,  # in meters
+    diameter= 100,  # in meters
+    pixel_scale= 0.33,  # in arcseconds
+    latlong= [-24.6275, -70.4044], # [latitude, longitude] in degree
     TTF_link= "https://astro.swarthmore.edu/telescope/tess-secure/print_eclipses.cgi?observatory_string=-24.6272%3B-70.4039%3"
                 "BAmerica%2FSantiago%3BSPECULOOS-South+Observatory+%284x1.0-m%29%3BSPECULOOS+South&use_utc=1&observatory_latitude=-29.2563"
                 "&observatory_longitude=-70.738&timezone=UTC&start_date={date}&days_to_print=90&days_in_past=0&minimum_start_elevation="
@@ -74,30 +74,31 @@ speculoos_south = dict(
 callisto = dict(
     speculoos_south,
     name = "Callisto",
-    names = ["SPECULOOS-CALLISTO"]
+    names = ["SPECULOOS-CALLISTO","Callisto","ACP->CALLISTO"]
 )
 
 io = dict(
     speculoos_south,
     name = "Io",
-    names = ["SPECULOOS-IO"]
+    names = ["SPECULOOS-IO","Io","ACP->IO"]
 )
 
 ganymede = dict(
     speculoos_south,
     name = "Ganymede",
-    names = ["SPECULOOS-GANYMEDE", "ACP->Ganymede"]
+    names = ["SPECULOOS-GANYMEDE","Ganymede","ACP->GANYMEDE"]
 )
 
 europa = dict(
     speculoos_south,
     name = "Europa",
-    names = ["SPECULOOS-EUROPA"]
+    names = ["SPECULOOS-EUROPA","Europa","ACP->EUROPA"]
 )
 
 artemis = dict(
     speculoos_south,
     name = "Artemis",
+    names = ["Artemis","ACP->Artemis"],
     ra_unit = "hourangle",
     latlong = [28.4754, -16.3089],
     TTF_link = "https://astro.swarthmore.edu/telescope/tess-secure/print_eclipses.cgi?observatory_string=28.2999%3B-16.5058%3BAtlantic%2FCanary%3"
@@ -110,7 +111,7 @@ artemis = dict(
 trappist = dict(
     speculoos_south,
     name = "TRAPPIST-South",
-    names = ["TRAPPIST-S"],
+    names = ["TRAPPIST-S","TRAPPIST"],
     trimming= [40, 40],
     pixel_scale= 0.64,
     ra_unit= "deg",
@@ -125,7 +126,7 @@ trappist = dict(
 trappistN = dict(
     speculoos_south,
     name = "TRAPPIST-North",
-    names = ["Trappist-North", "ntm"],
+    names = ["Trappist-North", "ntm","ACP->NTM"],
     pixel_scale= 0.60,
     ra_unit= "hourangle",
     latlong= [31.2027, -7.8586],
@@ -138,7 +139,8 @@ trappistN = dict(
 
 saintex = dict(
     speculoos_south,
-    name= "Saint-Ex",  
+    name= "Saint-Ex",
+    names = ["SAINT-Ex","ACP->SAINT-EX"],
     ra_unit= "hourangle",
     latlong= [31.0439, -115.4637],
     TTF_link= "https://astro.swarthmore.edu/telescope/tess-secure/print_eclipses.cgi?observatory_string=31.04342%3B-115.45476%3BPST8PDT%3"
@@ -154,13 +156,13 @@ liverpool = dict(
     name = "Liverpool",
     names = ["Liverpool Telescope"],
     keyword_telescope= "TELESCOP",
-    trimming= [8, 22],
-    read_noise= 12,
-    gain= 2.4, 
-    altitude= 2363, 
-    diameter= 200, 
-    pixel_scale= 1.0752, 
-    latlong= [28.7624, -17.8792],
+    trimming= [8, 22], # pixels
+    read_noise= 12, # ADU
+    gain= 2.4, # ADU/e-
+    altitude= 2363, # m
+    diameter= 200, # cm
+    pixel_scale= 1.0752, # arcsec
+    latlong= [28.7624, -17.8792], # deg
     keyword_object= "OBJECT",
     keyword_image_type= "OBSTYPE",
     keyword_light_images= "expose",

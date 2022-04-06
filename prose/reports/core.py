@@ -89,9 +89,11 @@ class Report(LatexTemplate):
             paths=self.paths
         ))
 
+
 def copy_figures(folder, prefix, destination):
     figures = list(Path(folder).glob("**/*.png"))
     texts = list(Path(folder).glob("**/*.txt"))
+    pdfs = list(Path(folder).glob("**/*.pdf"))
     new_folder = Path(destination)
     new_folder.mkdir(exist_ok=True)
     for fig in figures:
@@ -100,3 +102,6 @@ def copy_figures(folder, prefix, destination):
     for txt in texts:
         if ".ipynb_checkpoints" not in str(txt):
             shutil.copy(txt, new_folder / (prefix + "_" + txt.name))
+    for pdf in pdfs:
+        if ".ipynb_checkpoints" not in str(pdf):
+            shutil.copy(pdf, new_folder / (prefix + "_" + "report.pdf"))

@@ -36,8 +36,10 @@ class Summary(Observation, LatexTemplate):
             ["Images", len(self.time)],
             ["Mean std · fwhm (epsf)",
              f"{np.mean(self.fwhm) / (2 * np.sqrt(2 * np.log(2))):.2f} · {np.mean(self.fwhm):.2f} pixels"],
-            # ["Fwhmx · fwhmy (target)", f"{self.plot_star_psf(print_values=False,plot=False)[0]:.2f} · {self.plot_star_psf(print_values=False,plot=False)[1]:.2f} pixels"],
-            ["Optimum aperture", f"{np.mean(self.apertures_radii[self.aperture,:]):.2f} pixels"],
+            ["Fwhm (target)", f"{np.mean(self.plot_star_psf(print_values=False,plot=False)[0:2]):.2f} pixels · "
+                              f"{np.mean(self.plot_star_psf(print_values=False,plot=False)[0:2])*self.telescope.pixel_scale:.2f} arcsec"],
+            ["Optimum aperture", f"{np.mean(self.apertures_radii[self.aperture,:]):.2f} pixels · "
+                                 f"{np.mean(self.apertures_radii[self.aperture,:])*self.telescope.pixel_scale:.2f} arcsec"],
             ["Telescope", self.telescope.name],
             ["Filter", self.filter],
             ["Exposure", f"{np.mean(self.exptime)} s"],
@@ -56,8 +58,8 @@ class Summary(Observation, LatexTemplate):
         self.plot_radial_psf()
         self.style()
 
-    def plot_stars(self, size=8):
-        self.show_stars(size=size)
+    def plot_stars(self, size=8,**kwargs):
+        self.show_stars(size=size,**kwargs)
         plt.tight_layout()
 
     def plot_syst(self, size=(6, 8)):

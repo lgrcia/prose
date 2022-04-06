@@ -1,7 +1,7 @@
 from .core import LatexTemplate
 
 
-class TessNotes(LatexTemplate):
+class TESSNotes(LatexTemplate):
 
     def __init__(self, style="paper", template_name="tess-notes.tex"):
 

@@ -47,6 +47,7 @@ class NEBCheck(LatexTemplate, NEB):
         self.dpi = 100
         self.obstable = None
         self.lcs = []
+        self.df = pd.DataFrame()
 
     def plot_neb_lcs(self, destination, indexes, disposition, transparent=True, report_layout=True):
         """Plot all the light curves of a given list of stars with the expected transits.
@@ -80,7 +81,7 @@ class NEBCheck(LatexTemplate, NEB):
         for i, idxs in enumerate(split):
             lcs_path = path.join(destination, disposition, f"lcs{i}.png")
             if i > 0:
-                self.lcs.append(str(i+1))
+                self.lcs.append(str(i))
             if report_layout is True:
                 if i == 0:
                     self.plot_lcs(idxs)
@@ -142,8 +143,8 @@ class NEBCheck(LatexTemplate, NEB):
                 destination : str
                     Path to store the table.
         """
-        self.disposition_string = np.array([self.disposition for i in self.nearby_ids]).astype("str")
-        for i, j in zip(['0.0', '1.0', '2.0', '3.0', '4.0'],
+        self.disposition_string = np.array([self.disposition[i] for i in self.nearby_ids]).astype("str")
+        for i, j in zip(['0', '1', '2', '3', '4'],
                         ["Likely cleared", "Cleared", "Cleared too faint", "Flux too low", "Not cleared"]):
             self.disposition_string[self.disposition_string == i] = j
 
@@ -176,7 +177,7 @@ class NEBCheck(LatexTemplate, NEB):
                 list_dec.append('Not found')
                 list_dist.append('Not found')
 
-        df = pd.DataFrame(collections.OrderedDict(
+        self.df = pd.DataFrame(collections.OrderedDict(
             {
                 "Star number": self.nearby_ids,
                 "GAIA ID": list_gaia,
@@ -191,9 +192,13 @@ class NEBCheck(LatexTemplate, NEB):
                 "Disposition": [self.disposition_string[i] for i in self.nearby_ids],
             }))
         for c in ["Distance to target (arcsec)", "Dmag", "RMS (ppt)", "Expected depth (ppt)", "RMS/expected depth"]:
-            df[c] = df[c].round(decimals=3)
+            for j in np.arange(len(self.df)):
+                try:
+                    self.df[c][j] = self.df[c][j].round(decimals=3)
+                except AttributeError:
+                    pass
         destination_path = Path(destination)
-        df.to_csv(path.join(destination_path, "neb_table.txt"), sep="\t", index=False)
+        self.df.to_csv(path.join(destination_path, "neb_table.txt"), sep="\t", index=False)
         self.obstable = [["Cleared", "Likely Cleared", "Cleared too faint", "Not cleared", "Flux too low"],
                          [len(self.cleared), len(self.likely_cleared), len(self.cleared_too_faint),
                           len(self.not_cleared),

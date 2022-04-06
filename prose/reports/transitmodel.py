@@ -8,11 +8,12 @@ from .. import viz
 from .core import LatexTemplate
 import pandas as pd
 import collections
+import re
 
 
 class TransitModel(Observation, LatexTemplate):
 
-    def __init__(self, obs, transit, trend=None, expected=None, rms_bin=5/24/60, style="paper", template_name="transitmodel.tex"):
+    def __init__(self, obs, transit, trend=None, expected=None, name=None, posteriors={}, rms_bin=5/24/60,  style="paper", template_name="transitmodel.tex"):
         """Transit modeling report
 
         Parameters
@@ -40,7 +41,6 @@ class TransitModel(Observation, LatexTemplate):
         self.destination = None
         self.report_name = None
         self.figure_destination = None
-
         self.transit_model = transit
         self.trend_model = trend if trend is not None else np.zeros_like(self.time)
         self.residuals = self.diff_flux - self.transit_model - self.trend_model
@@ -51,24 +51,27 @@ class TransitModel(Observation, LatexTemplate):
         self.snr = self.snr()
         self.rms_bin = rms_bin
         self.rms = self.rms_binned()
-
+        self.priors = {}
+        self.priors = self.get_priors(name)
+        self.posteriors = posteriors #TODO if posteriors is empty, avoid the KeyError in the obstable, replace by nan or None or whatever
         self.expected = expected
         self.obstable = [
             ["Parameters", "Model", "TESS"],
-            ["[u1,u2]", None, "-"],
-            ["[R*]", "R$_{\odot}$", "R$_{\odot}$"],
-            ["[M*]", "M$_{\odot}$", "M$_{\odot}$"],
-            ["P", "d", "d"],
-            ["Rp", "R$_{\oplus}$",  "R$_{\oplus}$"],
-            ["Tc", None , None],
-            ["b", None, None],
-            ["Duration", f"{self.t14:.2f} min", None],
-            ["(Rp/R*)\u00b2", None, None],
-            ["Apparent depth (min. flux)", f"{np.abs(min(self.transit_model)):.2e}", None],
-            ["a/R*", None, None],
-            ["i", None, None],
-            ["SNR", f"{self.snr:.2f}", None],
-            ["RMS per bin (%s min)" % f"{self.rms[1]:.1f}", f"{self.rms[0]:.2e}", None],
+            ["u1", f"{self.posteriors['u[0]']}" "$\pm$" f"{self.posteriors['u[0]_e']}", "-"],
+            ["u2", f"{self.posteriors['u[1]']}" "$\pm$" f"{self.posteriors['u[1]_e']}", "-"],
+            ["R*", f"{self.posteriors['r_s']}" "$\pm$" f"{self.posteriors['r_s_e']}""R$_{\odot}$", f"{self.priors['rad_s']:.4f}" "$\pm$" f"{self.priors['rad_s_e']:.4f}" "R$_{\odot}$"],
+            ["M*", f"{self.posteriors['m_s']}" "$\pm$" f"{self.posteriors['m_s_e']}""M$_{\odot}$", f"{self.priors['mass_s']:.4f}" "$\pm$" f"{self.priors['mass_s_e']:.4f}" "M$_{\odot}$"],
+            ["P",f"{self.posteriors['P']}" "$\pm$" f"{self.posteriors['P_e']}""d", f"{self.priors['period']:.4f}" "$\pm$" f"{self.priors['period_e']:.4f}""d"],
+            ["Rp", f"{self.posteriors['r']}" "$\pm$" f"{self.posteriors['r_e']}""R$_{\oplus}$", f"{self.priors['rad_p']:.4f}" "$\pm$" f"{self.priors['rad_p_e']:.4f}" "R$_{\oplus}$"],
+            ["Tc", f"{self.posteriors['t0']}" "$\pm$" f"{self.posteriors['t0_e']}" , None],
+            ["b", f"{self.posteriors['b']}" "$\pm$" f"{self.posteriors['b_e']}", "-"],
+            ["Duration", f"{self.t14:.2f} min", f"{self.priors['duration']:.2f}" "$\pm$" f"{self.priors['duration_e']:.2f} min"],
+            ["(Rp/R*)\u00b2", f"{self.posteriors['depth'] * 1e3}" 'e-3' "$\pm$" f"{self.posteriors['depth_e'] * 1e3}" 'e-3', f"{self.priors['depth']:.2f}" 'e-3' "$\pm$" f"{self.priors['depth_e']:.2f}" 'e-3'],
+            ["Apparent depth (min. flux)", f"{np.abs(min(self.transit_model)):.2e}", "-"],
+            ["a/R*", f"{self.posteriors['a/r_s']}" "$\pm$" f"{self.posteriors['a/r_s_e']}", "-"],
+            ["i", f"{self.posteriors['i']}" "$\pm$" f"{self.posteriors['i_e']}", "-"],
+            ["SNR", f"{self.snr:.2f}", "-"],
+            ["RMS per bin (%s min)" % f"{self.rms[1]:.1f}", f"{self.rms[0]:.2e}", "-"],
         ]
 
     def plot_ingress_egress(self):
@@ -82,6 +85,7 @@ class TransitModel(Observation, LatexTemplate):
         self.plot_lc_model()
         plt.savefig(path.join(destination, "model.png"), dpi=self.dpi)
         plt.close()
+        #TEST
 
     def make(self, destination):
         self.make_report_folder(destination)
@@ -164,3 +168,37 @@ class TransitModel(Observation, LatexTemplate):
     def rms_binned(self):
         bins, flux, std = binning(self.time, self.residuals, bins=self.rms_bin, std=True)
         return np.std(flux), self.rms_bin * 24 * 60
+
+    def get_priors(self, name):
+        if name is not None:
+            nb = re.findall('\d*\.?\d+', name) #TODO add the possibility to do this with TIC ID rather than TOI number (also in obs)
+            df = pd.read_csv("https://exofop.ipac.caltech.edu/tess/download_toi?toi=%s&output=csv" % nb[0])
+            self.priors['rad_p'] = df['Planet Radius (R_Earth)'][0]
+            self.priors['rad_p_e'] = df['Planet Radius (R_Earth) err'][0]
+            self.priors['rad_s'] = df['Stellar Radius (R_Sun)'][0]
+            self.priors['rad_s_e'] = df['Stellar Radius (R_Sun) err'][0]
+            self.priors['mass_s'] = df['Stellar Mass (M_Sun)'][0]
+            self.priors['mass_s_e'] = df['Stellar Mass (M_Sun) err'][0]
+            self.priors['period'] = df['Period (days)'][0]
+            self.priors['period_e'] = df['Period (days) err'][0]
+            self.priors['duration'] = df['Duration (hours)'][0] * 60
+            self.priors['duration_e'] = df['Duration (hours) err'][0] * 60
+            self.priors['depth'] = df['Depth (ppm)'][0] / 1e3
+            self.priors['depth_e'] = df['Depth (ppm) err'][0] / 1e3
+        else:
+            self.priors['rad_p'] = np.nan
+            self.priors['rad_p_e'] = np.nan
+            self.priors['rad_s'] = np.nan
+            self.priors['rad_s_e'] = np.nan
+            self.priors['mass_s'] = np.nan
+            self.priors['mass_s_e'] = np.nan
+            self.priors['period'] = np.nan
+            self.priors['period_e'] = np.nan
+            self.priors['duration'] = np.nan
+            self.priors['duration_e'] = np.nan
+            self.priors['depth'] = np.nan
+            self.priors['depth_e'] = np.nan
+        for keys in self.priors.keys():
+            if self.priors[keys] != self.priors[keys]:
+                self.priors[keys] = np.nan
+        return self.priors
