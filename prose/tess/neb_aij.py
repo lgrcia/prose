@@ -1,17 +1,13 @@
-from .core import *
 from ..blocks.registration import distances
-from .. import utils
 import numpy as np
 import pandas as pd
 import collections
 import matplotlib.pyplot as plt
 from os import path
 from pathlib import Path
-import shutil
 from .. import viz
-from .. import Observation
 from ..diagnostics.near_eclipsing_binary import NEB
-from .core import LatexTemplate
+from ..reports.core import LatexTemplate
 
 
 class NEBCheck(LatexTemplate, NEB):

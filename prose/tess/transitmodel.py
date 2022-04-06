@@ -5,7 +5,7 @@ from ..fluxes import pont2006
 from ..utils import binning
 from os import path
 from .. import viz
-from .core import LatexTemplate
+from ..reports.core import LatexTemplate
 import pandas as pd
 import collections
 import re

@@ -1,4 +1,4 @@
-from .core import LatexTemplate
+from ..reports.core import LatexTemplate
 
 
 class TESSNotes(LatexTemplate):

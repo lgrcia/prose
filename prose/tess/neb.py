@@ -1,4 +1,4 @@
-from .core import *
+from ..reports.core import LatexTemplate
 from ..blocks.registration import distances
 from .. import utils
 import numpy as np
