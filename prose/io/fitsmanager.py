@@ -162,6 +162,11 @@ class FitsManager:
                 print(f"No new files to scan")
         else:
             raise AssertionError(f"No files with extension '{extension}' found")
+
+        # updating self observation labels
+        _observations = self.observations(show=False, index=False)
+        self._observations = np.array([f"{o[0]}_{o[1]}_{o[2]}_{o[3]}" for o in _observations])
+
         
     def print(self, calib=True, repr=False):
         """Print database observations, calibrations and other files in nice table
