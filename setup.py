@@ -52,6 +52,7 @@ setup(
             "sphinx-copybutton",        
             "docutils",
             "jupyterlab",
+            "myst-parser",
             "twine",
         ]
     },

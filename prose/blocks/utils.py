@@ -320,41 +320,6 @@ class Flip(Block):
         if flip_value != self.reference_flip_value:
             image.data = image.data[::-1, ::-1]
 
-# TODO put into vizualisation and test
-class LivePlot(Block):
-    @register_args
-    def __init__(self, plot_function=None, sleep=0., size=None, **kwargs):
-        super().__init__(**kwargs)
-        if plot_function is None:
-            plot_function = lambda im: viz.show_stars(
-                im.data, im.stars_coords if hasattr(im, "stars_coords") else None,
-                size=size
-                )
-
-        self.plot_function = plot_function
-        self.sleep = sleep
-        self.display = None
-        self.size = size
-        self.figure_added = False
-
-    def run(self, image):
-        if not self.figure_added:
-            from IPython import display as disp
-            self.display = disp
-            if isinstance(self.size, tuple):
-                plt.figure(figsize=self.size)
-            self.figure_added = True
-
-        self.plot_function(image)
-        self.display.clear_output(wait=True)
-        self.display.display(plt.gcf())
-        time.sleep(self.sleep)
-        plt.cla()
-
-    def terminate(self):
-        plt.close()
-
-
 # TODO document
 class Get(Block):
 

@@ -1,11 +1,11 @@
 import numpy as np
-from prose import utils, Block
+from .. import Block, viz
 import matplotlib.pyplot as plt
 import imageio
 from prose.visualization import corner_text
 from skimage.transform import resize
 from matplotlib.backends.backend_agg import FigureCanvasAgg
-
+import time
 
 def im_to_255(image, factor=0.25):
     if factor !=1:
@@ -66,11 +66,11 @@ class RawVideo(_Video):
         
 class PlotVideo(_Video):
 
-    def __init__(self, plot_function, destination, fps=10, **kwargs):
+    def __init__(self, plot_function, destination, fps=10, antialias=False, **kwargs):
         super().__init__(destination, fps=fps, **kwargs)
         self.plot_function = plot_function
         self._init_alias = plt.rcParams['text.antialiased']
-        plt.rcParams['text.antialiased'] = False
+        plt.rcParams['text.antialiased'] = antialias
 
     def to_rbg(self):
         fig = plt.gcf()
@@ -90,3 +90,37 @@ class PlotVideo(_Video):
     def terminate(self):
         super().terminate()
         plt.rcParams['text.antialiased'] = self._init_alias
+
+
+class LivePlot(Block):
+
+    def __init__(self, plot_function=None, sleep=0., size=None, **kwargs):
+        super().__init__(**kwargs)
+        if plot_function is None:
+            plot_function = lambda im: viz.show_stars(
+                im.data, im.stars_coords if hasattr(im, "stars_coords") else None,
+                size=size
+                )
+
+        self.plot_function = plot_function
+        self.sleep = sleep
+        self.display = None
+        self.size = size
+        self.figure_added = False
+
+    def run(self, image):
+        if not self.figure_added:
+            from IPython import display as disp
+            self.display = disp
+            if isinstance(self.size, tuple):
+                plt.figure(figsize=self.size)
+            self.figure_added = True
+
+        self.plot_function(image)
+        self.display.clear_output(wait=True)
+        self.display.display(plt.gcf())
+        time.sleep(self.sleep)
+        plt.cla()
+
+    def terminate(self):
+        plt.close()
