@@ -31,6 +31,7 @@ FORE_COLOR = style["fore_color"][CONFIG.config["color"]]
 
 RUN_LABEL = "{}RUN{}".format(FORE_COLOR, Fore.RESET)
 INFO_LABEL = "{}INFO{}".format(FORE_COLOR, Fore.RESET)
+WARNING_LABEL = "{}WARNING{}".format(style["fore_color"]["yellow"], Fore.RESET)
 
 TQDM_BAR_FORMAT = "%s {l_bar}%s{bar}%s{r_bar}" % (
     RUN_LABEL, FORE_COLOR, Fore.RESET
@@ -132,3 +133,7 @@ def _get_terminal_size_linux():
 
 def info(s):
     print(f"{INFO_LABEL} {s}")
+
+
+def warning(s):
+    print(f"{WARNING_LABEL} {s}")

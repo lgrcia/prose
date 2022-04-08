@@ -181,3 +181,19 @@ class Peaks(Block):
             cut = cuts[j]
             if cut is not None:
                 image.peaks[i] = np.max(cut.data)
+
+
+class LimitStars(Block):
+
+    def __init__(self, min=4, max=10000, **kwargs):
+        super().__init__(**kwargs)
+        self.min = min
+        self.max = max
+        
+    def run(self, image):
+        if image.stars_coords is None:
+            image.discard = True
+        else:
+            n = len(image.stars_coords) 
+            if n < self.min or n > self.max:
+                image.discard = True
