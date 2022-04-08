@@ -378,3 +378,30 @@ def easy_median(images):
     n = shape_divisors[np.argmin(np.abs(50 - shape_divisors))]
     return np.concatenate([np.nanmedian(im, axis=0) for im in np.split(images, n, axis=1)])
 
+
+def image_in_xarray(image, xarr, name="stack", stars=False):
+    xarr.attrs.update(header_to_cdf4_dict(image.header))
+    xarr.attrs.update(dict(
+        telescope=image.telescope.name,
+        filter=image.header.get(image.telescope.keyword_filter, ""),
+        exptime=image.header.get(image.telescope.keyword_exposure_time, ""),
+        name=image.header.get(image.telescope.keyword_object, ""),
+    ))
+
+    if image.telescope.keyword_observation_date in image.header:
+        date = image.header[image.telescope.keyword_observation_date]
+    else:
+        date = Time(image.header[image.telescope.keyword_jd], format="jd").datetime
+
+    xarr.attrs.update(dict(date=format_iso_date(date).isoformat()))
+    xarr.coords[name] = (('w', 'h'), image.data)
+
+    xarr = xarr.assign_coords(time=xarr.jd_utc)
+    xarr = xarr.sortby("time")
+    xarr.attrs["time_format"] = "jd_utc"
+    
+    if stars:
+        xarr = xarr.assign_coords(stars=(("star", "n"), image.stars_coords))
+
+    
+    return xarr
