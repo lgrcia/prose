@@ -365,15 +365,19 @@ class Twirl(Block):
         self.kdtree = KDTree(self.quads_ref)
 
     def run(self, image, **kwargs):
-        x, image.dx, image.dy = self(image.stars_coords, return_dx=True)
-
-        image.transform = skAT(x)
-        image.header["TWROT"] = image.transform.rotation
-        image.header["TWTRANSX"] = image.transform.translation[0]
-        image.header["TWTRANSY"] = image.transform.translation[1]
-        image.header["TWSCALEX"] = image.transform.scale[0]
-        image.header["TWSCALEY"] = image.transform.scale[1]
-        image.header["ALIGNALG"] = self.__class__.__name__
+        result = self(image.stars_coords, return_dx=True)
+        if result is not None:
+            x, image.dx, image.dy = result
+            image.transform = skAT(x)
+            image.header["TWROT"] = image.transform.rotation
+            image.header["TWTRANSX"] = image.transform.translation[0]
+            image.header["TWTRANSY"] = image.transform.translation[1]
+            image.header["TWSCALEX"] = image.transform.scale[0]
+            image.header["TWSCALEY"] = image.transform.scale[1]
+            image.header["ALIGNALG"] = self.__class__.__name__
+        
+        else:
+            image.discard = True
 
     def __call__(self, stars_coords, tolerance=2, return_dx=False):
         s = stars_coords.copy()
@@ -394,7 +398,12 @@ class Twirl(Block):
         M = tutils._find_transform(S1, S2)
         new_ref = tutils.affine_transform(M)(self.ref)
 
-        i, j = tutils.cross_match(new_ref, s, tolerance=tolerance, return_ixds=True).T
+        matches = tutils.cross_match(new_ref, s, tolerance=tolerance, return_ixds=True).T
+        if len(matches) == 0:
+            return None
+        else:
+            i, j = matches
+
         x = tutils._find_transform(s[j], self.ref[i])
 
         if return_dx:
