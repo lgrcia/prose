@@ -1,12 +1,12 @@
-from ..reports.core import LatexTemplate
-from ..blocks.registration import distances
-from .. import utils
+from prose.reports.core import LatexTemplate
+from prose.blocks.registration import distances
+from prose import utils
 import numpy as np
 import matplotlib.pyplot as plt
 from os import path
 import shutil
-from .. import viz
-from .. import Observation
+from prose import viz
+from prose import Observation
 
 
 def protopapas2005(t, t0, duration, depth, c, period=1):

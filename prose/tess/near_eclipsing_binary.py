@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from prose.utils import binning, sigma_clip
 import matplotlib.patches as mpatches
-from .. import viz
+from prose import viz
 from prose import Observation, utils
 from prose.models import transit
 from prose import blocks

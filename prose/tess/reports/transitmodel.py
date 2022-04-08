@@ -1,11 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from .. import Observation
-from ..fluxes import pont2006
-from ..utils import binning
+from prose import Observation
+from prose.fluxes import pont2006
+from prose.utils import binning
 from os import path
-from .. import viz
-from ..reports.core import LatexTemplate
+from prose import viz
+from prose.reports.core import LatexTemplate
 import pandas as pd
 import collections
 import re
@@ -13,7 +13,8 @@ import re
 
 class TransitModel(Observation, LatexTemplate):
 
-    def __init__(self, obs, transit, trend=None, expected=None, name=None, posteriors={}, rms_bin=5/24/60,  style="paper", template_name="transitmodel.tex"):
+    def __init__(self, obs, transit, trend=None, expected=None, posteriors={}, rms_bin=5/24/60,
+                 style="paper", template_name="transitmodel.tex"):
         """Transit modeling report
 
         Parameters
@@ -52,7 +53,6 @@ class TransitModel(Observation, LatexTemplate):
         self.rms_bin = rms_bin
         self.rms = self.rms_binned()
         self.priors = {}
-        self.priors = self.get_priors(name)
         self.posteriors = posteriors #TODO if posteriors is empty, avoid the KeyError in the obstable, replace by nan or None or whatever
         self.expected = expected
         self.obstable = [
@@ -125,7 +125,7 @@ class TransitModel(Observation, LatexTemplate):
         """
         This one adds de-trended light-curve
         """
-        destination = path.join(self.destination, "..", 'measurements' + ".txt")
+        destination = path.join(self.destination, "../..", 'measurements' + ".txt")
 
         comparison_stars = self.comps[self.aperture]
         list_diff = ["DIFF_FLUX_C%s" % i for i in comparison_stars]
@@ -169,22 +169,20 @@ class TransitModel(Observation, LatexTemplate):
         bins, flux, std = binning(self.time, self.residuals, bins=self.rms_bin, std=True)
         return np.std(flux), self.rms_bin * 24 * 60
 
-    def get_priors(self, name):
-        if name is not None:
-            nb = re.findall('\d*\.?\d+', name) #TODO add the possibility to do this with TIC ID rather than TOI number (also in obs)
-            df = pd.read_csv("https://exofop.ipac.caltech.edu/tess/download_toi?toi=%s&output=csv" % nb[0])
-            self.priors['rad_p'] = df['Planet Radius (R_Earth)'][0]
-            self.priors['rad_p_e'] = df['Planet Radius (R_Earth) err'][0]
-            self.priors['rad_s'] = df['Stellar Radius (R_Sun)'][0]
-            self.priors['rad_s_e'] = df['Stellar Radius (R_Sun) err'][0]
-            self.priors['mass_s'] = df['Stellar Mass (M_Sun)'][0]
-            self.priors['mass_s_e'] = df['Stellar Mass (M_Sun) err'][0]
-            self.priors['period'] = df['Period (days)'][0]
-            self.priors['period_e'] = df['Period (days) err'][0]
-            self.priors['duration'] = df['Duration (hours)'][0] * 60
-            self.priors['duration_e'] = df['Duration (hours) err'][0] * 60
-            self.priors['depth'] = df['Depth (ppm)'][0] / 1e3
-            self.priors['depth_e'] = df['Depth (ppm) err'][0] / 1e3
+    def get_priors(self):
+        if self.priors_dataframe is not None:
+            self.priors['rad_p'] = self.priors_dataframe['Planet Radius (R_Earth)'][0]
+            self.priors['rad_p_e'] = self.priors_dataframe['Planet Radius (R_Earth) err'][0]
+            self.priors['rad_s'] = self.priors_dataframe['Stellar Radius (R_Sun)'][0]
+            self.priors['rad_s_e'] = self.priors_dataframe['Stellar Radius (R_Sun) err'][0]
+            self.priors['mass_s'] = self.priors_dataframe['Stellar Mass (M_Sun)'][0]
+            self.priors['mass_s_e'] = self.priors_dataframe['Stellar Mass (M_Sun) err'][0]
+            self.priors['period'] = self.priors_dataframe['Period (days)'][0]
+            self.priors['period_e'] = self.priors_dataframe['Period (days) err'][0]
+            self.priors['duration'] = self.priors_dataframe['Duration (hours)'][0] * 60
+            self.priors['duration_e'] = self.priors_dataframe['Duration (hours) err'][0] * 60
+            self.priors['depth'] = self.priors_dataframe['Depth (ppm)'][0] / 1e3
+            self.priors['depth_e'] = self.priors_dataframe['Depth (ppm) err'][0] / 1e3
         else:
             self.priors['rad_p'] = np.nan
             self.priors['rad_p_e'] = np.nan
