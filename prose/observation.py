@@ -221,14 +221,6 @@ class Observation(ApertureFluxes):
     def night_date(self):
         return self.stack.night_date
 
-    @property
-    def target(self):
-        return int(self.x.attrs['target'])
-
-    @target.setter
-    def target(self, i):
-        self.x.attrs["target"] = i
-
     # TESS specific methods
     # --------------------
     
