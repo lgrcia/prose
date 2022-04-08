@@ -262,8 +262,8 @@ class Image:
         str
         """
         return "_".join([
-            self.telescope.name,
             self.night_date.strftime("%Y%m%d"),
+            self.telescope.name,
             self.header.get(self.telescope.keyword_object, "?"),
             self.filter
         ])
@@ -428,7 +428,7 @@ class Image:
         plt.annotate(f"radius {arcmin}'", xy=[x, y + search_radius + 15], color="white",
                      ha='center', fontsize=12, va='bottom', alpha=0.6)
 
-    def plot_catalog(self, name, color="y", label=False, n=100000):
+    def plot_catalog(self, name, color="y", label=False, n=100000): # Change to show_catalog ? Show = stack
         """Plot catalog stars 
         
         must be over :py:class:`Image.show` or :py:class:`Image.show_cutout` plot

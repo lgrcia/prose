@@ -1,8 +1,5 @@
-from .. import Observation
-from .tess_summary import TESSSummary
-from .tessnotes import  TESSNotes
-from .transitmodel import TransitModel
-class TFOPObservation(Observation):
-
-    def __init__(self,):
-        pass
+from .tfop_observation import TFOPObservation
+from prose.tess.reports.nebcheck import NEBCheck
+from prose.tess.reports.transitmodel import TransitModel
+from prose.tess.reports.tessnotes import TESSNotes
+from prose.tess.reports.tesssummary import TESSSummary
