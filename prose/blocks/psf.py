@@ -167,7 +167,7 @@ class PSFModel(Block):
         self.x = self.y = None
 
     def from_cutouts(self, image):
-        self.cutout_size = image.cutouts[0].shape[0]
+        self.cutout_size = image.cutouts[image.cutouts_idxs[0]].shape[0]
         self.x, self.y = np.indices((self.cutout_size, self.cutout_size))
 
     @property
