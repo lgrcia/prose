@@ -53,13 +53,13 @@ class Image:
 
     """
 
-    def __init__(self, fitspath=None, data=None, header=None, **kwargs):
+    def __init__(self, fitspath=None, data=None, header=None, hdu=0,**kwargs):
         """
         Image instanciation
         """
         if fitspath is not None:
             self.path = fitspath
-            self._get_data_header()
+            self._get_data_header(hdu=hdu)
         else:
             self.data = data
             self.header = header if header is not None else {}
@@ -71,11 +71,11 @@ class Image:
         self._check_telescope()
         self.catalogs = {}
 
-    def _get_data_header(self):
+    def _get_data_header(self,hdu=0):
         """Retrieve data and metadata from an image
         """
         self.data = fits.getdata(self.path).astype(float)
-        self.header = fits.getheader(self.path)
+        self.header = fits.getheader(self.path,ext=hdu)
 
     def copy(self, data=True):
         """Copy of image object

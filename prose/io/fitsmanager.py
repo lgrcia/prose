@@ -76,7 +76,7 @@ class FitsManager:
             self.con.commit()
         
         if folders is not None:
-            self.scan_files(folders, extension, batch_size=batch_size, depth=depth)
+            self.scan_files(folders, extension, batch_size=batch_size, depth=depth,hdu=hdu)
         # else:
         #     raise AssertionError(f"No files with extension '{extension}'found")
 
@@ -94,7 +94,7 @@ class FitsManager:
             f"INSERT or IGNORE INTO files VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (date, _path, telescope, _filter, _type, target, width, height, jd, "NULL", exposure))
 
-    def scan_files(self, folders, extension, batch_size=False, verbose=True, depth=0):
+    def scan_files(self, folders, extension, batch_size=False, verbose=True, depth=0,hdu=0):
         """Scan a folder and add data to database
 
         Parameters
@@ -149,12 +149,12 @@ class FitsManager:
 
                 if batch_size is not False:
                     for batch in progress(batches):
-                        df = fits_to_df(batch, verbose=False)
+                        df = fits_to_df(batch, verbose=False,hdu=hdu)
                         for row in df.values:
                             self._insert(*row)
                         self.con.commit()
                 else:
-                    df = fits_to_df(files_to_scan, verbose=True)
+                    df = fits_to_df(files_to_scan, verbose=True,hdu=hdu)
                     for row in df.values:
                         self._insert(*row)
                     self.con.commit()
