@@ -283,6 +283,7 @@ class Image:
         zscale=True,
         frame=False,
         contrast=0.1,
+        **kwargs
         ):
         """Show image data
 
@@ -329,9 +330,9 @@ class Image:
         if zscale is False:
             vmin = np.nanmedian(self.data)
             vmax = vmax = vmin*(1+contrast)/(1-contrast)
-            _ = ax.imshow(self.data, cmap=cmap, origin="lower",vmin=vmin,vmax=vmax)
+            _ = ax.imshow(self.data, cmap=cmap, origin="lower",vmin=vmin,vmax=vmax, **kwargs)
         else:
-            _ = ax.imshow(utils.z_scale(self.data, contrast), cmap=cmap, origin="lower")
+            _ = ax.imshow(utils.z_scale(self.data, contrast), cmap=cmap, origin="lower", **kwargs)
         
         if stars is None:
             stars = "stars_coords" in self.__dict__
@@ -346,7 +347,7 @@ class Image:
             overlay[0].set_axislabel('Right Ascension (J2000)')
             overlay[1].set_axislabel('Declination (J2000)')
 
-    def show_cutout(self, star=None, size=200, marks=True, **kwargs):
+    def show_cutout(self, star=None, size=200, **kwargs):
         """Show a zoomed cutout around a detected star or coordinates
 
         Parameters
@@ -355,6 +356,7 @@ class Image:
             detected star id or (x, y) coordinate, by default None
         size : int, optional
             side size of square cutout in pixel, by default 200
+        **kwargs passed to self.show
         """
 
         if star is None:
@@ -369,7 +371,8 @@ class Image:
         self.show(**kwargs)
         plt.xlim(np.array([-size / 2, size / 2]) + x)
         plt.ylim(np.array([-size / 2, size / 2]) + y)
-        if marks and hasattr(self, "stars_coords"):
+        stars = kwargs.get("stars", False)
+        if stars and hasattr(self, "stars_coords"):
             idxs = np.argwhere(np.max(np.abs(self.stars_coords - [x, y]), axis=1) < size).squeeze()
             viz.plot_marks(*self.stars_coords[idxs].T, label=idxs)
 

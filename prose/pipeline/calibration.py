@@ -212,27 +212,7 @@ class Calibration:
 
     def save(self):
         xarray = self.calibration.xarray.xarray
-        xarray.attrs.update(utils.header_to_cdf4_dict(self.stack.header))
-        xarray.attrs.update(dict(
-            target=-1,
-            aperture=-1,
-            telescope=self.stack.telescope.name,
-            filter=self.stack.header.get(self.stack.telescope.keyword_filter, ""),
-            exptime=self.stack.header.get(self.stack.telescope.keyword_exposure_time, ""),
-            name=self.stack.header.get(self.stack.telescope.keyword_object, ""),
-        ))
-
-        if self.stack.telescope.keyword_observation_date in self.stack.header:
-            date = self.stack.header[self.stack.telescope.keyword_observation_date]
-        else:
-            date = Time(self.stack.header[self.stack.telescope.keyword_jd], format="jd").datetime
-
-        xarray.attrs.update(dict(date=utils.format_iso_date(date).isoformat()))
-        xarray.coords["stack"] = (('w', 'h'), self.calibration.stack.stack)
-
-        xarray = xarray.assign_coords(time=xarray.jd_utc)
-        xarray = xarray.sortby("time")
-        xarray.attrs["time_format"] = "jd_utc"
+        xarray = utils.image_in_xarray(self.stack, xarray, stars=False)
         xarray.attrs["reduction"] = [b.__class__.__name__ for b in self.calibration.blocks]
         self.xarray = xarray
         xarray.to_netcdf(self.phot)

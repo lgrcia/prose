@@ -353,12 +353,13 @@ class Get(Block):
 class XArray(Block):
 
     @register_args
-    def __init__(self, *names, name="xarray", raise_error=True, concat_dim="time"):
+    def __init__(self, *names, name="xarray", raise_error=True, concat_dim="time", **kwargs):
         super().__init__(name=name)
         self.variables = {name: (dims, []) for dims, name in names}
         self.raise_error = raise_error
         self.xarray = xr.Dataset()
         self.concat_dim = concat_dim
+        self.xarray.attrs.update(kwargs)
 
     def run(self, image):
         for name in self.variables:

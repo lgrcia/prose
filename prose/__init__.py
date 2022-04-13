@@ -6,7 +6,7 @@ warnings.simplefilter("ignore", FITSFixedWarning)
 from . import config
 
 CONFIG = config.ConfigManager()
-
+CONFIG.check_builtins_changes()
 
 from . import visualization as viz
 

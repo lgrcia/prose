@@ -249,7 +249,7 @@ def observation_to_model(time, t0=0.1, r=0.06417):
         fluxes=xr.DataArray(np.ones_like(time)[None, None, :], dims=("apertures", "star", "time")),
         errors=xr.DataArray(np.ones_like(time)[None, None, :], dims=("apertures", "star", "time")),
         sky=xr.DataArray(sky, dims="time"),
-        dy=xr.DataArray(dy, dims="time")
+        dy=xr.DataArray(dy, dims="time"),
     ), attrs=dict(
         telescope="Saint-Ex",
         aperture=0,

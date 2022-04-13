@@ -201,7 +201,9 @@ class ApertureFluxes:
 
     @property
     def target(self):
-        return self.xarray.attrs['target']
+        return self.xarray.attrs.get('target', -1)
+        #TODO: target not set error over all Observation function using target
+
 
     @target.setter
     def target(self, value):
@@ -211,7 +213,8 @@ class ApertureFluxes:
 
     @property
     def aperture(self):
-        return self.xarray.aperture
+        return self.xarray.attr.get('aperture', -1)
+        #TODO: aperture not set error over all Observation 
 
     @aperture.setter
     def aperture(self, value):

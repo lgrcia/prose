@@ -55,6 +55,12 @@ class Observation(ApertureFluxes):
         if "stars" in self.x:
             self.stack.stars_coords = self.x.stars.values
 
+        if self.has_stack:
+            self._stack = Image(data=self.x["stack"].values, header=clean_header(self.x.attrs))
+
+            if "stars" in self.x:
+                self.stack.stars_coords = self.x.stars.values
+
         has_bjd = hasattr(self.xarray, "bjd_tdb")
         if has_bjd:
             has_bjd = ~np.all(self.xarray.bjd_tdb.isnull().values)
@@ -68,8 +74,12 @@ class Observation(ApertureFluxes):
                 if not time_verbose:
                     print(f"{INFO_LABEL} Could not convert time to BJD TDB")
 
-    def _check_stack(self):
-        assert 'stack' in self.xarray is not None, "No stack found"
+    @property
+    def has_stack(self):
+        return 'stack' in self.xarray is not None
+
+    def assert_stack(self):
+        assert self.has_stack, "This observation has no stack image"
 
     # Loaders and savers (files and data)
     # ------------------------------------
@@ -77,7 +87,8 @@ class Observation(ApertureFluxes):
         copied = Observation(self.xarray.copy(), time_verbose=True)
         copied.phot = self.phot
         copied.telescope = self.telescope
-        copied.stack.wcs = self.wcs
+        if self.has_stack:
+            copied.stack.wcs = self.wcs
 
         return copied
 
@@ -368,7 +379,9 @@ class Observation(ApertureFluxes):
             obs.plot_psf_model()
             
         """
-        
+
+        self.assert_stack()
+
         # Extracting and computing PSF model
         # ---------------------------------    
         self._compute_psf_model(star=star, model=model, size=size)
@@ -629,6 +642,8 @@ class Observation(ApertureFluxes):
 
         """
 
+        self.assert_stack()
+
         if isinstance(star, (tuple, list, np.ndarray)):
             x, y = star
         else:
@@ -790,6 +805,8 @@ class Observation(ApertureFluxes):
             
 
         """
+        self.assert_stack()
+
         self.stack.show(stars=False)
         
         if stars is None:
@@ -965,7 +982,7 @@ class Observation(ApertureFluxes):
         display(HTML(widget))
 
     def plate_solve(self):
-        """Plate solve the current py::stack``
+        """Plate solve the current py::stack
         """
         self.stack = blocks.catalogs.PlateSolve()(self.stack)   
 

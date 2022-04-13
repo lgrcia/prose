@@ -1,5 +1,5 @@
 from tqdm import tqdm
-from .console_utils import TQDM_BAR_FORMAT
+from .console_utils import TQDM_BAR_FORMAT, warning
 from collections import OrderedDict
 from tabulate import tabulate
 import numpy as np
@@ -35,8 +35,8 @@ class Sequence:
             for i, block in enumerate(blocks)
         })
 
-    def run(self, images, show_progress=True):
-
+    def run(self, images, show_progress=True, live_discard=False):
+        discards = {}
         self.files_or_images = images if not isinstance(images, (str, Path, Image)) else [images]
 
         if show_progress:
@@ -80,9 +80,14 @@ class Sequence:
                     #     if not last_block is None:
                     #         print(f"{type(last_block).__name__} failed")
                 elif not discard_message:
-                    last_block = self.blocks[b-1]
+                    last_block = type(self.blocks[b-1]).__name__
                     discard_message = True
-                    print(f"Warning: image {i} discarded in {type(last_block).__name__}")
+                    if live_discard:
+                        warning(f"image {i} discarded in {last_block}")
+                    else:
+                        if last_block not in discards:
+                            discards[last_block] = []
+                        discards[last_block].append(str(i))
 
             del image
             self.n_processed_images += 1
@@ -90,6 +95,10 @@ class Sequence:
         # terminate
         for block in self.blocks:
             block.terminate()
+        
+        if not live_discard:
+            for block_name, discarded in discards.items():
+                warning(f"{block_name} discarded image{'s' if len(discarded)>1 else ''} {', '.join(discarded)}")
 
     def __str__(self):
         rows = [[

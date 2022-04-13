@@ -113,6 +113,18 @@ class ConfigManager:
             for fpath in id_files:
                 shutil.move(fpath, str(fpath).replace(".id", ".telescope"))
 
+    def check_builtins_changes(self):
+        for name, telescope in built_in_telescopes.items():
+            telescope_file_name = path.join(self.folder_path, f"{name}.telescope")
+            if path.exists(telescope_file_name):
+                with open(telescope_file_name, mode="r") as f:
+                    existing_telescope = yaml.load(f, Loader=yaml.FullLoader)
+                    if existing_telescope != telescope:
+                        info(f"{Path(telescope_file_name).name} differs from builtins (use prose.CONFIG.update_builtins() to update)")
+
+    def update_builtins(self):
+        self.create_builtins_telescopes_files(force=True)
+
     def build_telescopes_dict(self):
         telescope_files = self.folder_path.glob("*.telescope")
 
