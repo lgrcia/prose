@@ -76,7 +76,7 @@ class FitsManager:
             self.con.commit()
         
         if folders is not None:
-            self.scan_files(folders, extension, batch_size=batch_size, depth=depth)
+            self.scan_files(folders, extension, batch_size=batch_size, depth=depth, hdu=hdu)
         # else:
         #     raise AssertionError(f"No files with extension '{extension}'found")
 
@@ -94,7 +94,7 @@ class FitsManager:
             f"INSERT or IGNORE INTO files VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (date, _path, telescope, _filter, _type, target, width, height, jd, "NULL", exposure))
 
-    def scan_files(self, folders, extension, batch_size=False, verbose=True, depth=0):
+    def scan_files(self, folders, extension, batch_size=False, verbose=True, depth=0, hdu=0):
         """Scan a folder and add data to database
 
         Parameters
@@ -149,12 +149,12 @@ class FitsManager:
 
                 if batch_size is not False:
                     for batch in progress(batches):
-                        df = fits_to_df(batch, verbose=False)
+                        df = fits_to_df(batch, verbose=False, hdu=hdu)
                         for row in df.values:
                             self._insert(*row)
                         self.con.commit()
                 else:
-                    df = fits_to_df(files_to_scan, verbose=True)
+                    df = fits_to_df(files_to_scan, verbose=True, hdu=hdu)
                     for row in df.values:
                         self._insert(*row)
                     self.con.commit()
@@ -168,7 +168,7 @@ class FitsManager:
         self._observations = np.array([f"{o[0]}_{o[1]}_{o[2]}_{o[3]}" for o in _observations])
 
         
-    def print(self, calib=True, repr=False):
+    def print(self, calib=True, repr=False, exposure=False):
         """Print database observations, calibrations and other files in nice table
 
         Parameters
@@ -179,9 +179,11 @@ class FitsManager:
             whether to return a str of the table, by default False
         """
         txt = []
-        fields = ["date", "telescope", "target", "filter", "exposure", "type", "quantity"]
+        fields = ["date", "telescope", "target", "filter", "type", "quantity"]
+        if exposure:
+            fields.insert(3, "exposure")
 
-        observations = self.observations(telescope="*", target="*", date="*", afilter="*", show=False, index=False)
+        observations = self.observations(telescope="*", target="*", date="*", afilter="*", show=False, index=False, order_exposure=exposure)
         _observations = observations.copy()
         if len(observations):
             for i, obs in enumerate(observations):
@@ -190,7 +192,7 @@ class FitsManager:
             txt.append(tabulate.tabulate(observations, headers=["index", *fields], tablefmt="fancy_grid"))
             
         calibs = [
-            self.observations(telescope="*", target="*", date="*", afilter="*", imtype=imtype, show=False, index=False)
+            self.observations(telescope="*", target="*", date="*", afilter="*", imtype=imtype, show=False, index=False, order_exposure=exposure)
             for imtype in ["bias", "dark", "flat"]
         ]
         calibs = [c for ca in calibs for c in ca] # flattening
@@ -200,7 +202,7 @@ class FitsManager:
                 txt.append("Calibrations:")
                 txt.append(tabulate.tabulate(calibs, headers=fields, tablefmt="fancy_grid"))
             
-        others = set(self.observations(telescope="*", target="*", date="*", afilter="*", imtype="*", show=False, index=False))
+        others = set(self.observations(telescope="*", target="*", date="*", afilter="*", imtype="*", show=False, index=False, order_exposure=exposure))
         obs_and_calibs = set(_observations)
         obs_and_calibs.update(calibs)
         others = others.difference(obs_and_calibs)
@@ -224,7 +226,8 @@ class FitsManager:
         afilter="", 
         imtype="light", 
         show=True, 
-        index=True
+        index=True,
+        order_exposure=True,
     ):
         """
         Print of return current observations
@@ -243,7 +246,9 @@ class FitsManager:
         index: bool, optional
             whether to show observation index, default True       
         """
-        fields = ["date", "telescope", "target", "filter", "exposure", "type", "quantity"]
+        fields = ["date", "telescope", "target", "filter", "type", "quantity"]
+        if order_exposure:
+            fields.insert(4, "exposure")
         telescope=telescope.replace("*", "%")
         target=target.replace("*", "%")
         date=date.replace("*", "%")
@@ -259,7 +264,7 @@ class FitsManager:
                 (target LIKE :target || '%' OR target IS NULL) AND 
                 date LIKE :date || '%' AND 
                 filter LIKE :filter || '%'
-                GROUP BY date, telescope, target, filter, exposure, type ORDER BY date
+                GROUP BY date, telescope, target, filter{', exposure' if order_exposure else ''}, type ORDER BY date
                 """
                 , {"telescope":telescope, "target":target, "date": date, "filter":afilter, "imtype":imtype}))
         

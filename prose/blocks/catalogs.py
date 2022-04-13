@@ -74,7 +74,7 @@ class CatalogBlock(Block):
         catalog["x"], catalog["y"] = stars_coords
     
         if self.mode == "replace":
-            self.stars_coords = stars_coords
+            image.stars_coords = stars_coords.T[np.all(np.isfinite(stars_coords), 0)]
 
         elif self.mode == "crossmatch":
             x, y = catalog[["x", "y"]].values.T
