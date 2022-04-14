@@ -694,7 +694,7 @@ class Observation(ApertureFluxes):
         else:
             if star is None:
                 star = self.target
-            assert isinstance(star, int), "star must be star coordinates or integer index"
+            assert isinstance(star, np.integer), "star must be star coordinates or integer index"
 
             x, y = self.stars[star]
 

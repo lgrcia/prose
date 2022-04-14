@@ -6,6 +6,16 @@ from prose import CONFIG
 from .psf import cutouts
 from ..utils import register_args
 
+TF_LOADED = False
+
+try:
+    import os
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
+    from tensorflow.keras.models import Sequential
+    from tensorflow.keras.layers import Dense, Conv2D, MaxPooling2D, Flatten
+except ModuleNotFoundError:
+    TF_LOADED = True
+
 
 class Centroid2dg(Block):
     """Centroiding from  ``photutils.centroids.centroid_2dg``
@@ -41,16 +51,6 @@ class CNNCentroid(Block):
         self.x, self.y = np.indices((cutout, cutout))
 
     def import_and_check_model(self):
-        try:
-            import os
-            os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
-            import tensorflow as tf
-            from tensorflow.keras import models as models, layers
-            self.tf_models = models
-            self.tf_layers = layers
-        except ModuleNotFoundError:
-            raise ModuleNotFoundError("CNN centroid methods require tensorflow to be installed")
-
         model_file = path.join(CONFIG.folder_path, self.filename)
 
         if path.exists(model_file):
@@ -101,17 +101,17 @@ class BalletCentroid(CNNCentroid):
         self.import_and_check_model()
 
     def build_model(self):
-        self.model = self.tf_models.Sequential([
-            self.tf_layers.Conv2D(64, (3, 3), activation='relu', input_shape=(self.cutout, self.cutout, 1),
+        self.model = Sequential([
+            Conv2D(64, (3, 3), activation='relu', input_shape=(self.cutout, self.cutout, 1),
                                   use_bias=True, padding="same"),
-            self.tf_layers.MaxPooling2D((2, 2), padding="same"),
-            self.tf_layers.Conv2D(128, (3, 3), activation='relu', use_bias=True, padding="same"),
-            self.tf_layers.MaxPooling2D((2, 2), padding="same"),
-            self.tf_layers.Conv2D(256, (3, 3), activation='relu', use_bias=True, padding="same"),
-            self.tf_layers.Flatten(),
-            self.tf_layers.Dense(2048, activation="sigmoid", use_bias=True),
-            self.tf_layers.Dense(512, activation="sigmoid", use_bias=True),
-            self.tf_layers.Dense(2),
+            MaxPooling2D((2, 2), padding="same"),
+            Conv2D(128, (3, 3), activation='relu', use_bias=True, padding="same"),
+            MaxPooling2D((2, 2), padding="same"),
+            Conv2D(256, (3, 3), activation='relu', use_bias=True, padding="same"),
+            Flatten(),
+            Dense(2048, activation="sigmoid", use_bias=True),
+            Dense(512, activation="sigmoid", use_bias=True),
+            Dense(2),
         ])
 
 

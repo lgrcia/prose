@@ -1,4 +1,5 @@
 from tqdm import tqdm
+import xarray
 from .console_utils import TQDM_BAR_FORMAT, warning
 from collections import OrderedDict
 from tabulate import tabulate
@@ -150,22 +151,26 @@ class Sequence:
         return blocks
 
 
-class MultiProcessSequence(Sequence):
+class MPSequence(Sequence):
     
-    def run(self, show_progress=True):
+    def run(self, images, globals=None, show_progress=True, live_discard=False):
+        if globals is None:
+            globals = {}
+        self.files_or_images = images if not isinstance(images, (str, Path, Image)) else [images]
+
         if show_progress:
-            def progress(x, **kwargs): 
+            def progress(x, total=None):
                 return tqdm(
-                    x,
-                    desc=self.name,
-                    unit="images",
-                    ncols=80,
-                    bar_format=TQDM_BAR_FORMAT,
-                    **kwargs
-                )
+                x,
+                desc=self.name,
+                unit="images",
+                ncols=80,
+                bar_format=TQDM_BAR_FORMAT,
+                total=total
+            )
 
         else:
-            def progress(x, **kwargs): return x
+            progress = lambda x: x
 
         if isinstance(self.files_or_images, list):
             if len(self.files_or_images) == 0:
@@ -175,29 +180,19 @@ class MultiProcessSequence(Sequence):
 
         self.n_processed_images = 0
         
+        # run
+        n = len(self.files_or_images)
         processed_blocks = mp.Manager().list(self.blocks)
-        blocks_queue = mp.Manager().Queue()
-        
-        blocks_writing_process = mp.Process(
-            target=partial(
-                _concat_blocks,
-                current_blocks=processed_blocks,
-            ), args=(blocks_queue,)
-        )
-    
-        blocks_writing_process.deamon = True
-        blocks_writing_process.start()
-        
+        images = mp.Manager().list(self.files_or_images)
+
         with mp.Pool() as pool:
             for _ in progress(pool.imap(partial(
-                _run_blocks_on_image,
-                blocks_queue=blocks_queue,
-                blocks_list = self.blocks,
-                loader = self.loader
-            ), self.files_or_images), total=len(self.files_or_images)):
+                _run_all,
+                blocks=processed_blocks,
+                images=images,
+                loader=self.loader
+            ), np.arange(n)), total=n):
                 pass
-            
-        blocks_queue.put("done")
 
         self.blocks = processed_blocks
    
@@ -205,8 +200,11 @@ class MultiProcessSequence(Sequence):
         for block in self.blocks:
             block.terminate()
 
+        return list(images)
 
-def _run_blocks_on_image(file_or_image, blocks_queue=None, blocks_list=None, loader=None):
+def _run_all(i, images=None, blocks=None, loader=None):
+
+    file_or_image = images[i]
 
     if isinstance(file_or_image, (str, Path)):
         image = loader(file_or_image)
@@ -216,24 +214,15 @@ def _run_blocks_on_image(file_or_image, blocks_queue=None, blocks_list=None, loa
     discard_message = False
     last_block = None
 
-    for b, block in enumerate(blocks_list):
+    for b, block in enumerate(blocks):
         # This allows to discard image in any Block
         if not image.discard:
             block._run(image)
         elif not discard_message:
-            last_block = blocks_list[b-1]
+            last_block = blocks[b-1]
             discard_message = True
-            print(f"Warning: image ? discarded in {type(last_block).__name__}")
-
-    del image
-    blocks_queue.put(blocks_list)
+            warning(f"image i discarded in {type(last_block).__name__}")
     
-def _concat_blocks(blocks_queue, current_blocks=None):
-    while True:
-        new_blocks = blocks_queue.get()
-        if new_blocks == "done":
-            break
-        else:
-            for i, block in enumerate(new_blocks):
-                block.concat(current_blocks[i])
-                current_blocks[i] = block
+    image.data = None
+    image.cutouts = None
+    images[i] = image
