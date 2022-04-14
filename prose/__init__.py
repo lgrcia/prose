@@ -14,7 +14,7 @@ from .io.fitsmanager import FitsManager
 from .fluxes import ApertureFluxes
 from .telescope import Telescope
 from .block import Block
-from .sequence import Sequence, MultiProcessSequence
+from .sequence import Sequence
 from .image import Image
 from .observation import Observation
 from .observations import Observations
