@@ -28,12 +28,12 @@ def exposure_constraint(exposure=0, tolerance=1000000):
 def sql_other(kind, exposure=0, tolerance=1000000):
     return f"""
     SELECT path FROM files WHERE
-    type = '{kind}' AND telescope LIKE :telescope || '%' AND width = :w AND height = :h AND date = (
-        SELECT MAX(date) FROM files WHERE 
-        type = '{kind}' AND telescope LIKE :telescope || '%' AND width = :w AND height = :h AND
-        {exposure_constraint(exposure, tolerance)} AND
-        {sql_days_between}
-    )
+    type = '{kind}' AND telescope LIKE :telescope || '%' AND width = :w AND height = :h AND {exposure_constraint(exposure, tolerance)} AND
+        date = (
+            SELECT MAX(date) FROM files WHERE 
+         type = '{kind}' AND telescope LIKE :telescope || '%' AND width = :w AND height = :h AND
+            {sql_days_between}
+        )
     """
 
 class FitsManager:
@@ -44,7 +44,7 @@ class FitsManager:
     Parameters
     ----------
     folder : str
-        path of the folder to parse
+        path of the folder to parse (or list of folders as of prose 2.0.1)
     depth : int, optional
         maxiumum depth of the sub-folders to explore, by default 0
     hdu : int, optional
@@ -60,7 +60,8 @@ class FitsManager:
         by default False
     """
     
-    def __init__(self, folders=None, depth=0, hdu=0, extension=".f*t*", file=None, batch_size=False):
+    def __init__(self, folders=None, files=None, depth=0, hdu=0, extension=".f*t*", file=None, batch_size=False, scan=None):
+        # TODO: add overwrite
         if file is None:
             file = ":memory:"
 
@@ -76,9 +77,12 @@ class FitsManager:
             self.con.commit()
         
         if folders is not None:
-            self.scan_files(folders, extension, batch_size=batch_size, depth=depth, hdu=hdu)
-        # else:
-        #     raise AssertionError(f"No files with extension '{extension}'found")
+            assert files is None, "Only 'folders' or 'files' must be provided, not both"
+            files = self.get_files(folders, extension, depth=depth, scan=scan)
+        
+        if files is not None:
+            if len(files) > 0:
+                self.scan_files(files, batch_size=batch_size, hdu=hdu)
 
         _observations = self.observations(show=False, index=False)
         self._observations = np.array([f"{o[0]}_{o[1]}_{o[2]}_{o[3]}" for o in _observations])
@@ -94,15 +98,31 @@ class FitsManager:
             f"INSERT or IGNORE INTO files VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (date, _path, telescope, _filter, _type, target, width, height, jd, "NULL", exposure))
 
-    def scan_files(self, folders, extension, batch_size=False, verbose=True, depth=0, hdu=0):
-        """Scan a folder and add data to database
+    def get_files(self, folders, extension, scan=None, depth=0):
+        def _get_files(folder):
+            if scan is None:
+                return get_files(extension, folder, depth=depth)
+            else:
+                return scan(folder)
+
+        if isinstance(folders, (list, tuple)):
+            files = [] 
+            for folder in folders:
+                assert Path(folder).exists(), f"Folder {folder} does not exists"
+                files += _get_files(folder)
+        else:
+            assert Path(folders).exists(), f"Folder {folder} does not exists"
+            files = _get_files(folders)
+
+        return files
+
+    def scan_files(self, files, batch_size=False, verbose=True, hdu=0):
+        """Scan files and add data to database
 
         Parameters
         ----------
-        folder : str ot Path
-            path of folder (or list of folders as of prose 2.0.1)
-        extension : str, optional
-            by default ".f*ts*"
+        files : list of str or Path
+            paths of files
         batch_size : bool or int, optional
             - if False: update database after all FITS files are parsed
             - if int: update database every time ``batch_size`` FITS files are parse
@@ -110,17 +130,9 @@ class FitsManager:
             by default False
         verbose : bool, optional
             whether to show progress bar during parsing, by default True
-        depth : int, optional
-            maxiumum depth of the sub-folders to explore, by default 0
+        hdu: int
+            FITS data unit extension where header will be parsed
         """
-        if isinstance(folders, (list, tuple)):
-            files = [] 
-            for folder in folders:
-                assert Path(folder).exists(), f"Folder {folder} does not exists"
-                files += get_files(extension, folder, depth=depth)
-        else:
-            assert Path(folders).exists(), f"Folder {folder} does not exists"
-            files = get_files(extension, folders, depth=depth)
 
         if len(files) > 0:
             current_files = [v[0] for v in self.cur.execute("SELECT path from files").fetchall()]
@@ -161,14 +173,14 @@ class FitsManager:
             else:
                 print(f"No new files to scan")
         else:
-            raise AssertionError(f"No files with extension '{extension}' found")
+            raise AssertionError(f"No files provided")
 
         # updating self observation labels
         _observations = self.observations(show=False, index=False)
         self._observations = np.array([f"{o[0]}_{o[1]}_{o[2]}_{o[3]}" for o in _observations])
 
         
-    def print(self, calib=True, repr=False, exposure=False):
+    def print(self, calib=True, repr=False, exposure=False, **kwargs):
         """Print database observations, calibrations and other files in nice table
 
         Parameters
@@ -180,19 +192,20 @@ class FitsManager:
         """
         txt = []
         fields = ["date", "telescope", "target", "filter", "type", "quantity"]
-        if exposure:
-            fields.insert(3, "exposure")
 
-        observations = self.observations(telescope="*", target="*", date="*", afilter="*", show=False, index=False, order_exposure=exposure)
-        _observations = observations.copy()
-        if len(observations):
-            for i, obs in enumerate(observations):
-                observations[i] = (i, ) + obs
-            txt.append("Observations:")
-            txt.append(tabulate.tabulate(observations, headers=["index", *fields], tablefmt="fancy_grid"))
+        updated_kwargs = dict(telescope="*", target="*", date="*", afilter="*")
+        updated_kwargs.update(kwargs)
+
+        if exposure:
+            fields.insert(4, "exposure")
+
+        observations = self.observations(imtype="light", show=False, index=True, order_exposure=exposure, **updated_kwargs)
+        _fields = fields.copy()
+        _fields.insert(0, "index")
+        txt.append(tabulate.tabulate(observations, headers=_fields, tablefmt="fancy_grid"))
             
         calibs = [
-            self.observations(telescope="*", target="*", date="*", afilter="*", imtype=imtype, show=False, index=False, order_exposure=exposure)
+            self.observations(imtype=imtype, show=False, index=False, order_exposure=exposure, **updated_kwargs)
             for imtype in ["bias", "dark", "flat"]
         ]
         calibs = [c for ca in calibs for c in ca] # flattening
@@ -202,8 +215,8 @@ class FitsManager:
                 txt.append("Calibrations:")
                 txt.append(tabulate.tabulate(calibs, headers=fields, tablefmt="fancy_grid"))
             
-        others = set(self.observations(telescope="*", target="*", date="*", afilter="*", imtype="*", show=False, index=False, order_exposure=exposure))
-        obs_and_calibs = set(_observations)
+        others = set(self.observations(show=False, index=True, order_exposure=exposure, **updated_kwargs))
+        obs_and_calibs = set(observations.copy())
         obs_and_calibs.update(calibs)
         others = others.difference(obs_and_calibs)
 
@@ -275,6 +288,7 @@ class FitsManager:
                     result[i] = list(r)
                     j = np.flatnonzero(self._observations == f"{r[0]}_{r[1]}_{r[2]}_{r[3]}")[0]
                     result[i].insert(0, j)
+                    result[i] = tuple(result[i])
         
         if show:
             print(tabulate.tabulate(result, headers=fields, tablefmt="fancy_grid"))
