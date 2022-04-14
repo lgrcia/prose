@@ -349,6 +349,9 @@ class Get(Block):
         elif len(names) > 1:
             return [self.values[name] for name in names]
 
+    def concat(self, block):
+        for name in self.values.keys():
+            self.values[name] = [*self.values[name], *block.values[name]]
 
 class XArray(Block):
 
@@ -518,55 +521,38 @@ class Calibration(Block):
     def __init__(self, darks=None, flats=None, bias=None, loader=Image, easy_ram=True, **kwargs):
 
         super().__init__(**kwargs)
-        if darks is None:
-            darks = []
-        if flats is None:
-            flats = []
-        if bias is None:
-            bias = []
-        self.images = {
-            "dark": darks,
-            "flat": flats,
-            "bias": bias
-        }
-
-        self.master_dark = None
-        self.master_flat = None
-        self.master_bias = None
-
+            
         self.loader = loader
+        self.easy_ram = easy_ram
 
-        def _median(im):
-            if easy_ram:
-                return easy_median(im)
-            else:
-                return np.median(im, 0)
-
-        self.median =_median
-
-        if self.master_bias is None:
-            self._produce_master("bias")
-        if self.master_dark is None:
-            self._produce_master("dark")
-        if self.master_flat is None:
-            self._produce_master("flat")
+        self.master_bias = self._produce_master(bias, "bias")
+        self.master_dark = self._produce_master(darks, "dark")
+        self.master_flat = self._produce_master(flats, "flat")
 
     def calibration(self, image, exp_time):
         with np.errstate(divide='ignore', invalid='ignore'):
             return (image - (self.master_dark * exp_time + self.master_bias)) / self.master_flat
 
-    def _produce_master(self, image_type):
-        _master = []
-        images = self.images[image_type]
+    def _produce_master(self, images, image_type):
+        if images is not None:
+            assert isinstance(images, (list, np.array)), "images must be list or array"
 
-        if len(images) == 0:
+        def _median(im):
+            if self.easy_ram:
+                return easy_median(im)
+            else:
+                return np.median(im, 0)
+
+        _master = []
+
+        if images is None:
             info(f"No {image_type} images set")
             if image_type == "dark":
-                self.master_dark = 0
+                return 0
             elif image_type == "bias":
-                self.master_bias = 0
+                return  0
             elif image_type == "flat":
-                self.master_flat = 1
+                return 1
         else:
             info(f"Building master {image_type}")
 
@@ -584,14 +570,10 @@ class Calibration(Block):
                 del image
 
         if len(_master) > 0:
-            med = self.median(_master)
-            if image_type == "dark":
-                self.master_dark = med.copy()
-            elif image_type == "bias":
-                self.master_bias = med.copy()
-            elif image_type == "flat":
-                self.master_flat = med.copy()
-            del _master
+            med = _median(_master)
+            return med
+        else:
+            return None
 
     def show_masters(self, figsize=(20, 80)):
         plt.figure(figsize=figsize)
@@ -620,6 +602,15 @@ class Calibration(Block):
 
     def citations(self):
         return "astropy", "numpy"
+
+    @property
+    def shared(self):
+        for imtype in ['bias', 'dark', 'flat']:
+            data = self.__dict__[f"master_{imtype}"]
+            m = np.memmap(f"__{imtype}.array", dtype='float32', mode='w+', shape=data.shape)
+            m[:, :] = data[:, :]
+        
+        return MPCalibration()
 
 
 class CleanBadPixels(Block):
@@ -712,3 +703,82 @@ class MedianStack(Block):
         
     def terminate(self):
         self.stack = Image(data=np.median(self.images, 0))
+
+
+class XArray2(Block):
+    def __init__(self, names, name="xarray", raise_error=True, concat_dim="time", **kwargs):
+        super().__init__(name=name)
+        self.variables = names
+        self.raise_error = raise_error
+        self.xarray = xr.Dataset()
+        self.concat_dim = concat_dim
+        self.xarray.attrs.update(kwargs)
+        self.xarray_init = False
+    
+    def _to_xarray(self, image):
+        _x = xr.Dataset()
+        for name, dims in self.variables.items():
+            _x[name] = (dims, [self._get_value(image, name)])
+        return _x
+    
+    def _get_value(self, image, key):
+        try:
+            value = image.__getattribute__(key)
+            if isinstance(image.__getattribute__(key), Quantity):
+                value = value.value
+            return value
+        except AttributeError:
+            if self.raise_error:
+                raise AttributeError()
+            else:
+                pass
+
+    def run(self, image):
+        if not self.xarray_init:
+            self.xarray = self._to_xarray(image)
+            self.xarray_init = True
+        else:
+            x = self._to_xarray(image)
+            self.xarray = xr.concat([self.xarray, x], dim=self.concat_dim)
+
+    def save(self, destination):
+        self.xarray.to_netcdf(destination)            
+        
+    def concat(self, block):
+        if len(block.xarray) == 0:
+            pass
+        elif len(self.xarray) == 0:
+            self.xarray = block.xarray.copy()
+            self.xarray_init = True
+        else:
+            self.xarray =  xr.concat([self.xarray, block.xarray], dim=self.concat_dim)
+
+
+class MPCalibration(Block):
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+    def calibration(self, image, exp_time):
+        bias = np.memmap('__bias.array', dtype='float32', mode='r', shape=image.shape)
+        dark = np.memmap('__dark.array', dtype='float32', mode='r', shape=image.shape)
+        flat = np.memmap('__flat.array', dtype='float32', mode='r', shape=image.shape)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            return (image - (dark * exp_time + bias)) / flat
+
+    def run(self, image):
+        data = image.data
+        calibrated_image = self.calibration(data, image.exposure.value)
+        calibrated_image[calibrated_image < 0] = np.nan
+        calibrated_image[~np.isfinite(calibrated_image)] = -1
+        image.data = calibrated_image
+
+class Del(Block):
+
+    def __init__(self, *args, name="del"):
+        super().__init__(name=name)
+        self.args = args
+
+    def run(self, image):
+        for arg in self.args:
+            del image.__dict__[arg]
