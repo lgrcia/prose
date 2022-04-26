@@ -532,6 +532,8 @@ class Calibration(Block):
     def _produce_master(self, images, image_type):
         if images is not None:
             assert isinstance(images, (list, np.array)), "images must be list or array"
+            if len(images) == 0:
+                images = None
 
         def _median(im):
             if self.easy_ram:
