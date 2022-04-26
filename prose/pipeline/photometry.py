@@ -244,9 +244,8 @@ class AperturePhotometry(Photometry):
             r_in=r_in,
             r_out=r_out,
             sigclip=sigclip,
-            fwhm_scale=fwhm_scale,
+            scale=fwhm_scale,
             name="photometry",
-            set_once=True,
             twirl=twirl
 
         )
@@ -264,9 +263,8 @@ class AperturePhotometry(Photometry):
             r_in=r_in,
             r_out=r_out,
             sigclip=sigclip,
-            fwhm_scale=fwhm_scale,
+            scale=fwhm_scale,
             name="photometry",
-            set_once=True
         )
 
         if show:
