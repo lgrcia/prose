@@ -5,6 +5,7 @@ from pathlib import Path
 from .. import utils
 from .photometry import plot_function
 from astropy.time import Time
+from .. import __version__
 
 
 class Calibration:
@@ -216,6 +217,7 @@ class Calibration:
         xarray = self.calibration.xarray.xarray
         xarray = utils.image_in_xarray(self.stack, xarray, stars=False)
         xarray.attrs["reduction"] = [b.__class__.__name__ for b in self.calibration.blocks]
+        xarray.attrs["reduction_prose_version"] = __version__
         self.xarray = xarray
         xarray.to_netcdf(self.phot)
 
