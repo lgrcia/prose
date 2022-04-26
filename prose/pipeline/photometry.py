@@ -7,6 +7,7 @@ import numpy as np
 from pathlib import Path
 import time
 import xarray as xr
+from .. import __version__
 
 
 def plot_function(im, cmap="Greys_r", color=[0.51, 0.86, 1.]):
@@ -154,6 +155,7 @@ class Photometry:
         xarray["apertures_sky"] = xarray.sky  # mean over stars
         xarray["sky"] = ("time", np.mean(xarray.apertures_sky.values, 0))  # mean over stars
         xarray.attrs["photometry"] = [b.__class__.__name__ for b in self.photometry_s.blocks]
+        xarray.attrs["photometry_prose_version"] = __version__
         xarray.to_netcdf(self.phot)
 
     def _check_phot_path(self, destination):
