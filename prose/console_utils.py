@@ -5,6 +5,7 @@ import platform
 import subprocess
 from colorama import Fore
 from . import CONFIG
+from tqdm import tqdm as _tqdm
 
 style = {
         "spinner_color": {
@@ -36,6 +37,9 @@ WARNING_LABEL = "{}WARNING{}".format(style["fore_color"]["yellow"], Fore.RESET)
 TQDM_BAR_FORMAT = "%s {l_bar}%s{bar}%s{r_bar}" % (
     RUN_LABEL, FORE_COLOR, Fore.RESET
 )
+
+def tqdm(x, desc="run", unit="images"):
+    return _tqdm(x, desc=desc, unit=unit, ncols=80, bar_format=TQDM_BAR_FORMAT)
 
 def get_terminal_size():
     """ getTerminalSize()
