@@ -33,7 +33,7 @@ def sql_other(kind, exposure=0, tolerance=1000000):
             SELECT MAX(date) FROM files WHERE 
          type = '{kind}' AND telescope LIKE :telescope || '%' AND width = :w AND height = :h AND
             {sql_days_between}
-        )
+    )
     """
 
 class FitsManager:
@@ -214,8 +214,9 @@ class FitsManager:
             if len(calibs):
                 txt.append("Calibrations:")
                 txt.append(tabulate.tabulate(calibs, headers=fields, tablefmt="fancy_grid"))
-            
-        others = set(self.observations(show=False, index=True, order_exposure=exposure, **updated_kwargs))
+        
+        updated_kwargs.update(imtype="*")
+        others = set(self.observations(show=False, index=False, order_exposure=exposure, **updated_kwargs))
         obs_and_calibs = set(observations.copy())
         obs_and_calibs.update(calibs)
         others = others.difference(obs_and_calibs)

@@ -458,3 +458,7 @@ class Image:
         """
         return self.wcs.has_celestial
 
+    def writeto(self, destination):
+        hdu = fits.PrimaryHDU(data=self.data, header=fits.Header(utils.clean_header(self.header)))
+        hdu.writeto(destination)
+

@@ -65,3 +65,10 @@ class Block:
         image_copy = image.copy()
         self.run(image_copy)
         return image_copy
+
+    @staticmethod
+    def concatenate(blocks):
+        block = blocks[0]
+        for b in blocks[1::]:
+            block.concat(b)
+        return block
