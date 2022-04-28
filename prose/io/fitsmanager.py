@@ -12,27 +12,19 @@ SELECT * FROM files WHERE
 type = 'light' AND telescope LIKE :telescope || '%' AND target LIKE :target AND date = :date AND filter LIKE :filter || '%' ORDER BY jd
 """
 
-sql_flat = f"""
-SELECT path FROM files WHERE
-type = 'flat' AND telescope LIKE :telescope || '%' AND filter = :filter AND width = :w AND height = :h AND
-date = (
-    SELECT MAX(date) FROM files WHERE 
-    type = 'flat' AND telescope LIKE :telescope || '%' AND filter = :filter AND width = :w AND height = :h AND
-    {sql_days_between} 
-)
-"""
-
 def exposure_constraint(exposure=0, tolerance=1000000):
     return f"exposure between {exposure-tolerance} and {exposure+tolerance}"
 
-def sql_other(kind, exposure=0, tolerance=1000000, telescope=True):
-    _telescope = "AND telescope LIKE :telescope || '%' AND'" if telescope else ""
+def sql_other(kind, exposure=0, tolerance=1000000, telescope=True, filter=False):
+    _telescope = "telescope LIKE :telescope || '%' AND" if telescope else ""
+    _filter = "filter = :filter AND" if filter else ""
+
     return f"""
     SELECT path FROM files WHERE
-    type = '{kind}' AND {_telescope} width = :w AND height = :h AND {exposure_constraint(exposure, tolerance)} AND
+    type = '{kind}' AND {_telescope} {_filter} width = :w AND height = :h AND {exposure_constraint(exposure, tolerance)} AND
         date = (
             SELECT MAX(date) FROM files WHERE 
-         type = '{kind}' AND {_telescope} width = :w AND height = :h AND
+         type = '{kind}' AND {_telescope} {_filter} width = :w AND height = :h AND
             {sql_days_between}
     )
     """
@@ -406,7 +398,7 @@ class FitsManager:
 
         images["bias"] = np.array(list(self.cur.execute(sql_other("bias", telescope=same_telescope), kwargs)))
         images["darks"]  = np.array(list(self.cur.execute(sql_other("dark", exposure, darkexp_tolerance, telescope=same_telescope), kwargs)))
-        images["flats"]  = np.array(list(self.cur.execute(sql_flat, kwargs)))
+        images["flats"]  = np.array(list(self.cur.execute(sql_other("flat", filter=True, telescope=same_telescope), kwargs)))
         
         if len(images["bias"]):
             images["bias"] = [im for ims in images["bias"] for im in ims]
