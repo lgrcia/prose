@@ -25,13 +25,14 @@ date = (
 def exposure_constraint(exposure=0, tolerance=1000000):
     return f"exposure between {exposure-tolerance} and {exposure+tolerance}"
 
-def sql_other(kind, exposure=0, tolerance=1000000):
+def sql_other(kind, exposure=0, tolerance=1000000, telescope=True):
+    _telescope = "AND telescope LIKE :telescope || '%' AND'" if telescope else ""
     return f"""
     SELECT path FROM files WHERE
-    type = '{kind}' AND telescope LIKE :telescope || '%' AND width = :w AND height = :h AND {exposure_constraint(exposure, tolerance)} AND
+    type = '{kind}' AND {_telescope} width = :w AND height = :h AND {exposure_constraint(exposure, tolerance)} AND
         date = (
             SELECT MAX(date) FROM files WHERE 
-         type = '{kind}' AND telescope LIKE :telescope || '%' AND width = :w AND height = :h AND
+         type = '{kind}' AND {_telescope} width = :w AND height = :h AND
             {sql_days_between}
     )
     """
@@ -403,8 +404,8 @@ class FitsManager:
         h = np.unique(_lights[7])[0]
         kwargs.update({"w": w, "h": h})
 
-        images["bias"] = np.array(list(self.cur.execute(sql_other("bias"), kwargs)))
-        images["darks"]  = np.array(list(self.cur.execute(sql_other("dark", exposure, darkexp_tolerance), kwargs)))
+        images["bias"] = np.array(list(self.cur.execute(sql_other("bias", telescope=same_telescope), kwargs)))
+        images["darks"]  = np.array(list(self.cur.execute(sql_other("dark", exposure, darkexp_tolerance, telescope=same_telescope), kwargs)))
         images["flats"]  = np.array(list(self.cur.execute(sql_flat, kwargs)))
         
         if len(images["bias"]):
