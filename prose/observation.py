@@ -137,7 +137,7 @@ class Observation(ApertureFluxes):
         destination = self.phot if destination is None else destination
         self.xarray.attrs.update(self.stack.header)
         self.xarray.to_netcdf(destination)
-        info(f"saved {str(Path(destination).absolute)}")
+        info(f"saved {str(Path(destination).absolute())}")
 
     # Convenience
     # -----------
