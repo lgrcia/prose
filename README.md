@@ -5,8 +5,6 @@
 </p>
 
 <p align="center">
-  <br>  
-  <br>
   A python framework to build FITS images pipelines.
   <br>
   <p align="center">
