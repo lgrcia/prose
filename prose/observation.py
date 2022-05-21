@@ -137,7 +137,7 @@ class Observation(ApertureFluxes):
         destination = self.phot if destination is None else destination
         self.xarray.attrs.update(self.stack.header)
         self.xarray.to_netcdf(destination)
-        info(f"saved {Path(destination).absolute}")
+        info(f"saved {str(Path(destination).absolute())}")
 
     # Convenience
     # -----------
@@ -280,7 +280,6 @@ class Observation(ApertureFluxes):
             by default "prose"
         """
         assert self.telescope is not None
-        assert self.skycoord is not None
 
         exposure_days = self.xarray.exposure.values/60/60/24
 
@@ -296,11 +295,11 @@ class Observation(ApertureFluxes):
 
         if version == "prose":
             time = Time(self.jd_utc + exposure_days/2, format="jd", scale="utc", location=self.telescope.earth_location).tdb
-            light_travel_tbd = time.light_travel_time(self.skycoord, location=self.telescope.earth_location)
+            light_travel_tbd = time.light_travel_time(self.stack.skycoord, location=self.telescope.earth_location)
             bjd_time = (time + light_travel_tbd).value
 
         elif version == "eastman":
-            bjd_time = utils.jd_to_bjd(self.jd_utc + exposure_days/2, self.skycoord.ra.deg, self.skycoord.dec.deg)
+            bjd_time = utils.jd_to_bjd(self.jd_utc + exposure_days/2, self.stack.skycoord.ra.deg, self.skycoord.dec.deg)
 
         self.xarray = self.xarray.assign_coords(time=bjd_time)
         self.xarray["bjd_tdb"] = ("time", bjd_time)
@@ -694,7 +693,7 @@ class Observation(ApertureFluxes):
         else:
             if star is None:
                 star = self.target
-            assert isinstance(star, np.integer), "star must be star coordinates or integer index"
+            assert isinstance(star, (np.integer, int)), "star must be star coordinates or integer index"
 
             x, y = self.stars[star]
 

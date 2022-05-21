@@ -1,10 +1,11 @@
-from .. import Sequence, MultiProcessSequence, blocks, Block, Image
+from .. import Sequence, blocks, Block, Image
 import os
 from os import path
 from pathlib import Path
 from .. import utils
 from .photometry import plot_function
 from astropy.time import Time
+from .. import __version__
 
 
 class Calibration:
@@ -179,7 +180,7 @@ class Calibration:
             blocks.SaveReduced(destination, overwrite=self.overwrite, name="save_reduced"),
             blocks.AffineTransform(stars=True, data=True) if self.twirl else blocks.Pass(),
             blocks.LivePlot(plot_function, size=(10, 10)) if self.show else blocks.Pass(),
-            blocks.Stack(self.stack_path, header=self.reference.header, overwrite=self.overwrite, name="stack"),
+            blocks.Stack(self.reference, name="stack"),
             blocks.RawVideo(self.destination / f"movie.{movie}", function=utils.z_scale, scale=0.5) if movie is not False else blocks.Pass(),
         ], name="Calibration", loader=self.loader)
 
@@ -188,8 +189,9 @@ class Calibration:
         # Saving outpout
         # first image serves as reference for info (not reference image because it
         # can be from another observation (we encountered this use case)
-        self.stack = self.loader(self.stack_path)
+        self.stack = self.calibration.stack.stack
         self.save()
+        
 
     @property
     def stack_path(self):
@@ -211,9 +213,11 @@ class Calibration:
         return f"{self.detection}\n{self.calibration}"
 
     def save(self):
+        self.reference.writeto(self.stack_path)
         xarray = self.calibration.xarray.xarray
         xarray = utils.image_in_xarray(self.stack, xarray, stars=False)
         xarray.attrs["reduction"] = [b.__class__.__name__ for b in self.calibration.blocks]
+        xarray.attrs["reduction_prose_version"] = __version__
         self.xarray = xarray
         xarray.to_netcdf(self.phot)
 

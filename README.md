@@ -1,10 +1,10 @@
 # prose
 
 <p align="center">
+    <img src="docs/source/prose_illustration.png" width="350">
+</p>
 
-  <img width="450" src="https://github.com/lgrcia/prose/blob/master/docs/source/prose_illustration.png">
-  <br>  
-  <br>
+<p align="center">
   A python framework to build FITS images pipelines.
   <br>
   <p align="center">
@@ -89,3 +89,7 @@ pip install prose
 ## Helping us
 
 We are interested in seeing how you use prose, as well as helping creating blocks you need. Do not hesitate to reach us out! ☎️
+
+<p align="center">
+    <img src="docs/source/lookatit.png" width="150">
+</p>

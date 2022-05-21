@@ -95,11 +95,16 @@ class PhotutilsAperturePhotometry(Block):
     Parameters
     ----------
     apertures : ndarray or list, optional
-        apertures in fraction of fwhm, by default None, i.e. np.arange(0.1, 10, 0.25)
+        apertures in fraction of fwhm, by default None, i.e. np.arange(0.1, 8, 0.25)
     r_in : int, optional
         radius of the inner annulus in fraction of fwhm, by default 5
     r_out : int, optional
         radius of the outer annulus in fraction of fwhm, by default 8
+    scale: bool or float:
+        Multiplication factor applied to `apertures`.
+        - if True: `apertures` multiplied by image.fwhm, varying for each image
+        - if False: `apertures` not multiplied
+        - if float: `apertures` multiplied `scale` and held fixed for all images
     """
 
     @register_args
@@ -108,9 +113,8 @@ class PhotutilsAperturePhotometry(Block):
             apertures=None,
             r_in=5,
             r_out=8,
-            fwhm_scale=True,
+            scale=True,
             sigclip = 2.,
-            set_once=False,
             **kwargs):
 
         super().__init__(**kwargs)
@@ -133,11 +137,12 @@ class PhotutilsAperturePhotometry(Block):
 
         self.circular_apertures_area = None
         self.annulus_area = None
-        self.fwhm_scale = fwhm_scale
+        self.scale = scale
         self.sigclip = sigclip
-        self.set_once = set_once
 
-    def set_apertures(self, stars_coords, fwhm):
+        self._has_fix_scale = not isinstance(self.scale, bool)
+
+    def set_apertures(self, stars_coords, fwhm=1):
 
         self.annulus_final_rin = self.annulus_inner_radius * fwhm
         self.annulus_final_rout = self.annulus_outer_radius * fwhm
@@ -164,11 +169,17 @@ class PhotutilsAperturePhotometry(Block):
         self.annulus_masks = self.annulus_apertures.to_mask(method="center")
         self.n_stars = len(stars_coords)
 
-    def run(self, image, **kwargs):
-        if self.circular_apertures is None and self.set_once:
-            self.set_apertures(image.stars_coords, image.fwhm if self.fwhm_scale else 1)
-        else:
-            self.set_apertures(image.stars_coords, image.fwhm if self.fwhm_scale else 1)
+    def run(self, image):
+        try:
+            if self._has_fix_scale:
+                self.set_apertures(image.stars_coords, self.scale)
+            elif self.scale:
+                self.set_apertures(image.stars_coords, image.fwhm)
+            else:
+                self.set_apertures(image.stars_coords)
+        except ZeroDivisionError: # temporary
+            image.discard=True
+            return None
 
         bkg_median = []
         for mask in self.annulus_masks:

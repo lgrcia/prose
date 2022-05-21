@@ -43,56 +43,52 @@ class Stack(Block):
         weather to overwrite file if exists, by default False
     """
     @register_args
-    def __init__(self, destination=None, header=None, overwrite=False, **kwargs):
+    def __init__(self, ref=None, **kwargs):
 
         super(Stack, self).__init__(**kwargs)
-        self.stack = None
-        self.n_images = 0
-        self.header = header if header else {}
-        self.destination = destination
-        self.fits_manager = None
-        self.overwrite = overwrite
-        self.telescope = None
-        self.xarray = None
-
-        self.reference_image_path = None
+        self._stack = None
+        self._n_images = 0
+        self._header = ref.header.copy() if ref else {}
+        self.stack = ref.copy() if ref else None
 
     def run(self, image):
         #TODO check that all images have same telescope?
 
         data = image.data.copy()
 
-        if self.stack is None:
+        if self._stack is None:
             #first run
-            self.stack = data
+            self._stack = data
             self.telescope = image.telescope
         else:
-            self.stack += data
+            self._stack += data
 
-        self.n_images += 1
+        self._n_images += 1
 
     def terminate(self):
 
-        self.stack = self.stack/self.n_images
+        self._stack = self._stack/self._n_images
 
-        self.header[self.telescope.keyword_image_type] = "stack"
-        self.header["BZERO"] = 0
-        self.header["REDDATE"] = Time.now().to_value("fits")
-        self.header["NIMAGES"] = self.n_images
+        self._header[self.telescope.keyword_image_type] = "stack"
+        self._header["BZERO"] = 0
+        self._header["REDDATE"] = Time.now().to_value("fits")
+        self._header["NIMAGES"] = self._n_images
 
-        if self.destination is not None:
-            stack_hdu = fits.PrimaryHDU(self.stack, header=self.header)
-            stack_hdu.writeto(self.destination, overwrite=self.overwrite)
+        if self.stack is None:
+            self.stack = Image(data=self._stack, header=self._header)
+        else:
+            self.stack.data = self._stack
+            self.stack.header = self._header
 
     def concat(self, block):
-        if self.stack is not None:
+        if self._stack is not None:
             if block.stack is not None:
-                self.stack += block.stack
+                self._stack += block._stack
             else:
                 pass
         else:
-            self.stack = block.stack
-        self.n_images += block.n_images
+            self._stack = block._stack
+        self._n_images += block._n_images
 
 class StackStd(Block):
     
@@ -536,6 +532,8 @@ class Calibration(Block):
     def _produce_master(self, images, image_type):
         if images is not None:
             assert isinstance(images, (list, np.array)), "images must be list or array"
+            if len(images) == 0:
+                images = None
 
         def _median(im):
             if self.easy_ram:
