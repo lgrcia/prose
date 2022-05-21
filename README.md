@@ -2,7 +2,7 @@
 
 <p align="center">
 
-  <img width="450" src="https://github.com/lgrcia/prose/blob/master/docs/source/prose_illustration.png">
+  <img width="450" src="https://github.com/lgrcia/prose/tree/2.0.2/docs/source/prose_illustration.png">
   <br>  
   <br>
   A python framework to build FITS images pipelines.
@@ -89,3 +89,7 @@ pip install prose
 ## Helping us
 
 We are interested in seeing how you use prose, as well as helping creating blocks you need. Do not hesitate to reach us out! ☎️
+
+<p align="center">
+  <img width="150" src="https://github.com/lgrcia/prose/tree/2.0.2/docs/source/lookatit.png">
+</p>
