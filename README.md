@@ -1,8 +1,8 @@
 # prose
 
-<center>
+<p align="center">
     <img src="docs/source/prose_illustration.png" width="350">
-</center>
+</p>
 
 <p align="center">
   <br>  
@@ -92,6 +92,6 @@ pip install prose
 
 We are interested in seeing how you use prose, as well as helping creating blocks you need. Do not hesitate to reach us out! ☎️
 
-<center>
+<p align="center">
     <img src="docs/source/lookatit.png" width="150">
-</center>
+</p>
