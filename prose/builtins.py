@@ -45,7 +45,7 @@ default = dict(
     gain = 1, # e-/ADU
     altitude = 2000, # meters
     diameter = 100, # meters
-    pixel_scale = None, # arcseconds
+    pixel_scale = None, # arcsec/pixel
     latlong = [None, None], 
     saturation = 55000, # ADUs
     hdu = 0
@@ -61,7 +61,7 @@ speculoos_south = dict(
     gain= 1.02,  # in e-/ADU
     altitude= 2000,  # in meters
     diameter= 100,  # in meters
-    pixel_scale= 0.33,  # in arcseconds
+    pixel_scale= 0.33,  # arcsec/pixel
     latlong= [-24.6275, -70.4044], # [latitude, longitude] in degree
     TTF_link= "https://astro.swarthmore.edu/telescope/tess-secure/print_eclipses.cgi?observatory_string=-24.6272%3B-70.4039%3"
                 "BAmerica%2FSantiago%3BSPECULOOS-South+Observatory+%284x1.0-m%29%3BSPECULOOS+South&use_utc=1&observatory_latitude=-29.2563"
@@ -155,14 +155,14 @@ liverpool = dict(
     speculoos_south,
     name = "Liverpool",
     names = ["Liverpool Telescope"],
-    keyword_telescope= "TELESCOP",
-    trimming= [8, 22], # pixels
-    read_noise= 12, # ADU
-    gain= 2.4, # ADU/e-
-    altitude= 2363, # m
-    diameter= 200, # cm
-    pixel_scale= 1.0752, # arcsec
-    latlong= [28.7624, -17.8792], # deg
+    keyword_telescope = "TELESCOP",
+    trimming = [8, 22], # pixels
+    read_noise = 12, # ADU
+    gain = 2.4, # ADU/e-
+    altitude = 2363, # m
+    diameter = 200, # cm
+    pixel_scale = 0.22, # arcsec/pixel
+    latlong = [28.7624, -17.8792], # deg
     keyword_object= "OBJECT",
     keyword_image_type= "OBSTYPE",
     keyword_light_images= "expose",
@@ -172,7 +172,8 @@ liverpool = dict(
     keyword_jd= "JD_UTC",
     keyword_ra= "RA",
     keyword_dec= "DEC",
-    TTF_link= None
+    TTF_link= None,
+    ra_unit="hourangle",
 )
 
 spirit = dict(
