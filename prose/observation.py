@@ -299,7 +299,7 @@ class Observation(ApertureFluxes):
             bjd_time = (time + light_travel_tbd).value
 
         elif version == "eastman":
-            bjd_time = utils.jd_to_bjd(self.jd_utc + exposure_days/2, self.stack.skycoord.ra.deg, self.stack.skycoord.dec.deg)
+            bjd_time = utils.jd_to_bjd(self.jd_utc + exposure_days/2, self.stack.skycoord.ra.deg, self.skycoord.dec.deg)
 
         self.xarray = self.xarray.assign_coords(time=bjd_time)
         self.xarray["bjd_tdb"] = ("time", bjd_time)
