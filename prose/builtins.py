@@ -161,7 +161,7 @@ liverpool = dict(
     gain= 2.4, # ADU/e-
     altitude= 2363, # m
     diameter= 200, # cm
-    pixel_scale= 1.0752, # arcsec
+    pixel_scale= 0.22, # arcsec
     latlong= [28.7624, -17.8792], # deg
     keyword_object= "OBJECT",
     keyword_image_type= "OBSTYPE",
@@ -172,6 +172,7 @@ liverpool = dict(
     keyword_jd= "JD_UTC",
     keyword_ra= "RA",
     keyword_dec= "DEC",
+    ra_unit = "hourangle",
     TTF_link= None
 )
 

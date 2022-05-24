@@ -49,11 +49,7 @@ class Observation(ApertureFluxes):
         self.telescope = Telescope.from_name(self.telescope)
         self.gaia_data = None
         self._meridian_flip = None
-        self._check_stack()
-        self._stack = Image(data=self.x["stack"].values, header=clean_header(self.x.attrs))
 
-        if "stars" in self.x:
-            self.stack.stars_coords = self.x.stars.values
 
         if self.has_stack:
             self._stack = Image(data=self.x["stack"].values, header=clean_header(self.x.attrs))
@@ -218,14 +214,6 @@ class Observation(ApertureFluxes):
     @property
     def night_date(self):
         return self.stack.night_date
-
-    @property
-    def target(self):
-        return int(self.x.attrs['target'])
-
-    @target.setter
-    def target(self, i):
-        self.x.attrs["target"] = i
 
 
     # WCS
@@ -649,7 +637,7 @@ class Observation(ApertureFluxes):
         else:
             if star is None:
                 star = self.target
-            assert isinstance(star, int), "star must be star coordinates or integer index"
+            #assert isinstance(star, int), "star must be star coordinates or integer index"
 
             x, y = self.stars[star]
 
