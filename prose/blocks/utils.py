@@ -21,6 +21,28 @@ from ..image import Image
 from astropy.nddata import Cutout2D as astopy_Cutout2D
 from astropy.units.quantity import Quantity
 
+__all__ = [
+    "Stack",
+    "StackStd",
+    "SaveReduced",
+    "RemoveBackground",
+    "CleanCosmics",
+    "Pass",
+    "ImageBuffer",
+    "Set",
+    "Flip",
+    "Get",
+    "XArray",
+    "LocalInterpolation",
+    "Trim",
+    "Calibration",
+    "CleanBadPixels",
+    "MedianStack",
+    "XArray2",
+    "MPCalibration",
+    "Del"
+]
+
 
 class Stack(Block):
     """Build a FITS stack image of the observation
@@ -157,57 +179,6 @@ class SaveReduced(Block):
     
     def concat(self, block):
         self.files = [*self.files, *block.files]
-
-# TODO remove and replace in Calibration pipeline
-class _Video(Block):
-    """Build a video of all :code:`Image.data`.
-
-    Can be either from raw image or a :code:`int8` rgb image.
-
-    Parameters
-    ----------
-    destination : str
-        path of the video which format depends on the extension (e.g. :code:`.mp4`, or :code:`.gif)
-    overwrite : bool, optional
-        weather to overwrite file if exists, by default False
-    factor : float, optional
-        subsampling factor of the image, by default 0.25
-    fps : int, optional
-        frames per second of the video, by default 10
-    from_fits : bool, optional
-        Wether :code:`Image.data` is a raw fits image, by default False. If True, a z scaling is applied as well as casting to `uint8`
-    """
-    @register_args
-    def __init__(self, destination, overwrite=True, factor=0.25, fps=10, from_fits=False, **kwargs):
-
-        super().__init__(**kwargs)
-        self.destination = destination
-        self.overwrite = overwrite
-        self.images = []
-        self.factor = factor
-        self.fps = fps
-        self.from_fits = from_fits
-        self.checked_writer = False
-        
-    def run(self, image):
-        if not self.checked_writer:
-            _ = imageio.get_writer(self.destination, mode="I")
-            self.checked_writer = True
-
-        if self.from_fits:
-            self.images.append(viz.gif_image_array(image.data, factor=self.factor))
-        else:
-            self.images.append(image.data.copy())
-
-    def terminate(self):
-        imageio.mimsave(self.destination, self.images, fps=self.fps)
-
-    def citations(self):
-        return "imageio"
-
-
-from astropy.stats import sigma_clipped_stats
-
 
 class RemoveBackground(Block):
 

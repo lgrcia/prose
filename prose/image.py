@@ -8,8 +8,7 @@ from astropy.coordinates import Angle
 from dateutil import parser as dparser
 from astropy.wcs import WCS
 from . import viz, utils, Telescope
-from .utils import easy_median
-from .console_utils import info
+from .utils import gaia_query
 
 from astropy.io import fits
 from datetime import timedelta
@@ -53,10 +52,12 @@ class Image:
 
     """
 
-    def __init__(self, fitspath=None, data=None, header=None, **kwargs):
+    def __init__(self, fitspath=None, data=None, header=None, verbose=True, **kwargs):
         """
         Image instanciation
         """
+        self.verbose = verbose
+
         if fitspath is not None:
             self.path = fitspath
             self._get_data_header()
@@ -100,7 +101,11 @@ class Image:
         """Instantiate ``self.telescope`` from ``INSTRUME`` and or ``TELESCOP`` keywords
         """
         if self.header:
-           self.telescope = Telescope.from_names(self.header.get("INSTRUME", ""), self.header.get("TELESCOP", ""))
+           self.telescope = Telescope.from_names(
+               self.header.get("INSTRUME", ""), 
+               self.header.get("TELESCOP", ""), 
+               verbose=self.verbose
+            )
 
     def get(self, key, default=None):
         """Return corresponding value from header, similar to ``dict.get``
@@ -423,7 +428,7 @@ class Image:
         else:
             raise ValueError("center type not understood")
 
-        search_radius = 60 * arcmin / self.telescope.pixel_scale
+        search_radius = (60 * arcmin * u.arcmin / self.pixel_scale).decompose().value
         circle = plt.Circle((x, y), search_radius, fill=None, ec="white", alpha=0.6)
 
         ax = plt.gca()
@@ -462,3 +467,75 @@ class Image:
         hdu = fits.PrimaryHDU(data=self.data, header=fits.Header(utils.clean_header(self.header)))
         hdu.writeto(destination, overwrite=True)
 
+    def gaia_stars(self, world=False, inplace=True):
+        """Query gaia stars in the image  (only in >= 2.0.3)
+
+        Parameters
+        ----------
+        world : bool, optional
+            wether to return coordinates as SkyCoord if inplace is False, by default False which return the pixel location of stars in image
+        inplace : bool, optional
+            wether to set set Image.stars_coords to pixel coordinates of stars instead of returning them, by default True
+        """
+        fovmax = np.max(self.fov)
+        fov = u.Quantity([fovmax, fovmax])
+        stars_radec = gaia_query(self.skycoord, fov, "ra", "dec").to_pandas().values
+        stars_worlds = SkyCoord(*stars_radec.T, unit=("deg", "deg"))
+        stars_coords = np.array(self.wcs.world_to_pixel(stars_worlds)).T
+        
+        if not inplace:
+            if world:
+                return stars_worlds
+            else:
+                return stars_coords
+        else:
+            self.stars_coords = stars_coords
+            
+    def plot_marks(self, coordinates, label=None, ax=None, **kwargs):
+        """Plot circular marks given world coordinates (only in >= 2.0.3)
+
+        Parameters
+        ----------
+        coordinates : _type_
+            _description_
+        label : _type_, optional
+            _description_, by default None
+        ax : _type_, optional
+            _description_, by default None
+
+        Example
+        -------
+
+        .. jupyter-execute::
+
+            from prose import archive
+            import matplotlib.pyplot as plt
+
+            # star coordinates
+            coord = "04 27 01.36232", "-28 12 48.21681"
+
+            # getting an archival image for example
+            field_of_view = [3, 1.5] 
+            image = archive.pos1_image(coord, field_of_view)
+
+            # overplotting coord on image
+            image.show()
+            plt.title(image.date.date())
+            image.plot_marks(coord, color="k", ms=15)
+
+        """
+        
+        if len(np.shape(coordinates)) == 1:
+            coordinates = utils.check_skycoord(coordinates)
+        
+        if isinstance(coordinates, SkyCoord):
+            stars_coords = np.array(self.wcs.world_to_pixel(coordinates)).T
+        else:
+            stars_coords = coordinates
+        
+        label = np.arange(len(stars_coords)) if label is True else None
+        
+        if ax is None:
+            ax = plt.gca()
+            
+        viz.plot_marks(*stars_coords.T, label=label, ax=ax, **kwargs)

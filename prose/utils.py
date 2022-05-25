@@ -7,6 +7,8 @@ import astropy.constants as c
 import urllib
 from astropy.time import Time
 from astropy.table import Table
+from astropy.coordinates import SkyCoord
+import astropy.units as u
 from datetime import datetime
 import inspect
 from scipy import ndimage
@@ -405,3 +407,61 @@ def image_in_xarray(image, xarr, name="stack", stars=False):
 
     
     return xarr
+
+def check_skycoord(skycoord):
+    """
+    Check that skycoord is either:
+    - a list of int (interpreted as deg)
+    - a str (interpreted as houranlgle, deg)
+    - a SkyCoord object
+
+    and return a SkyCoord object
+
+    Parameters
+    ----------
+    skycoord : list, tuple or SkyCoord
+        coordinate of the image center
+
+    Raise
+    -----
+    Raise an error if skycoord cannot be interpreted
+
+    """
+    if isinstance(skycoord, (tuple, list)):
+        if isinstance(skycoord[0], (float, int)):
+            skycoord = SkyCoord(*skycoord, unit=(u.deg, u.deg))
+        elif isinstance(skycoord[0], str):
+            skycoord = SkyCoord(*skycoord, unit=("hourangle", "deg"))
+        else:
+            if not isinstance(skycoord, SkyCoord):
+                assert "'skycoord' must be a list of int (interpreted as deg), str (interpreted as houranlgle, deg) or SkyCoord object"
+
+    return skycoord
+
+
+def gaia_query(center, fov, *args, limit=10000):
+    """
+    https://gea.esac.esa.int/archive/documentation/GEDR3/Gaia_archive/chap_datamodel/sec_dm_main_tables/ssec_dm_gaia_source.html
+    """
+    
+    from astroquery.gaia import Gaia
+    
+    if isinstance(center, SkyCoord):
+        ra = center.ra.to(u.deg).value
+        dec = center.dec.to(u.deg).value
+    
+    if isinstance(fov, u.Quantity):
+        if len(fov) == 2:
+            ra_fov, dec_fov = fov.to(u.deg).value
+        else:
+            ra_fov = dec_fov = fov.to(u.deg).value
+
+        radius = np.min([ra_fov, dec_fov])/2
+
+    job = Gaia.launch_job(f"select top {limit} {','.join(args) if isinstance(args, (tuple, list)) else args} from gaiadr2.gaia_source where "
+                          "1=CONTAINS("
+                          f"POINT('ICRS', {ra}, {dec}), "
+                          f"CIRCLE('ICRS',ra, dec, {radius}))"
+                          "order by phot_g_mean_mag")
+
+    return job.get_results()

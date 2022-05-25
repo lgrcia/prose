@@ -6,34 +6,7 @@ import pandas as pd
 import numpy as np
 from astropy.time import Time
 import warnings
-
-def gaia_query(center, fov, *args, limit=10000):
-    """
-    https://gea.esac.esa.int/archive/documentation/GEDR3/Gaia_archive/chap_datamodel/sec_dm_main_tables/ssec_dm_gaia_source.html
-    """
-    
-    from astroquery.gaia import Gaia
-    
-    if isinstance(center, SkyCoord):
-        ra = center.ra.to(u.deg).value
-        dec = center.dec.to(u.deg).value
-    
-    if isinstance(fov, u.Quantity):
-        if len(fov) == 2:
-            ra_fov, dec_fov = fov.to(u.deg).value
-        else:
-            ra_fov = dec_fov = fov.to(u.deg).value
-
-        radius = np.min([ra_fov, dec_fov])/2
-
-    job = Gaia.launch_job(f"select top {limit} {','.join(args) if isinstance(args, (tuple, list)) else args} from gaiadr2.gaia_source where "
-                          "1=CONTAINS("
-                          f"POINT('ICRS', {ra}, {dec}), "
-                          f"CIRCLE('ICRS',ra, dec, {radius}))"
-                          "order by phot_g_mean_mag")
-
-    return job.get_results()
-
+from ..utils import gaia_query
 
 def image_gaia_query(image, *args, limit=3000, correct_pm=True):
 
