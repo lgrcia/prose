@@ -439,7 +439,7 @@ def check_skycoord(skycoord):
     return skycoord
 
 
-def gaia_query(center, fov, *args, limit=10000):
+def gaia_query(center, fov, *args, limit=10000, circular=True):
     """
     https://gea.esac.esa.int/archive/documentation/GEDR3/Gaia_archive/chap_datamodel/sec_dm_main_tables/ssec_dm_gaia_source.html
     """
@@ -450,18 +450,43 @@ def gaia_query(center, fov, *args, limit=10000):
         ra = center.ra.to(u.deg).value
         dec = center.dec.to(u.deg).value
     
-    if isinstance(fov, u.Quantity):
-        if len(fov) == 2:
-            ra_fov, dec_fov = fov.to(u.deg).value
-        else:
-            ra_fov = dec_fov = fov.to(u.deg).value
+    if not isinstance(fov, u.Quantity):
+        fov = fov * u.deg
+    
+    if fov.ndim == 1:
+        ra_fov, dec_fov = fov.to(u.deg).value
+    else:
+        ra_fov = dec_fov = fov.to(u.deg).value
 
-        radius = np.min([ra_fov, dec_fov])/2
+    radius = np.min([ra_fov, dec_fov])/2
 
-    job = Gaia.launch_job(f"select top {limit} {','.join(args) if isinstance(args, (tuple, list)) else args} from gaiadr2.gaia_source where "
-                          "1=CONTAINS("
-                          f"POINT('ICRS', {ra}, {dec}), "
-                          f"CIRCLE('ICRS',ra, dec, {radius}))"
-                          "order by phot_g_mean_mag")
+    fields = ','.join(args) if isinstance(args, (tuple, list)) else args
+
+    if circular:
+        job = Gaia.launch_job(f"select top {limit} {fields} from gaiadr2.gaia_source where "
+                            "1=CONTAINS("
+                            f"POINT('ICRS', {ra}, {dec}), "
+                            f"CIRCLE('ICRS',ra, dec, {radius}))"
+                            "order by phot_g_mean_mag")
+    else:
+        job = Gaia.launch_job(f"select top {limit} {fields} from gaiadr2.gaia_source where "
+                    f"ra BETWEEN {ra-ra_fov/2} AND {ra+ra_fov/2} AND "
+                    f"dec BETWEEN {dec-dec_fov/2} AND {dec+dec_fov/2} "
+                    "order by phot_g_mean_mag") 
 
     return job.get_results()
+
+def sparsify(stars, radius):
+
+    _stars = stars.copy()
+    deleted_stars = np.zeros([], dtype=int)
+    sparse_stars = []
+    
+    for i, s in enumerate(_stars):
+        if not i in deleted_stars:
+            distances = np.linalg.norm(_stars-s, axis=1)
+            idxs = np.flatnonzero(distances<radius)
+            sparse_stars.append(s)
+            deleted_stars = np.hstack([deleted_stars, idxs])
+    
+    return np.array(sparse_stars)

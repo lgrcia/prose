@@ -390,13 +390,13 @@ class Image:
 
     @property
     def fov(self):
-        """Field of view of the image in degrees
+        """RA-DEC field of view of the image in degrees
 
         Returns
         -------
         astropy.units Quantity
         """
-        return np.array(self.shape) * self.pixel_scale.to(u.deg)
+        return np.array(self.shape)[::-1] * self.pixel_scale.to(u.deg)
 
     @property
     def pixel_scale(self):
@@ -479,7 +479,7 @@ class Image:
         """
         fovmax = np.max(self.fov)
         fov = u.Quantity([fovmax, fovmax])
-        stars_radec = gaia_query(self.skycoord, fov, "ra", "dec").to_pandas().values
+        stars_radec = gaia_query(self.skycoord, fov, "ra", "dec", circular=False).to_pandas().values
         stars_worlds = SkyCoord(*stars_radec.T, unit=("deg", "deg"))
         stars_coords = np.array(self.wcs.world_to_pixel(stars_worlds)).T
         

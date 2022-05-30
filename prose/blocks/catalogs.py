@@ -6,11 +6,20 @@ import pandas as pd
 import numpy as np
 from astropy.time import Time
 import warnings
-from ..utils import gaia_query
+from ..utils import gaia_query, sparsify
+from twirl.utils import plot as tplot
 
-def image_gaia_query(image, *args, limit=3000, correct_pm=True):
+def image_gaia_query(image, *args, limit=3000, correct_pm=True, wcs=True, circular=True, fov=None):
+    
+    if wcs:
+        center = image.wcs.pixel_to_world(*(np.array(image.shape)/2)[::-1])
+    else:
+        center = image.skycoord
 
-    table = gaia_query(image.skycoord, image.fov, "*", limit=limit)
+    if fov is None:
+        fov = image.fov
+
+    table = gaia_query(center, fov, "*", limit=limit, circular=circular)
 
     if correct_pm:
         skycoord = SkyCoord(
@@ -32,10 +41,11 @@ def image_gaia_query(image, *args, limit=3000, correct_pm=True):
 
 class CatalogBlock(Block):
 
-    def __init__(self, name, mode=None, **kwargs):
+    def __init__(self, name, mode=None, limit=10000, **kwargs):
         super().__init__(**kwargs)
         self.mode = mode
         self.catalog_name = name
+        self.limit = limit
 
     def get_catalog(self, image):
         raise NotImplementedError()
@@ -45,49 +55,68 @@ class CatalogBlock(Block):
         radecs = np.array([catalog["ra"].quantity.to(u.deg), catalog["dec"].quantity.to(u.deg)])
         stars_coords = np.array(SkyCoord(*radecs, unit="deg").to_pixel(image.wcs))
         catalog["x"], catalog["y"] = stars_coords
+        image.catalogs[self.catalog_name] = catalog.to_pandas()
     
         if self.mode == "replace":
             image.stars_coords = stars_coords.T[np.all(np.isfinite(stars_coords), 0)]
+            idxs = np.flatnonzero(np.all(image.stars_coords < image.shape[::-1], 1))
+            image.stars_coords = image.stars_coords[idxs][0:self.limit]
+            image.catalogs[self.catalog_name] = image.catalogs[self.catalog_name].iloc[idxs].reset_index()
 
         elif self.mode == "crossmatch":
             x, y = catalog[["x", "y"]].values.T
             pass
 
-        image.catalogs[self.catalog_name] = catalog.to_pandas()
-
+        image.catalogs[self.catalog_name] = image.catalogs[self.catalog_name].iloc[0:self.limit]
         
 class PlateSolve(Block):
     
-    def __init__(self, ref_image=None, n_gaia=50, tolerance=10, n_twirl=15, **kwargs):
+    def __init__(self, ref_image=None, n=30, tolerance=10, radius=1, debug=False, **kwargs):
         super().__init__(**kwargs)
-        self.n_gaia = n_gaia
+        self.radius = radius * u.arcmin.to("deg")
+        self.n = n
         self.ref_image = ref_image is not None
-        self.n_gaia = n_gaia
-        self.n_twirl = n_twirl
         self.tolerance = tolerance
+        self.debug = debug
         
         if ref_image:
             self.ref_image = self(ref_image)
     
     def run(self, image):
         if not self.ref_image:
-            table = image_gaia_query(image).to_pandas()
+            table = image_gaia_query(image, wcs=False, circular=True, fov=image.fov.max()).to_pandas()
             self.gaias = np.array([table.ra, table.dec]).T
-            self.gaias[np.any(np.isnan(self.gaias), 1)] = 0
+            self.gaias = self.gaias[~np.any(np.isnan(self.gaias), 1)]
             
-        image.wcs = twirl._compute_wcs(image.stars_coords, self.gaias, n=self.n_twirl, tolerance=self.tolerance)
+            gaias = sparsify(self.gaias, self.radius)
+            stars = image.stars_coords*image.pixel_scale.to("deg").value
+            stars = sparsify(stars, self.radius)/image.pixel_scale.to("deg").value
+
+        image.wcs = twirl._compute_wcs(stars[0:self.n], gaias[0:self.n], n=self.n, tolerance=self.tolerance)
+
+        if self.debug:
+            image.show(stars=False)
+            tplot(*stars[0:self.n], color="r")
+            _gaias = np.array(image.wcs.world_to_pixel(SkyCoord(gaias[0:self.n], unit="deg"))).T
+            tplot(*_gaias)
 
 
 class GaiaCatalog(CatalogBlock):
     
-    def __init__(self, n_stars=10000, tolerance=4, correct_pm=True, **kwargs):
+    def __init__(self, tolerance=4, correct_pm=True, **kwargs):
         CatalogBlock.__init__(self, "gaia", **kwargs)
-        self.n_stars = n_stars
         self.tolerance = tolerance
         self.correct_pm = correct_pm
 
     def get_catalog(self, image):
-        table =  image_gaia_query(image, correct_pm=self.correct_pm, limit=self.n_stars)
+        max_fov = image.fov.max()*np.sqrt(2)
+        table =  image_gaia_query(
+            image, 
+            correct_pm=self.correct_pm, 
+            limit=500000, 
+            circular=True,
+            fov=max_fov
+        )
         table.rename_column('DESIGNATION', 'id')
         return table
 
