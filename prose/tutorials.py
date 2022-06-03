@@ -5,7 +5,7 @@ from os import path
 import shutil
 from . import Telescope, Image
 from .simulations import fits_image, ObservationSimulation
-from .finderchart import sdss_image
+from .archive import sdss_image
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 import numpy as np

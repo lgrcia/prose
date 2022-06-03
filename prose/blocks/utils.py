@@ -21,6 +21,28 @@ from ..image import Image
 from astropy.nddata import Cutout2D as astopy_Cutout2D
 from astropy.units.quantity import Quantity
 
+__all__ = [
+    "Stack",
+    "StackStd",
+    "SaveReduced",
+    "RemoveBackground",
+    "CleanCosmics",
+    "Pass",
+    "ImageBuffer",
+    "Set",
+    "Flip",
+    "Get",
+    "XArray",
+    "LocalInterpolation",
+    "Trim",
+    "Calibration",
+    "CleanBadPixels",
+    "MedianStack",
+    "XArray2",
+    "MPCalibration",
+    "Del"
+]
+
 
 class Stack(Block):
     """Build a FITS stack image of the observation
@@ -43,56 +65,52 @@ class Stack(Block):
         weather to overwrite file if exists, by default False
     """
     @register_args
-    def __init__(self, destination=None, header=None, overwrite=False, **kwargs):
+    def __init__(self, ref=None, **kwargs):
 
         super(Stack, self).__init__(**kwargs)
-        self.stack = None
-        self.n_images = 0
-        self.header = header if header else {}
-        self.destination = destination
-        self.fits_manager = None
-        self.overwrite = overwrite
-        self.telescope = None
-        self.xarray = None
-
-        self.reference_image_path = None
+        self._stack = None
+        self._n_images = 0
+        self._header = ref.header.copy() if ref else {}
+        self.stack = ref.copy() if ref else None
 
     def run(self, image):
         #TODO check that all images have same telescope?
 
         data = image.data.copy()
 
-        if self.stack is None:
+        if self._stack is None:
             #first run
-            self.stack = data
+            self._stack = data
             self.telescope = image.telescope
         else:
-            self.stack += data
+            self._stack += data
 
-        self.n_images += 1
+        self._n_images += 1
 
     def terminate(self):
 
-        self.stack = self.stack/self.n_images
+        self._stack = self._stack/self._n_images
 
-        self.header[self.telescope.keyword_image_type] = "stack"
-        self.header["BZERO"] = 0
-        self.header["REDDATE"] = Time.now().to_value("fits")
-        self.header["NIMAGES"] = self.n_images
+        self._header[self.telescope.keyword_image_type] = "stack"
+        self._header["BZERO"] = 0
+        self._header["REDDATE"] = Time.now().to_value("fits")
+        self._header["NIMAGES"] = self._n_images
 
-        if self.destination is not None:
-            stack_hdu = fits.PrimaryHDU(self.stack, header=self.header)
-            stack_hdu.writeto(self.destination, overwrite=self.overwrite)
+        if self.stack is None:
+            self.stack = Image(data=self._stack, header=self._header)
+        else:
+            self.stack.data = self._stack
+            self.stack.header = self._header
 
     def concat(self, block):
-        if self.stack is not None:
+        if self._stack is not None:
             if block.stack is not None:
-                self.stack += block.stack
+                self._stack += block._stack
             else:
                 pass
         else:
-            self.stack = block.stack
-        self.n_images += block.n_images
+            self._stack = block._stack
+        self._n_images += block._n_images
 
 class StackStd(Block):
     
@@ -161,57 +179,6 @@ class SaveReduced(Block):
     
     def concat(self, block):
         self.files = [*self.files, *block.files]
-
-# TODO remove and replace in Calibration pipeline
-class _Video(Block):
-    """Build a video of all :code:`Image.data`.
-
-    Can be either from raw image or a :code:`int8` rgb image.
-
-    Parameters
-    ----------
-    destination : str
-        path of the video which format depends on the extension (e.g. :code:`.mp4`, or :code:`.gif)
-    overwrite : bool, optional
-        weather to overwrite file if exists, by default False
-    factor : float, optional
-        subsampling factor of the image, by default 0.25
-    fps : int, optional
-        frames per second of the video, by default 10
-    from_fits : bool, optional
-        Wether :code:`Image.data` is a raw fits image, by default False. If True, a z scaling is applied as well as casting to `uint8`
-    """
-    @register_args
-    def __init__(self, destination, overwrite=True, factor=0.25, fps=10, from_fits=False, **kwargs):
-
-        super().__init__(**kwargs)
-        self.destination = destination
-        self.overwrite = overwrite
-        self.images = []
-        self.factor = factor
-        self.fps = fps
-        self.from_fits = from_fits
-        self.checked_writer = False
-        
-    def run(self, image):
-        if not self.checked_writer:
-            _ = imageio.get_writer(self.destination, mode="I")
-            self.checked_writer = True
-
-        if self.from_fits:
-            self.images.append(viz.gif_image_array(image.data, factor=self.factor))
-        else:
-            self.images.append(image.data.copy())
-
-    def terminate(self):
-        imageio.mimsave(self.destination, self.images, fps=self.fps)
-
-    def citations(self):
-        return "imageio"
-
-
-from astropy.stats import sigma_clipped_stats
-
 
 class RemoveBackground(Block):
 
@@ -349,6 +316,9 @@ class Get(Block):
         elif len(names) > 1:
             return [self.values[name] for name in names]
 
+    def concat(self, block):
+        for name in self.values.keys():
+            self.values[name] = [*self.values[name], *block.values[name]]
 
 class XArray(Block):
 
@@ -518,55 +488,40 @@ class Calibration(Block):
     def __init__(self, darks=None, flats=None, bias=None, loader=Image, easy_ram=True, **kwargs):
 
         super().__init__(**kwargs)
-        if darks is None:
-            darks = []
-        if flats is None:
-            flats = []
-        if bias is None:
-            bias = []
-        self.images = {
-            "dark": darks,
-            "flat": flats,
-            "bias": bias
-        }
-
-        self.master_dark = None
-        self.master_flat = None
-        self.master_bias = None
-
+            
         self.loader = loader
+        self.easy_ram = easy_ram
 
-        def _median(im):
-            if easy_ram:
-                return easy_median(im)
-            else:
-                return np.median(im, 0)
-
-        self.median =_median
-
-        if self.master_bias is None:
-            self._produce_master("bias")
-        if self.master_dark is None:
-            self._produce_master("dark")
-        if self.master_flat is None:
-            self._produce_master("flat")
+        self.master_bias = self._produce_master(bias, "bias")
+        self.master_dark = self._produce_master(darks, "dark")
+        self.master_flat = self._produce_master(flats, "flat")
 
     def calibration(self, image, exp_time):
         with np.errstate(divide='ignore', invalid='ignore'):
             return (image - (self.master_dark * exp_time + self.master_bias)) / self.master_flat
 
-    def _produce_master(self, image_type):
-        _master = []
-        images = self.images[image_type]
+    def _produce_master(self, images, image_type):
+        if images is not None:
+            assert isinstance(images, (list, np.array)), "images must be list or array"
+            if len(images) == 0:
+                images = None
 
-        if len(images) == 0:
+        def _median(im):
+            if self.easy_ram:
+                return easy_median(im)
+            else:
+                return np.median(im, 0)
+
+        _master = []
+
+        if images is None:
             info(f"No {image_type} images set")
             if image_type == "dark":
-                self.master_dark = 0
+                return 0
             elif image_type == "bias":
-                self.master_bias = 0
+                return  0
             elif image_type == "flat":
-                self.master_flat = 1
+                return 1
         else:
             info(f"Building master {image_type}")
 
@@ -584,14 +539,10 @@ class Calibration(Block):
                 del image
 
         if len(_master) > 0:
-            med = self.median(_master)
-            if image_type == "dark":
-                self.master_dark = med.copy()
-            elif image_type == "bias":
-                self.master_bias = med.copy()
-            elif image_type == "flat":
-                self.master_flat = med.copy()
-            del _master
+            med = _median(_master)
+            return med
+        else:
+            return None
 
     def show_masters(self, figsize=(20, 80)):
         plt.figure(figsize=figsize)
@@ -620,6 +571,15 @@ class Calibration(Block):
 
     def citations(self):
         return "astropy", "numpy"
+
+    @property
+    def shared(self):
+        for imtype in ['bias', 'dark', 'flat']:
+            data = self.__dict__[f"master_{imtype}"]
+            m = np.memmap(f"__{imtype}.array", dtype='float32', mode='w+', shape=data.shape)
+            m[:, :] = data[:, :]
+        
+        return MPCalibration()
 
 
 class CleanBadPixels(Block):
@@ -712,3 +672,82 @@ class MedianStack(Block):
         
     def terminate(self):
         self.stack = Image(data=np.median(self.images, 0))
+
+
+class XArray2(Block):
+    def __init__(self, names, name="xarray", raise_error=True, concat_dim="time", **kwargs):
+        super().__init__(name=name)
+        self.variables = names
+        self.raise_error = raise_error
+        self.xarray = xr.Dataset()
+        self.concat_dim = concat_dim
+        self.xarray.attrs.update(kwargs)
+        self.xarray_init = False
+    
+    def _to_xarray(self, image):
+        _x = xr.Dataset()
+        for name, dims in self.variables.items():
+            _x[name] = (dims, [self._get_value(image, name)])
+        return _x
+    
+    def _get_value(self, image, key):
+        try:
+            value = image.__getattribute__(key)
+            if isinstance(image.__getattribute__(key), Quantity):
+                value = value.value
+            return value
+        except AttributeError:
+            if self.raise_error:
+                raise AttributeError()
+            else:
+                pass
+
+    def run(self, image):
+        if not self.xarray_init:
+            self.xarray = self._to_xarray(image)
+            self.xarray_init = True
+        else:
+            x = self._to_xarray(image)
+            self.xarray = xr.concat([self.xarray, x], dim=self.concat_dim)
+
+    def save(self, destination):
+        self.xarray.to_netcdf(destination)            
+        
+    def concat(self, block):
+        if len(block.xarray) == 0:
+            pass
+        elif len(self.xarray) == 0:
+            self.xarray = block.xarray.copy()
+            self.xarray_init = True
+        else:
+            self.xarray =  xr.concat([self.xarray, block.xarray], dim=self.concat_dim)
+
+
+class MPCalibration(Block):
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+    def calibration(self, image, exp_time):
+        bias = np.memmap('__bias.array', dtype='float32', mode='r', shape=image.shape)
+        dark = np.memmap('__dark.array', dtype='float32', mode='r', shape=image.shape)
+        flat = np.memmap('__flat.array', dtype='float32', mode='r', shape=image.shape)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            return (image - (dark * exp_time + bias)) / flat
+
+    def run(self, image):
+        data = image.data
+        calibrated_image = self.calibration(data, image.exposure.value)
+        calibrated_image[calibrated_image < 0] = np.nan
+        calibrated_image[~np.isfinite(calibrated_image)] = -1
+        image.data = calibrated_image
+
+class Del(Block):
+
+    def __init__(self, *args, name="del"):
+        super().__init__(name=name)
+        self.args = args
+
+    def run(self, image):
+        for arg in self.args:
+            del image.__dict__[arg]

@@ -3,10 +3,15 @@ from astropy.coordinates import SkyCoord
 from prose.console_utils import info
 import requests
 from astropy.io import fits
-from . import Image
+from .. import Image, utils
 import astropy.units as u
+from dateutil import parser as dparser
 
 class PhotographicPlate(Image):
+
+    ra = None
+    dec = None
+    filter = None
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -18,6 +23,11 @@ class PhotographicPlate(Image):
     @property
     def skycoord(self):
         return SkyCoord(*self.wcs.pixel_to_world_values([np.array(self.shape)/2])[0] * u.deg)
+
+    @property
+    def date(self):
+        date_str = self.header[self.telescope.keyword_observation_date][0:10]
+        return dparser.parse(date_str)
     
 
 def sdss_image(skycoord, fov, filter="poss1_blue", return_hdu=False):
@@ -26,9 +36,12 @@ def sdss_image(skycoord, fov, filter="poss1_blue", return_hdu=False):
     Parameters
     ----------
     skycoord : list, tuple or SkyCoord
-        coordinate of the image center
+        Coordinate of the image center, either:
+            - a list of int (interpreted as deg)
+            - a str (interpreted as houranlgle, deg)
+            - a SkyCoord object
     fov : list, tuple or Quantity array
-        field of view of the image in the two axes
+        field of view of the image in the two axes. If list or tuple, interpreted as arcmin
     filter : str, optional
         type of image to retrieve, by default "poss1_blue". Available are:
             - poss1_blue
@@ -44,17 +57,11 @@ def sdss_image(skycoord, fov, filter="poss1_blue", return_hdu=False):
         ``Image`` object of the SDSS field
     """
 
-    if isinstance(skycoord, (tuple, list)):
-        if isinstance(skycoord[0], float):
-            skycoord = SkyCoord(*skycoord, unit=(u.deg, u.deg))
-        elif isinstance(skycoord[0], str):
-            skycoord = SkyCoord(*skycoord, unit=("hourangle", "deg"))
-        else:
-            if not isinstance(skycoord, SkyCoord):
-                assert "'skycoord' must be a list of int (interpreted as deg), str (interpreted as houranlgle, deg) or SkyCoord object"
+    skycoord = utils.check_skycoord(skycoord)
         
     if isinstance(fov, (tuple, list)):
         fov = np.array(fov)*u.arcmin
+
     ra, dec = skycoord.to_string().split(' ')
     h, w = fov.to(u.arcmin).value
     url = f"https://archive.stsci.edu/cgi-bin/dss_search?v={filter}&r={ra}&d={dec}&e=J2000&h={h}&w={w}&f=fits&c=none&s=on&fov=NONE&v3="
@@ -66,4 +73,10 @@ def sdss_image(skycoord, fov, filter="poss1_blue", return_hdu=False):
         return hdu
     
     else:
-        return PhotographicPlate(data=np.array(hdu[0].data).astype(float), header=hdu[0].header)
+        image = PhotographicPlate(data=np.array(hdu[0].data).astype(float), header=hdu[0].header, verbose=False)
+        image.ra = skycoord.ra
+        image.dec = skycoord.dec
+        image.filter = filter
+
+        return image
+

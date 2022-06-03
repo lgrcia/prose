@@ -110,7 +110,10 @@ class AffineTransform(Block):
                 image.discard = True
 
         if self.stars:
-            image.stars_coords = transform(image.stars_coords)
+            try:
+                image.stars_coords = transform(image.stars_coords)
+            except np.linalg.LinAlgError:
+                image.discard = True
 
     def citations(self, image):
         return "astropy", "numpy"

@@ -5,7 +5,7 @@ import numpy as np
 from ..telescope import Telescope
 from datetime import timedelta
 from astropy.io import fits
-from tqdm import tqdm
+from ..console_utils import tqdm
 from astropy.time import Time
 import os
 import zipfile
@@ -87,7 +87,7 @@ def fits_to_df(files, telescope_kw="TELESCOP", instrument_kw="INSTRUME", verbose
     df_list = []
 
     def progress(x):
-        return tqdm(x) if verbose else x
+        return tqdm(x, "Parsing FITS") if verbose else x
 
     for i in progress(files):
         header = fits.getheader(i, hdu)
@@ -115,7 +115,7 @@ def fits_to_df(files, telescope_kw="TELESCOP", instrument_kw="INSTRUME", verbose
             dimensions=(header.get("NAXIS1", 1), header.get("NAXIS2", 1)),
             flip=header.get(telescope.keyword_flip, ""),
             jd=header.get(telescope.keyword_jd, ""),
-            exposure=header.get(telescope.keyword_exposure_time, None)
+            exposure=float(header.get(telescope.keyword_exposure_time, None))
         ))
 
     df = pd.DataFrame(df_list)

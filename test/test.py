@@ -107,6 +107,27 @@ class TestReduction(unittest.TestCase):
 
         shutil.rmtree(RAW)
 
+    def test_empty_calibration(self):
+    
+        # generate dataset
+        import numpy as np
+        from prose.tutorials import simulate_observation
+
+        time = np.linspace(0, 0.15, 10) + 2450000
+        target_dflux = 1 + np.sin(time*100)*1e-2
+        simulate_observation(time, target_dflux, RAW)
+        
+        Telescope({
+            "name": "fake_telescope",
+            "trimming": (0, 0),
+            "latlong": [24.6275, 70.4044]
+        })
+
+        fm = FitsManager(RAW, depth=2)
+        destination = fm.obs_name
+        calib = Calibration(bias=[], darks=[], flats=[], overwrite=True)
+        calib.run(fm.images, TEST_FODLER / destination)
+
 class TestObservation(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
