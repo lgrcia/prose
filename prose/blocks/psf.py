@@ -51,7 +51,7 @@ def cutouts(image, stars, size=15):
         stars_tbl = Table(
             data=np.array([stars[0][0], stars[0][1]]),
             names=["x", "y"])
-        stars = extract_stars(NDData(data=image), stars_tbl, size=size)
+        stars = ([0], [extract_stars(NDData(data=image), stars_tbl, size=size)])
         return stars
 
 

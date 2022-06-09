@@ -253,7 +253,7 @@ class XYShift(_NeedStars):
 
     def run(self, image):
         if len(image.stars_coords) <= 2:
-            shift = image.stars_coords[0] - self.reference.stars_coords[0]
+            shift = self.reference.stars_coords[0] - image.stars_coords[0]
         else:
             shift = xyshift(image.stars_coords, self.reference.stars_coords, tolerance=self.tolerance, clean=self.clean)
         
