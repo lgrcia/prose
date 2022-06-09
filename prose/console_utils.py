@@ -33,6 +33,7 @@ FORE_COLOR = style["fore_color"][CONFIG.config["color"]]
 RUN_LABEL = "{}RUN{}".format(FORE_COLOR, Fore.RESET)
 INFO_LABEL = "{}INFO{}".format(FORE_COLOR, Fore.RESET)
 WARNING_LABEL = "{}WARNING{}".format(style["fore_color"]["yellow"], Fore.RESET)
+ERROR_LABEL = "{}ERROR{}".format(style["fore_color"]["red"], Fore.RESET)
 
 TQDM_BAR_FORMAT = "%s {l_bar}%s{bar}%s{r_bar}" % (
     RUN_LABEL, FORE_COLOR, Fore.RESET
@@ -141,3 +142,6 @@ def info(s):
 
 def warning(s):
     print(f"{WARNING_LABEL} {s}")
+
+def error(s):
+    print(f"{ERROR_LABEL} {s}")

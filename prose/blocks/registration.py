@@ -3,7 +3,8 @@ import numpy as np
 from scipy.spatial import KDTree
 from twirl import utils as tutils
 from skimage.transform import AffineTransform as skAT
-from ..block import Block
+from ..block import Block, _NeedStars
+from ..console_utils import error
 from ..utils import register_args
 
 def distance(p1, p2):
@@ -186,25 +187,7 @@ def astroalign_optimized_find_transform(
     return best_t, (source_controlp[so], target_controlp[d])
 
 
-class Registration(Block):
-
-    def __init__(self, detection=None, **kwargs):
-        super().__init__(**kwargs)
-        self.reference_stars = None
-        self.detection = detection
-
-
-class DistanceRegistration(Registration):
-
-    @register_args
-    def __init__(self, tolerance=1.5, clean=False, detection=None, reference=1/2, **kwargs):
-        super().__init__(detection=detection, **kwargs)
-        self.tolerance = tolerance
-        self.clean = clean
-        self.reference = reference
-
-
-class XYShift(Registration):
+class XYShift(_NeedStars):
     r"""Compute the linear shift between two point clouds. Star coordinates in the image are expected in image.stars_coords
 
     |write|  ``Image.dx``, ``Image.dy``, ``Image.header`` 
@@ -268,8 +251,12 @@ class XYShift(Registration):
         self.clean = clean
         self.reference = reference
 
-    def run(self, image, **kwargs):
-        shift = xyshift(image.stars_coords, self.reference, tolerance=self.tolerance, clean=self.clean)
+    def run(self, image):
+        if len(image.stars_coords) <= 2:
+            shift = image.stars_coords[0] - self.reference.stars_coords[0]
+        else:
+            shift = xyshift(image.stars_coords, self.reference.stars_coords, tolerance=self.tolerance, clean=self.clean)
+        
         image.shift = shift
         image.dx, image.dy = shift
         image.header["DX"] = shift[0]
@@ -277,7 +264,7 @@ class XYShift(Registration):
         image.header["ALIGNALG"] = self.__class__.__name__
 
 
-class AstroAlignShift(Registration):
+class AstroAlignShift(_NeedStars):
     """
     Compute the linear shift between point clouds using :code:`astroalign`
 
@@ -321,28 +308,7 @@ class AstroAlignShift(Registration):
         return """"""
 
 
-class _Twirl(Block):
-
-    @register_args
-    def __init__(self, ref, order=0, n=15, **kwargs):
-        super(_Twirl, self).__init__(**kwargs)
-        self.ref = ref[0:n]
-        self.order = order
-        self.n = n
-
-    def run(self, image, **kwargs):
-        x = tutils.find_transform(image.stars_coords, self.ref, n=self.n)
-        image.transform = skAT(x)
-        image.dx, image.dy = image.transform.translation
-        image.header["TWROT"] = image.transform.rotation
-        image.header["TWTRANSX"] = image.transform.translation[0]
-        image.header["TWTRANSY"] = image.transform.translation[1]
-        image.header["TWSCALEX"] = image.transform.scale[0]
-        image.header["TWSCALEY"] = image.transform.scale[1]
-        image.header["ALIGNALG"] = self.__class__.__name__
-
-
-class Twirl(Block):
+class Twirl(_NeedStars):
     """
     Affine transform computation for images registration
 

@@ -36,7 +36,7 @@ class Sequence:
             for i, block in enumerate(blocks)
         })
 
-    def run(self, images, show_progress=True, live_discard=False):
+    def run(self, images, show_progress=True, live_discard=False, telescope=None):
         discards = {}
         self.files_or_images = images if not isinstance(images, (str, Path, Image)) else [images]
 
@@ -63,7 +63,7 @@ class Sequence:
         # run
         for i, file_or_image in enumerate(progress(self.files_or_images)):
             if isinstance(file_or_image, (str, Path)):
-                image = self.loader(file_or_image)
+                image = self.loader(file_or_image, telescope=telescope)
             else:
                 image = file_or_image
             image.i = i

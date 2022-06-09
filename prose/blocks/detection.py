@@ -27,7 +27,7 @@ class StarsDetection(Block):
 
     def clean(self, fluxes, coordinates, *args):
 
-        if len(coordinates) > 2:
+        if len(coordinates) > 0:
             if self.sort:
                 idxs = np.argsort(fluxes)[::-1]
                 coordinates = coordinates[idxs]

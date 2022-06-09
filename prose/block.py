@@ -1,4 +1,5 @@
 from time import time
+from .console_utils import error
 
 
 class Block:
@@ -72,3 +73,20 @@ class Block:
         for b in blocks[1::]:
             block.concat(b)
         return block
+
+
+class _NeedStars(Block):
+
+    def __init__(self, name=None):
+        super().__init__(name)
+
+
+    def _run(self, image):
+        block_name = self.__class__.__name__
+        if not hasattr(image, "stars_coords"):
+            error(f"[{block_name}] `stars_coords` not found in Image (did you use a detection block?)")
+        elif image.stars_coords is None:
+            error(f"[{block_name}] `stars_coords` is empty (no stars detected)")
+        elif len(image.stars_coords) == 0:
+            error(f"[{block_name}] `stars_coords` is empty (no stars detected)")
+        super()._run(image)

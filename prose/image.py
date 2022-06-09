@@ -52,7 +52,7 @@ class Image:
 
     """
 
-    def __init__(self, fitspath=None, data=None, header=None, verbose=True, **kwargs):
+    def __init__(self, fitspath=None, data=None, header=None, verbose=True, telescope=None, **kwargs):
         """
         Image instanciation
         """
@@ -69,7 +69,10 @@ class Image:
         self.telescope = None
         self.discard = False
         self.__dict__.update(kwargs)
-        self._check_telescope()
+        if telescope is None:
+            self._check_telescope()
+        else:
+            self.telescope = Telescope.from_name(telescope)
         self.catalogs = {}
 
     def _get_data_header(self):
@@ -91,7 +94,11 @@ class Image:
         Image
             copied object
         """
-        new_self = self.__class__(**self.__dict__)
+        d = self.__dict__.copy()
+        d["telescope"] = self.telescope.name
+        new_self = self.__class__(**d)
+        new_self.data = new_self.data.copy()
+        new_self.header = new_self.header.copy()
         if not data:
             del new_self.__dict__["data"]
 
@@ -342,7 +349,7 @@ class Image:
         if stars is None:
             stars = "stars_coords" in self.__dict__
         
-        if stars:
+        if stars and self.stars_coords is not None:
             label = np.arange(len(self.stars_coords)) if stars_labels else None
             viz.plot_marks(*self.stars_coords.T, label=label, ax=ax)
 
