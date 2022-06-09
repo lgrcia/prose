@@ -272,8 +272,8 @@ class XYShift(Registration):
         shift = xyshift(image.stars_coords, self.reference, tolerance=self.tolerance, clean=self.clean)
         image.shift = shift
         image.dx, image.dy = shift
-        image.header["DX"] = shift[0]
-        image.header["DY"] = shift[1],
+        image.header["TDX"] = shift[0]
+        image.header["TDY"] = shift[1],
         image.header["ALIGNALG"] = self.__class__.__name__
 
 
@@ -309,8 +309,8 @@ class AstroAlignShift(Registration):
         shift = transform.translation
         image.shift = shift
         image.dx, image.dy = shift
-        image.header["DX"] = shift[0]
-        image.header["DY"] = shift[1],
+        image.header["TDX"] = shift[0]
+        image.header["TDY"] = shift[1],
         image.header["ALIGNALG"] = self.__class__.__name__
 
     def citations(self):
@@ -334,11 +334,11 @@ class _Twirl(Block):
         x = tutils.find_transform(image.stars_coords, self.ref, n=self.n)
         image.transform = skAT(x)
         image.dx, image.dy = image.transform.translation
-        image.header["TWROT"] = image.transform.rotation
-        image.header["TWTRANSX"] = image.transform.translation[0]
-        image.header["TWTRANSY"] = image.transform.translation[1]
-        image.header["TWSCALEX"] = image.transform.scale[0]
-        image.header["TWSCALEY"] = image.transform.scale[1]
+        image.header["TROT"] = image.transform.rotation
+        image.header["TDX"] = image.transform.translation[0]
+        image.header["TDY"] = image.transform.translation[1]
+        image.header["TSCALEX"] = image.transform.scale[0]
+        image.header["TSCALEY"] = image.transform.scale[1]
         image.header["ALIGNALG"] = self.__class__.__name__
 
 
@@ -369,11 +369,11 @@ class Twirl(Block):
         if result is not None:
             x, image.dx, image.dy = result
             image.transform = skAT(x)
-            image.header["TWROT"] = image.transform.rotation
-            image.header["TWTRANSX"] = image.transform.translation[0]
-            image.header["TWTRANSY"] = image.transform.translation[1]
-            image.header["TWSCALEX"] = image.transform.scale[0]
-            image.header["TWSCALEY"] = image.transform.scale[1]
+            image.header["TROT"] = image.transform.rotation
+            image.header["TDX"] = image.transform.translation[0]
+            image.header["TDY"] = image.transform.translation[1]
+            image.header["TSCALEX"] = image.transform.scale[0]
+            image.header["TSCALEY"] = image.transform.scale[1]
             image.header["ALIGNALG"] = self.__class__.__name__
         
         else:

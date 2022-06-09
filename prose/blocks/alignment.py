@@ -25,7 +25,7 @@ class Cutout2D(Block):
 
     def run(self, image):
         # TODO this is shitty, should use image.dx, image.dy
-        shift = np.array([image.header["DX"], image.header["DY"]])
+        shift = np.array([image.header["TDX"], image.header["TDY"]])
 
         aligned_image = _Cutout2D(
                         image.data,
@@ -48,9 +48,9 @@ class AffineTransform(Block):
 
     |read|
     
-    - rotation : ``Image.header['TWROT']``
-    - translation : ``Image.header['TWTRANSX']``, ``Image.header['TWTRANSY']``
-    - scale : ``Image.header['TWSCALEX']``, ``Image.header['TWSCALEY']``
+    - rotation : ``Image.header['TROT']``
+    - translation : ``Image.header['TDX']``, ``Image.header['TDY']``
+    - scale : ``Image.header['TSCALEX']``, ``Image.header['TSCALEY']``
 
 
     |write|
@@ -82,11 +82,15 @@ class AffineTransform(Block):
 
     def run(self, image, **kwargs):
         if "transform" not in image.__dict__:
-            if "TWROT" in image.header:
+            if "TROT" in image.header:
                 image.transform = skAffineTransform(
-                    rotation=image.header["TWROT"],
-                    translation=(image.header["TWTRANSX"], image.header["TWTRANSY"]),
-                    scale=(image.header["TWSCALEX"], image.header["TWSCALEX"])
+                    rotation=image.header["TROT"],
+                    translation=(image.header["TDX"], image.header["TDY"]),
+                    scale=(image.header["TSCALEX"], image.header["TSCALEX"])
+                )
+            elif "TDX" in image.header:
+                image.transform = skAffineTransform(
+                    translation=(image.header["TDX"], image.header["TDY"]),
                 )
             else:
                 raise AssertionError("Could not find transformation matrix")
