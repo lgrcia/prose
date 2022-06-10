@@ -20,6 +20,7 @@ import matplotlib.patches as patches
 from ..image import Image
 from astropy.nddata import Cutout2D as astopy_Cutout2D
 from astropy.units.quantity import Quantity
+from astropy.stats import sigma_clipped_stats
 
 __all__ = [
     "Stack",
@@ -298,14 +299,21 @@ class Get(Block):
 
     def run(self, image, **kwargs):
         for name in self.names:
-            if name in image.__dict__:
-                value = image.__dict__[name]
-            elif name in image.header:
-                value = image.header[name]
-            else:
-                raise AttributeError(f"'{name}' not in Image attributes or Image.header")
+            try:
+                value = image.__getattribute__(name)
+            except:
+                try:
+                    value = image.header[name]
+                except:
+                    raise AttributeError(f"'{name}' not in Image attributes or Image.header")
 
             self.values[name].append(value)
+    
+    def __getattr__(self, key):
+        if key in self.values:
+            return self.values[key]
+        else:
+            super().__getattribute__(key)
 
 
     def __call__(self, *names):

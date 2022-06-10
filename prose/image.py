@@ -295,6 +295,8 @@ class Image:
         zscale=True,
         frame=False,
         contrast=0.1,
+        ms=15,
+        fs=12,
         **kwargs
         ):
         """Show image data
@@ -317,6 +319,10 @@ class Image:
             whether to show astronomical coordinates axes, by default False
         contrast : float, optional
             image contrast used in image scaling, by default 0.1
+        ms: int
+            stars markers size
+        ft: int
+            stars label font size
 
         See also
         --------
@@ -351,7 +357,7 @@ class Image:
         
         if stars and self.stars_coords is not None:
             label = np.arange(len(self.stars_coords)) if stars_labels else None
-            viz.plot_marks(*self.stars_coords.T, label=label, ax=ax)
+            viz.plot_marks(*self.stars_coords.T, label=label, ax=ax, ms=ms, offset=0.5*ms, fontsize=fs)
 
         if frame:
             overlay = ax.get_coords_overlay(self.wcs)
