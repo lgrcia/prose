@@ -103,12 +103,15 @@ class Sequence:
 
     def __str__(self):
         rows = [[
-            block.name, block.__class__.__name__, f"{block.processing_time:.3f} s ({(block.processing_time/self.processing_time)*100:.0f}%)"] 
-            for block in self.blocks
+            i, block.name, block.__class__.__name__, f"{block.processing_time:.3f} s ({(block.processing_time/self.processing_time)*100:.0f}%)"] 
+            for i, block in enumerate(self.blocks)
             ]
-        headers = ["name", "type", "processing"]
+        headers = ["index", "name", "type", "processing"]
 
         return tabulate(rows, headers, tablefmt="fancy_grid")
+
+    def __repr__(self) -> str:
+        return self.__str__()
 
     def citations(self):
         citations = [block.citations() for block in self.blocks if block.citations() is not None]
