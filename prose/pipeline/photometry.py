@@ -126,7 +126,8 @@ class Photometry:
                 (("time", "apertures", "star"), "errors"),
                 (("time", "apertures", "star"), "apertures_area"),
                 (("time", "apertures", "star"), "apertures_radii"),
-                (("time", "star"), "sky"),
+                (("time", "star"), "annulus_sky"),
+                ("time", "sky"),
                 (("time", "apertures"), "apertures_area"),
                 (("time", "apertures"), "apertures_radii"),
                 ("time", "annulus_rin"),
@@ -152,8 +153,6 @@ class Photometry:
         xarray = xr.merge([phot_xarray,initial_xarray], combine_attrs="no_conflicts", join='left', compat='override')
         xarray = xarray.transpose("apertures", "star", "time", ...)
         xarray = xarray.assign_coords(stars=(("star", "n"), self.stars))
-        xarray["apertures_sky"] = xarray.sky  # mean over stars
-        xarray["sky"] = ("time", np.mean(xarray.apertures_sky.values, 0))  # mean over stars
         xarray.attrs["photometry"] = [b.__class__.__name__ for b in self.photometry_s.blocks]
         xarray.attrs["photometry_prose_version"] = __version__
         xarray.to_netcdf(self.phot)

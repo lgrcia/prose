@@ -66,7 +66,7 @@ class TestFitsManager(unittest.TestCase):
 
 class TestReduction(unittest.TestCase):
 
-    def test_reduction(self):
+    def test_OLD_reduction(self):
         
         # generate dataset
         import numpy as np
@@ -107,7 +107,7 @@ class TestReduction(unittest.TestCase):
 
         shutil.rmtree(RAW)
 
-    def test_empty_calibration(self):
+    def test_OLD_empty_calibration(self):
     
         # generate dataset
         import numpy as np
