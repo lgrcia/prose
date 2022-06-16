@@ -36,6 +36,36 @@ def clean_stars_positions(positions, tolerance=50, output_id=False):
         return positions[np.unique(keep)]
 
 
+def cross_match(S1, S2, tolerance=10, return_ixds=False, none=True):
+    # cleaning
+    s1 = S1.copy()
+    s2 = S2.copy()
+    
+    s1[np.any(np.isnan(s1), 1)] = (1e15, 1e15)
+    s2[np.any(np.isnan(s2), 1)] = (1e15, 1e15)
+    
+    # matching
+    matches = []
+
+    for i, s in enumerate(s1):
+        distances = np.linalg.norm(s - s2, axis=1)
+        closest = np.argmin(distances)
+        if distances[closest] < tolerance:
+            matches.append([i, closest])
+        else:
+            if none:
+                matches.append([i, np.nan])
+
+    matches = np.array(matches)
+
+    if return_ixds:
+        return matches
+    else:
+        if len(matches) > 0:
+            return s1[matches[:, 0]], s2[matches[:, 1]]
+        else:
+            return np.array([]), np.array([])
+
 def closeness(im_stars_pos, ref_stars_pos, tolerance=1.5, clean=False):
     assert len(im_stars_pos) > 2, f"{len(im_stars_pos)} star coordinates provided (should be > 2)"
 
