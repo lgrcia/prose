@@ -194,7 +194,8 @@ class PhotutilsAperturePhotometry(Block):
         bkg_median = np.array(bkg_median)
 
         image.apertures_area = self.circular_apertures_area
-        image.sky = bkg_median
+        image.annulus_sky = bkg_median
+        image.sky = bkg_median.mean()
         image.fluxes = np.zeros((self.n_apertures, self.n_stars))
         image.annulus_area = self.annulus_area
         image.annulus_rin = self.annulus_final_rin

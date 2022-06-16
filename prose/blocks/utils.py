@@ -379,9 +379,6 @@ class XArray(Block):
         xarr = utils.image_in_xarray(stack, self.xarray, stars=True) # adding reference as a stack
         xarr = xarr.transpose("apertures", "star", "time", ...) # ... just needed
 
-        if "sky" in xarr:
-            xarr["sky"] = ("time", np.mean(xarr.sky.values, 0))  # mean over stars
-
         if sequence is not None:
             xarr.attrs["photometry"] = [b.__class__.__name__ for b in sequence.blocks]
 
