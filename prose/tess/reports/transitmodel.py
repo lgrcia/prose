@@ -8,12 +8,12 @@ from prose import viz
 from prose.reports.core import LatexTemplate
 import pandas as pd
 import collections
-import re
+from .. import TFOPObservation
 
 
-class TransitModel(Observation, LatexTemplate):
+class TransitModel(TFOPObservation, LatexTemplate):
 
-    def __init__(self, obs, transit, trend=None, expected=None, posteriors={}, rms_bin=5/24/60,
+    def __init__(self, photfile, transit, trend=None, expected=None, posteriors={}, rms_bin=5/24/60, name=None,
                  style="paper", template_name="transitmodel.tex"):
         """Transit modeling report
 
@@ -34,7 +34,8 @@ class TransitModel(Observation, LatexTemplate):
         template_name : str, optional
             [description], by default "transitmodel.tex"
         """
-        Observation.__init__(self, obs.xarray)
+        TFOPObservation.__init__(self, photfile, name)
+        #TESSSummary.__init__(self, photfile, name=None, template_name=template_name, style=style)
         LatexTemplate.__init__(self, template_name, style=style)
 
         # Some paths
@@ -52,7 +53,7 @@ class TransitModel(Observation, LatexTemplate):
         self.snr = self.snr()
         self.rms_bin = rms_bin
         self.rms = self.rms_binned()
-        self.priors = {}
+        self.priors = self.get_priors()
         self.posteriors = posteriors #TODO if posteriors is empty, avoid the KeyError in the obstable, replace by nan or None or whatever
         self.expected = expected
         self.obstable = [
@@ -66,8 +67,8 @@ class TransitModel(Observation, LatexTemplate):
             ["Tc", f"{self.posteriors['t0']}" "$\pm$" f"{self.posteriors['t0_e']}" , None],
             ["b", f"{self.posteriors['b']}" "$\pm$" f"{self.posteriors['b_e']}", "-"],
             ["Duration", f"{self.t14:.2f} min", f"{self.priors['duration']:.2f}" "$\pm$" f"{self.priors['duration_e']:.2f} min"],
-            ["(Rp/R*)\u00b2", f"{self.posteriors['depth'] * 1e3}" 'e-3' "$\pm$" f"{self.posteriors['depth_e'] * 1e3}" 'e-3', f"{self.priors['depth']:.2f}" 'e-3' "$\pm$" f"{self.priors['depth_e']:.2f}" 'e-3'],
-            ["Apparent depth (min. flux)", f"{np.abs(min(self.transit_model)):.2e}", "-"],
+            ["(Rp/R*)\u00b2", f"{self.posteriors['depth'] * 1e3}" 'e-3' "$\pm$" f"{self.posteriors['depth_e'] * 1e3}" 'e-3',"-"],
+            ["Apparent depth (min. flux)", f"{np.abs(min(self.transit_model)):.2e}",  f"{self.priors['depth']:.2f}" 'e-3' "$\pm$" f"{self.priors['depth_e']:.2f}" 'e-3'],
             ["a/R*", f"{self.posteriors['a/r_s']}" "$\pm$" f"{self.posteriors['a/r_s_e']}", "-"],
             ["i", f"{self.posteriors['i']}" "$\pm$" f"{self.posteriors['i_e']}", "-"],
             ["SNR", f"{self.snr:.2f}", "-"],
@@ -170,33 +171,34 @@ class TransitModel(Observation, LatexTemplate):
         return np.std(flux), self.rms_bin * 24 * 60
 
     def get_priors(self):
+        priors = {}
         if self.priors_dataframe is not None:
-            self.priors['rad_p'] = self.priors_dataframe['Planet Radius (R_Earth)'][0]
-            self.priors['rad_p_e'] = self.priors_dataframe['Planet Radius (R_Earth) err'][0]
-            self.priors['rad_s'] = self.priors_dataframe['Stellar Radius (R_Sun)'][0]
-            self.priors['rad_s_e'] = self.priors_dataframe['Stellar Radius (R_Sun) err'][0]
-            self.priors['mass_s'] = self.priors_dataframe['Stellar Mass (M_Sun)'][0]
-            self.priors['mass_s_e'] = self.priors_dataframe['Stellar Mass (M_Sun) err'][0]
-            self.priors['period'] = self.priors_dataframe['Period (days)'][0]
-            self.priors['period_e'] = self.priors_dataframe['Period (days) err'][0]
-            self.priors['duration'] = self.priors_dataframe['Duration (hours)'][0] * 60
-            self.priors['duration_e'] = self.priors_dataframe['Duration (hours) err'][0] * 60
-            self.priors['depth'] = self.priors_dataframe['Depth (ppm)'][0] / 1e3
-            self.priors['depth_e'] = self.priors_dataframe['Depth (ppm) err'][0] / 1e3
+            priors['rad_p'] = self.priors_dataframe['Planet Radius (R_Earth)'][0]
+            priors['rad_p_e'] = self.priors_dataframe['Planet Radius (R_Earth) err'][0]
+            priors['rad_s'] = self.priors_dataframe['Stellar Radius (R_Sun)'][0]
+            priors['rad_s_e'] = self.priors_dataframe['Stellar Radius (R_Sun) err'][0]
+            priors['mass_s'] = self.priors_dataframe['Stellar Mass (M_Sun)'][0]
+            priors['mass_s_e'] = self.priors_dataframe['Stellar Mass (M_Sun) err'][0]
+            priors['period'] = self.priors_dataframe['Period (days)'][0]
+            priors['period_e'] = self.priors_dataframe['Period (days) err'][0]
+            priors['duration'] = self.priors_dataframe['Duration (hours)'][0] * 60
+            priors['duration_e'] = self.priors_dataframe['Duration (hours) err'][0] * 60
+            priors['depth'] = self.priors_dataframe['Depth (ppm)'][0] / 1e3
+            priors['depth_e'] = self.priors_dataframe['Depth (ppm) err'][0] / 1e3
         else:
-            self.priors['rad_p'] = np.nan
-            self.priors['rad_p_e'] = np.nan
-            self.priors['rad_s'] = np.nan
-            self.priors['rad_s_e'] = np.nan
-            self.priors['mass_s'] = np.nan
-            self.priors['mass_s_e'] = np.nan
-            self.priors['period'] = np.nan
-            self.priors['period_e'] = np.nan
-            self.priors['duration'] = np.nan
-            self.priors['duration_e'] = np.nan
-            self.priors['depth'] = np.nan
-            self.priors['depth_e'] = np.nan
-        for keys in self.priors.keys():
-            if self.priors[keys] != self.priors[keys]:
-                self.priors[keys] = np.nan
-        return self.priors
+            priors['rad_p'] = np.nan
+            priors['rad_p_e'] = np.nan
+            priors['rad_s'] = np.nan
+            priors['rad_s_e'] = np.nan
+            priors['mass_s'] = np.nan
+            priors['mass_s_e'] = np.nan
+            priors['period'] = np.nan
+            priors['period_e'] = np.nan
+            priors['duration'] = np.nan
+            priors['duration_e'] = np.nan
+            priors['depth'] = np.nan
+            priors['depth_e'] = np.nan
+        for keys in priors.keys():
+            if priors[keys] != priors[keys]:
+                priors[keys] = np.nan
+        return priors

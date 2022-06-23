@@ -1,23 +1,15 @@
 import numpy as np
 import pandas as pd
 import collections
-import matplotlib.pyplot as plt
-from prose.utils import fast_binning, z_scale
-from prose.console_utils import INFO_LABEL
-from prose import Observation
-import os
 from os import path
-from astropy.time import Time
 from prose import viz
-#from ..core import LatexTemplate
-import astropy.units as u
 from prose.reports import Summary
 
 
 class TESSSummary(Summary):
 
-    def __init__(self, obs, style="paper", expected=None, template_name="summary.tex"):
-        Summary.__init__(self, obs, style=style, template_name=template_name)
+    def __init__(self, photfile, name=None, style="paper", expected=None, template_name="summary.tex"):
+        Summary.__init__(self, photfile, name=name,  style=style, template_name=template_name,tess=True)
         self.obstable.insert(0, ("TIC id", self.tic_id))
         self.obstable.insert(4, ("GAIA id", self.gaia_from_toi))
         self.header = "TESS follow-up"

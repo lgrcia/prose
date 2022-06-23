@@ -1,10 +1,7 @@
 import numpy as np
-import pandas as pd
-import collections
 import matplotlib.pyplot as plt
-from ..utils import fast_binning, z_scale
-from ..console_utils import INFO_LABEL
 from .. import Observation
+from ..tess import TFOPObservation
 import os
 from os import path
 from astropy.time import Time
@@ -13,9 +10,12 @@ from .core import LatexTemplate
 import astropy.units as u
 
 
-class Summary(Observation, LatexTemplate):
-    def __init__(self, obs, style="paper", template_name="summary.tex"):
-        Observation.__init__(self, obs.xarray)
+class Summary(TFOPObservation, Observation, LatexTemplate):
+    def __init__(self, photfile, name=None, style="paper", template_name="summary.tex",tess=False):
+        if tess is True :
+            TFOPObservation.__init__(self, photfile,name=name)
+        else :
+            Observation.__init__(self,photfile)
         LatexTemplate.__init__(self, template_name, style=style)
 
         datetimes = Time(self.time, format='jd', scale='utc').to_datetime()
@@ -25,25 +25,25 @@ class Summary(Observation, LatexTemplate):
         obs_duration_hours = (max_datetime - min_datetime).seconds // 3600
         obs_duration_mins = ((max_datetime - min_datetime).seconds // 60) % 60
 
-        obs_duration = f"{min_datetime.strftime('%H:%M')} - {max_datetime.strftime('%H:%M')} " \
+        self.obs_duration = f"{min_datetime.strftime('%H:%M')} - {max_datetime.strftime('%H:%M')} " \
             f"[{obs_duration_hours}h{obs_duration_mins if obs_duration_mins != 0 else ''}]"
 
         # TODO: adapt to use PSF model block here (se we don't use the plot_... method from Observation)
 
-        mean_fwhm = np.mean(self.x.fwhm.values)
+        self.mean_fwhm = np.mean(self.x.fwhm.values)
         self._compute_psf_model(star=self.target)
-        mean_target_fwhm = np.mean([self.stack.fwhmx, self.stack.fwhmy])
-        optimal_aperture = np.mean(self.apertures_radii[self.aperture,:])
+        self.mean_target_fwhm = np.mean([self.stack.fwhmx, self.stack.fwhmy])
+        self.optimal_aperture = np.mean(self.apertures_radii[self.aperture,:])
 
         self.obstable = [
-            ["Time", obs_duration],
+            ["Time", self.obs_duration],
             ["RA - DEC", f"{self.RA} {self.DEC}"],
             ["Images", len(self.time)],
             ["Mean std · fwhm (epsf)",
-             f"{mean_fwhm / (2 * np.sqrt(2 * np.log(2))):.2f} · {mean_fwhm:.2f} pixels"],
-            ["Fwhm (target)", f"{mean_target_fwhm:.2f} pixels · {(mean_target_fwhm*self.telescope.pixel_scale.to(u.arcsec)):.2f}"],
-            ["Optimum aperture", f"{optimal_aperture:.2f} pixels · "
-                                 f"{(optimal_aperture*self.telescope.pixel_scale.to(u.arcsec)):.2f}"],
+             f"{self.mean_fwhm / (2 * np.sqrt(2 * np.log(2))):.2f} · {self.mean_fwhm:.2f} pixels"],
+            ["Fwhm (target)", f"{self.mean_target_fwhm:.2f} pixels · {(self.mean_target_fwhm*self.telescope.pixel_scale.to(u.arcsec)):.2f}"],
+            ["Optimum aperture", f"{self.optimal_aperture:.2f} pixels · "
+                                 f"{(self.optimal_aperture*self.telescope.pixel_scale.to(u.arcsec)):.2f}"],
             ["Telescope", self.telescope.name],
             ["Filter", self.filter],
             ["Exposure", f"{np.mean(self.exptime)} s"],

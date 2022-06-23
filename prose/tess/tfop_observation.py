@@ -25,20 +25,19 @@ class TFOPObservation(Observation):
         if name is None:
             name = self.name
         self.tic_data = None
-        self.priors_dataframe = None
-        self.priors = self.get_priors(name)
+        self.priors_dataframe = self.find_priors(name)
 
     # TESS specific methods
     # --------------------
 
-    def get_priors(self, name):
+    def find_priors(self, name):
 
         try:
             nb = re.findall('\d*\.?\d+', name) #TODO add the possibility to do this with TIC ID rather than TOI number (also in obs)
-            self.priors_dataframe = pd.read_csv("https://exofop.ipac.caltech.edu/tess/download_toi?toi=%s&output=csv" % nb[0])
+            priors_dataframe = pd.read_csv("https://exofop.ipac.caltech.edu/tess/download_toi?toi=%s&output=csv" % nb[0])
         except KeyError:
             print('TOI not found')
-        return self.priors_dataframe
+        return priors_dataframe
 
     @property
     def tic_id(self):
