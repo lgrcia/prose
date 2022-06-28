@@ -467,7 +467,7 @@ class FitsManager:
         -------
         list of str
         """
-        return self.files(imtype="stack")
+        return self.files(imtype="stack")  # It's not finding the stack image
 
     @property
     def reduced(self):

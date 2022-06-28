@@ -190,7 +190,6 @@ class Calibration:
         # first image serves as reference for info (not reference image because it
         # can be from another observation (we encountered this use case)
         self.stack = self.calibration.stack.stack
-        self.stack = Image(self.stack_path)
         self.save()
 
 
@@ -214,7 +213,7 @@ class Calibration:
         return f"{self.detection}\n{self.calibration}"
 
     def save(self):
-        self.reference.writeto(self.stack_path)
+        self.stack.writeto(self.stack_path)
         xarray = self.calibration.xarray.xarray
         xarray = utils.image_in_xarray(self.stack, xarray, stars=False)
         xarray.attrs["reduction"] = [b.__class__.__name__ for b in self.calibration.blocks]
