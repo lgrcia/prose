@@ -1,6 +1,6 @@
 from tqdm import tqdm
 import xarray
-from .console_utils import TQDM_BAR_FORMAT, warning
+from .console_utils import TQDM_BAR_FORMAT, warning, error
 from collections import OrderedDict
 from tabulate import tabulate
 import numpy as np
@@ -9,11 +9,13 @@ from .image import Image
 from pathlib import Path
 from functools import partial
 import multiprocessing as mp
+from .blocks.utils import DataBlock
+import sys
 
 class Sequence:
     # TODO: add index self.i in image within unit loop
 
-    def __init__(self, blocks, name="", loader=Image, **kwargs):
+    def __init__(self, blocks, name="", loader=Image):
         self.name = name
         self.files_or_images = []
         self.blocks = blocks
@@ -36,7 +38,7 @@ class Sequence:
             for i, block in enumerate(blocks)
         })
 
-    def run(self, images, show_progress=True, live_discard=False, telescope=None):
+    def run(self, images, show_progress=True, live_discard=False, telescope=None, terminate=True):
         discards = {}
         self.files_or_images = images if not isinstance(images, (str, Path, Image)) else [images]
 
@@ -93,13 +95,17 @@ class Sequence:
             del image
             self.n_processed_images += 1
 
-        # terminate
-        for block in self.blocks:
-            block.terminate()
+
+        if terminate:
+            self.terminate()
         
         if not live_discard:
             for block_name, discarded in discards.items():
                 warning(f"{block_name} discarded image{'s' if len(discarded)>1 else ''} {', '.join(discarded)}")
+
+    def terminate(self):
+        for block in self.blocks:
+            block.terminate()
 
     def __str__(self):
         rows = [[
@@ -155,8 +161,29 @@ class Sequence:
 
 
 class MPSequence(Sequence):
+
+    def __init__(self, blocks, data_blocks=None, name="", loader=Image):
+        super().__init__(blocks, name=name, loader=loader)
+        if data_blocks is None:
+            self.data = None
+            self._has_data = False
+        else:
+            self.data = Sequence(data_blocks)
+            self._has_data = True
+
+    def check_data_blocks(self):
+        bad_blocks = []
+        for i, b in enumerate(self.blocks): 
+            if isinstance(b, DataBlock):
+                bad_blocks.append(f"{b.__class__.__name__}")
+        if len(bad_blocks) > 0:
+            bad_blocks = ', '.join(list(np.unique(bad_blocks)))
+            error(f"Data blocks [{bad_blocks}] cannot be used in MPSequence\n\nConsider using the data_blocks kwargs")
+            sys.exit()
     
-    def run(self, images, globals=None, show_progress=True, live_discard=False):
+    def run(self, images, globals=None, show_progress=True, live_discard=False, terminate=True):
+        self.check_data_blocks()
+
         if globals is None:
             globals = {}
         self.files_or_images = images if not isinstance(images, (str, Path, Image)) else [images]
@@ -186,28 +213,21 @@ class MPSequence(Sequence):
         # run
         n = len(self.files_or_images)
         processed_blocks = mp.Manager().list(self.blocks)
-        images = mp.Manager().list(self.files_or_images)
 
         with mp.Pool() as pool:
-            for _ in progress(pool.imap(partial(
+            for image in progress(pool.imap(partial(
                 _run_all,
                 blocks=processed_blocks,
-                images=images,
                 loader=self.loader
-            ), np.arange(n)), total=n):
-                pass
-
-        self.blocks = processed_blocks
-   
+            ), self.files_or_images), total=n):
+                if self._has_data:
+                    self.data.run(image, terminate=False, show_progress=False)
+    
         # terminate
-        for block in self.blocks:
-            block.terminate()
+        if terminate and self._has_data:
+                self.data.terminate()
 
-        return list(images)
-
-def _run_all(i, images=None, blocks=None, loader=None):
-
-    file_or_image = images[i]
+def _run_all(file_or_image, blocks=None, loader=None):
 
     if isinstance(file_or_image, (str, Path)):
         image = loader(file_or_image)
@@ -224,8 +244,6 @@ def _run_all(i, images=None, blocks=None, loader=None):
         elif not discard_message:
             last_block = blocks[b-1]
             discard_message = True
-            warning(f"image i discarded in {type(last_block).__name__}")
-    
-    image.data = None
-    image.cutouts = None
-    images[i] = image
+            warning(f"image ? discarded in {type(last_block).__name__}")
+
+    return image

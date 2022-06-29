@@ -110,6 +110,7 @@ class Cutouts(Block):
     |write| 
     - ``Image.cutouts``: cutouts images
     - ``Image.cutouts_idxs``: indexes of stars_coords corresponding to each cutout 
+    - ``Image.stars_coords`` if ``clean`` is ``True``
 
     Cutouts are sometimes called "imagette" and represent small square portions of the image centered on specific points.
 
@@ -119,12 +120,18 @@ class Cutouts(Block):
        square side length of the cutout in pixel, by default 21
     """
     @register_args
-    def __init__(self, size=21, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, size=21, clean=True, name=None):
+        super().__init__(name=name)
         self.size = size
+        self.clean = clean
 
     def run(self, image):
         image.cutouts_idxs, image.cutouts = cutouts(image.data, image.stars_coords, size=self.size)
+        if self.clean:
+            if hasattr(image, "stars_coords"):
+                image.stars_coords = image.stars_coords[image.cutouts_idxs]
+            image.cutouts = [image.cutouts[i] for i in image.cutouts_idxs]
+            image.cutouts_idxs = np.arange(len(image.cutouts))
 
 class MedianPSF(Block):
     """Get median psf from image.

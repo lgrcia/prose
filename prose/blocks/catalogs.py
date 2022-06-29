@@ -109,8 +109,8 @@ class PlateSolve(Block):
 
 class GaiaCatalog(CatalogBlock):
     
-    def __init__(self, tolerance=4, correct_pm=True, **kwargs):
-        CatalogBlock.__init__(self, "gaia", **kwargs)
+    def __init__(self, tolerance=4, correct_pm=True, limit=10000, **kwargs):
+        CatalogBlock.__init__(self, "gaia", limit=limit, **kwargs)
         self.tolerance = tolerance
         self.correct_pm = correct_pm
 

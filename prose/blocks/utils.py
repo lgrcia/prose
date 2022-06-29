@@ -44,8 +44,12 @@ __all__ = [
     "Del"
 ]
 
+class DataBlock(Block):
 
-class Stack(Block):
+    def __init__(self, name=None):
+        super().__init__(name)
+
+class Stack(DataBlock):
     """Build a FITS stack image of the observation
 
     The stack image is accessible through the ``stack`` attribute. It is built by accumulating images along creating a pixel weights map. This map allows to ignore bad pixels contributions to the stack, built through a weighted mean.
@@ -113,7 +117,7 @@ class Stack(Block):
             self._stack = block._stack
         self._n_images += block._n_images
 
-class StackStd(Block):
+class StackStd(DataBlock):
     
     @register_args
     def __init__(self, destination=None, overwrite=False, **kwargs):
@@ -223,7 +227,7 @@ class Pass(Block):
         pass
 
 
-class ImageBuffer(Block):
+class ImageBuffer(DataBlock):
     """Stores the last Image
     """
     @register_args
@@ -289,7 +293,7 @@ class Flip(Block):
             image.data = image.data[::-1, ::-1]
 
 # TODO document
-class Get(Block):
+class Get(DataBlock):
 
     @register_args
     def __init__(self, *names):
@@ -310,7 +314,7 @@ class Get(Block):
             self.values[name].append(value)
     
     def __getattr__(self, key):
-        if key in self.values:
+        if key in self.names:
             return self.values[key]
         else:
             super().__getattribute__(key)
@@ -325,10 +329,10 @@ class Get(Block):
             return [self.values[name] for name in names]
 
     def concat(self, block):
-        for name in self.values.keys():
+        for name in self.names:
             self.values[name] = [*self.values[name], *block.values[name]]
 
-class XArray(Block):
+class XArray(DataBlock):
 
     @register_args
     def __init__(self, *names, name="xarray", raise_error=True, concat_dim="time", **kwargs):
@@ -679,7 +683,7 @@ class CleanBadPixels(Block):
         image.data = self.clean(image.data.copy())
 
 
-class MedianStack(Block):
+class MedianStack(DataBlock):
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -692,7 +696,7 @@ class MedianStack(Block):
         self.stack = Image(data=np.median(self.images, 0))
 
 
-class XArray2(Block):
+class XArray2(DataBlock):
     def __init__(self, names, name="xarray", raise_error=True, concat_dim="time", **kwargs):
         super().__init__(name=name)
         self.variables = names

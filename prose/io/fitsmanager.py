@@ -53,7 +53,7 @@ class FitsManager:
         by default False
     """
     
-    def __init__(self, folders=None, files=None, depth=0, hdu=0, extension=".f*t*", file=None, batch_size=False, scan=None):
+    def __init__(self, folders=None, files=None, depth=0, hdu=0, extension=".f*t*", file=None, batch_size=False, scan=None, verbose=True):
         # TODO: add overwrite
         if file is None:
             file = ":memory:"
@@ -75,7 +75,7 @@ class FitsManager:
         
         if files is not None:
             if len(files) > 0:
-                self.scan_files(files, batch_size=batch_size, hdu=hdu)
+                self.scan_files(files, batch_size=batch_size, hdu=hdu, verbose=verbose)
 
         _observations = self.observations(show=False, index=False)
         self._observations = np.array([f"{o[0]}_{o[1]}_{o[2]}_{o[3]}" for o in _observations])
