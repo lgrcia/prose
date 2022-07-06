@@ -5,7 +5,7 @@ import numpy as np
 from ..telescope import Telescope
 from datetime import timedelta
 from astropy.io import fits
-from ..console_utils import tqdm
+from ..console_utils import tqdm, warning
 from astropy.time import Time
 import os
 import zipfile
@@ -78,7 +78,7 @@ def set_hdu(hdu_list, value):
         hdu_list.append(value)
 
 
-def fits_to_df(files, telescope_kw="TELESCOP", instrument_kw="INSTRUME", verbose=True, hdu=0):
+def fits_to_df(files, telescope_kw="TELESCOP", instrument_kw="INSTRUME", verbose=True, hdu=0, raise_oserror=False):
     assert len(files) > 0, "Files not provided"
 
     last_telescope = "_"
@@ -90,7 +90,16 @@ def fits_to_df(files, telescope_kw="TELESCOP", instrument_kw="INSTRUME", verbose
         return tqdm(x, "Parsing FITS") if verbose else x
 
     for i in progress(files):
-        header = fits.getheader(i, hdu)
+        try:
+            header = fits.getheader(i, hdu)
+        except OSError as err:
+            warning(f"OS error for file {i}")
+            if raise_oserror:
+                print(f"OS error: {err}")
+                raise
+            else:
+                continue
+            
         telescope_name = header.get(telescope_kw, "")
         instrument_name = header.get(instrument_kw, "")
 
