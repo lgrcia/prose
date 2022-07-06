@@ -5,6 +5,7 @@ import pandas as pd
 from pathlib import Path
 from .io import get_files, fits_to_df
 from IPython.display import display
+from ..console_utils import progress
 
 # Convenience
 # -----------
@@ -69,16 +70,32 @@ class FitsManager:
             if len(files) > 0:
                 self.scan_files(files, batch_size=batch_size, hdu=hdu, verbose=verbose)
 
-    def _insert(self, path, date, telescope, type, target, _filter, dimensions, _, jd, exposure):
+    def _insert(self, path, date, telescope, type, target, filter, dimensions, _, jd, exposure, id=None, update_obs=True):
         """Insert FITS data to object database
         """
-        if isinstance(_filter, float):
-            _filter = ""
+        if isinstance(filter, float):
+            filter = ""
+        else:
+            filter = filter or ""
+        telescope = telescope or ""
+        target = target or ""
+        id = id or "NULL"
         width, height = dimensions
-        # or IGNORED to handle the unique constraint
+        filter = filter.replace("'", "p")
+
+        # update observation
+        if update_obs:
+            obs = (date, telescope, filter, target, type, width, height, exposure)
+            self.con.execute(f"INSERT or IGNORE INTO observations({UNIQUE_FIELDS}, files) VALUES ({QMARKS_UNIQUE}, 0)", obs)
+            query = " AND ".join([f"{str(key)} = {in_value(value)}" for key, value in zip(UNIQUE_FIELDS_LIST, obs)])
+            id = self.con.execute(f"SELECT id FROM observations where {query}").fetchall()[0][0]
+            self.con.execute(f"UPDATE observations SET files = files + 1 WHERE id = {id}")
+            
+        # or IGNORE to handle the unique constraint
         self.cur.execute(
             f"INSERT or IGNORE INTO files VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (date, path, telescope, _filter, type, target, width, height, jd, None, exposure))
+            (date, path, telescope, filter, type, target, width, height, jd, id, exposure))
+            
 
     def get_files(self, folders, extension, scan=None, depth=0):
         def _get_files(folder):
@@ -135,14 +152,11 @@ class FitsManager:
                     else:
                         batches = np.array_split(files_to_scan, len(files_to_scan)//batch_size)
                 
-                if verbose:
-                    if batch_size is not False:
-                        def progress(x): return tqdm(x, bar_format='Reading fits {l_bar}{bar}{r_bar}')
-                else:
-                    def progress(x): return x
+                _verbose = verbose and batch_size is not False
+                _progress = progress(_verbose, desc="Reading fits", unit="files")
 
                 if batch_size is not False:
-                    for batch in progress(batches):
+                    for batch in _progress(batches):
                         df = fits_to_df(batch, verbose=False, hdu=hdu)
                         for row in df.values:
                             self._insert(*row)
@@ -152,7 +166,6 @@ class FitsManager:
                     for row in df.values:
                         self._insert(*row)
                     self.con.commit()
-                self.update_observations()
             else:
                 print(f"No new files to scan")
         else:
@@ -208,7 +221,7 @@ class FitsManager:
         df = self.to_pandas(f"select {','.join(columns.keys())} from files where {where}")
         return df
     
-    def observation_files(self, i, past=1e3, future=1, exp_tolerance=1e15, same_telescope=False, lights="images", show=True):
+    def observation_files(self, i, past=1e3, future=0, exp_tolerance=1e15, same_telescope=False, lights="images", show=True):
         files = {}
 
         obs_dict = self.observations(id=i, hide_exposure=False).to_dict("records")[0]
@@ -343,13 +356,15 @@ class FitsManager:
     def to_pandas(self, query):
         return pd.read_sql_query(query, self.con)
 
-    def update_observations(self):
+    def _update_observations(self, verbose=False):
+        """
+        Slow! This should never be used (use update_obs=True in _insert)
+        """
         observations = self.to_pandas(f"select {UNIQUE_FIELDS} from files WHERE id is NULL GROUP BY {UNIQUE_FIELDS}").values
 
-        # more conveniant to have flat 1D list
-        # self.con.row_factory = lambda cursor, row: row[0]
+        _progress = progress(verbose, desc="observations scan", unit=" obs")
 
-        for obs in observations:
+        for obs in _progress(observations):
             # insert obs
             self.con.execute(f"INSERT or IGNORE INTO observations({UNIQUE_FIELDS}, files) VALUES ({QMARKS_UNIQUE}, 0)", obs)
             self.con.commit()
@@ -362,6 +377,3 @@ class FitsManager:
             self.con.execute(f"UPDATE files SET id = ? WHERE id is NULL AND {query}", [obs_id])
             files_updated = self.con.execute("select changes()").fetchall()[0][0]
             self.con.execute("UPDATE observations SET files = files + ? WHERE id = ?", [files_updated, obs_id])
-
-        # unset
-        # self.con.row_factory = None

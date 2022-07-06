@@ -39,8 +39,14 @@ TQDM_BAR_FORMAT = "%s {l_bar}%s{bar}%s{r_bar}" % (
     RUN_LABEL, FORE_COLOR, Fore.RESET
 )
 
-def tqdm(x, desc="run", unit="images"):
-    return _tqdm(x, desc=desc, unit=unit, ncols=80, bar_format=TQDM_BAR_FORMAT)
+def tqdm(x, desc="run", unit="images", **kwargs):
+    return _tqdm(x, desc=desc, unit=unit, ncols=80, bar_format=TQDM_BAR_FORMAT, **kwargs)
+
+def progress(show, **kwargs):
+    if show:
+        return lambda x: tqdm(x, **kwargs)
+    else:
+        return lambda x: x
 
 def get_terminal_size():
     """ getTerminalSize()

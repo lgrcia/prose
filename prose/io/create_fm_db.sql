@@ -14,7 +14,7 @@ CREATE TABLE files (
 );
 
 CREATE TABLE observations (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id INTEGER PRIMARY KEY,
   date text,
   telescope text,
   filter text,
