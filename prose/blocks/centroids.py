@@ -52,14 +52,19 @@ class PhotutilsCentroid(_NeedStars):
         self.limit = limit
 
     def run(self, image):
-        x, y = image.stars_coords.T
+        # *%+#@ photutils check (see photutils.centroids.core code...)
+        in_image = np.all(image.stars_coords < image.shape[::-1] - (1, 1), axis=1)
+        in_image = np.logical_and(in_image, np.all(image.stars_coords > (0, 0), axis=1))
+        x, y = image.stars_coords[in_image].T.copy()
 
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', AstropyUserWarning)
-            stars_coords = np.array(centroid_sources(
+            centroid_stars_coords = np.array(centroid_sources(
                 image.data, x, y, box_size=self.cutout, centroid_func=self.centroid_func
             )).T
 
+        stars_coords = image.stars_coords.copy()
+        stars_coords[in_image] = centroid_stars_coords
         in_limit = np.linalg.norm(image.stars_coords - stars_coords, axis=1) < self.limit
         image.stars_coords[in_limit] = stars_coords[in_limit]
 

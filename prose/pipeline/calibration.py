@@ -3,6 +3,7 @@ import os
 from os import path
 from pathlib import Path
 from .. import utils
+from ..blocks.vizualisation import LivePlot
 from .photometry import plot_function
 from astropy.time import Time
 from .. import __version__
@@ -56,6 +57,7 @@ class Calibration:
             cores=False,
             bad_pixels=False,
             save_masters=True,
+            min_stars=3,
             **kwargs
     ):
         self.destination = None
@@ -102,6 +104,8 @@ class Calibration:
             blocks.CleanBadPixels(darks=self.darks, flats=self.flats) if self.bad_pixels else blocks.Pass(),
             blocks.Trim(name="trimming", skip_wcs=True),
         ]
+
+        self.min_stars = min_stars
 
         if save_masters:
             pass
@@ -158,6 +162,7 @@ class Calibration:
             *self.calibration_blocks,
             blocks.Flip(self.reference, name="flip"),
             self.detection_block,
+            blocks.detection.LimitStars(min=self.min_stars),
             blocks.Twirl(self.reference.stars_coords, n=self.n, name="twirl") if self.twirl 
             else blocks.XYShift(self.reference.stars_coords),
             blocks.Cutouts(),
@@ -179,7 +184,7 @@ class Calibration:
             blocks.Cutout2D(self.reference) if not self.twirl else blocks.Pass(),
             blocks.SaveReduced(destination, overwrite=self.overwrite, name="save_reduced"),
             blocks.AffineTransform(stars=True, data=True) if self.twirl else blocks.Pass(),
-            blocks.LivePlot(plot_function, size=(10, 10)) if self.show else blocks.Pass(),
+            LivePlot(plot_function, size=(10, 10)) if self.show else blocks.Pass(),
             blocks.Stack(self.reference, name="stack"),
             blocks.RawVideo(self.destination / f"movie.{movie}", function=utils.z_scale, scale=0.5) if movie is not False else blocks.Pass(),
         ], name="Calibration", loader=self.loader)
@@ -213,7 +218,7 @@ class Calibration:
         return f"{self.detection}\n{self.calibration}"
 
     def save(self):
-        self.reference.writeto(self.stack_path)
+        self.stack.writeto(self.stack_path)
         xarray = self.calibration.xarray.xarray
         xarray = utils.image_in_xarray(self.stack, xarray, stars=False)
         xarray.attrs["reduction"] = [b.__class__.__name__ for b in self.calibration.blocks]

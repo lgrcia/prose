@@ -296,8 +296,8 @@ class Flip(Block):
 class Get(DataBlock):
 
     @register_args
-    def __init__(self, *names):
-        super().__init__()
+    def __init__(self, *names, name="get"):
+        super().__init__(name=name)
         self.names = names
         self.values = {name: [] for name in names}
 
@@ -524,7 +524,7 @@ class Calibration(Block):
 
     def _produce_master(self, images, image_type):
         if images is not None:
-            assert isinstance(images, (list, np.array)), "images must be list or array"
+            assert isinstance(images, (list, np.ndarray)), "images must be list or array"
             if len(images) == 0:
                 images = None
 

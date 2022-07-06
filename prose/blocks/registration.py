@@ -355,7 +355,7 @@ class Twirl(_NeedStars):
     @register_args
     def __init__(self, ref, n=10, **kwargs):
         super().__init__(**kwargs)
-        self.ref = ref[0:n]
+        self.ref = ref[0:n].copy()
         self.n = n
         self.quads_ref, self.stars_ref = tutils.quads_stars(ref, n=n)
         self.kdtree = KDTree(self.quads_ref)
