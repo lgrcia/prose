@@ -1,3 +1,4 @@
+from re import A
 from tqdm import tqdm
 import xarray
 from .console_utils import TQDM_BAR_FORMAT, warning, error
@@ -12,12 +13,22 @@ import multiprocessing as mp
 from .blocks.utils import DataBlock
 import sys
 
+def progress(name, x, **kwargs):
+    return tqdm(
+        x,
+        desc=name,
+        unit="images",
+        ncols=80,
+        bar_format=TQDM_BAR_FORMAT,
+        **kwargs
+    )
+
 class Sequence:
     # TODO: add index self.i in image within unit loop
 
     def __init__(self, blocks, name="", loader=Image):
         self.name = name
-        self.files_or_images = []
+        self.images = []
         self.blocks = blocks
         self.loader = loader
 
@@ -38,70 +49,52 @@ class Sequence:
             for i, block in enumerate(blocks)
         })
 
-    def run(self, images, show_progress=True, live_discard=False, telescope=None, terminate=True):
-        discards = {}
-        self.files_or_images = images if not isinstance(images, (str, Path, Image)) else [images]
+    def run(self, images, telescope=None, terminate=True, show_progress=True):
+        self.images = images if not isinstance(images, (str, Path, Image)) else [images]
 
-        if show_progress:
-            progress = lambda x: tqdm(
-                x,
-                desc=self.name,
-                unit="images",
-                ncols=80,
-                bar_format=TQDM_BAR_FORMAT,
-            )
-
+        if not show_progress:
+            def _p(x, **kwargs): return x
+            self.progress = _p
         else:
-            progress = lambda x: x
+            self.progress = partial(progress, self.name)
 
-        if isinstance(self.files_or_images, list):
-            if len(self.files_or_images) == 0:
+        if isinstance(self.images, list):
+            if len(self.images) == 0:
                 raise ValueError("No images to process")
-        elif self.files_or_images is None:
+        elif self.images is None:
             raise ValueError("No images to process")
 
-        self.n_processed_images = 0
-
         # run
-        for i, file_or_image in enumerate(progress(self.files_or_images)):
-            if isinstance(file_or_image, (str, Path)):
-                image = self.loader(file_or_image, telescope=telescope)
-            else:
-                image = file_or_image
-            image.i = i
-            self._last_image = image
-            discard_message = False
-
-            last_block = None
-
-            for b, block in enumerate(self.blocks):
-                # This allows to discard image in any Block
-                if not image.discard:
-                    block._run(image)
-                    # except:
-                    #     # TODO
-                    #     if not last_block is None:
-                    #         print(f"{type(last_block).__name__} failed")
-                elif not discard_message:
-                    last_block = type(self.blocks[b-1]).__name__
-                    discard_message = True
-                    if live_discard:
-                        warning(f"image {i} discarded in {last_block}")
-                    else:
-                        if last_block not in discards:
-                            discards[last_block] = []
-                        discards[last_block].append(str(i))
-
-            del image
-            self.n_processed_images += 1
-
+        self.n_processed_images = 0
+        self.discards = {}
+        self._run(telescope=telescope)
 
         if terminate:
             self.terminate()
         
-        if not live_discard:
-            for block_name, discarded in discards.items():
-                warning(f"{block_name} discarded image{'s' if len(discarded)>1 else ''} {', '.join(discarded)}")
+        for block_name, discarded in self.discards.items():
+            warning(f"{block_name} discarded image{'s' if len(discarded)>1 else ''} {', '.join(discarded)}")
+
+    def _run(self, telescope=None):
+        for i, image in enumerate(self.progress(self.images)):
+            if isinstance(image, (str, Path)):
+                image = self.loader(image, telescope=telescope)
+
+            image.i = i
+
+            for block in self.blocks:
+                # This allows to discard image in any Block
+                if image.discard:
+                    discard_block = image.discard_block
+                    self.add_discard(discard_block, i)
+                    break
+                else:
+                    block._run(image)
+                    if image.discard:
+                        image.discard_block = type(block).__name__
+
+            del image
+            self.n_processed_images += 1
 
     def terminate(self):
         for block in self.blocks:
@@ -159,6 +152,10 @@ class Sequence:
 
         return blocks
 
+    def add_discard(self, discard_block, i):
+        if discard_block not in self.discards:
+            self.discards[discard_block] = []
+        self.discards[discard_block].append(str(i))
 
 class MPSequence(Sequence):
 
@@ -173,7 +170,7 @@ class MPSequence(Sequence):
 
     def check_data_blocks(self):
         bad_blocks = []
-        for i, b in enumerate(self.blocks): 
+        for b in self.blocks: 
             if isinstance(b, DataBlock):
                 bad_blocks.append(f"{b.__class__.__name__}")
         if len(bad_blocks) > 0:
@@ -181,69 +178,46 @@ class MPSequence(Sequence):
             error(f"Data blocks [{bad_blocks}] cannot be used in MPSequence\n\nConsider using the data_blocks kwargs")
             sys.exit()
     
-    def run(self, images, globals=None, show_progress=True, live_discard=False, terminate=True):
+    def _run(self, telescope=None):
         self.check_data_blocks()
 
-        if globals is None:
-            globals = {}
-        self.files_or_images = images if not isinstance(images, (str, Path, Image)) else [images]
-
-        if show_progress:
-            def progress(x, total=None):
-                return tqdm(
-                x,
-                desc=self.name,
-                unit="images",
-                ncols=80,
-                bar_format=TQDM_BAR_FORMAT,
-                total=total
-            )
-
-        else:
-            progress = lambda x: x
-
-        if isinstance(self.files_or_images, list):
-            if len(self.files_or_images) == 0:
-                raise ValueError("No images to process")
-        elif self.files_or_images is None:
-            raise ValueError("No images to process")
-
         self.n_processed_images = 0
-        
-        # run
-        n = len(self.files_or_images)
+        n = len(self.images)
         processed_blocks = mp.Manager().list(self.blocks)
+        images_i = list(enumerate(self.images))
 
         with mp.Pool() as pool:
-            for image in progress(pool.imap(partial(
+            for image in self.progress(pool.imap(partial(
                 _run_all,
                 blocks=processed_blocks,
                 loader=self.loader
-            ), self.files_or_images), total=n):
-                if self._has_data:
-                    self.data.run(image, terminate=False, show_progress=False)
+            ), images_i), total=n):
+                if not image.discard:
+                    if self._has_data:
+                        self.data.run(image, terminate=False, show_progress=False)
+                else:
+                    self.add_discard(image.discard_block, image.i)
+
+    def terminate(self):
+        if self._has_data:
+            self.data.terminate()
+
+def _run_all(image_i, blocks=None, loader=None):
+
+    i, image = image_i
+
+    if isinstance(image, (str, Path)):
+        image = loader(image)
     
-        # terminate
-        if terminate and self._has_data:
-                self.data.terminate()
+    image.i = i
 
-def _run_all(file_or_image, blocks=None, loader=None):
-
-    if isinstance(file_or_image, (str, Path)):
-        image = loader(file_or_image)
-    else:
-        image = file_or_image
-
-    discard_message = False
-    last_block = None
-
-    for b, block in enumerate(blocks):
+    for block in blocks:
         # This allows to discard image in any Block
-        if not image.discard:
+        if image.discard:
+            return image
+        else:
             block._run(image)
-        elif not discard_message:
-            last_block = blocks[b-1]
-            discard_message = True
-            warning(f"image ? discarded in {type(last_block).__name__}")
+            if image.discard:
+                image.discard_block = type(block).__name__
 
     return image
