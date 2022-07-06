@@ -248,7 +248,7 @@ class FitsManager:
             query += f" AND type = '{type}'"
             query = query.format(**obs_dict)
 
-            obs_ids = self.to_pandas(f"""SELECT id FROM observations WHERE {sql_exposure} AND {query}'
+            obs_ids = self.to_pandas(f"""SELECT id FROM observations WHERE {sql_exposure} AND {query}
                 AND date = (SELECT MAX(date) FROM files WHERE {sql_days} AND {query})
             """).values.flatten()
             
