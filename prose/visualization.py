@@ -699,7 +699,7 @@ from prose.telescope import Telescope
 from astropy.coordinates import SkyCoord
 
 
-def _show_tics(data, header=None, telescope_kw="TELESCOP", r=12*u.arcminute):
+def _show_tics(data, header= None, telescope_kw="TELESCOP", r=12*u.arcminute):
     if header is None:
         header = fits.getheader(data)
         data = fits.getdata(data)

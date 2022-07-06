@@ -83,13 +83,13 @@ class Photometry:
         self.photometry = photometry(**kwargs)
         self.show = show
 
-    def run(self, destination):
+    def run(self, destination,**kwargs):
         self._check_phot_path(destination)
 
         # Reference detection
         # -------------------
         self.detection_s = Sequence([
-            blocks.DAOFindStars(n_stars=self.n_stars, name="detection"),
+            blocks.DAOFindStars(n_stars=self.n_stars, name="detection",**kwargs),
             blocks.Set(stars_coords=self.stars) if self.stars is not None else blocks.Pass(),
             blocks.Cutouts(size=51),
             blocks.MedianPSF(),

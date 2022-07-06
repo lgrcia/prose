@@ -10,19 +10,14 @@ from .fluxes import ApertureFluxes, pont2006
 from . import viz
 from .telescope import Telescope
 from . import utils
-from astroquery.mast import Catalogs
-from astropy.wcs import utils as wcsutils
 import pandas as pd
 from scipy.stats import binned_statistic
 from .blocks.psf import Gaussian2D
 from .console_utils import INFO_LABEL
 from astropy.io.fits.verify import VerifyWarning
 import warnings
-from .blocks.registration import distances
-import requests
 import shutil
 from pathlib import Path
-import io
 from .utils import fast_binning, z_scale, clean_header
 from .console_utils import info
 from . import blocks
@@ -52,10 +47,9 @@ class Observation(ApertureFluxes):
 
         self.phot = photfile
         self.telescope = Telescope.from_name(self.telescope)
-
         self.gaia_data = None
-        self.tic_data = None
         self._meridian_flip = None
+
 
         if self.has_stack:
             self._stack = Image(data=self.x["stack"].values, header=clean_header(self.x.attrs))
@@ -221,36 +215,6 @@ class Observation(ApertureFluxes):
     def night_date(self):
         return self.stack.night_date
 
-    # TESS specific methods
-    # --------------------
-    
-    @property
-    def tic_id(self):
-        """TIC id from digits found in target name
-        """
-        try:
-            nb = re.findall('\d*\.?\d+', self.name)
-            df = pd.read_csv("https://exofop.ipac.caltech.edu/tess/download_toi?toi=%s&output=csv" % nb[0])
-            tic = df["TIC ID"][0]
-            return f"{tic}"
-        except KeyError:
-            print('TIC ID not found')
-            return None
-
-    @property
-    def gaia_from_toi(self):
-        """Gaia id from TOI id if TOI is in target name
-        """
-        if self.tic_id is not None:
-            tic_id = ("TIC " + self.tic_id)
-            catalog_data = Catalogs.query_object(tic_id, radius=.001, catalog="TIC")
-            return f"{catalog_data['GAIA'][0]}"
-        else:
-            return None
-
-    @property
-    def tfop_prefix(self):
-        return f"TIC{self.tic_id}_{self.stack.night_date}_{self.telescope.name}_{self.filter}"
 
     # WCS
     # ----
@@ -280,6 +244,7 @@ class Observation(ApertureFluxes):
             by default "prose"
         """
         assert self.telescope is not None
+        assert self.stack.skycoord is not None
 
         exposure_days = self.xarray.exposure.values/60/60/24
 
@@ -305,35 +270,6 @@ class Observation(ApertureFluxes):
         self.xarray["bjd_tdb"] = ("time", bjd_time)
         self.xarray.attrs["time_format"] = "bjd_tdb"
 
-        # Catalog queries
-        # ---------------
-
-    # TODO replace using stack Image and create TIC catalog block
-    def query_tic(self,cone_radius=None):
-        """Query TIC catalog (through MAST) for stars in the field
-        """
-        from astroquery.mast import Catalogs
-
-        header = self.xarray.attrs
-        shape = self.stack.shape
-        if cone_radius is None:
-            cone_radius = np.sqrt(2) * np.max(shape) * self.telescope.pixel_scale / 120
-
-        coord = self.skycoord
-        radius = u.Quantity(cone_radius, u.arcminute)
-        self.tic_data = Catalogs.query_region(coord, radius, "TIC", verbose=False)
-        self.tic_data.sort("Jmag")
-
-        skycoords = SkyCoord(
-            ra=self.tic_data['ra'],
-            dec=self.tic_data['dec'], unit="deg")
-
-        self.tic_data["x"], self.tic_data["y"] = np.array(wcsutils.skycoord_to_pixel(skycoords, self.wcs))
-
-        w, h = self.stack.shape
-        if np.abs(np.mean(self.tic_data["x"])) > w or np.abs(np.mean(self.tic_data["y"])) > h:
-            warnings.warn("Catalog stars seem out of the field. Check that your stack is solved and that telescope "
-                          "'ra_unit' and 'dec_unit' are well set")
 
     # Plot
     # ----
@@ -470,7 +406,7 @@ class Observation(ApertureFluxes):
                     f"angle: {self.stack.theta/np.pi*180:.2f}°", c="w")
 
 
-    def plot_systematics(self, fields=None, ylim=None):
+    def plot_systematics(self, fields=None, ylim=None, amplitude_factor = None):
         """Plot systematics measurements along target light curve
 
         Parameters
@@ -496,7 +432,10 @@ class Observation(ApertureFluxes):
         flux = self.diff_flux.copy()
         flux /= np.nanmean(flux)
         _, amplitude = pont2006(self.time, self.diff_flux, plot=False)
-        amplitude *= 3
+        if amplitude_factor is None:
+            amplitude *= 3
+        else:
+            amplitude *= amplitude_factor
         offset = 2.5*amplitude
 
         if len(plt.gcf().axes) == 0:
@@ -518,7 +457,10 @@ class Observation(ApertureFluxes):
             else:
                 i -= 1
 
-        plt.ylim(1 - off - offset, 1 + offset)
+        if ylim is None:
+            plt.ylim(1 - off - offset, 1 + offset)
+        else:
+            plt.ylim(ylim)
         plt.title("Systematics (scaled to diff. flux)", loc="left")
         plt.tight_layout()
 
@@ -667,8 +609,10 @@ class Observation(ApertureFluxes):
             cutout width and height, by default 40
         zscale : bool, optional
             whether to apply a zscale to cutout image, by default False
-        aperture : float, optional
+        aperture : float or int optional
             radius of aperture to display, by default None corresponds to best target aperture
+            if int, corresponds to the number of the aperture in the xarray
+            if float, corresponds to the aperture in pixels
         rin : [type], optional
             radius of inner annulus to display, by default None corresponds to inner radius saved
         rout : [type], optional
@@ -693,7 +637,7 @@ class Observation(ApertureFluxes):
         else:
             if star is None:
                 star = self.target
-            assert isinstance(star, (np.integer, int)), "star must be star coordinates or integer index"
+            #assert isinstance(star, int), "star must be star coordinates or integer index"
 
             x, y = self.stars[star]
 
@@ -718,21 +662,25 @@ class Observation(ApertureFluxes):
         plt.ylabel("ADUs")
         _, ylim = plt.ylim()
 
-        if "apertures_radii" in self and self.aperture != -1:
-            apertures = self.apertures_radii[:, 0]
-            aperture = apertures[self.aperture]
+        if isinstance(aperture, int) or aperture is None:
+            if "apertures_radii" in self.xarray:
+                apertures = self.apertures_radii[:, 0]
+                if aperture is None:
+                    ap = apertures[self.aperture]
+                else:
+                    ap = apertures[aperture]
+        if isinstance(aperture, float):
+            ap = aperture
+        plt.xlim(0)
+        plt.text(ap, ylim, "APERTURE", ha="right", rotation="vertical", va="top")
+        plt.axvline(ap, c="k", alpha=0.1)
+        plt.axvspan(0, ap, color="0.9", alpha=0.1)
 
-            if "annulus_rin" in self:
-                if rin is None:
-                    rin = self.annulus_rin.mean()
-                if rout is None:
-                    rout = self.annulus_rout.mean() 
-
-        if aperture is not None:
-            plt.xlim(0)
-            plt.text(aperture, ylim, "APERTURE", ha="right", rotation="vertical", va="top")
-            plt.axvline(aperture, c="k", alpha=0.1)
-            plt.axvspan(0, aperture, color="0.9", alpha=0.1)
+        if "annulus_rin" in self:
+            if rin is None:
+                rin = self.annulus_rin.mean()
+            if rout is None:
+                rout = self.annulus_rout.mean()
 
         if rin is not None:
             plt.axvline(rin, color="k", alpha=0.2)
@@ -760,7 +708,10 @@ class Observation(ApertureFluxes):
             ax2.add_patch(plt.Circle((n, n), rin, ec='grey', fill=False, lw=2))
         if rout is not None:
             ax2.add_patch(plt.Circle((n, n), rout, ec='grey', fill=False, lw=2))
-        ax2.text(0.05, 0.05, f"{star}", fontsize=12, color="white", transform=ax2.transAxes)
+        if star is None:
+            ax2.text(0.05, 0.05, f"{self.target}", fontsize=12, color="white", transform=ax2.transAxes)
+        else:
+            ax2.text(0.05, 0.05, f"{star}", fontsize=12, color="white", transform=ax2.transAxes)
 
         plt.tight_layout()
 
@@ -959,34 +910,6 @@ class Observation(ApertureFluxes):
 
         if not inplace:
             return new_self
-
-    def set_tic_target(self):
-
-        self.query_tic()
-        try:
-            # TOI to TIC
-            toi = re.split("-|\.", self.name)[1]
-            b = requests.get(f"https://exofop.ipac.caltech.edu/tess/download_toi?toi={toi}&output=csv").content
-            TIC = pd.read_csv(io.BytesIO(b))["TIC ID"][0]
-
-            # getting all TICs
-            tics = self.tic_data["ID"].data
-            tics.fill_value = 0
-            tics = tics.data.astype(int)
-
-            # Finding the one
-            i = np.argwhere(tics == TIC).flatten()
-            if len(i) == 0:
-                raise AssertionError(f"TIC {TIC} not found")
-            else:
-                i = i[0]
-            row = self.tic_data[i]
-
-            # setting the closest to target
-            self.target = np.argmin(distances(self.stars.T, [row['x'], row['y']]))
-
-        except KeyError:
-            print('TIC ID not found')
 
     def _convert_flip(self,keyword):
         self.xarray['flip'] = ('time', (self.flip == keyword).astype(int))

@@ -196,7 +196,6 @@ class Calibration:
         # can be from another observation (we encountered this use case)
         self.stack = self.calibration.stack.stack
         self.save()
-        
 
     @property
     def stack_path(self):

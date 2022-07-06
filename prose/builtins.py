@@ -172,8 +172,8 @@ liverpool = dict(
     keyword_jd= "JD_UTC",
     keyword_ra= "RA",
     keyword_dec= "DEC",
-    TTF_link= None,
-    ra_unit="hourangle",
+    ra_unit = "hourangle",
+    TTF_link= None
 )
 
 spirit = dict(
