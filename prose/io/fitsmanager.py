@@ -227,7 +227,7 @@ class FitsManager:
         df = self.to_pandas(f"select {','.join(columns.keys())} from files where {where}")
         return df
     
-    def observation_files(self, i, past=1e3, future=0, exp_tolerance=1e15, same_telescope=False, lights="images", show=True):
+    def observation_files(self, i, past=1e3, future=0, exp_tolerance=1e15, same_telescope=True, lights="images", show=True):
         files = {}
 
         obs_dict = self.observations(id=i, hide_exposure=False).to_dict("records")[0]
@@ -245,9 +245,10 @@ class FitsManager:
                 fields.append("filter")
 
             query = " AND ".join([f"{key} = {in_value(obs_dict[key])}" for key in fields])
+            query += f" AND type = '{type}'"
             query = query.format(**obs_dict)
 
-            obs_ids = self.to_pandas(f"""SELECT id FROM observations WHERE {sql_exposure} AND {query} AND type = '{type}'
+            obs_ids = self.to_pandas(f"""SELECT id FROM observations WHERE {sql_exposure} AND {query}'
                 AND date = (SELECT MAX(date) FROM files WHERE {sql_days} AND {query})
             """).values.flatten()
             
