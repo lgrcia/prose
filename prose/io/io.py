@@ -124,8 +124,9 @@ def fits_to_df(files, telescope_kw="TELESCOP", instrument_kw="INSTRUME", verbose
     df.type.loc[df.type.str.lower().str.contains(telescope.keyword_dark_images.lower())] = "dark"
     df.type.loc[df.type.str.lower().str.contains(telescope.keyword_bias_images.lower())] = "bias"
     df.type.loc[df.type.str.lower().str.contains(telescope.keyword_flat_images.lower())] = "flat"
-    df.telescope.loc[df.telescope.str.lower().str.contains("unknown")] = np.nan
+    df.telescope.loc[df.telescope.str.lower().str.contains("unknown")] = ""
     df.date = pd.to_datetime(df.date)
+    df["filter"] = df["filter"].str.replace("'", "p")
 
     if (df.jd == "").all():  # jd empty then convert from date
         df.jd = Time(df.date, scale="utc").to_value('jd') + telescope.mjd
@@ -134,7 +135,7 @@ def fits_to_df(files, telescope_kw="TELESCOP", instrument_kw="INSTRUME", verbose
     # So we remove 15 hours to be sure the date year-month-day are consistent with single observations
     df.date = (df.date - timedelta(hours=15)).apply(lambda x: x.strftime('%Y-%m-%d'))
 
-    return df.replace("", np.nan)
+    return df
 
 
 def get_new_fits(current_df, folder, depth=3):
