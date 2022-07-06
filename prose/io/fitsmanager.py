@@ -115,7 +115,7 @@ class FitsManager:
 
         return files
 
-    def scan_files(self, files, batch_size=False, verbose=True, hdu=0):
+    def scan_files(self, files, batch_size=False, verbose=True, hdu=0, telescope=None):
         """Scan files and add data to database
 
         Parameters
@@ -159,11 +159,15 @@ class FitsManager:
                     for batch in _progress(batches):
                         df = fits_to_df(batch, verbose=False, hdu=hdu)
                         for row in df.values:
+                            if telescope is not None:
+                                row[2] = telescope
                             self._insert(*row)
                         self.con.commit()
                 else:
                     df = fits_to_df(files_to_scan, verbose=True, hdu=hdu)
                     for row in df.values:
+                        if telescope is not None:
+                            row[2] = telescope
                         self._insert(*row)
                     self.con.commit()
             else:
