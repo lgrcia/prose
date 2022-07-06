@@ -115,6 +115,9 @@ class FitsManager:
 
         return files
 
+    def _path_in(self, path):
+        return self.con.execute(f"SELECT * FROM files WHERE path='{path}'").fetchone() is not None
+
     def scan_files(self, files, batch_size=False, verbose=True, hdu=0, telescope=None):
         """Scan files and add data to database
 
@@ -134,8 +137,7 @@ class FitsManager:
         """
 
         if len(files) > 0:
-            current_files = [v[0] for v in self.cur.execute("SELECT path from files").fetchall()]
-            files_to_scan = np.setdiff1d(files, current_files)
+            files_to_scan = [path for path in files if not self._path_in(path)]
 
             if len(files_to_scan) > 0:
                 if batch_size is None:
