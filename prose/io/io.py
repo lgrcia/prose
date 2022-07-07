@@ -85,7 +85,7 @@ def fits_to_df(
     verbose=True, 
     hdu=0, 
     raise_oserror=False, 
-    oserror_verbose=False
+    verbose_os=False
     ):
     
     assert len(files) > 0, "Files not provided"
@@ -102,7 +102,7 @@ def fits_to_df(
         try:
             header = fits.getheader(i, hdu)
         except OSError as err:
-            if oserror_verbose:
+            if verbose_os:
                 warning(f"OS error for file {i}")
             if raise_oserror:
                 print(f"OS error: {err}")

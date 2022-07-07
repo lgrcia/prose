@@ -118,7 +118,7 @@ class FitsManager:
     def _path_in(self, path):
         return self.con.execute(f"SELECT * FROM files WHERE path='{path}'").fetchone() is not None
 
-    def scan_files(self, files, batch_size=False, verbose=True, hdu=0, telescope=None, verbose_new=False):
+    def scan_files(self, files, batch_size=False, verbose=True, hdu=0, telescope=None, verbose_new=False, verbose_os=False):
         """Scan files and add data to database
 
         Parameters
@@ -161,14 +161,14 @@ class FitsManager:
 
                 if batch_size is not False:
                     for batch in _progress(batches):
-                        df = fits_to_df(batch, verbose=False, hdu=hdu)
+                        df = fits_to_df(batch, verbose=False, hdu=hdu, verbose_os=verbose_os)
                         for row in df.values:
                             if telescope is not None:
                                 row[2] = telescope
                             self._insert(*row)
                         self.con.commit()
                 else:
-                    df = fits_to_df(files_to_scan, verbose=True, hdu=hdu)
+                    df = fits_to_df(files_to_scan, verbose=True, hdu=hdu, verbose_os=verbose_os)
                     for row in df.values:
                         if telescope is not None:
                             row[2] = telescope
