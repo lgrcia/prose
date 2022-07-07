@@ -5,7 +5,7 @@ import pandas as pd
 from pathlib import Path
 from .io import get_files, fits_to_df
 from IPython.display import display
-from ..console_utils import progress
+from ..console_utils import progress, info
 
 # Convenience
 # -----------
@@ -118,7 +118,7 @@ class FitsManager:
     def _path_in(self, path):
         return self.con.execute(f"SELECT * FROM files WHERE path='{path}'").fetchone() is not None
 
-    def scan_files(self, files, batch_size=False, verbose=True, hdu=0, telescope=None):
+    def scan_files(self, files, batch_size=False, verbose=True, hdu=0, telescope=None, verbose_new=False):
         """Scan files and add data to database
 
         Parameters
@@ -138,6 +138,8 @@ class FitsManager:
 
         if len(files) > 0:
             files_to_scan = [path for path in files if not self._path_in(path)]
+            if verbose_new:
+                info(f"{len(files_to_scan)} new files to scan")
 
             if len(files_to_scan) > 0:
                 if batch_size is None:

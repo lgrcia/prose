@@ -78,7 +78,16 @@ def set_hdu(hdu_list, value):
         hdu_list.append(value)
 
 
-def fits_to_df(files, telescope_kw="TELESCOP", instrument_kw="INSTRUME", verbose=True, hdu=0, raise_oserror=False):
+def fits_to_df(
+    files, 
+    telescope_kw="TELESCOP", 
+    instrument_kw="INSTRUME", 
+    verbose=True, 
+    hdu=0, 
+    raise_oserror=False, 
+    oserror_verbose=False
+    ):
+    
     assert len(files) > 0, "Files not provided"
 
     last_telescope = "_"
@@ -93,7 +102,8 @@ def fits_to_df(files, telescope_kw="TELESCOP", instrument_kw="INSTRUME", verbose
         try:
             header = fits.getheader(i, hdu)
         except OSError as err:
-            warning(f"OS error for file {i}")
+            if oserror_verbose:
+                warning(f"OS error for file {i}")
             if raise_oserror:
                 print(f"OS error: {err}")
                 raise
