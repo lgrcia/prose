@@ -127,7 +127,18 @@ def fits_to_df(files, telescope_kw="TELESCOP", instrument_kw="INSTRUME", verbose
             exposure=float(header.get(telescope.keyword_exposure_time, None))
         ))
 
-    df = pd.DataFrame(df_list)
+    df = pd.DataFrame(df_list, columns=(
+        "path",
+        "date",
+        "telescope",
+        "type",
+        "target",
+        "filter",
+        "dimensions",
+        "flip",
+        "jd",
+        "exposure"
+    ))
 
     df.type.loc[df.type.str.lower().str.contains(telescope.keyword_light_images.lower())] = "light"
     df.type.loc[df.type.str.lower().str.contains(telescope.keyword_dark_images.lower())] = "dark"
