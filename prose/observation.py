@@ -1,11 +1,9 @@
-from calendar import c
 from . import Image
 import matplotlib.pyplot as plt
 import numpy as np
 import re
 from astropy.time import Time
 from astropy import units as u
-from astropy.coordinates import SkyCoord
 from .fluxes import ApertureFluxes, pont2006
 from . import viz
 from .telescope import Telescope
@@ -19,10 +17,11 @@ import warnings
 import shutil
 from pathlib import Path
 from .utils import fast_binning, z_scale, clean_header
-from .console_utils import info
+from .console_utils import info, warning
 from . import blocks
 from prose import Sequence
 from matplotlib import gridspec
+from .blocks import catalogs
 
 warnings.simplefilter('ignore', category=VerifyWarning)
 
@@ -990,3 +989,28 @@ class Observation(ApertureFluxes):
             gaia_i = gaia_i[0]
             gxy = self.stack.catalogs[catalog_name][["x", "y"]].values[gaia_i]
             self.target = int(np.argmin(np.linalg.norm(self.stars - gxy, axis=1)))
+
+    def set_gaia_target(self, gaia_id, verbose=False):
+        if not self.stack.plate_solved:
+            if verbose:
+                info("plate solving ...")
+            self.plate_solve()
+
+        if verbose:
+            info("querying Gaia catalog ...")
+        
+        catalog_image = catalogs.GaiaCatalog()(self.stack)
+
+        gaia_table = catalog_image.catalogs["gaia"]
+        matched_gaia = gaia_table.id.values == f"Gaia DR2 {gaia_id}"
+        target_xy = gaia_table[matched_gaia][["x", "y"]].values[0]
+        distances = np.linalg.norm(self.stack.stars_coords - target_xy, axis=1)
+        i = np.argmin(distances)
+
+        if distances[i] > 10:
+            warning(f"matched gaia star is far from detected star ({distances[i]:0f} pix.)")
+
+        self.target = i
+        if verbose:
+            info(f"target = {i}")
+
