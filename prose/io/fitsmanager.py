@@ -175,7 +175,8 @@ class FitsManager:
                         self._insert(*row)
                     self.con.commit()
             else:
-                print(f"No new files to scan")
+                if not verbose_new:
+                    f"{len(files_to_scan)} new files to scan"
         else:
             raise AssertionError(f"No files provided")
 

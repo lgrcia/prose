@@ -33,5 +33,6 @@ CREATE TABLE products (
   datetime text,
   version text,
   files int,
-  path text
+  path text,
+  status error
 );
