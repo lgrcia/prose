@@ -1,13 +1,11 @@
 from astroquery.mast import Catalogs
-from astropy.coordinates import SkyCoord
-from astropy.wcs import utils as wcsutils
 from astropy import units as u
 from prose import Observation
 import re
 import pandas as pd
 import numpy as np
-from prose.blocks.registration import distances
-
+from ..console_utils import info, error, warning
+from ..blocks import catalogs
 
 class TFOPObservation(Observation):
     """
@@ -63,53 +61,14 @@ class TFOPObservation(Observation):
 
     # Catalog queries
     # ---------------
-
-    # TODO replace using stack Image and create TIC catalog block
     def query_tic(self, cone_radius=None):
         """Query TIC catalog (through MAST) for stars in the field
         """
-        header = self.xarray.attrs
-        shape = self.stack.shape
-        if cone_radius is None:
-            cone_radius = np.sqrt(2) * np.max(shape) * self.telescope.pixel_scale / 120
+        self.stack = catalogs.TESSCatalog(mode="crossmatch")(self.stack)
 
-        coord = self.stack.skycoord
-        radius = u.Quantity(cone_radius, u.arcminute)
-        self.tic_data = Catalogs.query_region(coord, radius, "TIC", verbose=False)
-        self.tic_data.sort("Jmag")
+    def set_tic_target(self, verbose=True):
 
-        skycoords = SkyCoord(
-            ra=self.tic_data['ra'],
-            dec=self.tic_data['dec'], unit="deg")
-
-        self.tic_data["x"], self.tic_data["y"] = np.array(wcsutils.skycoord_to_pixel(skycoords, self.wcs))
-
-        w, h = self.stack.shape
-        if np.abs(np.mean(self.tic_data["x"])) > w or np.abs(np.mean(self.tic_data["y"])) > h:
-            warnings.warn("Catalog stars seem out of the field. Check that your stack is solved and that telescope "
-                          "'ra_unit' and 'dec_unit' are well set")
-
-    def set_tic_target(self):
-
-        self.query_tic()
-        try:
-            # getting all TICs
-            tics = self.tic_data["ID"].data
-            tics.fill_value = 0
-            tics = tics.data.astype(int)
-
-            # Finding the one
-            i = np.argwhere(tics == np.int64(self.tic_id)).flatten()
-            if len(i) == 0:
-                raise AssertionError(f"TIC {self.tic_id} not found")
-            else:
-                i = i[0]
-            row = self.tic_data[i]
-
-            # setting the closest to target
-            self.target = np.argmin(distances(self.stars.T, [row['x'], row['y']]))
-
-        except KeyError:
-            print('TIC ID not found')
+        # using Gaia is easier to correct for proper motion... (discuss with LG)
+        self.set_gaia_target(self.gaia_from_toi, verbose=verbose)
 
 
