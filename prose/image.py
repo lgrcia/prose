@@ -99,6 +99,7 @@ class Image:
         new_self = self.__class__(**d)
         new_self.data = new_self.data.copy()
         new_self.header = new_self.header.copy()
+        new_self.catalogs = self.catalogs.copy()
         if not data:
             del new_self.__dict__["data"]
 
