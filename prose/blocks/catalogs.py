@@ -9,6 +9,7 @@ import warnings
 from ..utils import gaia_query, sparsify
 from twirl.utils import plot as tplot
 from .registration import cross_match
+from astroquery.mast import Catalogs
 
 def image_gaia_query(image, *args, limit=3000, correct_pm=True, wcs=True, circular=True, fov=None):
     
@@ -109,9 +110,8 @@ class PlateSolve(Block):
 
 class GaiaCatalog(CatalogBlock):
     
-    def __init__(self, tolerance=4, correct_pm=True, limit=10000, **kwargs):
+    def __init__(self, correct_pm=True, limit=10000, **kwargs):
         CatalogBlock.__init__(self, "gaia", limit=limit, **kwargs)
-        self.tolerance = tolerance
         self.correct_pm = correct_pm
 
     def get_catalog(self, image):
@@ -124,6 +124,23 @@ class GaiaCatalog(CatalogBlock):
             fov=max_fov
         )
         table.rename_column('DESIGNATION', 'id')
+        return table
+
+    def run(self, image):
+        CatalogBlock.run(self, image)
+
+
+class TESSCatalog(CatalogBlock):
+    
+    def __init__(self, limit=10000, **kwargs):
+        CatalogBlock.__init__(self, "tess", limit=limit, **kwargs)
+
+    def get_catalog(self, image):
+        max_fov = image.fov.max()*np.sqrt(2)/2
+        table = Catalogs.query_region(image.skycoord, max_fov, "TIC", verbose=False)
+        table["ra"].unit = "deg"
+        table["dec"].unit = "deg"
+        table.rename_column('ID', 'id')
         return table
 
     def run(self, image):
