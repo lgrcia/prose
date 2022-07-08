@@ -280,8 +280,8 @@ def model_it():
     global trace
     with model:
         trace = pm.sample(
-            tune=1000,
-            draws=1000,
+            tune=3000,
+            draws=4000,
             start=opt,
             cores=3,
             chains=2,
