@@ -17,7 +17,7 @@ import warnings
 import shutil
 from pathlib import Path
 from .utils import fast_binning, z_scale, clean_header
-from .console_utils import info, warning
+from .console_utils import info, warning, error
 from . import blocks
 from prose import Sequence
 from matplotlib import gridspec
@@ -990,7 +990,7 @@ class Observation(ApertureFluxes):
             gxy = self.stack.catalogs[catalog_name][["x", "y"]].values[gaia_i]
             self.target = int(np.argmin(np.linalg.norm(self.stars - gxy, axis=1)))
 
-    def set_gaia_target(self, gaia_id, verbose=False):
+    def set_gaia_target(self, gaia_id, verbose=False, raise_far=True):
         if not self.stack.plate_solved:
             if verbose:
                 info("plate solving ...")
@@ -1008,7 +1008,12 @@ class Observation(ApertureFluxes):
         i = np.argmin(distances)
 
         if distances[i] > 10:
-            warning(f"matched gaia star is far from detected star ({distances[i]:0f} pix.)")
+            _distance = f"{distances[i]:.0f} pix."
+            if raise_far:
+                error(f"matched gaia star too far from detected star ({_distance})")
+                return None
+            else:
+                warning(f"matched gaia star is far from detected star ({_distance})")
 
         self.target = i
         if verbose:
