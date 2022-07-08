@@ -164,7 +164,7 @@ def build_xar():
     obs.xarray.attrs.update(obs.stack.header)
     if "'" in obs.stack.filter:
         obs.stack.FILTER=obs.stack.filter.replace("'",'')
-    obs.plot()
+
     print(f"https://exofop.ipac.caltech.edu/tess/target.php?id={obs.tic_id}")
     date = obs.date.date()
     tfop_url=obs.telescope.TTF_link.format(date=f'{date.strftime("%m-%d-%Y")}',tic_id=obs.tic_id).replace('print_html=1','print_html=2')
@@ -179,6 +179,9 @@ def build_xar():
                           for l in [j.split(',') 
                                     for j in r.text[r.text.find('# ')+2:].splitlines()]][1:]]
     print(obs.telescope.TTF_link.format(date=f'{date.strftime("%m-%d-%Y")}',tic_id=obs.tic_id).replace('days_in_past=0','days_in_past=1'))
+    obs.plot()
+    plt.axvline(float(tfop_priors[0]['jd_mid'])+2450000)
+    print(f"Predicted midtime = {float(tfop_priors[0]['jd_mid'])+2450000}")
     
 
 OUT=widgets.Output(layout={'border': '1px solid black'})
