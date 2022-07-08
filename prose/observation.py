@@ -11,7 +11,6 @@ from . import utils
 import pandas as pd
 from scipy.stats import binned_statistic
 from .blocks.psf import Gaussian2D
-from .console_utils import INFO_LABEL
 from astropy.io.fits.verify import VerifyWarning
 import warnings
 import shutil
@@ -64,10 +63,10 @@ class Observation(ApertureFluxes):
             try:
                 self.compute_bjd()
                 if not time_verbose:
-                    print(f"{INFO_LABEL} Time converted to BJD TDB")
+                    info("Time converted to BJD TDB")
             except:
                 if not time_verbose:
-                    print(f"{INFO_LABEL} Could not convert time to BJD TDB")
+                    info("Could not convert time to BJD TDB")
 
     @property
     def has_stack(self):
