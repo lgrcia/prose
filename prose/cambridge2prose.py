@@ -354,7 +354,7 @@ def make_report():
     mean_target_fwhm=np.mean([obs.stack.fwhmx, obs.stack.fwhmy])
 
     summary = TESSSummary(obs, mean_target_fwhm,optimal_aperture,mean_fwhm,expected=(obs_t0, obs_dur))
-    notes = TESSNotes()
+    notes = TESSNotes(notes = TESSNotes(obs_t0,tfop_priors[0]['Comments'],tm,mean_target_fwhm,optimal_aperture,mean_fwhm,posteriors))
 
     # Make the full report
     report = Report([summary,tm,notes])
