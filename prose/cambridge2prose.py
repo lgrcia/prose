@@ -29,6 +29,7 @@ from prose.reports.core import copy_figures
 import corner
 import ipywidgets as widgets
 from IPython.display import clear_output
+from datetime import datetime
 
 loc = os.getcwd()
 style = {'description_width': 'initial'}
@@ -165,6 +166,8 @@ def build_xar():
         obs.stack.FILTER=obs.stack.filter.replace("'",'')
     obs.plot()
     print(f"https://exofop.ipac.caltech.edu/tess/target.php?id={obs.tic_id}")
+    date = obs.date.date()
+    print(obs.telescope.TTF_link.format(date=f'{date.strftime("%m-%d-%Y")}',tic_id=obs.tic_id))
 
 OUT=widgets.Output(layout={'border': '1px solid black'})
     
