@@ -34,5 +34,5 @@ CREATE TABLE products (
   version text,
   files int,
   path text,
-  status error
+  status text,
 );
