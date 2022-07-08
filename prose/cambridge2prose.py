@@ -108,7 +108,7 @@ def get_stack():
 def build_xar():
     scrape_portal()
     get_stack()
-    global APERTURE,SCOPE, EXPTIME,TIME,obs
+    global APERTURE,SCOPE, EXPTIME,TIME,obs,tfop_url
     ap_list=[2,2.8,4,5.7,8,11.3,16,20,24,28,32,40,48]
     ap_dict={f'{i+1}':a for i,a in zip(range(13), ap_list)}
 
@@ -167,7 +167,19 @@ def build_xar():
     obs.plot()
     print(f"https://exofop.ipac.caltech.edu/tess/target.php?id={obs.tic_id}")
     date = obs.date.date()
-    print(obs.telescope.TTF_link.format(date=f'{date.strftime("%m-%d-%Y")}',tic_id=obs.tic_id))
+    tfop_url=obs.telescope.TTF_link.format(date=f'{date.strftime("%m-%d-%Y")}',tic_id=obs.tic_id).replace('print_html=1','print_html=2')
+    tfop_url=tfop_url.replace('days_in_past=0','days_in_past=1')
+    global tfop_priors
+    r=req.get(tfop_url,
+         auth=('tess_nda_observer', 'F1nd_TE$S_PlaNets!'))
+    tfop_priors = [{k:v for k,v in zip([l[:25]+l[-11:] 
+                                     for l in [j.split(',') 
+                                               for j in r.text[r.text.find('# ')+2:].splitlines()]][0], i)} 
+                for i in [l[:25]+l[-11:] 
+                          for l in [j.split(',') 
+                                    for j in r.text[r.text.find('# ')+2:].splitlines()]][1:]]
+    print(obs.telescope.TTF_link.format(date=f'{date.strftime("%m-%d-%Y")}',tic_id=obs.tic_id).replace('days_in_past=0','days_in_past=1'))
+    
 
 OUT=widgets.Output(layout={'border': '1px solid black'})
     
@@ -187,7 +199,7 @@ BOX_ONE=widgets.VBox([widgets.HBox([USR, PSSWD], layout=widgets.Layout(height='4
 
 #modelling
 
-OBS_DEPTH=widgets.FloatText(
+"""OBS_DEPTH=widgets.FloatText(
     description='Depth (ppt)',
     style=style
 )
@@ -202,7 +214,7 @@ OBS_PER=widgets.FloatText(
 OBS_DUR=widgets.FloatText(
     description='Duration (hrs)',
     style=style
-)
+)"""
 
 MODEL_IT_B=widgets.Button(description='Model it!')
 
@@ -210,12 +222,12 @@ OUT2=widgets.Output(layout={'border': '1px solid black'})
 
 def model_it():
     global obs_depth,obs_t0,obs_per,obs_ms,obs_rs,obs_dur
-    obs_depth=OBS_DEPTH.value
-    obs_t0=OBS_T0.value
-    obs_per=OBS_PER.value
+    obs_depth=float(tfop_priors[0]['depth(ppt)'])
+    obs_t0=float(tfop_priors[0]['jd_mid'])+2450000
+    obs_per=float(tfop_priors[0]['period(days)'])
     obs_ms=obs.priors_dataframe['Stellar Mass (M_Sun)'][0]
     obs_rs=obs.priors_dataframe['Stellar Radius (R_Sun)'][0]
-    obs_dur=OBS_DUR.value/24
+    obs_dur=(float(tfop_priors[0]['duration(hours)'].split(':')[0])+float(tfop_priors[0]['duration(hours)'].split(':')[1])/60)/24
     
     global opt,model
     X= obs.polynomial(airmass=2,fwhm=2,sky=2).T
@@ -302,8 +314,8 @@ def model_it_b(b):
 MODEL_IT_B.on_click(model_it_b)
 
 BOX_TWO=widgets.VBox([widgets.Label('Priors and Modelling'),
-                      widgets.Label('Guess the transit midtime from the lightcurve above - grab the rest from TFOP'),
-    widgets.HBox([OBS_T0,OBS_PER,OBS_DUR,OBS_DEPTH], layout=widgets.Layout(height='45px')),
+                      #widgets.Label('Guess the transit midtime from the lightcurve above - grab the rest from TFOP'),
+    #widgets.HBox([OBS_T0,OBS_PER,OBS_DUR,OBS_DEPTH], layout=widgets.Layout(height='45px')),
                       MODEL_IT_B, OUT2
 ], style=style)
 
