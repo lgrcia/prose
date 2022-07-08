@@ -277,7 +277,7 @@ class Image:
     def filter(self):
         """Observation filter as written in image header
         """
-        return self.header.get(self.telescope.keyword_filter, None).replace("'",'')
+        return self.header.get(self.telescope.keyword_filter, None).replace("'",'p')
     
     def show(self, 
         cmap="Greys_r", 
