@@ -61,9 +61,9 @@ class TFOPObservation(Observation):
     def tfop_prefix(self):
         if any(["TIC" in self.name, "TOI" in self.name]):
             try:
-                return f"TIC{self.tic_id}-{self.name.split('.')[1]}_{self.date}_{self.telescope.name}_{self.filter}"
+                return f"TIC{self.tic_id}-{self.name.split('.')[1]}_{self.date.date()}_{self.telescope.name}_{self.filter}"
             except IndexError:
-                return f"TIC{self.tic_id}-01_{self.date}_{self.telescope.name}_{self.filter}"
+                return f"TIC{self.tic_id}-01_{self.date.date()}_{self.telescope.name}_{self.filter}"
 
     # Catalog queries
     # ---------------
