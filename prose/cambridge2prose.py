@@ -205,12 +205,13 @@ BOX_ONE=widgets.VBox([widgets.HBox([USR, PSSWD], layout=widgets.Layout(height='4
 """OBS_DEPTH=widgets.FloatText(
     description='Depth (ppt)',
     style=style
-)
+)"""
 OBS_T0=widgets.FloatText(
     description='T0 (bjd)',
-    style=style
+    style=style,
+    value=0.0
 )
-OBS_PER=widgets.FloatText(
+"""OBS_PER=widgets.FloatText(
     description='Period (days)',
     style=style
 )
@@ -226,7 +227,10 @@ OUT2=widgets.Output(layout={'border': '1px solid black'})
 def model_it():
     global obs_depth,obs_t0,obs_per,obs_ms,obs_rs,obs_dur
     obs_depth=float(tfop_priors[0]['depth(ppt)'])
-    obs_t0=float(tfop_priors[0]['jd_mid'])+2450000
+    if OBS_T0.value == 0:
+        obs_t0=float(tfop_priors[0]['jd_mid'])+2450000
+    else:
+        obs_t0=OBS_T0.value
     obs_per=float(tfop_priors[0]['period(days)'])
     obs_ms=obs.priors_dataframe['Stellar Mass (M_Sun)'][0]
     obs_rs=obs.priors_dataframe['Stellar Radius (R_Sun)'][0]
@@ -318,7 +322,9 @@ MODEL_IT_B.on_click(model_it_b)
 
 BOX_TWO=widgets.VBox([widgets.Label('Priors and Modelling'),
                       #widgets.Label('Guess the transit midtime from the lightcurve above - grab the rest from TFOP'),
-    #widgets.HBox([OBS_T0,OBS_PER,OBS_DUR,OBS_DEPTH], layout=widgets.Layout(height='45px')),
+    #widgets.HBox([
+     OBS_T0,
+    # OBS_PER,OBS_DUR,OBS_DEPTH], layout=widgets.Layout(height='45px')),
                       MODEL_IT_B, OUT2
 ], style=style)
 
