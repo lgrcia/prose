@@ -9,7 +9,7 @@ from prose import load
 from prose import Image
 from prose import viz
 from prose import Telescope
-import os
+import os,re, requests, sys, tkinter
 from astropy.io import fits
 from prose.tess import TFOPObservation
 import theano
@@ -30,6 +30,7 @@ import corner
 import ipywidgets as widgets
 from IPython.display import clear_output
 from datetime import datetime
+import astropy.units as u
 
 loc = os.getcwd()
 style = {'description_width': 'initial'}
@@ -335,7 +336,7 @@ BOX_TWO=widgets.VBox([widgets.Label('Priors and Modelling'),
 variables = ["P", "r",'t0','b','u','r_s','m_s','ror','depth','a','a/r_s','i']
 
 def make_report():
-    global tm,summary,report
+    global tm,summary,report, posteriors, mean_target_fwhm,optimal_aperture,mean_fwhm
 
     with model:
         summary = az.summary(
@@ -525,3 +526,264 @@ OUT4=widgets.Output(layout={'border': '1px solid black'})
 
 BOX_FOUR=widgets.VBox([widgets.Label("Finally, compile the report and check it's ok"),
                       WRAP_B,OUT4])
+
+TOI=widgets.FloatText(
+    description='TOI name',
+    style=style,
+    value=0
+)
+
+TRANSCOV=widgets.Dropdown(
+    description='Transit coverage',
+    options=['Full','Ingress','Egress'],
+    style=style
+)
+
+TFOP_USR=widgets.Text(
+    description='TFOP Username',
+    style=style
+)
+
+TFOP_PWD=widgets.Password(
+    description='TFOP pwd',
+    style=style
+)
+
+def upload_exofop():
+    toi       = TOI.value       #toi number (number portion only - i.e. no "TOI"), set to -1 if TOI number < 100 (including 0.01)
+    deltamag  = 0           #delta magnitude of faintest neighbor cleared, or delta magnitude of NEB, set to 0 to leave blank
+    transcov  = TRANSCOV.value      #Full Ingress Egress Out of Transit (CASE SENSITIVE!!!)
+    notes     = ' ' #public note such as "deep" etc. - do not put proprietary results here
+
+    camera    = 'Andor Ikon-L'  #Camera name (  Spectral  SINISTRO  SBIG STX6303  SBIG STX16803  )
+
+
+    skipsummaryupload = 0   #set to 1 to skip uploading observation summary, set to 0 to upload observation summary
+    skipfileupload = 0      #set to 1 to skip file uploads, set to 0 to upload matching files
+
+    username = TFOP_USR.value
+    password = TFOP_PWD.value
+
+    homedir = os.path.expanduser('~')       # find the home directory
+    path = os.path.join(tm.destination.parent,"figures")#os.getcwd()       # get current directory
+    fileList = os.listdir(path)
+    print(fileList)
+    """for fileName in fileList:
+        if os.path.isfile(os.path.join(path,fileName)) and fileName.endswith('.tbl'):
+            t = Table.read(fileName, format='ascii.tab', data_start=1)
+            break"""
+
+
+
+    obsstart = obs.time[0]      #start of observations (fractional JD)
+    obsend = obs.time[-1]     #end of observations (fractional JD)
+    obsdur = str(round(abs((obsend-obsstart)*24*60)))
+    print("Obs length in minutes: "+obsdur)
+
+    obsnum = str(obs.time.size)     #number of exposures
+    print("Number of exposures: "+obsnum)
+
+    photaprad = str(round(optimal_aperture,1))#mean aperture radius in pixels
+    print("Mean aperture radius in pixels: "+photaprad)
+
+    apradarcsec = str(round((optimal_aperture*0.34*u.arcsec).value,1)) #mean aperture radius in arcsec
+    print("Mean aperture radius in arcsec: "+apradarcsec)
+
+    exposuretime = str(EXPTIME)#mean exposure time
+    print("Mean exposure time: "+exposuretime)
+
+    psf = str(round(mean_target_fwhm,2))
+    print("Mean FWHM in arcsec: "+psf)
+
+    pixscale = str(0.34)
+    telsize = str(1.0)
+
+    if deltamag == 0:
+        deltamag=''
+    else:
+        deltamag = str(deltamag)
+    #if toi==0:
+    #    tkinter.Tk().bell()
+    #    tkinter.Tk().bell()
+    #    input("Enter TOI number in file")
+    #    exit()
+    if toi>0:
+        toi='TOI'+str(toi)#+" (Period = 2.32600773508212 d; TIC " + '277634430' +'.01)'
+        planet=toi.split('.')[1]
+    #else:
+    #    toi=''
+    #    planet='01'
+
+    if transcov.lower() =='full':
+        transcov = 'Full'
+    elif transcov.lower() =='ingress':
+        transcov = 'Ingress'
+    elif transcov.lower() =='egress':
+        transcov = 'Egress'
+    else:
+        transcov = 'Out of Transit'
+
+    pieces=""
+
+    for fileName in fileList:
+        if os.path.isfile(os.path.join(path,fileName)) and fileName.startswith('TIC') and not fileName.startswith('TIC '):
+            pieces=fileName.split("_")
+            break
+    print(pieces)
+    """if len(pieces) < 4:
+        input("Filenames must have at least three underscores...")
+        tkinter.Tk().bell()
+        tkinter.Tk().bell()
+        exit()"""
+    tic=pieces[0].split('-')[0]
+    tic=re.search(r'([0-9]+)',tic).group(1)
+    date=pieces[1]
+    short_date=date
+    print(date)
+    observatory = pieces[2]
+    filterband = pieces[3].split('.')[0]
+    tag=short_date+'_'+username+'_'+observatory+'_'+'5' #short_date+'_'+username+'_TIC'+tic+'_'+planet
+    print(tic)
+    emailtitle='TIC '+tic+'.'+planet+' (TOI-'+toi[3:]+') on UT'+ date+' from '+observatory+' in '+filterband
+    print(emailtitle)
+
+    entries = {
+            'planet': toi,
+            'tel': observatory,
+            'telsize': telsize,
+            'camera': camera,
+            'filter': filterband,
+            'pixscale': pixscale,
+            'psf': psf,
+            'photaprad': photaprad,
+            'obsdate': date,
+            'obsdur': obsdur,
+            'obsnum': obsnum,
+            'obstype': 'Continuous',
+            'transcov': transcov,
+            'deltamag': deltamag,
+            'tag': tag,
+            'groupname': 'tfopwg',
+            'notes': notes,
+            'id': tic
+        }
+
+    print(entries)
+    
+    if os.path.exists(path):
+        credentials = {
+        'username': username,
+        'password': password,
+        'ref': 'login_user',
+        'ref_page': '/tess/'
+        }
+        with requests.Session() as session:
+            response1 = session.post('https://exofop.ipac.caltech.edu/tess/password_check.php', data=credentials)
+            if response1:
+                print('\nLogin OK.')
+            else:
+                tkinter.Tk().bell()
+                tkinter.Tk().bell()
+                sys.exit('\nERROR:  Login did not work.')
+
+            if not skipsummaryupload:
+                response2 = session.post('https://exofop.ipac.caltech.edu/tess/insert_tseries.php', data=entries)
+                if response2:
+                    print('\nAdded new Time Series...')
+                else:
+                    tkinter.Tk().bell()
+                    tkinter.Tk().bell()
+                    #print('Failed')
+                    sys.exit('\nERROR: Time Series Add failed.')
+            else:
+                print('Skipped observation summary upload per user request.')
+            if not skipfileupload:
+                fileList = os.listdir(path)
+                print('path=',path)
+                print('fileList',fileList)
+                print('full_path',os.path.join(path,fileName))
+                for fileName in fileList:
+                    if os.path.isfile(os.path.join(path,fileName)) and fileName.startswith('TIC') and not fileName.startswith('TIC '):
+                        pieces=fileName.split("_")
+                        print(pieces)
+                        tic=pieces[0].split("-")[0]
+                        tic=re.search(r'([0-9]+)',tic).group(1)
+                        date=pieces[1]
+                        description=''
+                        if fileName.endswith('stars.png'):
+                            description='Field Image with Apertures'
+                        elif fileName.endswith('model.png'):
+                            description='Light curve plot target star with model'  
+                        elif fileName.endswith('psf.png'):
+                            description='Seeing profile'
+                        elif fileName.endswith('comparison.png'):
+                            description='Light curve plot comparison stars'
+                        elif fileName.endswith('systematics.png'):
+                            description='Light curve plot target target star with systematics'
+                        elif fileName.endswith('report.pdf'):
+                            description='Summary and Notes'
+                        elif fileName.endswith('measurements.txt'):
+                            description=' Measurements Table'
+                        elif fileName.endswith('lightcurve.png'):
+                            description='Light curve plot target star'
+
+                        if description == '':
+                            print('******NOT UPLOADED: '+fileName)
+                        else:
+                            #print(tic, toi, date, tag, description)
+                            print(fileName)
+                            files = {'file_name': open(os.path.join(path,fileName), 'rb')}
+                            payload = {
+                                'file_type': 'Light_Curve',
+                                'planet': toi,
+                                'file_desc': description,
+                                'file_tag': tag,
+                                'groupname': 'tfopwg',
+                                'propflag': 'on',
+                                'id': tic
+                                }
+                            response3 = session.post('https://exofop.ipac.caltech.edu/tess/insert_file.php', files=files, data=payload)
+                            if response3:
+                                print('\nUploading file: {}'.format(fileName))
+                            else:
+                                tkinter.Tk().bell()
+                                tkinter.Tk().bell()
+                                sys.exit('\nERROR: File upload failed: {}'.format(fileName))
+                            print(response3.text)
+                            print('UPLOADED:'+fileName)  
+                    else:
+                        print('******NOT UPLOADED: '+fileName)
+            else:
+                print("Skipped file uploads per user request.")
+
+    print("Obs length in minutes: "+obsdur)
+    print("Number of exposures: "+obsnum)
+    print("Mean aperture radius in pixels: "+photaprad)
+    print("Mean aperture radius in arcsec: "+apradarcsec)
+    print("Mean exposure time: "+exposuretime)
+    print("Mean FWHM in arcsec: "+psf)
+
+    print('YOU ARE FUCKING DONE')
+
+    #tkinter.Tk().bell()
+    #input("Press Enter to continue...")
+
+
+TFOP_B=widgets.Button(description='To ExoFOP')
+
+def tfop_b(b):
+    with OUT5:
+        clear_output()
+        upload_exofop()
+                    
+TFOP_B.on_click(tfop_b)
+                    
+OUT5=widgets.Output(layout={'border': '1px solid black'})
+
+TFOP_BOX_ONE=widgets.VBox([
+    widgets.HBox([TFOP_USR,TFOP_PWD]),
+    widgets.HBox([TOI,TRANSCOV]),
+    TFOP_B,
+    OUT5
+])
+

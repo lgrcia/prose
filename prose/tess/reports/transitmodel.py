@@ -75,6 +75,7 @@ class TransitModel(TFOPObservation, LatexTemplate):
             ["SNR", f"{self.snr:.2f}", "-"],
             ["RMS per bin (%s min)" % f"{self.rms[1]:.1f}", f"{self.rms[0]:.2e}", "-"],
         ]
+        #print(self.obstable)
 
     def plot_ingress_egress(self):
         plt.axvline(self.t0 + self.duration / 2, c='C4', alpha=0.4, label='predicted ingress/egress')
