@@ -59,7 +59,7 @@ OBS_DATE=widgets.Text(
 )
 
 OBS_FILTER=widgets.Dropdown(
-    options=['I+z', 'r', 'g', 'B', 'I'],
+    options=['I+z', 'r', 'g', 'B', 'i', 'z'],
     description='Filter',
     style=style
 )
