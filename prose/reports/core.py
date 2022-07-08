@@ -70,7 +70,9 @@ class Report(LatexTemplate):
     def compile(self):
         cwd = os.getcwd()
         os.chdir(self.destination)
-        os.system(f"pdflatex {self.report_name}")
+        os.system(f"""
+        pdflatex {self.report_name}
+        """)
         os.chdir(cwd)
 
     def make(self, destination):

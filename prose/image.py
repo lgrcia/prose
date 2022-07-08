@@ -52,7 +52,7 @@ class Image:
 
     """
 
-    def __init__(self, fitspath=None, data=None, header=None, verbose=True, telescope=None, **kwargs):
+    def __init__(self, fitspath=None, data=None, header=None, verbose=True, **kwargs):
         """
         Image instanciation
         """
@@ -69,10 +69,7 @@ class Image:
         self.telescope = None
         self.discard = False
         self.__dict__.update(kwargs)
-        if telescope is None:
-            self._check_telescope()
-        else:
-            self.telescope = Telescope.from_name(telescope)
+        self._check_telescope()
         self.catalogs = {}
 
     def _get_data_header(self):
@@ -94,12 +91,7 @@ class Image:
         Image
             copied object
         """
-        d = self.__dict__.copy()
-        d["telescope"] = self.telescope.name
-        new_self = self.__class__(**d)
-        new_self.data = new_self.data.copy()
-        new_self.header = new_self.header.copy()
-        new_self.catalogs = self.catalogs.copy()
+        new_self = self.__class__(**self.__dict__)
         if not data:
             del new_self.__dict__["data"]
 
@@ -275,8 +267,8 @@ class Image:
         str
         """
         return "_".join([
-            self.telescope.name,
             self.night_date.strftime("%Y%m%d"),
+            self.telescope.name,
             self.header.get(self.telescope.keyword_object, "?"),
             self.filter
         ])
@@ -285,7 +277,7 @@ class Image:
     def filter(self):
         """Observation filter as written in image header
         """
-        return self.header.get(self.telescope.keyword_filter, None)
+        return self.header.get(self.telescope.keyword_filter, None).replace("'",'')
     
     def show(self, 
         cmap="Greys_r", 
@@ -296,8 +288,6 @@ class Image:
         zscale=True,
         frame=False,
         contrast=0.1,
-        ms=15,
-        fs=12,
         **kwargs
         ):
         """Show image data
@@ -320,10 +310,6 @@ class Image:
             whether to show astronomical coordinates axes, by default False
         contrast : float, optional
             image contrast used in image scaling, by default 0.1
-        ms: int
-            stars markers size
-        ft: int
-            stars label font size
 
         See also
         --------
@@ -356,9 +342,9 @@ class Image:
         if stars is None:
             stars = "stars_coords" in self.__dict__
         
-        if stars and self.stars_coords is not None:
+        if stars:
             label = np.arange(len(self.stars_coords)) if stars_labels else None
-            viz.plot_marks(*self.stars_coords.T, label=label, ax=ax, ms=ms, offset=0.5*ms, fontsize=fs)
+            viz.plot_marks(*self.stars_coords.T, label=label, ax=ax)
 
         if frame:
             overlay = ax.get_coords_overlay(self.wcs)
@@ -450,7 +436,7 @@ class Image:
         plt.annotate(f"radius {arcmin}'", xy=[x, y + search_radius + 15], color="white",
                      ha='center', fontsize=12, va='bottom', alpha=0.6)
 
-    def plot_catalog(self, name, color="y", label=False, n=100000):
+    def plot_catalog(self, name, color="y", label=False, n=100000): # Change to show_catalog ? Show = stack
         """Plot catalog stars 
         
         must be over :py:class:`Image.show` or :py:class:`Image.show_cutout` plot

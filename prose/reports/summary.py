@@ -11,14 +11,15 @@ import astropy.units as u
 
 
 class Summary(TFOPObservation, Observation, LatexTemplate):
-    def __init__(self, photfile, name=None, style="paper", template_name="summary.tex",tess=False):
-        if tess is True :
-            TFOPObservation.__init__(self, photfile,name=name)
-        else :
-            Observation.__init__(self,photfile)
+    def __init__(self, obs,mean_target_fwhm,optimal_aperture,mean_fwhm, name=None, style="paper", template_name="summary.tex",tess=False):
+        #if tess is True :
+        #    TFOPObservation.__init__(self, photfile,name=name)
+        #else :
+        #    Observation.__init__(self,photfile)
         LatexTemplate.__init__(self, template_name, style=style)
+        self.obs=obs
 
-        datetimes = Time(self.time, format='jd', scale='utc').to_datetime()
+        datetimes = Time(self.obs.time, format='jd', scale='utc').to_datetime()
         min_datetime = datetimes.min()
         max_datetime = datetimes.max()
 
@@ -30,26 +31,26 @@ class Summary(TFOPObservation, Observation, LatexTemplate):
 
         # TODO: adapt to use PSF model block here (se we don't use the plot_... method from Observation)
 
-        self.mean_fwhm = np.mean(self.x.fwhm.values)
-        self._compute_psf_model(star=self.target)
-        self.mean_target_fwhm = np.mean([self.stack.fwhmx, self.stack.fwhmy])
-        self.optimal_aperture = np.mean(self.apertures_radii[self.aperture,:])
+        self.mean_fwhm = mean_fwhm
+        #self._compute_psf_model(star=self.target)
+        self.mean_target_fwhm = mean_target_fwhm
+        self.optimal_aperture = optimal_aperture
 
         self.obstable = [
             ["Time", self.obs_duration],
-            ["RA - DEC", f"{self.RA} {self.DEC}"],
-            ["Images", len(self.time)],
+            ["RA - DEC", f"{self.obs.RA} {self.obs.DEC}"],
+            ["Images", len(self.obs.time)],
             ["Mean std · fwhm (epsf)",
              f"{self.mean_fwhm / (2 * np.sqrt(2 * np.log(2))):.2f} · {self.mean_fwhm:.2f} pixels"],
-            ["Fwhm (target)", f"{self.mean_target_fwhm:.2f} pixels · {(self.mean_target_fwhm*self.telescope.pixel_scale.to(u.arcsec)):.2f}"],
+            ["Fwhm (target)", f"{self.mean_target_fwhm:.2f} pixels · {(self.mean_target_fwhm*0.34*u.arcsec):.2f}"],
             ["Optimum aperture", f"{self.optimal_aperture:.2f} pixels · "
-                                 f"{(self.optimal_aperture*self.telescope.pixel_scale.to(u.arcsec)):.2f}"],
-            ["Telescope", self.telescope.name],
-            ["Filter", self.filter],
-            ["Exposure", f"{np.mean(self.exptime)} s"],
+                                 f"{(self.optimal_aperture*0.34*u.arcsec):.2f}"],
+            ["Telescope", self.obs.telescope.name],
+            ["Filter", self.obs.filter],
+            ["Exposure", f"{np.mean(self.obs.exptime)} s"],
         ]
 
-        self.description = f"{self.night_date.strftime('%Y %m %d')} $\cdot$ {self.telescope.name} $\cdot$ {self.filter}"
+        self.description = f"{self.obs.night_date.strftime('%Y %m %d')} $\cdot$ {self.obs.telescope.name} $\cdot$ {self.obs.filter}"
         self._trend = None
         self._transit = None
         self.dpi = 100
@@ -105,33 +106,13 @@ class Summary(TFOPObservation, Observation, LatexTemplate):
         plt.ylabel("norm. flux")
         self.style()
 
-    def make_figures(self, destination):
-        self.plot_psf_summary()
-        plt.savefig(path.join(destination, "psf.png"), dpi=self.dpi)
-        plt.close()
-        self.plot_comps()
-        plt.savefig(path.join(destination, "comparison.png"), dpi=self.dpi)
-        plt.close()
-        self.plot_raw()
-        plt.savefig(path.join(destination, "raw.png"), dpi=self.dpi)
-        plt.close()
-        self.plot_syst()
-        plt.savefig(path.join(destination, "systematics.png"), dpi=self.dpi)
-        plt.close()
-        self.plot_stars()
-        plt.savefig(path.join(destination, "stars.png"), dpi=self.dpi)
-        plt.close()
-        self.plot_lc()
-        plt.savefig(path.join(destination, "lightcurve.png"), dpi=self.dpi)
-        plt.close()
-
     def make(self, destination):
 
         self.make_report_folder(destination)
-        self.make_figures(self.figure_destination)
+        #self.make_figures(self.figure_destination)
         open(self.tex_destination, "w").write(self.template.render(
             obstable=self.obstable,
-            target=self.name,
+            target=self.obs.name,
             description=self.description,
             header=self.header
         ))
