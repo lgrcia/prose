@@ -178,6 +178,8 @@ def build_xar():
                 for i in [l[:25]+l[-11:] 
                           for l in [j.split(',') 
                                     for j in r.text[r.text.find('# ')+2:].splitlines()]][1:]]
+    for i, j in zip(tfop_priors, r.text.splitlines()[1:]):
+        i['Comments']=j[j.find('"')+1:-j[::-1].find('"')-1]
     print(obs.telescope.TTF_link.format(date=f'{date.strftime("%m-%d-%Y")}',tic_id=obs.tic_id).replace('days_in_past=0','days_in_past=1'))
     obs.plot()
     plt.axvline(float(tfop_priors[0]['jd_mid'])+2450000)
