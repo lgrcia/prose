@@ -196,11 +196,10 @@ class FitsManager:
             query = f"select *, SUM(files) from observations where {where} GROUP BY date, telescope, target, filter, type"
             df = self.to_pandas(query)
             df["files"]
-            df = df.drop(columns=["products", "files", "exposure"]).rename(columns={"SUM(files)": "files"})
+            df = df.drop(columns=["files", "exposure"]).rename(columns={"SUM(files)": "files"})
         else:
             query = f"select * from observations where {where}"
             df = self.to_pandas(query)
-            df.drop(columns=["products"])
             
         return df.set_index(["id"])
 
@@ -239,6 +238,9 @@ class FitsManager:
 
         files[lights] = self.to_pandas(f"SELECT path from files where id = {i}").values.flatten()
         dfs = []
+
+        if show:
+            dfs.append(self.to_pandas(f"SELECT * from observations where id = {i}"))
 
         for type in ("dark", "bias", "flat"):
             fields = ["width", "height"]

@@ -23,7 +23,6 @@ CREATE TABLE observations (
   width int,
   height int,
   exposure real,
-  products int,
   files int,
   UNIQUE(date, telescope, filter, target, type, width, height, exposure)
 );
@@ -35,4 +34,5 @@ CREATE TABLE products (
   files int,
   path text,
   status text,
+  FOREIGN KEY(id) REFERENCES observations(id)
 );
