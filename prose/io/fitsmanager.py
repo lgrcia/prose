@@ -294,7 +294,7 @@ class FitsManager:
         -------
         list of str
         """
-        return self.files(imtype="light")
+        return self.files(type='light', path=True).path.values
 
     @property
     def darks(self):
@@ -304,7 +304,8 @@ class FitsManager:
         -------
         list of str
         """
-        return self.files(imtype="dark")
+        return self.files(type='dark', path=True).path.values
+
 
     @property
     def bias(self):
@@ -314,7 +315,8 @@ class FitsManager:
         -------
         list of str
         """
-        return self.files(imtype="bias")
+        return self.files(type='bias', path=True).path.values
+
 
     @property
     def flats(self):
@@ -324,7 +326,7 @@ class FitsManager:
         -------
         list of str
         """
-        return self.files(imtype="flat")
+        return self.files(type='flat', path=True).path.values
 
     @property
     def stack(self):
