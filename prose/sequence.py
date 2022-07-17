@@ -12,6 +12,8 @@ from functools import partial
 import multiprocessing as mp
 from .blocks.utils import DataBlock
 import sys
+import yaml
+from .utils import full_class_name
 
 def progress(name, x, **kwargs):
     return tqdm(
@@ -156,6 +158,31 @@ class Sequence:
         if discard_block not in self.discards:
             self.discards[discard_block] = []
         self.discards[discard_block].append(str(i))
+
+
+    def params_dict(self):
+        d = {}
+        for block in self.blocks:
+            params = {
+                'args': {k: a.tolist() if isinstance(a, np.ndarray) else a for k, a in block.args.items()}, 
+                'kwargs': {k:v.tolist() if isinstance(v, np.ndarray) else v for k, v in block.kwargs.items()}
+            }
+            if len(block.args) == 0:
+                del params['args']
+            if len(block.kwargs) == 0:
+                del params['kwargs']
+                
+            d[full_class_name(block)] = params
+
+        return d
+
+    @property
+    def params_str(self):
+        return yaml.safe_dump(self.params_dict(), sort_keys=False)
+
+    def from_params_str(self, params_str):
+        pass
+
 
 class MPSequence(Sequence):
 

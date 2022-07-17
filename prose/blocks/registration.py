@@ -355,6 +355,7 @@ class Twirl(_NeedStars):
     @register_args
     def __init__(self, ref, n=10, **kwargs):
         super().__init__(**kwargs)
+        ref = ref if isinstance(ref, np.ndarray) else np.array(ref)
         self.ref = ref[0:n].copy()
         self.n = n
         self.quads_ref, self.stars_ref = tutils.quads_stars(ref, n=n)
@@ -380,7 +381,7 @@ class Twirl(_NeedStars):
         quads, stars = tutils.quads_stars(s, n=self.n)
         dist, indices = self.kdtree.query(quads)
 
-        # We pick the two asterisms leading to the highest stars matching
+        # We pick the two asterismrefs leading to the highest stars matching
         closeness = []
         for i, m in enumerate(indices):
             M = tutils._find_transform(self.stars_ref[m], stars[i])

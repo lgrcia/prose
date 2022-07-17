@@ -2,7 +2,7 @@ from pathlib import Path
 from setuptools import find_packages, setup
 
 HERE = Path(__file__).parent
-README = (HERE / "README.md").read_text()
+README = (HERE / "README.md").read_text(encoding='utf-8')
 
 setup(
     name="prose",

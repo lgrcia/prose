@@ -3,7 +3,7 @@ import numpy as np
 from skimage.transform import warp
 from skimage.transform import AffineTransform as skAffineTransform
 from astropy.nddata import Cutout2D as _Cutout2D
-from ..utils import register_args, nan_gaussian_filter
+from ..utils import register_args
 
 
 class Cutout2D(Block):
@@ -18,8 +18,10 @@ class Cutout2D(Block):
     """
 
     # TODO should take shape as input not an image
-    def __init__(self, reference_image, **kwargs):
-        super().__init__(**kwargs)
+    @register_args
+    def __init__(self, reference_image, name=None):
+        super().__init__(name=name)
+        self.reference_image = reference_image
         self.ref_shape = np.array(reference_image.shape)
         self.ref_center = self.ref_shape[::-1] / 2
 
@@ -40,7 +42,6 @@ class Cutout2D(Block):
 
     def citations(self, image):
         return "astropy", "numpy"
-
 
 class AffineTransform(Block):
     """
@@ -73,8 +74,8 @@ class AffineTransform(Block):
     """
 
     @register_args
-    def __init__(self, stars=True, data=True, inverse=False, output_shape=None, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, stars=True, data=True, inverse=False, output_shape=None, name=None):
+        super().__init__(name=name)
         self.data = data
         self.stars = stars
         self.inverse = inverse

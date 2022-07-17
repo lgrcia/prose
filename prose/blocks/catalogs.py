@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 from astropy.time import Time
 import warnings
-from ..utils import gaia_query, sparsify
+from ..utils import gaia_query, sparsify, register_args
 from twirl.utils import plot as tplot
 from .registration import cross_match
 from astroquery.mast import Catalogs
@@ -43,6 +43,7 @@ def image_gaia_query(image, *args, limit=3000, correct_pm=True, wcs=True, circul
 
 class CatalogBlock(Block):
 
+    @register_args
     def __init__(self, name, mode=None, limit=10000, **kwargs):
         super().__init__(**kwargs)
         self.mode = mode
@@ -78,6 +79,7 @@ class CatalogBlock(Block):
         
 class PlateSolve(Block):
     
+    @register_args
     def __init__(self, ref_image=None, n=30, tolerance=10, radius=1, debug=False, **kwargs):
         super().__init__(**kwargs)
         self.radius = radius * u.arcmin.to("deg")
@@ -110,6 +112,7 @@ class PlateSolve(Block):
 
 class GaiaCatalog(CatalogBlock):
     
+    @register_args
     def __init__(self, correct_pm=True, limit=10000, **kwargs):
         CatalogBlock.__init__(self, "gaia", limit=limit, **kwargs)
         self.correct_pm = correct_pm
@@ -132,6 +135,7 @@ class GaiaCatalog(CatalogBlock):
 
 class TESSCatalog(CatalogBlock):
     
+    @register_args
     def __init__(self, limit=10000, **kwargs):
         CatalogBlock.__init__(self, "tess", limit=limit, **kwargs)
 

@@ -185,6 +185,7 @@ class Peaks(Block):
 
 class LimitStars(Block):
 
+    @register_args
     def __init__(self, min=4, max=10000, **kwargs):
         super().__init__(**kwargs)
         self.min = min
