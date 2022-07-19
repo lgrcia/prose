@@ -10,6 +10,7 @@ import shutil
 from pathlib import Path
 from prose import Telescope, blocks, load
 from prose.reports import Report, Summary
+from prose.utils import register
 
 
 RAW = Path("synthetic_dataset")
@@ -66,7 +67,7 @@ class TestFitsManager(unittest.TestCase):
 
 class TestReduction(unittest.TestCase):
 
-    def test_reduction(self):
+    def test_OLD_reduction(self):
         
         # generate dataset
         import numpy as np
@@ -107,7 +108,7 @@ class TestReduction(unittest.TestCase):
 
         shutil.rmtree(RAW)
 
-    def test_empty_calibration(self):
+    def test_OLD_empty_calibration(self):
     
         # generate dataset
         import numpy as np
@@ -228,3 +229,39 @@ class TestObservation(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    class Test:
+        def __init__(self, a, b):
+            register(locals())
+            self.a = a
+
+    t = Test(2, 3)
+    print("{'a': 2, 'b': 3} {}")
+    print(t.args, t.kwargs, "\n")
+
+    class Test:
+        def __init__(self, a, b=4):
+            register(locals())
+            self.a = a
+            
+    t = Test(2, 3)
+    print("{'a': 2} {'b': 3}")
+    print(t.args, t.kwargs, "\n")
+
+    class Test:
+        def __init__(self, a, *args):
+            register(locals())
+            self.a = a
+            
+    t = Test(2, 5)
+    print("{'a': 2, '0': 5} {}")
+    print(t.args, t.kwargs, "\n")
+
+    class Test:
+        def __init__(self, a, **kwargs):
+            register(locals())
+            self.a = a
+            
+    t = Test(2, g=5)
+    print("{'a': 2} {'g': 5}")
+    print(t.args, t.kwargs, "\n")

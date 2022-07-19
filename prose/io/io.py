@@ -5,7 +5,7 @@ import numpy as np
 from ..telescope import Telescope
 from datetime import timedelta
 from astropy.io import fits
-from ..console_utils import tqdm
+from ..console_utils import tqdm, warning
 from astropy.time import Time
 import os
 import zipfile
@@ -78,7 +78,16 @@ def set_hdu(hdu_list, value):
         hdu_list.append(value)
 
 
-def fits_to_df(files, telescope_kw="TELESCOP", instrument_kw="INSTRUME", verbose=True, hdu=0):
+def fits_to_df(
+    files, 
+    telescope_kw="TELESCOP", 
+    instrument_kw="INSTRUME", 
+    verbose=True, 
+    hdu=0, 
+    raise_oserror=False, 
+    verbose_os=False
+    ):
+    
     assert len(files) > 0, "Files not provided"
 
     last_telescope = "_"
@@ -90,7 +99,17 @@ def fits_to_df(files, telescope_kw="TELESCOP", instrument_kw="INSTRUME", verbose
         return tqdm(x, "Parsing FITS") if verbose else x
 
     for i in progress(files):
-        header = fits.getheader(i, hdu)
+        try:
+            header = fits.getheader(i, hdu)
+        except OSError as err:
+            if verbose_os:
+                warning(f"OS error for file {i}")
+            if raise_oserror:
+                print(f"OS error: {err}")
+                raise
+            else:
+                continue
+            
         telescope_name = header.get(telescope_kw, "")
         instrument_name = header.get(instrument_kw, "")
 
@@ -118,23 +137,36 @@ def fits_to_df(files, telescope_kw="TELESCOP", instrument_kw="INSTRUME", verbose
             exposure=float(header.get(telescope.keyword_exposure_time, None))
         ))
 
-    df = pd.DataFrame(df_list)
+    df = pd.DataFrame(df_list, columns=(
+        "path",
+        "date",
+        "telescope",
+        "type",
+        "target",
+        "filter",
+        "dimensions",
+        "flip",
+        "jd",
+        "exposure"
+    ))
 
-    df.type.loc[df.type.str.lower().str.contains(telescope.keyword_light_images.lower())] = "light"
-    df.type.loc[df.type.str.lower().str.contains(telescope.keyword_dark_images.lower())] = "dark"
-    df.type.loc[df.type.str.lower().str.contains(telescope.keyword_bias_images.lower())] = "bias"
-    df.type.loc[df.type.str.lower().str.contains(telescope.keyword_flat_images.lower())] = "flat"
-    df.telescope.loc[df.telescope.str.lower().str.contains("unknown")] = np.nan
-    df.date = pd.to_datetime(df.date)
+    if len(df) > 0 and telescope is not None:
+        df.type.loc[df.type.str.lower().str.contains(telescope.keyword_light_images.lower())] = "light"
+        df.type.loc[df.type.str.lower().str.contains(telescope.keyword_dark_images.lower())] = "dark"
+        df.type.loc[df.type.str.lower().str.contains(telescope.keyword_bias_images.lower())] = "bias"
+        df.type.loc[df.type.str.lower().str.contains(telescope.keyword_flat_images.lower())] = "flat"
+        df.telescope.loc[df.telescope.str.lower().str.contains("unknown")] = ""
+        df.date = pd.to_datetime(df.date)
+        df["filter"] = df["filter"].str.replace("'", "p")
 
-    if (df.jd == "").all():  # jd empty then convert from date
-        df.jd = Time(df.date, scale="utc").to_value('jd') + telescope.mjd
+        if (df.jd == "").all():  # jd empty then convert from date
+            df.jd = Time(df.date, scale="utc").to_value('jd') + telescope.mjd
 
-    # We want dates that correspond to same observations but night might be over 2 days (before and after midnight)
-    # So we remove 15 hours to be sure the date year-month-day are consistent with single observations
-    df.date = (df.date - timedelta(hours=15)).apply(lambda x: x.strftime('%Y-%m-%d'))
+        # We want dates that correspond to same observations but night might be over 2 days (before and after midnight)
+        # So we remove 15 hours to be sure the date year-month-day are consistent with single observations
+        df.date = (df.date - timedelta(hours=15)).apply(lambda x: x.strftime('%Y-%m-%d'))
 
-    return df.replace("", np.nan)
+    return df
 
 
 def get_new_fits(current_df, folder, depth=3):

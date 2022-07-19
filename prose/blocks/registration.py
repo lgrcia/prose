@@ -3,7 +3,8 @@ import numpy as np
 from scipy.spatial import KDTree
 from twirl import utils as tutils
 from skimage.transform import AffineTransform as skAT
-from ..block import Block
+from ..block import Block, _NeedStars
+from ..console_utils import error
 from ..utils import register_args
 
 def distance(p1, p2):
@@ -34,6 +35,36 @@ def clean_stars_positions(positions, tolerance=50, output_id=False):
     else:
         return positions[np.unique(keep)]
 
+
+def cross_match(S1, S2, tolerance=10, return_ixds=False, none=True):
+    # cleaning
+    s1 = S1.copy()
+    s2 = S2.copy()
+    
+    s1[np.any(np.isnan(s1), 1)] = (1e15, 1e15)
+    s2[np.any(np.isnan(s2), 1)] = (1e15, 1e15)
+    
+    # matching
+    matches = []
+
+    for i, s in enumerate(s1):
+        distances = np.linalg.norm(s - s2, axis=1)
+        closest = np.argmin(distances)
+        if distances[closest] < tolerance:
+            matches.append([i, closest])
+        else:
+            if none:
+                matches.append([i, np.nan])
+
+    matches = np.array(matches)
+
+    if return_ixds:
+        return matches
+    else:
+        if len(matches) > 0:
+            return s1[matches[:, 0]], s2[matches[:, 1]]
+        else:
+            return np.array([]), np.array([])
 
 def closeness(im_stars_pos, ref_stars_pos, tolerance=1.5, clean=False):
     assert len(im_stars_pos) > 2, f"{len(im_stars_pos)} star coordinates provided (should be > 2)"
@@ -186,25 +217,7 @@ def astroalign_optimized_find_transform(
     return best_t, (source_controlp[so], target_controlp[d])
 
 
-class Registration(Block):
-
-    def __init__(self, detection=None, **kwargs):
-        super().__init__(**kwargs)
-        self.reference_stars = None
-        self.detection = detection
-
-
-class DistanceRegistration(Registration):
-
-    @register_args
-    def __init__(self, tolerance=1.5, clean=False, detection=None, reference=1/2, **kwargs):
-        super().__init__(detection=detection, **kwargs)
-        self.tolerance = tolerance
-        self.clean = clean
-        self.reference = reference
-
-
-class XYShift(Registration):
+class XYShift(_NeedStars):
     r"""Compute the linear shift between two point clouds. Star coordinates in the image are expected in image.stars_coords
 
     |write|  ``Image.dx``, ``Image.dy``, ``Image.header`` 
@@ -260,7 +273,7 @@ class XYShift(Registration):
 
     """
 
-    @register_args
+    
     def __init__(self, reference, tolerance=2, clean=False, **kwargs):
 
         super().__init__(**kwargs)
@@ -268,16 +281,20 @@ class XYShift(Registration):
         self.clean = clean
         self.reference = reference
 
-    def run(self, image, **kwargs):
-        shift = xyshift(image.stars_coords, self.reference, tolerance=self.tolerance, clean=self.clean)
+    def run(self, image):
+        if len(image.stars_coords) <= 2:
+            shift = self.reference.stars_coords[0] - image.stars_coords[0]
+        else:
+            shift = xyshift(image.stars_coords, self.reference.stars_coords, tolerance=self.tolerance, clean=self.clean)
+        
         image.shift = shift
         image.dx, image.dy = shift
-        image.header["DX"] = shift[0]
-        image.header["DY"] = shift[1],
+        image.header["TDX"] = shift[0]
+        image.header["TDY"] = shift[1],
         image.header["ALIGNALG"] = self.__class__.__name__
 
 
-class AstroAlignShift(Registration):
+class AstroAlignShift(_NeedStars):
     """
     Compute the linear shift between point clouds using :code:`astroalign`
 
@@ -286,7 +303,7 @@ class AstroAlignShift(Registration):
     `astroalign <https://astroalign.readthedocs.io/en/latest/>`_ is a python module used to align stellar astronomical images using 3-point asterisms (triangles) similarities. For speed, reference asterisms are computed once at the begining of the reduction and then matched with every images.
     """
 
-    @register_args
+    
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.reference_invariants = None
@@ -309,8 +326,8 @@ class AstroAlignShift(Registration):
         shift = transform.translation
         image.shift = shift
         image.dx, image.dy = shift
-        image.header["DX"] = shift[0]
-        image.header["DY"] = shift[1],
+        image.header["TDX"] = shift[0]
+        image.header["TDY"] = shift[1],
         image.header["ALIGNALG"] = self.__class__.__name__
 
     def citations(self):
@@ -321,28 +338,7 @@ class AstroAlignShift(Registration):
         return """"""
 
 
-class _Twirl(Block):
-
-    @register_args
-    def __init__(self, ref, order=0, n=15, **kwargs):
-        super(_Twirl, self).__init__(**kwargs)
-        self.ref = ref[0:n]
-        self.order = order
-        self.n = n
-
-    def run(self, image, **kwargs):
-        x = tutils.find_transform(image.stars_coords, self.ref, n=self.n)
-        image.transform = skAT(x)
-        image.dx, image.dy = image.transform.translation
-        image.header["TWROT"] = image.transform.rotation
-        image.header["TWTRANSX"] = image.transform.translation[0]
-        image.header["TWTRANSY"] = image.transform.translation[1]
-        image.header["TWSCALEX"] = image.transform.scale[0]
-        image.header["TWSCALEY"] = image.transform.scale[1]
-        image.header["ALIGNALG"] = self.__class__.__name__
-
-
-class Twirl(Block):
+class Twirl(_NeedStars):
     """
     Affine transform computation for images registration
 
@@ -356,10 +352,11 @@ class Twirl(Block):
         number of stars to consider to compute transformation, by default 10
     """
 
-    @register_args
+    
     def __init__(self, ref, n=10, **kwargs):
         super().__init__(**kwargs)
-        self.ref = ref[0:n]
+        ref = ref if isinstance(ref, np.ndarray) else np.array(ref)
+        self.ref = ref[0:n].copy()
         self.n = n
         self.quads_ref, self.stars_ref = tutils.quads_stars(ref, n=n)
         self.kdtree = KDTree(self.quads_ref)
@@ -369,11 +366,11 @@ class Twirl(Block):
         if result is not None:
             x, image.dx, image.dy = result
             image.transform = skAT(x)
-            image.header["TWROT"] = image.transform.rotation
-            image.header["TWTRANSX"] = image.transform.translation[0]
-            image.header["TWTRANSY"] = image.transform.translation[1]
-            image.header["TWSCALEX"] = image.transform.scale[0]
-            image.header["TWSCALEY"] = image.transform.scale[1]
+            image.header["TROT"] = image.transform.rotation
+            image.header["TDX"] = image.transform.translation[0]
+            image.header["TDY"] = image.transform.translation[1]
+            image.header["TSCALEX"] = image.transform.scale[0]
+            image.header["TSCALEY"] = image.transform.scale[1]
             image.header["ALIGNALG"] = self.__class__.__name__
         
         else:
@@ -384,7 +381,7 @@ class Twirl(Block):
         quads, stars = tutils.quads_stars(s, n=self.n)
         dist, indices = self.kdtree.query(quads)
 
-        # We pick the two asterisms leading to the highest stars matching
+        # We pick the two asterismrefs leading to the highest stars matching
         closeness = []
         for i, m in enumerate(indices):
             M = tutils._find_transform(self.stars_ref[m], stars[i])

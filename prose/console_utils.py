@@ -3,43 +3,25 @@ import shlex
 import struct
 import platform
 import subprocess
-from colorama import Fore
 from . import CONFIG
+from datetime import datetime
 from tqdm import tqdm as _tqdm
 
-style = {
-        "spinner_color": {
-            "bright_green": "green",
-            "bright_blue": "blue",
-            "yellow": "yellow",
-            "blue": "blue",
-            "red": "red",
-            "white": "white",
-        },
-        "fore_color": {
-            "bright_green": Fore.LIGHTGREEN_EX,
-            "bright_blue": Fore.LIGHTBLUE_EX,
-            "yellow": Fore.YELLOW,
-            "blue": Fore.LIGHTBLUE_EX,
-            "red": Fore.RED,
-            "white": Fore.WHITE,
-        },
-        "info_label": {}
-}
-
-SPINNER_COLOR = style["spinner_color"][CONFIG.config["color"]]
-FORE_COLOR = style["fore_color"][CONFIG.config["color"]]
-
-RUN_LABEL = "{}RUN{}".format(FORE_COLOR, Fore.RESET)
-INFO_LABEL = "{}INFO{}".format(FORE_COLOR, Fore.RESET)
-WARNING_LABEL = "{}WARNING{}".format(style["fore_color"]["yellow"], Fore.RESET)
+def color(s, i):
+    return f"\u001b[38;5;{i}m{s}\x1b[0m"
 
 TQDM_BAR_FORMAT = "%s {l_bar}%s{bar}%s{r_bar}" % (
-    RUN_LABEL, FORE_COLOR, Fore.RESET
+    color("RUN", 12), "\u001b[38;5;12m", "\x1b[0m"
 )
 
-def tqdm(x, desc="run", unit="images"):
-    return _tqdm(x, desc=desc, unit=unit, ncols=80, bar_format=TQDM_BAR_FORMAT)
+def tqdm(x, desc="run", unit="images", **kwargs):
+    return _tqdm(x, desc=desc, unit=unit, ncols=80, bar_format=TQDM_BAR_FORMAT, **kwargs)
+
+def progress(show, **kwargs):
+    if show:
+        return lambda x: tqdm(x, **kwargs)
+    else:
+        return lambda x: x
 
 def get_terminal_size():
     """ getTerminalSize()
@@ -135,9 +117,25 @@ def _get_terminal_size_linux():
     return int(cr[1]), int(cr[0])
 
 
-def info(s):
-    print(f"{INFO_LABEL} {s}")
 
+def _log(type, s):
+    date = datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
+    for file in CONFIG.logs:
+        open(file, "a").write(f"{date} {type} {s}\n")
+
+def log(s):
+    print(s)
+    for file in CONFIG.logs:
+        open(file, "a").write(f"{s}\n")
+
+def info(s):
+    print(f"{color('INFO', 12)} {s}")
+    _log('INFO', s)
 
 def warning(s):
-    print(f"{WARNING_LABEL} {s}")
+    print(f"{color('WARNING', 3)} {s}")
+    _log('WARNING', s)
+
+def error(s):
+    print(f"{color('ERROR', 1)} {s}")
+    _log('ERROR', s)

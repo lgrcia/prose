@@ -20,6 +20,7 @@ import matplotlib.patches as patches
 from ..image import Image
 from astropy.nddata import Cutout2D as astopy_Cutout2D
 from astropy.units.quantity import Quantity
+from astropy.stats import sigma_clipped_stats
 
 __all__ = [
     "Stack",
@@ -43,8 +44,12 @@ __all__ = [
     "Del"
 ]
 
+class DataBlock(Block):
 
-class Stack(Block):
+    def __init__(self, name=None):
+        super().__init__(name)
+
+class Stack(DataBlock):
     """Build a FITS stack image of the observation
 
     The stack image is accessible through the ``stack`` attribute. It is built by accumulating images along creating a pixel weights map. This map allows to ignore bad pixels contributions to the stack, built through a weighted mean.
@@ -64,7 +69,7 @@ class Stack(Block):
     overwrite : bool, optional
         weather to overwrite file if exists, by default False
     """
-    @register_args
+    
     def __init__(self, ref=None, **kwargs):
 
         super(Stack, self).__init__(**kwargs)
@@ -112,9 +117,9 @@ class Stack(Block):
             self._stack = block._stack
         self._n_images += block._n_images
 
-class StackStd(Block):
+class StackStd(DataBlock):
     
-    @register_args
+    
     def __init__(self, destination=None, overwrite=False, **kwargs):
         super(StackStd, self).__init__(**kwargs)
         self.images = []
@@ -149,7 +154,7 @@ class SaveReduced(Block):
         weather to overwrite file if exists, by default False
     """
     # TODO rename to SaveFITS and make destination a string like thing with the name of the image...
-    @register_args
+    
     def __init__(self, destination, overwrite=False, **kwargs):
 
         super().__init__(**kwargs)
@@ -182,7 +187,7 @@ class SaveReduced(Block):
 
 class RemoveBackground(Block):
 
-    @register_args
+    
     def __init__(self):
         super().__init__()
         self.stack_data = None
@@ -194,7 +199,7 @@ class RemoveBackground(Block):
 
 class CleanCosmics(Block):
 
-    @register_args
+    
     def __init__(self, threshold=2):
         super().__init__()
         self.stack_data = None
@@ -214,7 +219,7 @@ class CleanCosmics(Block):
 
 class Pass(Block):
     """A Block that does nothing"""
-    @register_args
+    
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
     
@@ -222,10 +227,10 @@ class Pass(Block):
         pass
 
 
-class ImageBuffer(Block):
+class ImageBuffer(DataBlock):
     """Stores the last Image
     """
-    @register_args
+    
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.image = None
@@ -250,7 +255,7 @@ class Set(Block):
     kwargs : kwargs
         keywords argument and values to be set on every image
     """
-    @register_args
+    
     def __init__(self, name=None, **kwargs):
         super().__init__(name=name)
         self.kwargs = kwargs
@@ -268,7 +273,7 @@ class Flip(Block):
     reference_image : `Image`
         Image serving as a reference for the flip value
     """
-    @register_args
+    
     def __init__(self, reference_image, **kwargs):
         """[summary]
 
@@ -288,24 +293,31 @@ class Flip(Block):
             image.data = image.data[::-1, ::-1]
 
 # TODO document
-class Get(Block):
+class Get(DataBlock):
 
-    @register_args
-    def __init__(self, *names):
-        super().__init__()
+    
+    def __init__(self, *names, name="get"):
+        super().__init__(name=name)
         self.names = names
         self.values = {name: [] for name in names}
 
     def run(self, image, **kwargs):
         for name in self.names:
-            if name in image.__dict__:
-                value = image.__dict__[name]
-            elif name in image.header:
-                value = image.header[name]
-            else:
-                raise AttributeError(f"'{name}' not in Image attributes or Image.header")
+            try:
+                value = image.__getattribute__(name)
+            except:
+                try:
+                    value = image.header[name]
+                except:
+                    raise AttributeError(f"'{name}' not in Image attributes or Image.header")
 
             self.values[name].append(value)
+    
+    def __getattr__(self, key):
+        if key in self.names:
+            return self.values[key]
+        else:
+            super().__getattribute__(key)
 
 
     def __call__(self, *names):
@@ -317,12 +329,12 @@ class Get(Block):
             return [self.values[name] for name in names]
 
     def concat(self, block):
-        for name in self.values.keys():
+        for name in self.names:
             self.values[name] = [*self.values[name], *block.values[name]]
 
-class XArray(Block):
+class XArray(DataBlock):
 
-    @register_args
+    
     def __init__(self, *names, name="xarray", raise_error=True, concat_dim="time", **kwargs):
         super().__init__(name=name)
         self.variables = {name: (dims, []) for dims, name in names}
@@ -366,6 +378,16 @@ class XArray(Block):
                 pass
         else:
             self.variables = block.variables.copy()
+
+    def to_observation(self, stack, sequence=None):
+        xarr = utils.image_in_xarray(stack, self.xarray, stars=True) # adding reference as a stack
+        xarr = xarr.transpose("apertures", "star", "time", ...) # ... just needed
+
+        if sequence is not None:
+            xarr.attrs["photometry"] = [b.__class__.__name__ for b in sequence.blocks]
+
+        # xarr.attrs["prose_version"] = __version__
+        return xarr
 
 class LocalInterpolation(Block):
     
@@ -443,7 +465,7 @@ class Trim(Block):
 
     """
 
-    @register_args
+    
     def __init__(self, skip_wcs=False, trim=None, **kwargs):
 
         super().__init__(**kwargs)
@@ -484,7 +506,7 @@ class Calibration(Block):
         list of bias files paths
     """
 
-    @register_args
+    
     def __init__(self, darks=None, flats=None, bias=None, loader=Image, easy_ram=True, **kwargs):
 
         super().__init__(**kwargs)
@@ -502,7 +524,7 @@ class Calibration(Block):
 
     def _produce_master(self, images, image_type):
         if images is not None:
-            assert isinstance(images, (list, np.array)), "images must be list or array"
+            assert isinstance(images, (list, np.ndarray)), "images must be list or array"
             if len(images) == 0:
                 images = None
 
@@ -661,7 +683,7 @@ class CleanBadPixels(Block):
         image.data = self.clean(image.data.copy())
 
 
-class MedianStack(Block):
+class MedianStack(DataBlock):
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -674,7 +696,7 @@ class MedianStack(Block):
         self.stack = Image(data=np.median(self.images, 0))
 
 
-class XArray2(Block):
+class XArray2(DataBlock):
     def __init__(self, names, name="xarray", raise_error=True, concat_dim="time", **kwargs):
         super().__init__(name=name)
         self.variables = names

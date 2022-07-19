@@ -1,11 +1,9 @@
-from calendar import c
 from . import Image
 import matplotlib.pyplot as plt
 import numpy as np
 import re
 from astropy.time import Time
 from astropy import units as u
-from astropy.coordinates import SkyCoord
 from .fluxes import ApertureFluxes, pont2006
 from . import viz
 from .telescope import Telescope
@@ -13,16 +11,16 @@ from . import utils
 import pandas as pd
 from scipy.stats import binned_statistic
 from .blocks.psf import Gaussian2D
-from .console_utils import INFO_LABEL
 from astropy.io.fits.verify import VerifyWarning
 import warnings
 import shutil
 from pathlib import Path
 from .utils import fast_binning, z_scale, clean_header
-from .console_utils import info
+from .console_utils import info, warning, error
 from . import blocks
 from prose import Sequence
 from matplotlib import gridspec
+from .blocks import catalogs
 
 warnings.simplefilter('ignore', category=VerifyWarning)
 
@@ -65,10 +63,10 @@ class Observation(ApertureFluxes):
             try:
                 self.compute_bjd()
                 if not time_verbose:
-                    print(f"{INFO_LABEL} Time converted to BJD TDB")
+                    info("Time converted to BJD TDB")
             except:
                 if not time_verbose:
-                    print(f"{INFO_LABEL} Could not convert time to BJD TDB")
+                    info("Could not convert time to BJD TDB")
 
     @property
     def has_stack(self):
@@ -990,3 +988,33 @@ class Observation(ApertureFluxes):
             gaia_i = gaia_i[0]
             gxy = self.stack.catalogs[catalog_name][["x", "y"]].values[gaia_i]
             self.target = int(np.argmin(np.linalg.norm(self.stars - gxy, axis=1)))
+
+    def set_gaia_target(self, gaia_id, verbose=False, raise_far=True):
+        if not self.stack.plate_solved:
+            if verbose:
+                info("plate solving ...")
+            self.plate_solve()
+
+        if verbose:
+            info("querying Gaia catalog ...")
+        
+        catalog_image = catalogs.GaiaCatalog()(self.stack)
+
+        gaia_table = catalog_image.catalogs["gaia"]
+        matched_gaia = gaia_table.id.values == f"Gaia DR2 {gaia_id}"
+        target_xy = gaia_table[matched_gaia][["x", "y"]].values[0]
+        distances = np.linalg.norm(self.stack.stars_coords - target_xy, axis=1)
+        i = np.argmin(distances)
+
+        if distances[i] > 10:
+            _distance = f"{distances[i]:.0f} pix."
+            if raise_far:
+                error(f"matched gaia star too far from detected star ({_distance})")
+                return None
+            else:
+                warning(f"matched gaia star is far from detected star ({_distance})")
+
+        self.target = i
+        if verbose:
+            info(f"target = {i}")
+

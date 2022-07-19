@@ -27,7 +27,7 @@ class StarsDetection(Block):
 
     def clean(self, fluxes, coordinates, *args):
 
-        if len(coordinates) > 2:
+        if len(coordinates) > 0:
             if self.sort:
                 idxs = np.argsort(fluxes)[::-1]
                 coordinates = coordinates[idxs]
@@ -65,7 +65,7 @@ class DAOFindStars(StarsDetection):
     sort : bool, optional
         whether to sort stars coordinates from the highest to the lowest intensity, by default True
     """
-    @register_args
+    
     def __init__(self, sigma_clip=2.5, lower_snr=5, fwhm=5, **kwargs):
         super().__init__(**kwargs)
         self.sigma_clip = sigma_clip
@@ -102,7 +102,7 @@ class SegmentedPeaks(StarsDetection):
     sort : bool, optional
         whether to sort stars coordinates from the highest to the lowest intensity, by default True
     """
-    @register_args
+    
     def __init__(self, unit_euler=False, threshold=4, min_area=3, **kwargs):
         super().__init__(**kwargs)
         self.threshold = threshold
@@ -150,7 +150,7 @@ class SEDetection(StarsDetection):
     sort : bool, optional
         whether to sort stars coordinates from the highest to the lowest intensity, by default True
     """
-    @register_args
+    
     def __init__(self, threshold=1.5, **kwargs):
         super().__init__(**kwargs)
         self.threshold = threshold
@@ -169,7 +169,7 @@ class SEDetection(StarsDetection):
 
 class Peaks(Block):
 
-    @register_args
+    
     def __init__(self, cutout=21, **kwargs):
         super().__init__(**kwargs)
         self.cutout = cutout
@@ -185,6 +185,7 @@ class Peaks(Block):
 
 class LimitStars(Block):
 
+    
     def __init__(self, min=4, max=10000, **kwargs):
         super().__init__(**kwargs)
         self.min = min

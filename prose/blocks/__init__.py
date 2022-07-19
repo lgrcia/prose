@@ -1,13 +1,13 @@
-from .registration import XYShift, AstroAlignShift, _Twirl, Twirl
+from .registration import XYShift, AstroAlignShift, Twirl
 from .alignment import AffineTransform, Cutout2D
 from .detection import SegmentedPeaks, DAOFindStars, SEDetection, Peaks
 from .psf import MedianPSF, Gaussian2D, Moffat2D, FastGaussian, KeepGoodStars, FWHM, Cutouts
-from .centroids import BalletCentroid
 from .photometry import PhotutilsAperturePhotometry, SEAperturePhotometry, PhotutilsPSFPhotometry
 from .shepard import  Shepard
 from . import catalogs
 from .vizualisation import RawVideo
 from .utils import *
+from .centroids import *
 
 # import prose
 # from prose import Block

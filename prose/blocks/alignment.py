@@ -3,7 +3,7 @@ import numpy as np
 from skimage.transform import warp
 from skimage.transform import AffineTransform as skAffineTransform
 from astropy.nddata import Cutout2D as _Cutout2D
-from ..utils import register_args, nan_gaussian_filter
+from ..utils import register_args
 
 
 class Cutout2D(Block):
@@ -18,14 +18,16 @@ class Cutout2D(Block):
     """
 
     # TODO should take shape as input not an image
-    def __init__(self, reference_image, **kwargs):
-        super().__init__(**kwargs)
+    
+    def __init__(self, reference_image, name=None):
+        super().__init__(name=name)
+        self.reference_image = reference_image
         self.ref_shape = np.array(reference_image.shape)
         self.ref_center = self.ref_shape[::-1] / 2
 
     def run(self, image):
         # TODO this is shitty, should use image.dx, image.dy
-        shift = np.array([image.header["DX"], image.header["DY"]])
+        shift = np.array([image.header["TDX"], image.header["TDY"]])
 
         aligned_image = _Cutout2D(
                         image.data,
@@ -41,16 +43,15 @@ class Cutout2D(Block):
     def citations(self, image):
         return "astropy", "numpy"
 
-
 class AffineTransform(Block):
     """
     Apply an affine transformation to image and/or stars
 
     |read|
     
-    - rotation : ``Image.header['TWROT']``
-    - translation : ``Image.header['TWTRANSX']``, ``Image.header['TWTRANSY']``
-    - scale : ``Image.header['TWSCALEX']``, ``Image.header['TWSCALEY']``
+    - rotation : ``Image.header['TROT']``
+    - translation : ``Image.header['TDX']``, ``Image.header['TDY']``
+    - scale : ``Image.header['TSCALEX']``, ``Image.header['TSCALEY']``
 
 
     |write|
@@ -72,9 +73,9 @@ class AffineTransform(Block):
 
     """
 
-    @register_args
-    def __init__(self, stars=True, data=True, inverse=False, output_shape=None, **kwargs):
-        super().__init__(**kwargs)
+    
+    def __init__(self, stars=True, data=True, inverse=False, output_shape=None, name=None):
+        super().__init__(name=name)
         self.data = data
         self.stars = stars
         self.inverse = inverse
@@ -82,11 +83,15 @@ class AffineTransform(Block):
 
     def run(self, image, **kwargs):
         if "transform" not in image.__dict__:
-            if "TWROT" in image.header:
+            if "TROT" in image.header:
                 image.transform = skAffineTransform(
-                    rotation=image.header["TWROT"],
-                    translation=(image.header["TWTRANSX"], image.header["TWTRANSY"]),
-                    scale=(image.header["TWSCALEX"], image.header["TWSCALEX"])
+                    rotation=image.header["TROT"],
+                    translation=(image.header["TDX"], image.header["TDY"]),
+                    scale=(image.header["TSCALEX"], image.header["TSCALEX"])
+                )
+            elif "TDX" in image.header:
+                image.transform = skAffineTransform(
+                    translation=(image.header["TDX"], image.header["TDY"]),
                 )
             else:
                 raise AssertionError("Could not find transformation matrix")

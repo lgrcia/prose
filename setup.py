@@ -2,14 +2,15 @@ from pathlib import Path
 from setuptools import find_packages, setup
 
 HERE = Path(__file__).parent
-README = (HERE / "README.md").read_text()
+README = (HERE / "README.md").read_text(encoding='utf-8')
 
 setup(
     name="prose",
-    version="2.0.3",
+    version="2.1.0",
     author="Lionel J. Garcia",
     description="Reduction and analysis of FITS telescope observations",
     packages=find_packages(exclude=["test"]),
+    #include_package_data = True,
     license="MIT",
     url="https://github.com/lgrcia/prose",
     # entry_points="""
@@ -23,11 +24,9 @@ setup(
         "scipy",
         "astropy",
         "matplotlib",
-        "colorama",
         "scikit-image",
         "pandas>=1.1",
         "tqdm",
-        "astroalign",
         "photutils",
         "astroquery",
         "pyyaml",

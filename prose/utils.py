@@ -12,6 +12,8 @@ import astropy.units as u
 from datetime import datetime
 import inspect
 from scipy import ndimage
+from functools import wraps
+from collections import OrderedDict
 
 earth2sun = (c.R_earth / c.R_sun).value
 
@@ -333,17 +335,33 @@ def sigma_clip(y, sigma=5., return_mask=False, x=None):
             return x[mask], y[mask]
 
 
+def args_kwargs(f):
+    s = inspect.signature(f)
+    args = []
+    kwargs = {}
+    for p in s.parameters.values():
+        if p.default != inspect._empty:
+            kwargs[p.name] = p.default
+        else:
+            args.append(p.name)
+    return args, kwargs
+
+# todo: adapt to work with positional parameters like register
 def register_args(f):
     """
     When used within a class, saves args and kwargs passed to a function
     (mostly used to record __init__ inputs)
     """
-    def inner(*args, **kwargs):
-        self = args[0]
-        self.args = args[1::]
+    @wraps(f)
+    def inner(*_args, **_kwargs):
+        self = _args[0]
+        args, kwargs = args_kwargs(f)
+        args = dict(zip(args[1::], _args[1::]))
+        kwargs.update(_kwargs)
+        self.args = args
         self.kwargs = kwargs
-        return f(*args, **kwargs)
-    return f
+        return f(self, *args.values(), **kwargs)
+    return inner
     
 
 def nan_gaussian_filter(data, sigma=1., truncate=4.):
@@ -490,3 +508,48 @@ def sparsify(stars, radius):
             deleted_stars = np.hstack([deleted_stars, idxs])
     
     return np.array(sparse_stars)
+
+
+
+def register(loc):
+    self = loc['self']
+    del loc['self']
+    if '__class__' in loc:
+        del loc['__class__']
+    s = inspect.signature(self.__init__)
+    kwargs = {}
+    var_pos_name = None
+    key_pos_name = None
+    for p in s.parameters.values():
+        if p.default != inspect._empty:
+            kwargs[p.name] = p.default
+        elif p.kind.name == "VAR_POSITIONAL":
+            var_pos_name = p.name
+        elif p.kind.name == "VAR_KEYWORD":
+            key_pos_name = p.name
+            
+    kwargs_keys = list(kwargs.keys())
+    args = {}
+    for a, v in loc.items():
+        if a == var_pos_name:
+            for i, a in enumerate(v):
+                args[f"{i}"] = a
+        elif a == key_pos_name:
+            for k, _v in v.items():
+                kwargs[k] = _v
+        elif not a in kwargs_keys:
+            args[a] = v
+    
+    for k in kwargs_keys:
+        kwargs[k] = loc[k]
+    
+    self.args = args
+    self.kwargs = kwargs
+
+def full_class_name(o):
+    # https://stackoverflow.com/questions/2020014/get-fully-qualified-class-name-of-an-object-in-python
+    klass = o.__class__
+    module = klass.__module__
+    if module == 'builtins':
+        return klass.__qualname__ # avoid outputs like 'builtins.str'
+    return module + '.' + klass.__qualname__

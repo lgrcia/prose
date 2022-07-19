@@ -1,10 +1,21 @@
-from photutils.centroids import centroid_sources, centroid_2dg
+from photutils.centroids import centroid_sources, centroid_2dg, centroid_quadratic, centroid_com
 from .. import Block
+from prose.block import _NeedStars
 import numpy as np
 from os import path
 from prose import CONFIG
 from .psf import cutouts
 from ..utils import register_args
+import warnings
+from astropy.utils.exceptions import AstropyUserWarning
+
+
+__all__ = [
+    "COM",
+    "Gaussian2D",
+    "Quadratic",
+    "BalletCentroid",
+]
 
 TF_LOADED = False
 
@@ -17,32 +28,110 @@ except ModuleNotFoundError:
     TF_LOADED = True
 
 
-class Centroid2dg(Block):
-    """Centroiding from  ``photutils.centroids.centroid_2dg``
-    
-    |write| ``Image.stars_coords``
-    """
+class PhotutilsCentroid(_NeedStars):
 
-    @register_args
-    def __init__(self, cutout=21, **kwargs):
+    
+    def __init__(self, centroid_func, limit=None, cutout=21, **kwargs):
+        """Photutils centroiding (only prose >= 2.0.3)
+
+        Parameters
+        ----------
+        centroid_func : function
+            photutils.centroids function
+        limit : int, optional
+            maximum deviation from initial coordinate, by default `cutout/2`
+        cutout : int, optional
+            size of the cutout to be used for centroiding, by default 21
+        """
         super().__init__(**kwargs)
         self.cutout = cutout
+        self.centroid_func = centroid_func
+        if limit is None:
+            limit = cutout/2
 
-    def run(self, image, **kwargs):
-        x, y = image.stars_coords.T
+        self.limit = limit
 
-        image.stars_coords = np.array(centroid_sources(
-            image.data, x, y, box_size=self.cutout, centroid_func=centroid_2dg
-        )).T
+    def run(self, image):
+        # *%+#@ photutils check (see photutils.centroids.core code...)
+        in_image = np.all(image.stars_coords < image.shape[::-1] - (1, 1), axis=1)
+        in_image = np.logical_and(in_image, np.all(image.stars_coords > (0, 0), axis=1))
+        x, y = image.stars_coords[in_image].T.copy()
+
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', AstropyUserWarning)
+            centroid_stars_coords = np.array(centroid_sources(
+                image.data, x, y, box_size=self.cutout, centroid_func=self.centroid_func
+            )).T
+
+        stars_coords = image.stars_coords.copy()
+        stars_coords[in_image] = centroid_stars_coords
+        in_limit = np.linalg.norm(image.stars_coords - stars_coords, axis=1) < self.limit
+        image.stars_coords[in_limit] = stars_coords[in_limit]
 
     @staticmethod
     def citations():
         return "photutils", "numpy"
 
+class COM(PhotutilsCentroid):
+    """Centroiding using ``photutils.centroids.centroid_com``
+    
+    |read| ``Image.stars_coords``
+
+    |write| ``Image.stars_coords``
+
+    Parameters
+    ----------
+    limit : int, optional
+        maximum deviation from initial coordinate, by default `cutout/2`
+    cutout : int, optional
+        size of the cutout to be used for centroiding, by default 21 
+    """
+
+    
+    def __init__(self, **kwargs):
+        super().__init__(centroid_func=centroid_com, **kwargs)
+
+class Gaussian2D(PhotutilsCentroid):
+    """Centroiding using ``photutils.centroids.centroid_2dg``
+    
+    |read| ``Image.stars_coords``
+
+    |write| ``Image.stars_coords``
+
+    Parameters
+    ----------
+    limit : int, optional
+        maximum deviation from initial coordinate, by default `cutout/2`
+    cutout : int, optional
+        size of the cutout to be used for centroiding, by default 21 
+    """
+
+    
+    def __init__(self, **kwargs):
+        super().__init__(centroid_func=centroid_2dg, **kwargs)
+
+class Quadratic(PhotutilsCentroid):
+    """Centroiding using ``photutils.centroids.centroid_quadratic``
+    
+    |read| ``Image.stars_coords``
+    
+    |write| ``Image.stars_coords``
+
+    Parameters
+    ----------
+    limit : int, optional
+        maximum deviation from initial coordinate, by default `cutout/2`
+    cutout : int, optional
+        size of the cutout to be used for centroiding, by default 21 
+    """
+    
+    
+    def __init__(self, **kwargs):
+        super().__init__(centroid_func=centroid_quadratic, **kwargs)
+
 
 class CNNCentroid(Block):
 
-    @register_args
     def __init__(self, cutout=15, filename=None, **kwargs):
         super().__init__(**kwargs)
         self.filename = filename
@@ -94,8 +183,7 @@ class BalletCentroid(CNNCentroid):
 
     |write| ``Image.stars_coords``
     """
-
-    @register_args
+    
     def __init__(self, **kwargs):
         super().__init__(cutout=15, filename="centroid.h5", **kwargs)
         self.import_and_check_model()
@@ -117,7 +205,7 @@ class BalletCentroid(CNNCentroid):
 
 class OldNNCentroid(CNNCentroid):
 
-    @register_args
+    
     def __init__(self, **kwargs):
         super().__init__(cutout=21, filename="oldcentroid.h5", **kwargs)
         self.import_and_check_model()

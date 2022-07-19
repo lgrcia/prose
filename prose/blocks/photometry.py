@@ -22,7 +22,7 @@ except:
 
 class PhotutilsPSFPhotometry(Block):
 
-    @register_args
+    
     def __init__(self, fwhm, **kwargs):
         super().__init__(**kwargs)
 
@@ -107,7 +107,7 @@ class PhotutilsAperturePhotometry(Block):
         - if float: `apertures` multiplied `scale` and held fixed for all images
     """
 
-    @register_args
+    
     def __init__(
             self,
             apertures=None,
@@ -194,7 +194,8 @@ class PhotutilsAperturePhotometry(Block):
         bkg_median = np.array(bkg_median)
 
         image.apertures_area = self.circular_apertures_area
-        image.sky = bkg_median
+        image.annulus_sky = bkg_median
+        image.sky = bkg_median.mean()
         image.fluxes = np.zeros((self.n_apertures, self.n_stars))
         image.annulus_area = self.annulus_area
         image.annulus_rin = self.annulus_final_rin
@@ -278,7 +279,7 @@ class SEAperturePhotometry(Block):
         radius of the outer annulus in fraction of fwhm, by default 8
     """
 
-    @register_args
+    
     def __init__(self, apertures=None, r_in=5, r_out=8, fwhm_scale=True, **kwargs):
 
         super().__init__(**kwargs)

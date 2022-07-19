@@ -6,8 +6,10 @@ import pandas as pd
 import numpy as np
 from astropy.time import Time
 import warnings
-from ..utils import gaia_query, sparsify
+from ..utils import gaia_query, sparsify, register_args
 from twirl.utils import plot as tplot
+from .registration import cross_match
+from astroquery.mast import Catalogs
 
 def image_gaia_query(image, *args, limit=3000, correct_pm=True, wcs=True, circular=True, fov=None):
     
@@ -41,6 +43,7 @@ def image_gaia_query(image, *args, limit=3000, correct_pm=True, wcs=True, circul
 
 class CatalogBlock(Block):
 
+    
     def __init__(self, name, mode=None, limit=10000, **kwargs):
         super().__init__(**kwargs)
         self.mode = mode
@@ -55,21 +58,27 @@ class CatalogBlock(Block):
         radecs = np.array([catalog["ra"].quantity.to(u.deg), catalog["dec"].quantity.to(u.deg)])
         stars_coords = np.array(SkyCoord(*radecs, unit="deg").to_pixel(image.wcs))
         catalog["x"], catalog["y"] = stars_coords
-        image.catalogs[self.catalog_name] = catalog.to_pandas()
+        catalog = catalog.to_pandas()
+        image.catalogs[self.catalog_name] = catalog
     
         if self.mode == "replace":
             image.stars_coords = stars_coords.T[np.all(np.isfinite(stars_coords), 0)]
             idxs = np.flatnonzero(np.all(image.stars_coords < image.shape[::-1], 1))
             image.stars_coords = image.stars_coords[idxs][0:self.limit]
-            image.catalogs[self.catalog_name] = image.catalogs[self.catalog_name].iloc[idxs].reset_index()
+            catalog = catalog.iloc[idxs].reset_index()
 
         elif self.mode == "crossmatch":
-            x, y = catalog[["x", "y"]].values.T
-            pass
+            xys = catalog[["x", "y"]].values
+            matches = cross_match(image.stars_coords, xys, return_ixds=True)
+            catalog.loc[len(xys)] = [np.nan for _ in catalog.keys()]
+            matches[np.isnan(matches)] = -1
+            matches = matches.astype(int)
+            catalog = catalog.iloc[matches.T[1]].reset_index()
 
-        image.catalogs[self.catalog_name] = image.catalogs[self.catalog_name].iloc[0:self.limit]
+        image.catalogs[self.catalog_name] = catalog.iloc[0:self.limit]
         
 class PlateSolve(Block):
+    
     
     def __init__(self, ref_image=None, n=30, tolerance=10, radius=1, debug=False, **kwargs):
         super().__init__(**kwargs)
@@ -103,9 +112,9 @@ class PlateSolve(Block):
 
 class GaiaCatalog(CatalogBlock):
     
-    def __init__(self, tolerance=4, correct_pm=True, **kwargs):
-        CatalogBlock.__init__(self, "gaia", **kwargs)
-        self.tolerance = tolerance
+    
+    def __init__(self, correct_pm=True, limit=10000, **kwargs):
+        CatalogBlock.__init__(self, "gaia", limit=limit, **kwargs)
         self.correct_pm = correct_pm
 
     def get_catalog(self, image):
@@ -118,6 +127,24 @@ class GaiaCatalog(CatalogBlock):
             fov=max_fov
         )
         table.rename_column('DESIGNATION', 'id')
+        return table
+
+    def run(self, image):
+        CatalogBlock.run(self, image)
+
+
+class TESSCatalog(CatalogBlock):
+    
+    
+    def __init__(self, limit=10000, **kwargs):
+        CatalogBlock.__init__(self, "tess", limit=limit, **kwargs)
+
+    def get_catalog(self, image):
+        max_fov = image.fov.max()*np.sqrt(2)/2
+        table = Catalogs.query_region(image.skycoord, max_fov, "TIC", verbose=False)
+        table["ra"].unit = "deg"
+        table["dec"].unit = "deg"
+        table.rename_column('ID', 'id')
         return table
 
     def run(self, image):
