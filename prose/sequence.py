@@ -131,58 +131,39 @@ class Sequence:
     # import/export properties
     # ------------------------
 
-    @staticmethod
-    def from_dicts(blocks_dicts):
-        blocks = []
-        for block_dict in blocks_dicts:
-            block = block_dict["block"](*block_dict["args"], **block_dict["kwargs"])
-            block.name = block_dict["name"]
-            blocks.append(block)
-            
-        return Sequence(blocks)
-
-    @property
-    def as_dicts(self):
-        blocks = []
-        for block in self.blocks:
-            blocks.append(dict(
-                block=block.__class__,
-                name=block.name,
-                args=block.args,
-                kwargs=block.kwargs
-            ))
-
-        return blocks
-
     def add_discard(self, discard_block, i):
         if discard_block not in self.discards:
             self.discards[discard_block] = []
         self.discards[discard_block].append(str(i))
 
 
-    def params_dict(self):
-        d = {}
-        for block in self.blocks:
-            params = {
-                'args': {k: a.tolist() if isinstance(a, np.ndarray) else a for k, a in block.args.items()}, 
-                'kwargs': {k:v.tolist() if isinstance(v, np.ndarray) else v for k, v in block.kwargs.items()}
-            }
-            if len(block.args) == 0:
-                del params['args']
-            if len(block.kwargs) == 0:
-                del params['kwargs']
-                
-            d[full_class_name(block)] = params
+    @property
+    def args(self):
+        blocks = []
+        for block in self.blocks:        
+            blocks.append({
+                'block': full_class_name(block),
+                **block.args
+            })
 
-        return d
+        return blocks
+
+    @classmethod
+    def from_args(cls, args):
+        import prose
+        
+        blocks = []
+        for block_dict in args:
+            block_class = block_dict["block"]
+            del block_dict["block"]
+            block = eval(block_class).from_args(block_dict)
+            blocks.append(block)
+            
+        return cls(blocks)
 
     @property
     def params_str(self):
         return yaml.safe_dump(self.params_dict(), sort_keys=False)
-
-    def from_params_str(self, params_str):
-        pass
-
 
 class MPSequence(Sequence):
 

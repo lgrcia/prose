@@ -273,7 +273,7 @@ class XYShift(_NeedStars):
 
     """
 
-    @register_args
+    
     def __init__(self, reference, tolerance=2, clean=False, **kwargs):
 
         super().__init__(**kwargs)
@@ -303,7 +303,7 @@ class AstroAlignShift(_NeedStars):
     `astroalign <https://astroalign.readthedocs.io/en/latest/>`_ is a python module used to align stellar astronomical images using 3-point asterisms (triangles) similarities. For speed, reference asterisms are computed once at the begining of the reduction and then matched with every images.
     """
 
-    @register_args
+    
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.reference_invariants = None
@@ -352,7 +352,7 @@ class Twirl(_NeedStars):
         number of stars to consider to compute transformation, by default 10
     """
 
-    @register_args
+    
     def __init__(self, ref, n=10, **kwargs):
         super().__init__(**kwargs)
         ref = ref if isinstance(ref, np.ndarray) else np.array(ref)

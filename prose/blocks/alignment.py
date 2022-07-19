@@ -18,7 +18,7 @@ class Cutout2D(Block):
     """
 
     # TODO should take shape as input not an image
-    @register_args
+    
     def __init__(self, reference_image, name=None):
         super().__init__(name=name)
         self.reference_image = reference_image
@@ -73,7 +73,7 @@ class AffineTransform(Block):
 
     """
 
-    @register_args
+    
     def __init__(self, stars=True, data=True, inverse=False, output_shape=None, name=None):
         super().__init__(name=name)
         self.data = data

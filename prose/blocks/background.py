@@ -7,7 +7,7 @@ from photutils.background import Background2D, MedianBackground
 
 class PhotutilsBackground2D(Block):
 
-    @register_args
+    
     def __init__(self, subtract=True, name=None):
         super().__init__(name=None)
         self.sigma_clip = SigmaClip(sigma=3.)

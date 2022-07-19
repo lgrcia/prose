@@ -1,8 +1,8 @@
 from time import time
+import inspect
 from .console_utils import error
 
-
-class Block:
+class Block(object):
     """Single unit of processing acting on the :py:class:`~prose.Image` object
     
     Reading, processing and writing :py:class:`~prose.Image` attributes. When placed in a sequence, it goes through two steps:
@@ -18,6 +18,18 @@ class Block:
 
     All prose blocks must be child of this parent class
     """
+    @staticmethod    
+    def __new__(cls, *args, **kwargs):
+        s = inspect.signature(cls.__init__)
+        # TODO:
+        # make copy if copy function available on each args and kwargs
+
+        defaults = {name: value.default for name, value in s.parameters.items() if value.default != inspect._empty}
+        argspecs = s.bind(None, *args, **kwargs).arguments
+        defaults.update(argspecs)
+        del defaults['self']
+        cls._args = defaults
+        return super().__new__(cls)
 
     def __init__(self, name=None):
         """Instanciation
@@ -26,10 +38,12 @@ class Block:
         self.unit_data = None
         self.processing_time = 0
         self.runs = 0
+        self._args
 
-        # recording args and kwargs for reproducibility
-        # when subclassing, use @utils.register_args decorator (see docs)
-
+    @property    
+    def args(self):
+        return self._args
+    
     def _run(self, *args, **kwargs):
         t0 = time()
         self.run(*args, **kwargs)
@@ -59,20 +73,21 @@ class Block:
     def _doc():
         return ""
 
-    def concat(self, block):
-        return self
-
     def __call__(self, image):
         image_copy = image.copy()
         self.run(image_copy)
         return image_copy
 
-    @staticmethod
-    def concatenate(blocks):
-        block = blocks[0]
-        for b in blocks[1::]:
-            block.concat(b)
-        return block
+    @classmethod
+    def from_args(cls, args):
+        _args, varargs, varkw, _, kwonlyargs, *_ = inspect.getfullargspec(cls.__init__)
+
+        _args = [args[k]  for k in _args if k != 'self'] if _args is not None else []
+        varargs = args[varargs] if varargs in args else []
+        varkw = args[varkw] if varkw in args else {}
+        kwonlyargs = {k: args[k] for k in kwonlyargs} if kwonlyargs is not None else {}
+
+        return cls(*_args, *varargs, **varkw, **kwonlyargs)
 
 
 class _NeedStars(Block):

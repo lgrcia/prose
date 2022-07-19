@@ -119,7 +119,7 @@ class Cutouts(Block):
     size : int, optional
        square side length of the cutout in pixel, by default 21
     """
-    @register_args
+    
     def __init__(self, size=21, clean=True, name=None):
         super().__init__(name=name)
         self.size = size
@@ -145,7 +145,7 @@ class MedianPSF(Block):
     cutout_size : int, optional
         size of the cutouts used to compute the global PSF, by default None which mean the Image.cutouts are used
     """
-    @register_args
+    
     def __init__(self, cutout_size=None, stars=None, n=None, **kwargs):
         super().__init__(**kwargs)
         self.cutout_block = None
@@ -227,7 +227,7 @@ class FWHM(PSFModel):
     (based on Arielle Bertrou-Cantou's idea)
     """
     
-    @register_args
+    
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -274,7 +274,7 @@ class FastGaussian(PSFModel):
     """
     Fit a symetric 2D Gaussian model to an image effective PSF
     """
-    @register_args
+    
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -398,7 +398,7 @@ class Gaussian2D(PSFModel):
 
     """
 
-    @register_args
+    
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -530,7 +530,7 @@ class Moffat2D(PSFModel):
 
     """
 
-    @register_args
+    
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -577,7 +577,7 @@ class Moffat2D(PSFModel):
 
 class KeepGoodStars(Block):
 
-    @register_args
+    
     def __init__(self, stat=0, n=-1, **kwargs):
         super().__init__(**kwargs)
         self.n = n

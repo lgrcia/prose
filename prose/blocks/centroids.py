@@ -30,7 +30,7 @@ except ModuleNotFoundError:
 
 class PhotutilsCentroid(_NeedStars):
 
-    @register_args
+    
     def __init__(self, centroid_func, limit=None, cutout=21, **kwargs):
         """Photutils centroiding (only prose >= 2.0.3)
 
@@ -87,7 +87,7 @@ class COM(PhotutilsCentroid):
         size of the cutout to be used for centroiding, by default 21 
     """
 
-    @register_args
+    
     def __init__(self, **kwargs):
         super().__init__(centroid_func=centroid_com, **kwargs)
 
@@ -106,7 +106,7 @@ class Gaussian2D(PhotutilsCentroid):
         size of the cutout to be used for centroiding, by default 21 
     """
 
-    @register_args
+    
     def __init__(self, **kwargs):
         super().__init__(centroid_func=centroid_2dg, **kwargs)
 
@@ -125,7 +125,7 @@ class Quadratic(PhotutilsCentroid):
         size of the cutout to be used for centroiding, by default 21 
     """
     
-    @register_args
+    
     def __init__(self, **kwargs):
         super().__init__(centroid_func=centroid_quadratic, **kwargs)
 
@@ -183,7 +183,7 @@ class BalletCentroid(CNNCentroid):
 
     |write| ``Image.stars_coords``
     """
-    @register_args
+    
     def __init__(self, **kwargs):
         super().__init__(cutout=15, filename="centroid.h5", **kwargs)
         self.import_and_check_model()
@@ -205,7 +205,7 @@ class BalletCentroid(CNNCentroid):
 
 class OldNNCentroid(CNNCentroid):
 
-    @register_args
+    
     def __init__(self, **kwargs):
         super().__init__(cutout=21, filename="oldcentroid.h5", **kwargs)
         self.import_and_check_model()

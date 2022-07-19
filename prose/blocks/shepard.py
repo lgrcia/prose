@@ -21,7 +21,7 @@ def shapelet2d(x, y, n1, n2, b=1):
 
 class Shepard(Block):
 
-    @register_args
+    
     def __init__(self, order=4, size=31, **kwargs):
         super().__init__(**kwargs)
         self.order = order

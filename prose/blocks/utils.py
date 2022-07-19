@@ -69,7 +69,7 @@ class Stack(DataBlock):
     overwrite : bool, optional
         weather to overwrite file if exists, by default False
     """
-    @register_args
+    
     def __init__(self, ref=None, **kwargs):
 
         super(Stack, self).__init__(**kwargs)
@@ -119,7 +119,7 @@ class Stack(DataBlock):
 
 class StackStd(DataBlock):
     
-    @register_args
+    
     def __init__(self, destination=None, overwrite=False, **kwargs):
         super(StackStd, self).__init__(**kwargs)
         self.images = []
@@ -154,7 +154,7 @@ class SaveReduced(Block):
         weather to overwrite file if exists, by default False
     """
     # TODO rename to SaveFITS and make destination a string like thing with the name of the image...
-    @register_args
+    
     def __init__(self, destination, overwrite=False, **kwargs):
 
         super().__init__(**kwargs)
@@ -187,7 +187,7 @@ class SaveReduced(Block):
 
 class RemoveBackground(Block):
 
-    @register_args
+    
     def __init__(self):
         super().__init__()
         self.stack_data = None
@@ -199,7 +199,7 @@ class RemoveBackground(Block):
 
 class CleanCosmics(Block):
 
-    @register_args
+    
     def __init__(self, threshold=2):
         super().__init__()
         self.stack_data = None
@@ -219,7 +219,7 @@ class CleanCosmics(Block):
 
 class Pass(Block):
     """A Block that does nothing"""
-    @register_args
+    
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
     
@@ -230,7 +230,7 @@ class Pass(Block):
 class ImageBuffer(DataBlock):
     """Stores the last Image
     """
-    @register_args
+    
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.image = None
@@ -255,7 +255,7 @@ class Set(Block):
     kwargs : kwargs
         keywords argument and values to be set on every image
     """
-    @register_args
+    
     def __init__(self, name=None, **kwargs):
         super().__init__(name=name)
         self.kwargs = kwargs
@@ -273,7 +273,7 @@ class Flip(Block):
     reference_image : `Image`
         Image serving as a reference for the flip value
     """
-    @register_args
+    
     def __init__(self, reference_image, **kwargs):
         """[summary]
 
@@ -295,7 +295,7 @@ class Flip(Block):
 # TODO document
 class Get(DataBlock):
 
-    @register_args
+    
     def __init__(self, *names, name="get"):
         super().__init__(name=name)
         self.names = names
@@ -334,7 +334,7 @@ class Get(DataBlock):
 
 class XArray(DataBlock):
 
-    @register_args
+    
     def __init__(self, *names, name="xarray", raise_error=True, concat_dim="time", **kwargs):
         super().__init__(name=name)
         self.variables = {name: (dims, []) for dims, name in names}
@@ -465,7 +465,7 @@ class Trim(Block):
 
     """
 
-    @register_args
+    
     def __init__(self, skip_wcs=False, trim=None, **kwargs):
 
         super().__init__(**kwargs)
@@ -506,7 +506,7 @@ class Calibration(Block):
         list of bias files paths
     """
 
-    @register_args
+    
     def __init__(self, darks=None, flats=None, bias=None, loader=Image, easy_ram=True, **kwargs):
 
         super().__init__(**kwargs)
