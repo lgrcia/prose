@@ -226,7 +226,7 @@ class FitsManager:
         where += f" AND {exposure_constraint(exposure, tolerance)}"
 
         del columns["id"]
-        df = self.to_pandas(f"select {','.join(columns.keys())} from files where {where}")
+        df = self.to_pandas(f"select {','.join(columns.keys())} from files where {where} order by jd")
         return df
     
     def observation_files(self, i, past=1e3, future=0, exp_tolerance=1e15, same_telescope=True, lights="images", show=True):
@@ -287,7 +287,7 @@ class FitsManager:
         return len(self.observations(show=False)) == 1
 
     @property
-    def images(self):
+    def all_images(self):
         """fits paths of the observation science images
 
         Returns
@@ -296,8 +296,11 @@ class FitsManager:
         """
         return self.files(type='light', path=True).path.values
 
+    def images(self, i, show=False, **kwargs):
+        return self.observation_files(i, show=show, **kwargs)['images']
+
     @property
-    def darks(self):
+    def all_darks(self):
         """fits paths of the observation dark images
 
         Returns
@@ -306,9 +309,12 @@ class FitsManager:
         """
         return self.files(type='dark', path=True).path.values
 
+    def bias(self, i, show=False, **kwargs):
+        return self.observation_files(i, show=show, **kwargs)['bias']
+
 
     @property
-    def bias(self):
+    def all_bias(self):
         """fits paths of the observation bias images
 
         Returns
@@ -317,9 +323,12 @@ class FitsManager:
         """
         return self.files(type='bias', path=True).path.values
 
+    def darks(self, i, show=False, **kwargs):
+        return self.observation_files(i, show=show, **kwargs)['darks']
+
 
     @property
-    def flats(self):
+    def all_flats(self):
         """fits paths of the observation flats images
 
         Returns
@@ -327,6 +336,9 @@ class FitsManager:
         list of str
         """
         return self.files(type='flat', path=True).path.values
+
+    def flats(self, i, show=False, **kwargs):
+        return self.observation_files(i, show=show, **kwargs)['flats']
 
     @property
     def stack(self):
