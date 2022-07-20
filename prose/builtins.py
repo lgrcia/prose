@@ -180,7 +180,7 @@ spirit = dict(
     speculoos_south,
     name = "Spirit",
     keyword_telescope = "TELESCOP",
-    names = ["PIRT1280SciCam2"],
+    names = ["PIRT1280SciCam2","SPECULOOS-CALLISTO"],
     pixel_scale = 0.306,
     ra_unit= "hourangle",
     trimming = (0, 0),
