@@ -10,6 +10,7 @@ from ..utils import gaia_query, sparsify, register_args
 from twirl.utils import plot as tplot
 from .registration import cross_match
 from astroquery.mast import Catalogs
+from . import vizualisation as viz
 
 def image_gaia_query(image, *args, limit=3000, correct_pm=True, wcs=True, circular=True, fov=None):
     
@@ -105,9 +106,9 @@ class PlateSolve(Block):
 
         if self.debug:
             image.show(stars=False)
-            tplot(*stars[0:self.n], color="r")
             _gaias = np.array(image.wcs.world_to_pixel(SkyCoord(gaias[0:self.n], unit="deg"))).T
-            tplot(*_gaias)
+            image.plot_marks(_gaias, ms=15, label="stars coordinates based on SkyCooord")
+
 
 
 class GaiaCatalog(CatalogBlock):
