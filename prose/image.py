@@ -9,6 +9,7 @@ from dateutil import parser as dparser
 from astropy.wcs import WCS
 from . import viz, utils, Telescope
 from .utils import gaia_query
+from functools import partial
 
 from astropy.io import fits
 from datetime import timedelta
@@ -553,3 +554,7 @@ class Image:
             ax = plt.gca()
             
         viz.plot_marks(*stars_coords.T, label=label, ax=ax, **kwargs)
+
+    @classmethod
+    def from_telescope(cls, telescope):
+        return partial(cls, telescope=telescope)
