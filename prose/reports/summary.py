@@ -10,15 +10,12 @@ from .core import LatexTemplate
 import astropy.units as u
 
 
-class Summary(TFOPObservation, Observation, LatexTemplate):
-    def __init__(self, photfile, name=None, style="paper", template_name="summary.tex",tess=False):
-        if tess is True :
-            TFOPObservation.__init__(self, photfile,name=name)
-        else :
-            Observation.__init__(self,photfile)
+class Summary(LatexTemplate):
+    def __init__(self, obs, style="paper", template_name="summary.tex"):
         LatexTemplate.__init__(self, template_name, style=style)
+        self.obs = obs
 
-        datetimes = Time(self.time, format='jd', scale='utc').to_datetime()
+        datetimes = Time(self.obs.time, format='jd', scale='utc').to_datetime()
         min_datetime = datetimes.min()
         max_datetime = datetimes.max()
 
@@ -30,26 +27,26 @@ class Summary(TFOPObservation, Observation, LatexTemplate):
 
         # TODO: adapt to use PSF model block here (se we don't use the plot_... method from Observation)
 
-        self.mean_fwhm = np.mean(self.x.fwhm.values)
-        self._compute_psf_model(star=self.target)
-        self.mean_target_fwhm = np.mean([self.stack.fwhmx, self.stack.fwhmy])
-        self.optimal_aperture = np.mean(self.apertures_radii[self.aperture,:])
+        self.mean_fwhm = np.mean(self.obs.x.fwhm.values)
+        self.obs._compute_psf_model(star=self.obs.target)
+        self.mean_target_fwhm = np.mean([self.obs.stack.fwhmx, self.obs.stack.fwhmy])
+        self.optimal_aperture = np.mean(self.obs.apertures_radii[self.obs.aperture,:])
 
         self.obstable = [
             ["Time", self.obs_duration],
-            ["RA - DEC", f"{self.RA} {self.DEC}"],
-            ["Images", len(self.time)],
+            ["RA - DEC", f"{self.obs.RA} {self.obs.DEC}"],
+            ["Images", len(self.obs.time)],
             ["Mean std · fwhm (epsf)",
              f"{self.mean_fwhm / (2 * np.sqrt(2 * np.log(2))):.2f} · {self.mean_fwhm:.2f} pixels"],
-            ["Fwhm (target)", f"{self.mean_target_fwhm:.2f} pixels · {(self.mean_target_fwhm*self.telescope.pixel_scale.to(u.arcsec)):.2f}"],
+            ["Fwhm (target)", f"{self.mean_target_fwhm:.2f} pixels · {(self.mean_target_fwhm*self.obs.telescope.pixel_scale.to(u.arcsec)):.2f}"],
             ["Optimum aperture", f"{self.optimal_aperture:.2f} pixels · "
-                                 f"{(self.optimal_aperture*self.telescope.pixel_scale.to(u.arcsec)):.2f}"],
-            ["Telescope", self.telescope.name],
-            ["Filter", self.filter],
-            ["Exposure", f"{np.mean(self.exptime)} s"],
+                                 f"{(self.optimal_aperture*self.obs.telescope.pixel_scale.to(u.arcsec)):.2f}"],
+            ["Telescope", self.obs.telescope.name],
+            ["Filter", self.obs.filter],
+            ["Exposure", f"{np.mean(self.obs.exptime)} s"],
         ]
 
-        self.description = f"{self.night_date.strftime('%Y %m %d')} $\cdot$ {self.telescope.name} $\cdot$ {self.filter}"
+        self.description = f"{self.obs.night_date.strftime('%Y %m %d')} $\cdot$ {self.obs.telescope.name} $\cdot$ {self.obs.filter}"
         self._trend = None
         self._transit = None
         self.dpi = 100
@@ -59,11 +56,11 @@ class Summary(TFOPObservation, Observation, LatexTemplate):
         self.header = "Observation report"
 
     def plot_psf_summary(self):
-        self.plot_radial_psf()
+        self.obs.plot_radial_psf()
         self.style()
 
     def plot_stars(self, size=8,**kwargs):
-        self.show_stars(size=size,**kwargs)
+        self.obs.show_stars(size=size,**kwargs)
         plt.tight_layout()
 
     def plot_syst(self, size=(6, 8)):
@@ -71,8 +68,8 @@ class Summary(TFOPObservation, Observation, LatexTemplate):
         fig.patch.set_facecolor('xkcd:white')
         ax = fig.add_subplot(111)
 
-        self.plot_systematics()
-        self.plot_meridian_flip()
+        self.obs.plot_systematics()
+        self.obs.plot_meridian_flip()
         _ = plt.gcf().axes[0].set_title("", loc="left")
         plt.xlabel(f"BJD")
         plt.ylabel("diff. flux")
@@ -84,9 +81,9 @@ class Summary(TFOPObservation, Observation, LatexTemplate):
         fig.patch.set_facecolor('xkcd:white')
         ax = fig.add_subplot(111)
 
-        self.plot_comps_lcs()
+        self.obs.plot_comps_lcs()
         _ = plt.gcf().axes[0].set_title("", loc="left")
-        self.plot_meridian_flip()
+        self.obs.plot_meridian_flip()
         plt.xlabel(f"BJD")
         plt.ylabel("diff. flux")
         plt.tight_layout()
@@ -95,10 +92,10 @@ class Summary(TFOPObservation, Observation, LatexTemplate):
     def plot_raw(self, size=(6, 4)):
         fig = plt.figure(figsize=size)
         fig.patch.set_facecolor('xkcd:white')
-        raw_f = self.raw_fluxes[self.aperture, self.target]
-        plt.plot(self.time, raw_f / np.mean(raw_f), c="k", label="target")
-        plt.plot(self.time, self.alc[self.aperture], c="C0", label="artificial")
-        self.plot_meridian_flip()
+        raw_f = self.obs.raw_fluxes[self.obs.aperture, self.obs.target]
+        plt.plot(self.obs.time, raw_f / np.mean(raw_f), c="k", label="target")
+        plt.plot(self.obs.time, self.obs.alc[self.obs.aperture], c="C0", label="artificial")
+        self.obs.plot_meridian_flip()
         plt.legend()
         plt.tight_layout()
         plt.xlabel(f"BJD")
@@ -131,7 +128,7 @@ class Summary(TFOPObservation, Observation, LatexTemplate):
         self.make_figures(self.figure_destination)
         open(self.tex_destination, "w").write(self.template.render(
             obstable=self.obstable,
-            target=self.name,
+            target=self.obs.name,
             description=self.description,
             header=self.header
         ))
@@ -146,18 +143,18 @@ class Summary(TFOPObservation, Observation, LatexTemplate):
         fig = plt.figure(figsize=(6, 7 if self._trend is not None else 4))
         fig.patch.set_facecolor('xkcd:white')
         if self._trend is not None:
-            plt.plot(self.time, self.diff_flux - 0.03, ".", color="gainsboro", alpha=0.3)
-            plt.plot(self.time, self._trend - 0.03, c="k", alpha=0.2, label="systematics model")
-            viz.plot(self.time, self.diff_flux - self._trend + 1.,label='data',binlabel='binned data (7.2 min)')
+            plt.plot(self.obs.time, self.obs.diff_flux - 0.03, ".", color="gainsboro", alpha=0.3)
+            plt.plot(self.obs.time, self._trend - 0.03, c="k", alpha=0.2, label="systematics model")
+            viz.plot(self.obs.time, self.obs.diff_flux - self._trend + 1.,label='data',binlabel='binned data (7.2 min)')
             plt.text(plt.xlim()[1], 0.965, "RAW", rotation=270)
             plt.text(plt.xlim()[1], 0.995, "DETRENDED", rotation=270)
             plt.ylim(0.95, 1.02)
         else:
             plt.ylim(0.98, 1.02)
-            viz.plot(self.time, self.diff_flux,label='data',binlabel='binned data (7.2 min)')
-            self.plot_meridian_flip()
+            viz.plot(self.obs.time, self.obs.diff_flux,label='data',binlabel='binned data (7.2 min)')
+            self.obs.plot_meridian_flip()
         if self._transit is not None:
-            plt.plot(self.time, self._transit + 1., label="transit", c="k")
+            plt.plot(self.obs.time, self._transit + 1., label="transit", c="k")
 
         plt.legend()
         plt.xlabel(f"BJD")
