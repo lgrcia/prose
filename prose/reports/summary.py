@@ -27,20 +27,20 @@ class Summary(LatexTemplate):
 
         # TODO: adapt to use PSF model block here (se we don't use the plot_... method from Observation)
 
-        self.mean_fwhm = np.mean(self.obs.x.fwhm.values)
-        self.obs._compute_psf_model(star=self.obs.target)
-        self.mean_target_fwhm = np.mean([self.obs.stack.fwhmx, self.obs.stack.fwhmy])
-        self.optimal_aperture = np.mean(self.obs.apertures_radii[self.obs.aperture,:])
+        #self.mean_fwhm = np.mean(self.obs.x.fwhm.values)
+        #self.obs._compute_psf_model(star=self.obs.target)
+        #self.mean_target_fwhm = np.mean([self.obs.stack.fwhmx, self.obs.stack.fwhmy])
+        #self.optimal_aperture = np.mean(self.obs.apertures_radii[self.obs.aperture,:])
 
         self.obstable = [
             ["Time", self.obs_duration],
             ["RA - DEC", f"{self.obs.RA} {self.obs.DEC}"],
             ["Images", len(self.obs.time)],
             ["Mean std · fwhm (epsf)",
-             f"{self.mean_fwhm / (2 * np.sqrt(2 * np.log(2))):.2f} · {self.mean_fwhm:.2f} pixels"],
-            ["Fwhm (target)", f"{self.mean_target_fwhm:.2f} pixels · {(self.mean_target_fwhm*self.obs.telescope.pixel_scale.to(u.arcsec)):.2f}"],
-            ["Optimum aperture", f"{self.optimal_aperture:.2f} pixels · "
-                                 f"{(self.optimal_aperture*self.obs.telescope.pixel_scale.to(u.arcsec)):.2f}"],
+             f"{self.obs.mean_epsf / (2 * np.sqrt(2 * np.log(2))):.2f} · {self.obs.mean_epsf:.2f} pixels"],
+            ["Fwhm (target)", f"{self.obs.mean_target_psf:.2f} pixels · {(self.obs.mean_target_psf*self.obs.telescope.pixel_scale.to(u.arcsec)):.2f}"],
+            ["Optimum aperture", f"{self.obs.optimal_aperture:.2f} pixels · "
+                                 f"{(self.obs.optimal_aperture*self.obs.telescope.pixel_scale.to(u.arcsec)):.2f}"],
             ["Telescope", self.obs.telescope.name],
             ["Filter", self.obs.filter],
             ["Exposure", f"{np.mean(self.obs.exptime)} s"],
@@ -142,20 +142,28 @@ class Summary(LatexTemplate):
     def plot_lc(self):
         fig = plt.figure(figsize=(6, 7 if self._trend is not None else 4))
         fig.patch.set_facecolor('xkcd:white')
+
+        amplitude = np.percentile(self.obs.diff_flux, 95) - np.percentile(self.obs.diff_flux, 5)
+        amplitude *= 1.5
+
+
         if self._trend is not None:
-            plt.plot(self.obs.time, self.obs.diff_flux - 0.03, ".", color="gainsboro", alpha=0.3)
-            plt.plot(self.obs.time, self._trend - 0.03, c="k", alpha=0.2, label="systematics model")
+            offset = amplitude
+            plt.plot(self.obs.time, self.obs.diff_flux - offset, ".", color="gainsboro", alpha=0.3)
+            plt.plot(self.obs.time, self._trend - offset, c="k", alpha=0.2, label="systematics model")
             viz.plot(self.obs.time, self.obs.diff_flux - self._trend + 1.,label='data',binlabel='binned data (7.2 min)')
-            plt.text(plt.xlim()[1], 0.965, "RAW", rotation=270)
+            plt.text(plt.xlim()[1], 1-offset, "RAW", rotation=270)
             plt.text(plt.xlim()[1], 0.995, "DETRENDED", rotation=270)
-            plt.ylim(0.95, 1.02)
+
+            ylim = (1 - offset - 0.9 * amplitude, 1 + 0.9 * amplitude)
         else:
-            plt.ylim(0.98, 1.02)
             viz.plot(self.obs.time, self.obs.diff_flux,label='data',binlabel='binned data (7.2 min)')
             self.obs.plot_meridian_flip()
+            ylim = (1 - 0.9 * amplitude, 1 + 0.9 * amplitude)
         if self._transit is not None:
             plt.plot(self.obs.time, self._transit + 1., label="transit", c="k")
 
+        plt.ylim(ylim)
         plt.legend()
         plt.xlabel(f"BJD")
         plt.ylabel("diff. flux")

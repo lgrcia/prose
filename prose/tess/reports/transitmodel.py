@@ -11,9 +11,9 @@ import collections
 from .. import TFOPObservation
 
 
-class TransitModel(TFOPObservation, LatexTemplate):
+class TransitModel(LatexTemplate):
 
-    def __init__(self, photfile, transit, trend=None, expected=None, posteriors={}, rms_bin=5/24/60, name=None,
+    def __init__(self, obs, transit, trend=None, expected=None, posteriors={}, rms_bin=5/24/60,
                  style="paper", template_name="transitmodel.tex"):
         """Transit modeling report
 
@@ -34,21 +34,19 @@ class TransitModel(TFOPObservation, LatexTemplate):
         template_name : str, optional
             [description], by default "transitmodel.tex"
         """
-        TFOPObservation.__init__(self, photfile, name)
-        #TESSSummary.__init__(self, photfile, name=None, template_name=template_name, style=style)
         LatexTemplate.__init__(self, template_name, style=style)
-
+        self.obs = obs
         # Some paths
         # ----------
         self.destination = None
         self.report_name = None
         self.figure_destination = None
         self.transit_model = transit
-        self.trend_model = trend if trend is not None else np.zeros_like(self.time)
-        self.residuals = self.diff_flux - self.transit_model - self.trend_model
+        self.trend_model = trend if trend is not None else np.zeros_like(self.obs.time)
+        self.residuals = self.obs.diff_flux - self.transit_model - self.trend_model
         intransit = self.transit_model < -1e-6
-        self.ingress = self.time[intransit][0]
-        self.egress = self.time[intransit][-1]
+        self.ingress = self.obs.time[intransit][0]
+        self.egress = self.obs.time[intransit][-1]
         self.t14 = (self.egress - self.ingress) * 24 * 60
         self.snr = self.snr()
         self.rms_bin = rms_bin
@@ -97,28 +95,7 @@ class TransitModel(TFOPObservation, LatexTemplate):
         self.to_csv_report()
 
     def plot_lc_model(self):
-        fig = plt.figure(figsize=(6, 7 if self.trend_model is not None else 4))
-        fig.patch.set_facecolor('white')
-        viz.plot(self.time, self.diff_flux,label='data',binlabel='binned data (7.2 min)')
-        plt.plot(self.time, self.trend_model + self.transit_model, c="C0",
-                 label="systematics + transit model")
-        plt.plot(self.time, self.transit_model + 1. - 0.03, label="transit model", c="k")
-        plt.text(plt.xlim()[1] + 0.002, 1, "RAW", rotation=270, ha="center")
-        viz.plot(self.time, self.diff_flux - self.trend_model + 1. - 0.03)
-        plt.text(plt.xlim()[1] + 0.002, 1 - 0.03, "DETRENDED", rotation=270, ha="center")
-        plt.ylim(0.95, 1.03)
-
-        # plot expected and observed transits
-        std = 2 * np.std(self.diff_flux)
-        t0, duration = self.expected
-        viz.plot_section(1 + std, "expected", t0, duration, c="k")
-        duration = self.egress - self.ingress
-        viz.plot_section(1 + std + 0.005, "observed", self.ingress + duration / 2, duration, c="C0")
-
-        self.plot_meridian_flip()
-        plt.legend()
-        plt.xlabel(f"BJD-TDB")
-        plt.ylabel("diff. flux")
+        viz.plot_systematics_signal(self.obs.time,self.obs.diff_flux,self.trend_model,self.transit_model)
         plt.tight_layout()
         self.style()
 
@@ -128,63 +105,63 @@ class TransitModel(TFOPObservation, LatexTemplate):
         """
         destination = path.join(self.destination, "../..", 'measurements' + ".txt")
 
-        comparison_stars = self.comps[self.aperture]
+        comparison_stars = self.obs.comps[self.obs.aperture]
         list_diff = ["DIFF_FLUX_C%s" % i for i in comparison_stars]
         list_err = ["DIFF_ERROR_C%s" % i for i in comparison_stars]
         list_columns = [None] * (len(list_diff) + len(list_err))
         list_columns[::2] = list_diff
         list_columns[1::2] = list_err
-        list_diff_array = [self.diff_fluxes[self.aperture, i] for i in comparison_stars]
-        list_err_array = [self.diff_errors[self.aperture, i] for i in comparison_stars]
+        list_diff_array = [self.obs.diff_fluxes[self.obs.aperture, i] for i in comparison_stars]
+        list_err_array = [self.obs.diff_errors[self.obs.aperture, i] for i in comparison_stars]
         list_columns_array = [None] * (len(list_diff_array) + len(list_err_array))
         list_columns_array[::2] = list_diff_array
         list_columns_array[1::2] = list_err_array
 
         df = pd.DataFrame(collections.OrderedDict(
             {
-                "BJD-TDB" if self.time_format == "bjd_tdb" else "JD-UTC": self.time,
-                "DIFF_FLUX_T%s" % self.target: self.diff_flux,
-                "DIFF_FLUX_T%s_DETRENDED" % self.target: self.diff_flux - self.trend_model + 1,
-                "DIFF_ERROR_T%s" % self.target: self.diff_error,
+                "BJD-TDB" if self.obs.time_format == "bjd_tdb" else "JD-UTC": self.obs.time,
+                "DIFF_FLUX_T%s" % self.obs.target: self.obs.diff_flux,
+                "DIFF_FLUX_T%s_DETRENDED" % self.obs.target: self.obs.diff_flux - self.trend_model + 1,
+                "DIFF_ERROR_T%s" % self.obs.target: self.obs.diff_error,
                 **dict(zip(list_columns, list_columns_array)),
-                "dx": self.dx,
-                "dy": self.dy,
-                "FWHM": self.fwhm,
-                "SKYLEVEL": self.sky,
-                "AIRMASS": self.airmass,
-                "EXPOSURE": self.exptime,
+                "dx": self.obs.dx,
+                "dy": self.obs.dy,
+                "FWHM": self.obs.fwhm,
+                "SKYLEVEL": self.obs.sky,
+                "AIRMASS": self.obs.airmass,
+                "EXPOSURE": self.obs.exptime,
             })
         )
         df.to_csv(destination, sep="\t", index=False)
 
     def snr(self):
-        lc = self.diff_flux - self.transit_model - self.trend_model
-        wn, rn = pont2006(self.time, lc, plot=False)
-        texp = np.mean(self.exptime)
+        lc = self.obs.diff_flux - self.transit_model - self.trend_model
+        wn, rn = pont2006(self.obs.time, lc, plot=False)
+        texp = np.mean(self.obs.exptime)
         _duration = (self.egress - self.ingress) * 24 * 60 * 60
         n = int(_duration / texp)
         depth = np.abs(min(self.transit_model))
         return depth / (np.sqrt(((wn ** 2) / n) + (rn ** 2)))
 
     def rms_binned(self):
-        bins, flux, std = binning(self.time, self.residuals, bins=self.rms_bin, std=True)
+        bins, flux, std = binning(self.obs.time, self.residuals, bins=self.rms_bin, std=True)
         return np.std(flux), self.rms_bin * 24 * 60
 
     def get_priors(self):
         priors = {}
-        if self.priors_dataframe is not None:
-            priors['rad_p'] = self.priors_dataframe['Planet Radius (R_Earth)'][0]
-            priors['rad_p_e'] = self.priors_dataframe['Planet Radius (R_Earth) err'][0]
-            priors['rad_s'] = self.priors_dataframe['Stellar Radius (R_Sun)'][0]
-            priors['rad_s_e'] = self.priors_dataframe['Stellar Radius (R_Sun) err'][0]
-            priors['mass_s'] = self.priors_dataframe['Stellar Mass (M_Sun)'][0]
-            priors['mass_s_e'] = self.priors_dataframe['Stellar Mass (M_Sun) err'][0]
-            priors['period'] = self.priors_dataframe['Period (days)'][0]
-            priors['period_e'] = self.priors_dataframe['Period (days) err'][0]
-            priors['duration'] = self.priors_dataframe['Duration (hours)'][0] * 60
-            priors['duration_e'] = self.priors_dataframe['Duration (hours) err'][0] * 60
-            priors['depth'] = self.priors_dataframe['Depth (ppm)'][0] / 1e3
-            priors['depth_e'] = self.priors_dataframe['Depth (ppm) err'][0] / 1e3
+        if self.obs.exofop_priors is not None:
+            priors['rad_p'] = self.obs.exofop_priors['Planet Radius (R_Earth)'][0]
+            priors['rad_p_e'] = self.obs.exofop_priors['Planet Radius (R_Earth) err'][0]
+            priors['rad_s'] = self.obs.exofop_priors['Stellar Radius (R_Sun)'][0]
+            priors['rad_s_e'] = self.obs.exofop_priors['Stellar Radius (R_Sun) err'][0]
+            priors['mass_s'] = self.obs.exofop_priors['Stellar Mass (M_Sun)'][0]
+            priors['mass_s_e'] = self.obs.exofop_priors['Stellar Mass (M_Sun) err'][0]
+            priors['period'] = self.obs.exofop_priors['Period (days)'][0]
+            priors['period_e'] = self.obs.exofop_priors['Period (days) err'][0]
+            priors['duration'] = self.obs.exofop_priors['Duration (hours)'][0] * 60
+            priors['duration_e'] = self.obs.exofop_priors['Duration (hours) err'][0] * 60
+            priors['depth'] = self.obs.exofop_priors['Depth (ppm)'][0] / 1e3
+            priors['depth_e'] = self.obs.exofop_priors['Depth (ppm) err'][0] / 1e3
         else:
             priors['rad_p'] = np.nan
             priors['rad_p_e'] = np.nan

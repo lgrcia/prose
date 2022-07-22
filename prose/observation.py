@@ -326,6 +326,33 @@ class Observation(ApertureFluxes):
             assert star in self.stack.cutouts_idxs, "star seems out of frame"
             self.stack.psf = self.stack.cutouts[star].data
             self.stack = model()(self.stack)
+    @property
+    def mean_epsf(self):
+        """
+        Returns
+        -------
+        The mean of the image effective PSF in pixels
+        """
+        return np.mean(self.x.fwhm.values)
+
+    @property
+    def mean_target_psf(self):
+        """
+        Returns
+        -------
+        An estimation of the fwhm of the target psf using a Gaussian 2D model in pixels
+        """
+        self._compute_psf_model(star=self.target)
+        return np.mean([self.stack.fwhmx, self.stack.fwhmy])
+
+    @property
+    def optimal_aperture(self):
+        """
+        Returns
+        -------
+        The optimal aperture radius in pixels
+        """
+        return np.mean(self.apertures_radii[self.aperture,:])
 
     def plot_psf_model(self, star=None, size=21, cmap="inferno", c="blueviolet", model=Gaussian2D, figsize=(5, 5)):
         """Plot a PSF model fit of the a PSF

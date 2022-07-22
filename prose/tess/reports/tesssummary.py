@@ -14,7 +14,7 @@ class TESSSummary(Summary):
         self.obstable.insert(4, ("GAIA id", self.obs.gaia_from_toi))
         self.header = "TESS follow-up"
         self.expected = expected
-        self.measurements = self.to_csv_report()
+
 
     def to_csv_report(self):
         """Export a typical csv of the observation's data
@@ -47,6 +47,7 @@ class TESSSummary(Summary):
                 "EXPOSURE": self.obs.exposure,
             })
         )
+        #self.measurements = self.to_csv_report()
         df.to_csv(destination, sep="\t", index=False)
         return df
 
