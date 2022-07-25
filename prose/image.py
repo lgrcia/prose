@@ -283,9 +283,13 @@ class Image:
         return "_".join([
             self.telescope.name,
             self.night_date.strftime("%Y%m%d"),
-            self.header.get(self.telescope.keyword_object, "?"),
+            self.object,
             self.filter
         ])
+
+    @property
+    def object(self):
+        return self.header.get(self.telescope.keyword_object, "?")
 
     @property
     def filter(self):
