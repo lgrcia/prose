@@ -229,12 +229,12 @@ class FitsManager:
         df = self.to_pandas(f"select {','.join(columns.keys())} from files where {where} order by jd")
         return df
     
-    def observation_files(self, i, past=1e3, future=0, exp_tolerance=1e15, same_telescope=True, lights="images", show=True):
+    def observation_files(self, i, past=1e3, future=0, tolerance=1e15, same_telescope=True, lights="images", show=True):
         files = {}
 
         obs_dict = self.observations(id=i, hide_exposure=False).to_dict("records")[0]
         sql_days = SQL_DAYS_BETWEEN.format(date=obs_dict["date"], future=future, past=past)
-        sql_exposure = exposure_constraint(exposure=obs_dict["exposure"], tolerance=exp_tolerance)
+        sql_exposure = exposure_constraint(exposure=obs_dict["exposure"], tolerance=tolerance)
 
         files[lights] = self.to_pandas(f"SELECT path from files where id = {i}").values.flatten()
         dfs = []
