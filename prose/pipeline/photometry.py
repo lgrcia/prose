@@ -49,7 +49,7 @@ class Photometry:
                  stars=None,
                  overwrite=False,
                  n_stars=500,
-                 psf=blocks.Gaussian2D,
+                 psf=blocks.psf.Gaussian2D,
                  stack_psf=blocks.FWHM,
                  photometry=blocks.PhotutilsAperturePhotometry,
                  centroid=None,
@@ -222,7 +222,7 @@ class AperturePhotometry(Photometry):
                  r_out=8,
                  fwhm_scale=True,
                  sigclip=3.,
-                 psf=blocks.Gaussian2D,
+                 psf=blocks.psf.Gaussian2D,
                  photometry=blocks.PhotutilsAperturePhotometry,
                  centroid=blocks.BalletCentroid,
                  show=False,
@@ -298,7 +298,7 @@ class PSFPhotometry(Photometry):
                  stack=None,
                  overwrite=False,
                  n_stars=500,
-                 psf=blocks.Gaussian2D,
+                 psf=blocks.psf.Gaussian2D,
                  photometry=blocks.PhotutilsPSFPhotometry):
 
         super().__init__(
@@ -336,7 +336,7 @@ class ShapeletPhotometry(Photometry):
                  stars=None,
                  overwrite=False,
                  n_stars=500,
-                 psf=blocks.Gaussian2D,
+                 psf=blocks.psf.Gaussian2D,
                  photometry=blocks.Shepard):
 
         super().__init__(

@@ -509,43 +509,6 @@ def sparsify(stars, radius):
     
     return np.array(sparse_stars)
 
-
-
-def register(loc):
-    self = loc['self']
-    del loc['self']
-    if '__class__' in loc:
-        del loc['__class__']
-    s = inspect.signature(self.__init__)
-    kwargs = {}
-    var_pos_name = None
-    key_pos_name = None
-    for p in s.parameters.values():
-        if p.default != inspect._empty:
-            kwargs[p.name] = p.default
-        elif p.kind.name == "VAR_POSITIONAL":
-            var_pos_name = p.name
-        elif p.kind.name == "VAR_KEYWORD":
-            key_pos_name = p.name
-            
-    kwargs_keys = list(kwargs.keys())
-    args = {}
-    for a, v in loc.items():
-        if a == var_pos_name:
-            for i, a in enumerate(v):
-                args[f"{i}"] = a
-        elif a == key_pos_name:
-            for k, _v in v.items():
-                kwargs[k] = _v
-        elif not a in kwargs_keys:
-            args[a] = v
-    
-    for k in kwargs_keys:
-        kwargs[k] = loc[k]
-    
-    self.args = args
-    self.kwargs = kwargs
-
 def full_class_name(o):
     # https://stackoverflow.com/questions/2020014/get-fully-qualified-class-name-of-an-object-in-python
     klass = o.__class__

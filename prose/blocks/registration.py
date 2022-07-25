@@ -1,11 +1,9 @@
-import astroalign
 import numpy as np
 from scipy.spatial import KDTree
 from twirl import utils as tutils
 from skimage.transform import AffineTransform as skAT
 from ..block import Block, _NeedStars
 from ..console_utils import error
-from ..utils import register_args
 
 def distance(p1, p2):
     return np.sqrt(np.power(p1[0] - p2[0], 2) + np.power(p1[1] - p2[1], 2))

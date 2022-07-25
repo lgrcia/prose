@@ -28,11 +28,10 @@ def progress(name, x, **kwargs):
 class Sequence:
     # TODO: add index self.i in image within unit loop
 
-    def __init__(self, blocks, name="", loader=Image):
+    def __init__(self, blocks, name=""):
         self.name = name
         self.images = []
         self.blocks = blocks
-        self.loader = loader
 
         self.data = {}
         self.n_processed_images = None
@@ -51,7 +50,12 @@ class Sequence:
             for i, block in enumerate(blocks)
         })
 
-    def run(self, images, telescope=None, terminate=True, show_progress=True):
+    def _set_blocks_in_sequence(self, in_sequence):
+        for b in self.blocks:
+            b.in_sequence = in_sequence
+
+    def run(self, images, terminate=True, show_progress=True, loader=Image):
+        self._set_blocks_in_sequence(True)
         self.images = images if not isinstance(images, (str, Path, Image)) else [images]
 
         if not show_progress:
@@ -69,7 +73,7 @@ class Sequence:
         # run
         self.n_processed_images = 0
         self.discards = {}
-        self._run(telescope=telescope)
+        self._run(loader=loader)
 
         if terminate:
             self.terminate()
@@ -77,10 +81,10 @@ class Sequence:
         for block_name, discarded in self.discards.items():
             warning(f"{block_name} discarded image{'s' if len(discarded)>1 else ''} {', '.join(discarded)}")
 
-    def _run(self, telescope=None):
+    def _run(self, loader=Image):
         for i, image in enumerate(self.progress(self.images)):
             if isinstance(image, (str, Path)):
-                image = self.loader(image, telescope=telescope)
+                image = loader(image)
 
             image.i = i
 
@@ -101,6 +105,7 @@ class Sequence:
     def terminate(self):
         for block in self.blocks:
             block.terminate()
+        self._set_blocks_in_sequence(False)
 
     def __str__(self):
         rows = [[
@@ -128,8 +133,8 @@ class Sequence:
     def __getitem__(self, item):
         return self.blocks[item]
 
-    # import/export properties
-    # ------------------------
+    # io
+    # --
 
     def add_discard(self, discard_block, i):
         if discard_block not in self.discards:
@@ -163,7 +168,8 @@ class Sequence:
 
     @property
     def params_str(self):
-        return yaml.safe_dump(self.params_dict(), sort_keys=False)
+        return yaml.safe_dump(self.args, sort_keys=False)
+
 
 class MPSequence(Sequence):
 

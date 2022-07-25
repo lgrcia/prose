@@ -5,7 +5,6 @@ import numpy as np
 from os import path
 from prose import CONFIG
 from .psf import cutouts
-from ..utils import register_args
 import warnings
 from astropy.utils.exceptions import AstropyUserWarning
 

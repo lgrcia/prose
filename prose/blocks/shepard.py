@@ -5,8 +5,6 @@ from prose.blocks.psf import Gaussian2D
 from itertools import product
 import numpy as np
 from scipy.special import hermite
-from ..utils import register_args
-
 
 def shapelet1d(x, n, b=1):
     _x = x / b

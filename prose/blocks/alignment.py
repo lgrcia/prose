@@ -3,7 +3,6 @@ import numpy as np
 from skimage.transform import warp
 from skimage.transform import AffineTransform as skAffineTransform
 from astropy.nddata import Cutout2D as _Cutout2D
-from ..utils import register_args
 
 
 class Cutout2D(Block):

@@ -82,9 +82,9 @@ class Calibration:
 
         # Checking psf block
         if psf_block is None:
-            psf_block = blocks.Moffat2D(name="fwhm")
+            psf_block = blocks.psf.Moffat2D
         else:
-            assert isinstance(psf_block, Block), "psf must be a subclass of Block"
+            assert issubclass(psf_block, Block), "psf must be a subclass of Block"
             psf_block.name = "fwhm"
 
         self.psf = psf_block
@@ -146,10 +146,11 @@ class Calibration:
         self.detection = Sequence([
             *self.calibration_blocks,
             self.detection_block,
-            blocks.ImageBuffer(name="buffer")
-        ], loader=self.loader)
+            blocks.Cutouts(),
+            blocks.MedianPSF(),
+        ])
 
-        self.detection.run(self.reference, show_progress=False)
+        self.detection.run(self.reference, show_progress=False, loader=self.loader)
 
         # Checking enough reference stars are found
         if self.twirl:
@@ -167,7 +168,7 @@ class Calibration:
             else blocks.XYShift(self.reference.stars_coords),
             blocks.Cutouts(),
             blocks.MedianPSF(),
-            self.psf,
+            self.psf(name="psf", reference=self.reference),
             blocks.XArray(
                 ("time", "jd_utc"),
                 ("time", "bjd_tdb"),
@@ -187,9 +188,9 @@ class Calibration:
             LivePlot(plot_function, size=(10, 10)) if self.show else blocks.Pass(),
             blocks.Stack(self.reference, name="stack"),
             blocks.RawVideo(self.destination / f"movie.{movie}", function=utils.z_scale, scale=0.5) if movie is not False else blocks.Pass(),
-        ], name="Calibration", loader=self.loader)
+        ], name="Calibration")
 
-        self.calibration.run(images, show_progress=self.verbose)
+        self.calibration.run(images, show_progress=self.verbose, loader=self.loader)
 
         # Saving outpout
         # first image serves as reference for info (not reference image because it

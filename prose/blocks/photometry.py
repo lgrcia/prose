@@ -9,7 +9,6 @@ from photutils import CircularAperture, CircularAnnulus
 from .. import FitsManager
 from photutils.psf import IntegratedGaussianPRF, DAOGroup, BasicPSFPhotometry
 from .. import Block
-from ..utils import register_args
 try:
     import sep
 except:
