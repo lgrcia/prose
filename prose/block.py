@@ -102,18 +102,18 @@ class _NeedStars(Block):
     def _run(self, image):
         block_name = self.__class__.__name__
         if not hasattr(image, "stars_coords"):
-            error(f"[{block_name}] `stars_coords` not found in Image (did you use a detection block?)")
+            ValueError(f"[{block_name}] `stars_coords` not found in Image (did you use a detection block?)")
         elif image.stars_coords is None:
-            error(f"[{block_name}] `stars_coords` is empty (no stars detected)")
+            ValueError(f"[{block_name}] `stars_coords` is empty (no stars detected)")
         elif len(image.stars_coords) == 0:
             if self.discard:
                 image.discard = True
             else:
-                error(f"[{block_name}] `stars_coords` is empty (no stars detected)")
+                ValueError(f"[{block_name}] `stars_coords` is empty (no stars detected)")
         elif len(image.stars_coords) < self._n:
             if self.discard:
                 image.discard = True
             else:
-                error(f"[{block_name}] only {len(image.stars_coords)} stars detected ({block_name} needs more than {self._n})")
+                ValueError(f"[{block_name}] only {len(image.stars_coords)} stars detected ({block_name} needs more than {self._n})")
 
         super()._run(image)
