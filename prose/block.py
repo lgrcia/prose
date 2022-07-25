@@ -96,7 +96,7 @@ class _NeedStars(Block):
 
     def __init__(self, n=1, discard=False, name=None):
         super().__init__(name)
-        self.n = n
+        self._n = n
         self.discard = discard
 
     def _run(self, image):
@@ -110,10 +110,10 @@ class _NeedStars(Block):
                 image.discard = True
             else:
                 error(f"[{block_name}] `stars_coords` is empty (no stars detected)")
-        elif len(image.stars_coords) < self.n:
+        elif len(image.stars_coords) < self._n:
             if self.discard:
                 image.discard = True
             else:
-                error(f"[{block_name}] only {len(image.stars_coords)} stars detected ({block_name} needs > {self.n})")
+                error(f"[{block_name}] only {len(image.stars_coords)} stars detected ({block_name} needs more than {self._n})")
 
         super()._run(image)
