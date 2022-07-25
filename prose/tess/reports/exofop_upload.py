@@ -138,9 +138,7 @@ class UploadToExofop:
                         if (self.figures_path / fileName).is_file() and fileName.startswith('TIC') and not fileName.startswith('TIC '):
                             description = ''
                             if fileName.endswith('stars.png'):
-                                print('stars')
                                 description = 'Field Image with Apertures'
-                                print(description)
 
                             elif fileName.endswith('model.png'):
                                 description = 'Light curve plot target star with model'
@@ -152,10 +150,7 @@ class UploadToExofop:
                                 description = 'Light curve plot comparison stars'
 
                             elif fileName.endswith('systematics.png'):
-                                description = 'AstroImageJ Photometry Aperture File'
-
-                            elif fileName.endswith('Light curve plot target target star with systematics'):
-                                description = 'AstroImageJ Plot Configuration File'
+                                description = 'Light curve plot target target star with systematics'
 
                             elif fileName.endswith('measurements.txt'):
                                 description = ' Measurements Table'
@@ -163,15 +158,13 @@ class UploadToExofop:
                             elif fileName.endswith('lightcurve.png'):
                                 description = 'Light curve plot target star'
 
-                            #else:
-                            #    description=''
-                            #    print('******NOT UPLOADED: ' + fileName)
+                            elif fileName.endswith('report.pdf'):
+                                description = 'Summary and notes'
 
                             if description == '':
                                 print('******NOT UPLOADED: ' + fileName)
                             else:
-                                print(fileName,type(fileName))
-                                files = {'file_name': (open(str(self.figures_path) + '/' + fileName), 'rb')}
+                                files = {'file_name': open(str(self.figures_path) + '/' + fileName,'rb')}
                                 payload = {
                                     'file_type': 'Light_Curve',
                                     'planet': toi,
@@ -181,12 +174,8 @@ class UploadToExofop:
                                     'propflag': 'on',
                                     'id': tic
                                 }
-                                print(toi)
-                                print(tic)
-                                print(description)
-                                print(files)
                                 response3 = session.post('https://exofop.ipac.caltech.edu/tess/insert_file.php', files=files, data=payload)
-                                print(response3.text)
+                                #print(response3.text)
 
                                 if response3:
                                     print('Uploading file: {}'.format(fileName))
