@@ -623,7 +623,7 @@ class Image:
 
             elif len(self.stars_coords) < n:
                 if error:
-                    raise ValueError(f"only {self.stars_coords} stars detected (at least {n} needed)")
+                    raise ValueError(f"only {len(self.stars_coords)} stars detected (at least {n} needed)")
                 return False
             else:
                 return True
