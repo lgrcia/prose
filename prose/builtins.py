@@ -48,7 +48,8 @@ default = dict(
     pixel_scale = None, # arcsec/pixel
     latlong = [None, None], 
     saturation = 55000, # ADUs
-    hdu = 0
+    hdu = 0,
+    camera_name = "Andor ikon-L"
 )
 
 
@@ -68,7 +69,7 @@ speculoos_south = dict(
                 "&observatory_longitude=-70.738&timezone=UTC&start_date={date}&days_to_print=90&days_in_past=0&minimum_start_elevation="
                 "23&and_vs_or=or&minimum_end_elevation=23&minimum_ha=-12&maximum_ha=12&baseline_hrs=1.5&show_unc=1&maximum_priority=5&"
                 "minimum_depth=0&maximum_V_mag=&target_string={tic_id}&lco_only=0&single_object=0&ra=&dec=&epoch=&period=&duration=&"
-                "target=&show_ephemeris=0&print_html=1&twilight=-12&max_airmass=2.4"
+                "target=&show_ephemeris=0&print_html=1&twilight=-12&max_airmass=2.4",
 )
 
 callisto = dict(
@@ -114,13 +115,15 @@ trappist = dict(
     names = ["TRAPPIST-S","TRAPPIST", "ACP->TRAPPIST"],
     trimming= [40, 40],
     pixel_scale= 0.64,
+    diameter = 60,
     ra_unit= "deg",
     latlong= [-29.2563, -70.7380],
     TTF_link= "https://astro.swarthmore.edu/telescope/tess-secure/print_eclipses.cgi?observatory_string=-29.2563%3B-70.738%3BAmerica%2FSantiago%3" \
                 "BTRAPPIST-South+%280.6-m%29%3BTRAPPIST+South&use_utc=1&observatory_latitude=-29.2563&observatory_longitude=-70.738&timezone=UTC&" \
                 "start_date={date}&days_to_print=90&days_in_past=0&minimum_start_elevation=23&and_vs_or=or&minimum_end_elevation=23&minimum_ha=-12" \
                 "&maximum_ha=12&baseline_hrs=1.5&show_unc=1&maximum_priority=5&minimum_depth=0&maximum_V_mag=&target_string={tic_id}&lco_only=0&" \
-                "single_object=0&ra=&dec=&epoch=&period=&duration=&target=&show_ephemeris=0&print_html=1&twilight=-12&max_airmass=2.4"
+                "single_object=0&ra=&dec=&epoch=&period=&duration=&target=&show_ephemeris=0&print_html=1&twilight=-12&max_airmass=2.4",
+    camera_name= "FLI ProLine PL3041-BB"
 )
 
 trappistN = dict(
@@ -128,13 +131,15 @@ trappistN = dict(
     name = "TRAPPIST-North",
     names = ["Trappist-North", "ntm","ACP->NTM"],
     pixel_scale= 0.60,
+    diameter= 60,
     ra_unit= "hourangle",
     latlong= [31.2027, -7.8586],
     TTF_link= "https://astro.swarthmore.edu/telescope/tess-secure/print_eclipses.cgi?observatory_string=31.2061%3B-7.8664%3BAfrica%2FCasablanca%3"
                 "BTRAPPIST-North+%280.6-m%29%3BTRAPPIST+North&use_utc=1&observatory_latitude=-29.2563&observatory_longitude=-70.738&timezone=UTC&"
                 "start_date={date}&days_to_print=90&days_in_past=0&minimum_start_elevation=23&and_vs_or=or&minimum_end_elevation=23&minimum_ha=-12"
                 "&maximum_ha=12&baseline_hrs=1.5&show_unc=1&maximum_priority=5&minimum_depth=0&maximum_V_mag=&target_string={tic_id}&lco_only=0&"
-                "single_object=0&ra=&dec=&epoch=&period=&duration=&target=&show_ephemeris=0&print_html=1&twilight=-12&max_airmass=2.4"
+                "single_object=0&ra=&dec=&epoch=&period=&duration=&target=&show_ephemeris=0&print_html=1&twilight=-12&max_airmass=2.4",
+    camera_name= "Andor IKONL BEX2 DD"
 )
 
 saintex = dict(
@@ -173,7 +178,8 @@ liverpool = dict(
     keyword_ra= "RA",
     keyword_dec= "DEC",
     ra_unit = "hourangle",
-    TTF_link= None
+    TTF_link= None,
+    camera_name = None
 )
 
 spirit = dict(
@@ -187,6 +193,7 @@ spirit = dict(
     saturation = 14500,
     read_noise = 17,
     gain = 5,
+    camera_name= "PIRT1280SciCam2"
 )
 
 built_in_telescopes = {telescope["name"].lower(): telescope for telescope in [

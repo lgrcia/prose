@@ -27,6 +27,11 @@ class TFOPObservation(Observation):
         self.tic_data = None
         self.exofop_priors = self.find_exofop_priors(name)
         self.ttf_priors = self.find_ttf_priors()
+        self.toi = self.name.split('-')[1]
+        try :
+            self.planet = self.toi.split('.')[1]
+        except IndexError:
+            self.planet = '01'
 
     # TESS specific methods
     # --------------------
@@ -75,7 +80,8 @@ class TFOPObservation(Observation):
 
     @property
     def tfop_prefix(self):
-        return f"TIC{self.tic_id}_{self.stack.night_date}_{self.telescope.name}_{self.filter}"
+        date = self.stack.night_date.strftime("%Y%m%d")
+        return f"TIC{self.tic_id}-{self.planet}_{date}_{self.telescope.name}_{self.filter}"
 
     # Catalog queries
     # ---------------
@@ -112,15 +118,15 @@ class TFOPObservation(Observation):
             # -----------------
             u = xo.distributions.QuadLimbDark("u", testval=np.array(limb_darkening_coefs))
             star = xo.LimbDarkLightCurve(u[0], u[1])
-            m_s = pm.Normal('m_s',self.exofop_priors["Stellar Mass (M_Sun)"].values,self.exofop_priors["Stellar Mass (M_Sun) err"].values)
-            r_s = pm.Normal('r_s', self.exofop_priors["Stellar Radius (R_Sun)"].values,self.exofop_priors["Stellar Radius (R_Sun) err"].values)
+            m_s = pm.Normal('m_s',self.exofop_priors["Stellar Mass (M_Sun)"].values[0],self.exofop_priors["Stellar Mass (M_Sun) err"].values[0])
+            r_s = pm.Normal('r_s', self.exofop_priors["Stellar Radius (R_Sun)"].values[0],self.exofop_priors["Stellar Radius (R_Sun) err"].values[0])
 
             # Orbital parameters
             # -----------------
             t0 = pm.Normal('t0', 2450000 + float(self.ttf_priors['jd_mid']), 0.05)
-            p = pm.Normal('P', self.exofop_priors['Period (days)'].values, self.exofop_priors["Period (days) err"].values)
+            p = pm.Normal('P', self.exofop_priors['Period (days)'].values[0], self.exofop_priors["Period (days) err"].values[0])
             b = pm.Uniform("b", 0, 1)
-            depth = pm.Uniform("depth", 0, self.exofop_priors['Depth (ppm)'].values*2 / 1000, testval=self.exofop_priors['Depth (ppm)'].values/1000)  # Prior normal sur log(param) = prior uniform sur param
+            depth = pm.Uniform("depth", 0, self.exofop_priors['Depth (ppm)'].values[0]*2 *1e-6, testval=self.exofop_priors['Depth (ppm)'].values[0]*1e-6)
             ror = pm.Deterministic("ror", star.get_ror_from_approx_transit_depth(depth, b))
             r_p = pm.Deterministic("r_p", ror * r_s)  # In solar radius
             r = pm.Deterministic('r', r_p * 1 / earth2sun)
@@ -131,7 +137,7 @@ class TFOPObservation(Observation):
 
             # starry light-curve
             # ---------------
-            light_curves = star.get_light_curve(orbit=orbit, r=r_p, t=obs.time)
+            light_curves = star.get_light_curve(orbit=orbit, r=r_p, t=self.time)
             transit = pm.Deterministic("transit", pm.math.sum(light_curves, axis=-1))
 
             # Let's track some parameters :
@@ -160,7 +166,7 @@ class TFOPObservation(Observation):
             trace = pm.sample(
                 tune=2000,
                 draws=3000,
-                start=opt,
+                start=self.opt,
                 cores=3,
                 chains=2,
                 init="adapt_full",
@@ -179,5 +185,5 @@ class TFOPObservation(Observation):
 
         self.posteriors = {}
         for i in self.summary.index:
-            self.posteriors[i] = summary['mean'][i]
-            self.posteriors[i + '_e'] = summary['sd'][i]
+            self.posteriors[i] = self.summary['mean'][i]
+            self.posteriors[i + '_e'] = self.summary['sd'][i]
