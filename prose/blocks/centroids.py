@@ -1,6 +1,5 @@
 from photutils.centroids import centroid_sources, centroid_2dg, centroid_quadratic, centroid_com
 from .. import Block
-from prose.block import _NeedStars
 import numpy as np
 from os import path
 from prose import CONFIG
@@ -27,7 +26,7 @@ except ModuleNotFoundError:
     TF_LOADED = True
 
 
-class PhotutilsCentroid(_NeedStars):
+class PhotutilsCentroid(Block):
 
     
     def __init__(self, centroid_func, limit=None, cutout=21, **kwargs):

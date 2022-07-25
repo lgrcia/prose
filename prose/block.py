@@ -1,6 +1,6 @@
 from time import time
 import inspect
-from .console_utils import error
+from .console_utils import error, warning
 
 class Block(object):
     """Single unit of processing acting on the :py:class:`~prose.Image` object
@@ -78,6 +78,8 @@ class Block(object):
     def __call__(self, image):
         image_copy = image.copy()
         self.run(image_copy)
+        if image_copy.discard:
+            warning(f"{self.__class__.__name__} discarded Image")
         return image_copy
 
     @classmethod
@@ -90,30 +92,3 @@ class Block(object):
         kwonlyargs = {k: args[k] for k in kwonlyargs} if kwonlyargs is not None else {}
 
         return cls(*_args, *varargs, **varkw, **kwonlyargs)
-
-
-class _NeedStars(Block):
-
-    def __init__(self, n=1, discard=False, name=None):
-        super().__init__(name)
-        self._n = n
-        self.discard = discard
-
-    def _run(self, image):
-        block_name = self.__class__.__name__
-        if not hasattr(image, "stars_coords"):
-            raise ValueError(f"[{block_name}] `stars_coords` not found in Image (did you use a detection block?)")
-        elif image.stars_coords is None:
-            raise ValueError(f"[{block_name}] `stars_coords` is empty (no stars detected)")
-        elif len(image.stars_coords) == 0:
-            if self.discard:
-                image.discard = True
-            else:
-                raise ValueError(f"[{block_name}] `stars_coords` is empty (no stars detected)")
-        elif len(image.stars_coords) < self._n:
-            if self.discard:
-                image.discard = True
-            else:
-                raise ValueError(f"[{block_name}] only {len(image.stars_coords)} stars detected ({block_name} needs more than {self._n})")
-
-        super()._run(image)

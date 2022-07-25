@@ -600,3 +600,32 @@ class Image:
         ax.text(1, 1, f"FWHM x: {self.fwhmx:.2f} pix\n"
                     f"FWHM y: {self.fwhmy:.2f} pix\n"
                     f"angle: {self.theta/np.pi*180:.2f}°", c="w")
+
+    def has_stars(self, error=False):
+        if not hasattr(self, "stars_coords"):
+            if error:
+                raise ValueError(f"`stars_coords` not found in Image (did you use a detection block?)")
+            return False
+        elif self.stars_coords is None:
+            if error:
+                raise ValueError(f"`stars_coords` is empty (no stars detected)")
+            return False
+        else:
+            return True
+
+    def enough_stars(self, n=0, error=False):
+        has = self.has_stars(error=error)
+        if has:
+            if len(self.stars_coords) == 0:
+                if error:
+                    raise ValueError(f"`stars_coords` is empty (no stars detected)")
+                return False
+
+            elif len(self.stars_coords) < n:
+                if error:
+                    raise ValueError(f"only {self.stars_coords} stars detected (at least {self.n} needed)")
+                return False
+            else:
+                return True
+        else:
+            return False
