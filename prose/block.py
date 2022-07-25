@@ -31,14 +31,16 @@ class Block(object):
         cls._args = defaults
         return super().__new__(cls)
 
-    def __init__(self, name=None):
+    def __init__(self, name=None, verbose=False):
         """Instanciation
         """
         self.name = name
         self.unit_data = None
         self.processing_time = 0
         self.runs = 0
-        self._args
+        self._args = None
+        self.in_sequence = False
+        self.verbose = verbose
 
     @property    
     def args(self):
