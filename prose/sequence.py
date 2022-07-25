@@ -89,15 +89,11 @@ class Sequence:
             image.i = i
 
             for block in self.blocks:
+                block._run(image)
                 # This allows to discard image in any Block
                 if image.discard:
-                    discard_block = image.discard_block
-                    self.add_discard(discard_block, i)
+                    self.add_discard(type(block).__name__, i)
                     break
-                else:
-                    block._run(image)
-                    if image.discard:
-                        image.discard_block = type(block).__name__
 
             del image
             self.n_processed_images += 1
