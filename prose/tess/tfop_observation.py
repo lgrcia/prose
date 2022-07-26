@@ -32,6 +32,10 @@ class TFOPObservation(Observation):
             self.planet = self.toi.split('.')[1]
         except IndexError:
             self.planet = '01'
+        self.samples = None
+        self.posteriors = None
+        self.summary = None
+        self.detrends = None
 
     # TESS specific methods
     # --------------------
@@ -58,6 +62,10 @@ class TFOPObservation(Observation):
                             for j in r.text[r.text.find('# ')+2:].splitlines()]][1:]]
         for i, j in zip(ttf_priors, r.text.splitlines()[1:]):
             i['Comments'] = j[j.find('"') + 1:-j[::-1].find('"') - 1]
+
+        ttf_priors[0]['Comments'] = ttf_priors[0]['Comments'].replace('σ', 'sigma')
+        ttf_priors[0]['Comments'] = ttf_priors[0]['Comments'].replace('Δ', 'Delta')
+
         return ttf_priors[0]
 
     @property
@@ -104,6 +112,7 @@ class TFOPObservation(Observation):
         from prose.utils import earth2sun
         from prose import viz
         import arviz as az
+        self.detrends = detrends
 
         X = self.polynomial(**detrends).T
         c = np.linalg.lstsq(X.T, self.diff_flux)[0]
@@ -159,6 +168,7 @@ class TFOPObservation(Observation):
             self.opt = pmx.optimize(start=model.test_point)
 
         viz.plot_systematics_signal(self.time, self.diff_flux, self.opt['systematics'], self.opt['transit'])
+        viz.paper_style()
 
         np.random.seed(42)
 
@@ -174,6 +184,8 @@ class TFOPObservation(Observation):
                 return_inferencedata=False
             )
         variables = ["P", "r", 't0', 'b', 'u', 'r_s', 'm_s', 'ror', 'depth', 'a', 'a/r_s', 'i']
+
+        self.samples = pm.trace_to_dataframe(trace, varnames=variables)
 
         with model:
             self.summary = az.summary(

@@ -8,7 +8,7 @@ from prose import viz
 from prose.reports.core import LatexTemplate
 import pandas as pd
 import collections
-from .. import TFOPObservation
+import corner
 
 
 class TransitModel(LatexTemplate):
@@ -60,13 +60,13 @@ class TransitModel(LatexTemplate):
             ["u2", f"{self.posteriors['u[1]']}" "$\pm$" f"{self.posteriors['u[1]_e']}", "-"],
             ["R*", f"{self.posteriors['r_s']}" "$\pm$" f"{self.posteriors['r_s_e']}""R$_{\odot}$", f"{self.priors['rad_s']:.4f}" "$\pm$" f"{self.priors['rad_s_e']:.4f}" "R$_{\odot}$"],
             ["M*", f"{self.posteriors['m_s']}" "$\pm$" f"{self.posteriors['m_s_e']}""M$_{\odot}$", f"{self.priors['mass_s']:.4f}" "$\pm$" f"{self.priors['mass_s_e']:.4f}" "M$_{\odot}$"],
-            ["P",f"{self.posteriors['P']}" "$\pm$" f"{self.posteriors['P_e']}""d", f"{self.priors['period']:.4f}" "$\pm$" f"{self.priors['period_e']:.4f}""d"],
+            ["P",f"{self.posteriors['P']}" "$\pm$" f"{self.posteriors['P_e']}""d", f"{self.priors['period']:.2e}" "$\pm$" f"{self.priors['period_e']:.2e}""d"],
             ["Rp", f"{self.posteriors['r']}" "$\pm$" f"{self.posteriors['r_e']}""R$_{\oplus}$", f"{self.priors['rad_p']:.4f}" "$\pm$" f"{self.priors['rad_p_e']:.4f}" "R$_{\oplus}$"],
-            ["Tc", f"{self.posteriors['t0']}" "$\pm$" f"{self.posteriors['t0_e']}" , None],
+            ["Tc", f"{self.posteriors['t0']}" "$\pm$" f"{self.posteriors['t0_e']}" , f"{2450000+float(self.obs.ttf_priors['jd_mid'])}" "$\pm$" f"{float(self.obs.ttf_priors['T_0_unc']):.2e}"],
             ["b", f"{self.posteriors['b']}" "$\pm$" f"{self.posteriors['b_e']}", "-"],
             ["Duration", f"{self.t14:.2f} min", f"{self.priors['duration']:.2f}" "$\pm$" f"{self.priors['duration_e']:.2f} min"],
-            ["(Rp/R*)\u00b2", f"{self.posteriors['depth'] * 1e3}" 'e-3' "$\pm$" f"{self.posteriors['depth_e'] * 1e3}" 'e-3',"-"],
-            ["Apparent depth (min. flux)", f"{np.abs(min(self.transit_model)):.2e}",  f"{self.priors['depth']:.2f}" 'e-3' "$\pm$" f"{self.priors['depth_e']:.2f}" 'e-3'],
+            ["(Rp/R*)\u00b2", f"{self.posteriors['depth'] * 1e3:.2f}" 'e-3' "$\pm$" f"{self.posteriors['depth_e'] * 1e3:.2f}" 'e-3',"-"],
+            ["Apparent depth (min. flux)", f"{np.abs(min(self.transit_model)) * 1e3:.2f}",  f"{self.priors['depth']:.2f}" 'e-3' "$\pm$" f"{self.priors['depth_e']:.2f}" 'e-3'],
             ["a/R*", f"{self.posteriors['a/r_s']}" "$\pm$" f"{self.posteriors['a/r_s_e']}", "-"],
             ["i", f"{self.posteriors['i']}" "$\pm$" f"{self.posteriors['i_e']}", "-"],
             ["SNR", f"{self.snr:.2f}", "-"],
@@ -84,7 +84,11 @@ class TransitModel(LatexTemplate):
         self.plot_lc_model()
         plt.savefig(path.join(destination, "model.png"), dpi=self.dpi)
         plt.close()
+        self.make_corner_plot()
+        plt.savefig(path.join(destination, "Corner_plot.png"), dpi=self.dpi)
+        plt.close()
         #TEST
+
 
     def make(self, destination):
         self.make_report_folder(destination)
@@ -98,6 +102,14 @@ class TransitModel(LatexTemplate):
         viz.plot_systematics_signal(self.obs.time,self.obs.diff_flux,self.trend_model,self.transit_model)
         plt.tight_layout()
         self.style()
+
+    def make_corner_plot(self):
+        if self.obs.samples is not None:
+            fig = corner.corner(self.obs.samples,
+                                truths=[self.obs.opt['P'], self.obs.opt['r'], self.obs.opt['t0'], self.obs.opt['b'], self.obs.opt['u'][0],
+                                        self.obs.opt['u'][1], self.obs.opt['r_s'], self.obs.opt['m_s'], self.obs.opt['ror'],
+                                        self.obs.opt['depth'], self.obs.opt['a'], self.obs.opt['a/r_s'], self.obs.opt['i']])
+            fig.patch.set_facecolor('xkcd:white')
 
     def to_csv_report(self):
         """
