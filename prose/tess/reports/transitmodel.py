@@ -102,6 +102,15 @@ class TransitModel(LatexTemplate):
 
     def plot_lc_model(self):
         viz.plot_systematics_signal(self.obs.time,self.obs.diff_flux,self.trend_model,self.transit_model)
+
+        # plot expected and observed transits
+        std = 2 * np.std(self.obs.diff_flux)
+        t0, duration = self.expected
+        viz.plot_section(1 + std, "expected", t0, duration, c="k")
+        duration = self.egress - self.ingress
+        viz.plot_section(1 + std + 0.005, "observed", self.ingress + duration / 2, duration, c="C0")
+
+        self.obs.plot_meridian_flip()
         plt.tight_layout()
         self.style()
 
