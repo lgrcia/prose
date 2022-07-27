@@ -12,7 +12,7 @@ from .. import utils
 import matplotlib.pyplot as plt
 import time
 import xarray as xr
-from ..utils import register_args, easy_median
+from ..utils import easy_median
 from ..console_utils import info
 from pathlib import Path
 from . import Cutout2D

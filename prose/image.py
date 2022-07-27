@@ -1,7 +1,7 @@
 from astropy.time import Time
 import matplotlib.pyplot as plt
 import numpy as np
-#from .blocks.utils import register_args
+#from .blocks.utils 
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 from astropy.coordinates import Angle
@@ -10,9 +10,10 @@ from astropy.wcs import WCS
 from . import viz, utils, Telescope
 from .utils import gaia_query
 from functools import partial
-
+from matplotlib import gridspec
 from astropy.io import fits
 from datetime import timedelta
+from pathlib import Path
 
 class Image:
     r"""Base object containing FITS image data and metadata
@@ -60,8 +61,7 @@ class Image:
         self.verbose = verbose
 
         if fitspath is not None:
-            self.path = fitspath
-            self._get_data_header()
+            self._get_data_header(fitspath)
         else:
             self.data = data
             self.header = header if header is not None else {}
@@ -73,14 +73,19 @@ class Image:
         if telescope is None:
             self._check_telescope()
         else:
-            self.telescope = Telescope.from_name(telescope)
+            self.telescope = Telescope.from_name(telescope, verbose=verbose)
         self.catalogs = {}
 
-    def _get_data_header(self):
+    def _get_data_header(self, fitspath):
         """Retrieve data and metadata from an image
         """
-        self.data = fits.getdata(self.path).astype(float)
-        self.header = fits.getheader(self.path)
+        if isinstance(fitspath, (str, Path)):
+            self.path = fitspath
+            self.data = fits.getdata(self.path).astype(float)
+            self.header = fits.getheader(self.path)
+
+        else:
+            raise ValueError("fitspath must be str or None")
 
     def copy(self, data=True):
         """Copy of image object
@@ -278,9 +283,13 @@ class Image:
         return "_".join([
             self.telescope.name,
             self.night_date.strftime("%Y%m%d"),
-            self.header.get(self.telescope.keyword_object, "?"),
+            self.object,
             self.filter
         ])
+
+    @property
+    def object(self):
+        return self.header.get(self.telescope.keyword_object, "?")
 
     @property
     def filter(self):
@@ -558,3 +567,65 @@ class Image:
     @classmethod
     def from_telescope(cls, telescope):
         return partial(cls, telescope=telescope)
+
+    def plot_psf_model(self, cmap="inferno", c="blueviolet", figsize=(5, 5)):
+        
+        # Plotting
+        # --------
+        assert hasattr(self, "psf"), "PSF not present in image"
+        data = self.psf
+        model = self.psf_model
+
+        plt.figure(figsize=figsize)
+        gs = gridspec.GridSpec(2, 2, width_ratios=[9, 2], height_ratios=[2, 9])
+        gs.update(wspace=0, hspace=0)
+        #axtt = plt.subplot(gs[1, 1])
+        ax = plt.subplot(gs[1, 0])
+        axr = plt.subplot(gs[1, 1], sharey=ax)
+        axt = plt.subplot(gs[0, 0], sharex=ax)
+
+        ax.imshow(self.psf, alpha=1, cmap=cmap, origin="lower")
+        ax.contour(self.psf_model, colors="w", alpha=0.7)
+
+        x, y = np.indices(data.shape)
+
+        axt.plot(y[0], np.mean(data, axis=0), c=c, label="data")
+        axt.plot(y[0], np.mean(model, axis=0), "--", c="k", label="model")
+        axt.axis("off")
+        axt.legend()
+
+        axr.plot(np.mean(data, axis=1), y[0], c=c)
+        axr.plot(np.mean(model, axis=1), y[0], "--", c="k")
+        axr.axis("off")
+        ax.text(1, 1, f"FWHM x: {self.fwhmx:.2f} pix\n"
+                    f"FWHM y: {self.fwhmy:.2f} pix\n"
+                    f"angle: {self.theta/np.pi*180:.2f}°", c="w")
+
+    def has_stars(self, error=False):
+        if not hasattr(self, "stars_coords"):
+            if error:
+                raise ValueError(f"`stars_coords` not found in Image (did you use a detection block?)")
+            return False
+        elif self.stars_coords is None:
+            if error:
+                raise ValueError(f"`stars_coords` is empty (no stars detected)")
+            return False
+        else:
+            return True
+
+    def enough_stars(self, n=0, error=False):
+        has = self.has_stars(error=error)
+        if has:
+            if len(self.stars_coords) == 0:
+                if error:
+                    raise ValueError(f"`stars_coords` is empty (no stars detected)")
+                return False
+
+            elif len(self.stars_coords) < n:
+                if error:
+                    raise ValueError(f"only {len(self.stars_coords)} stars detected (at least {n} needed)")
+                return False
+            else:
+                return True
+        else:
+            return False

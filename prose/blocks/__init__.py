@@ -1,7 +1,7 @@
 from .registration import XYShift, AstroAlignShift, Twirl
 from .alignment import AffineTransform, Cutout2D
 from .detection import SegmentedPeaks, DAOFindStars, SEDetection, Peaks
-from .psf import MedianPSF, Gaussian2D, Moffat2D, FastGaussian, KeepGoodStars, FWHM, Cutouts
+from .psf import MedianPSF, FastGaussian, KeepGoodStars, FWHM, Cutouts
 from .photometry import PhotutilsAperturePhotometry, SEAperturePhotometry, PhotutilsPSFPhotometry
 from .shepard import  Shepard
 from . import catalogs

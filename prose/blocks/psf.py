@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from scipy.optimize import minimize
+from scipy.optimize import minimize, differential_evolution
 import warnings
 import numpy as np
 from astropy.io import fits
@@ -11,9 +11,11 @@ from .. import Block
 import matplotlib.pyplot as plt
 from collections import OrderedDict
 from ..utils import fast_binning
-from ..utils import register_args
 from scipy.stats import shapiro
 from scipy.interpolate import interp1d
+from ..console_utils import info
+
+__all__ = ["MedianPSF", "Cutouts"]
 
 def cutouts(image, stars, size=15):
     """Custom version to extract stars cutouts
@@ -169,9 +171,17 @@ class MedianPSF(Block):
 
 class PSFModel(Block):
 
-    def __init__(self, **kwargs):
+    def __init__(self, reference=None, **kwargs):
         super().__init__(**kwargs)
         self.x = self.y = None
+        self.p0 = None
+        self.reference = reference
+
+        if reference is not None:
+            if self.verbose:
+                info(f"{self.__class__.__name__} optimizing reference PSF ...")
+            self.from_cutouts(reference)
+            self.p0 = self.optimize(reference.psf)
 
     def from_cutouts(self, image):
         self.cutout_size = image.cutouts[image.cutouts_idxs[0]].shape[0]
@@ -201,11 +211,22 @@ class PSFModel(Block):
         if self.x is None and hasattr(image, "cutouts"):
             self.from_cutouts(image)
 
+        if self.reference is not None:
+            assert np.all(image.shape == self.reference.shape), "reference shape differs from image shape"
+
         image.psf_models_params = self.optimize(image.psf)
         image.psf_model = self.model(*np.atleast_1d(image.psf_models_params))
         image.fwhmx, image.fwhmy, image.theta = self.fwhm(image.psf_models_params)
         image.fwhm = np.mean([image.fwhmx, image.fwhmy])
         image.psf_model_block = self.__class__.__name__
+
+    def _minimize(self, psf, p0, bounds):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            if self.p0 is None:
+                return differential_evolution(self.nll, bounds, x0=p0, args=(psf,)).x
+            else:
+                return minimize(self.nll, self.p0, bounds=bounds, args=(psf,)).x
 
 
 class FWHM(PSFModel):
@@ -288,11 +309,14 @@ class FastGaussian(PSFModel):
         return params[1]*self.sigma_to_fwhm(), params[1]*self.sigma_to_fwhm(), 0
 
     def optimize(self, psf):
-        p0 = [np.max(psf), 4, np.min(psf)]
+        if self.reference is None:
+            p0 = [np.max(psf), 4, np.min(psf)]
+        else:
+            p0 = self.p0
         min_sigma = 0.5
         bounds = [
-            (0, np.infty),
-            (min_sigma, np.infty),
+            (0, 1.),
+            (min_sigma, 1e20),
             (0, np.mean(psf)),
         ]
 
@@ -416,25 +440,21 @@ class Gaussian2D(PSFModel):
 
     def optimize(self, psf):
         p0 = moments(psf)
-        x0, y0 = p0[1], p0[2]
-        min_sigma = 0.5
+        w = np.max(psf.shape)
         bounds = [
-            (0, np.infty),
-            (x0 - 3, x0 + 3),
-            (y0 - 3, y0 + 3),
-            (min_sigma, np.infty),
-            (min_sigma, np.infty),
-            (0, 4),
+            (0, 1.),
+            (0, w),
+            (0, w),
+            (0.5, w),
+            (0.5, w),
+            (-np.pi, np.pi),
             (0, np.mean(psf)),
         ]
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            params = minimize(self.nll, p0, bounds=bounds, args=(psf)).x
-            return params
+        return self._minimize(psf, p0, bounds)
 
     def citations(self):
-        return "scipy", "photutils"
+        return "scipy"
 
 
 class Moffat2D(PSFModel):
@@ -551,28 +571,23 @@ class Moffat2D(PSFModel):
         return 2*np.sqrt(np.power(2, 1/beta) - 1)
     
     def optimize(self, psf):
-        p0 = list(moments(psf))
-        p0.append(1)
-        x0, y0 = p0[1], p0[2]
-        min_sigma = 0.5
+        p0 = list(moments(psf)) + [1]
+        w = np.max(psf.shape)
         bounds = [
-            (0, np.infty),
-            (x0 - 3, x0 + 3),
-            (y0 - 3, y0 + 3),
-            (min_sigma, np.infty),
-            (min_sigma, np.infty),
-            (0, 4),
+            (0, 1.),
+            (0, w),
+            (0, w),
+            (0.5, w),
+            (0.5, w),
+            (-np.pi, np.pi),
             (0, np.mean(psf)),
             (1, 8),
         ]
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            params = minimize(self.nll, p0, bounds=bounds, args=(psf,)).x
-            return params
+        return self._minimize(psf, p0, bounds)
 
     def citations(self):
-        return "scipy", "photutils"
+        return "scipy"
 
 
 class KeepGoodStars(Block):

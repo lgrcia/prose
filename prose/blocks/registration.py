@@ -1,11 +1,10 @@
-import astroalign
 import numpy as np
 from scipy.spatial import KDTree
 from twirl import utils as tutils
 from skimage.transform import AffineTransform as skAT
-from ..block import Block, _NeedStars
+from ..block import Block
 from ..console_utils import error
-from ..utils import register_args
+from functools import partial
 
 def distance(p1, p2):
     return np.sqrt(np.power(p1[0] - p2[0], 2) + np.power(p1[1] - p2[1], 2))
@@ -217,7 +216,7 @@ def astroalign_optimized_find_transform(
     return best_t, (source_controlp[so], target_controlp[d])
 
 
-class XYShift(_NeedStars):
+class XYShift(Block):
     r"""Compute the linear shift between two point clouds. Star coordinates in the image are expected in image.stars_coords
 
     |write|  ``Image.dx``, ``Image.dy``, ``Image.header`` 
@@ -294,7 +293,7 @@ class XYShift(_NeedStars):
         image.header["ALIGNALG"] = self.__class__.__name__
 
 
-class AstroAlignShift(_NeedStars):
+class AstroAlignShift(Block):
     """
     Compute the linear shift between point clouds using :code:`astroalign`
 
@@ -338,7 +337,7 @@ class AstroAlignShift(_NeedStars):
         return """"""
 
 
-class Twirl(_NeedStars):
+class Twirl(Block):
     """
     Affine transform computation for images registration
 
@@ -353,30 +352,34 @@ class Twirl(_NeedStars):
     """
 
     
-    def __init__(self, ref, n=10, **kwargs):
+    def __init__(self, ref, n=10, discard=True, **kwargs):
         super().__init__(**kwargs)
         ref = ref if isinstance(ref, np.ndarray) else np.array(ref)
         self.ref = ref[0:n].copy()
         self.n = n
         self.quads_ref, self.stars_ref = tutils.quads_stars(ref, n=n)
         self.kdtree = KDTree(self.quads_ref)
+        self.discard = discard
 
-    def run(self, image, **kwargs):
-        result = self(image.stars_coords, return_dx=True)
-        if result is not None:
-            x, image.dx, image.dy = result
-            image.transform = skAT(x)
-            image.header["TROT"] = image.transform.rotation
-            image.header["TDX"] = image.transform.translation[0]
-            image.header["TDY"] = image.transform.translation[1]
-            image.header["TSCALEX"] = image.transform.scale[0]
-            image.header["TSCALEY"] = image.transform.scale[1]
-            image.header["ALIGNALG"] = self.__class__.__name__
-        
+    def run(self, image):
+        if image.enough_stars(n=5, error=not self.discard):
+            result = self.solve(image.stars_coords, return_dx=True)
+            if result is not None:
+                x, image.dx, image.dy = result
+                image.transform = skAT(x)
+                image.header["TROT"] = image.transform.rotation
+                image.header["TDX"] = image.transform.translation[0]
+                image.header["TDY"] = image.transform.translation[1]
+                image.header["TSCALEX"] = image.transform.scale[0]
+                image.header["TSCALEY"] = image.transform.scale[1]
+                image.header["ALIGNALG"] = self.__class__.__name__
+            
+            else:
+                image.discard = True
         else:
             image.discard = True
 
-    def __call__(self, stars_coords, tolerance=2, return_dx=False):
+    def solve(self, stars_coords, tolerance=2, return_dx=False):
         s = stars_coords.copy()
         quads, stars = tutils.quads_stars(s, n=self.n)
         dist, indices = self.kdtree.query(quads)

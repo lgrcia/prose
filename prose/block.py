@@ -1,6 +1,6 @@
 from time import time
 import inspect
-from .console_utils import error
+from .console_utils import error, warning
 
 class Block(object):
     """Single unit of processing acting on the :py:class:`~prose.Image` object
@@ -31,14 +31,16 @@ class Block(object):
         cls._args = defaults
         return super().__new__(cls)
 
-    def __init__(self, name=None):
+    def __init__(self, name=None, verbose=False):
         """Instanciation
         """
         self.name = name
         self.unit_data = None
         self.processing_time = 0
         self.runs = 0
-        self._args
+        self._args = None
+        self.in_sequence = False
+        self.verbose = verbose
 
     @property    
     def args(self):
@@ -76,6 +78,8 @@ class Block(object):
     def __call__(self, image):
         image_copy = image.copy()
         self.run(image_copy)
+        if image_copy.discard:
+            warning(f"{self.__class__.__name__} discarded Image")
         return image_copy
 
     @classmethod
@@ -88,20 +92,3 @@ class Block(object):
         kwonlyargs = {k: args[k] for k in kwonlyargs} if kwonlyargs is not None else {}
 
         return cls(*_args, *varargs, **varkw, **kwonlyargs)
-
-
-class _NeedStars(Block):
-
-    def __init__(self, name=None):
-        super().__init__(name)
-
-
-    def _run(self, image):
-        block_name = self.__class__.__name__
-        if not hasattr(image, "stars_coords"):
-            error(f"[{block_name}] `stars_coords` not found in Image (did you use a detection block?)")
-        elif image.stars_coords is None:
-            error(f"[{block_name}] `stars_coords` is empty (no stars detected)")
-        elif len(image.stars_coords) == 0:
-            error(f"[{block_name}] `stars_coords` is empty (no stars detected)")
-        super()._run(image)
