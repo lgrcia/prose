@@ -52,10 +52,10 @@ image.show() # detected stars
 image.plot_psf_model() # PSF model
 ```
 
-While being run on a single image, a Sequence is designed to be run on list of images (paths) and provides the architecture to build powerful pipelines. For more details check [Quickstart](https://lgrcia.github.io/prose/build/html/notebooks/quickstart.html) and [What is a pipeline?](https://lgrcia.github.io/prose-docs/build/html/core.html)
+While being run on a single image, a Sequence is designed to be run on list of images (paths) and provides the architecture to build powerful pipelines. For more details check [Quickstart](https://lgrcia.github.io/prose-docs/build/html/notebooks/quickstart.html) and [What is a pipeline?](https://lgrcia.github.io/prose-docs/build/html/core.html)
 
 ## Default pipelines
-prose features default pipelines to perform common tasks such as
+ *prose* features default pipelines to perform common tasks like:
 
 ```python
 
@@ -64,16 +64,18 @@ from prose.pipeline import Calibration, AperturePhotometry
 destination = "reduced_folder"
 
 reduction = Calibration(darks=[...], flats=[...])
-reduction.run(images)
+reduction.run(images, destination)
 
 photometry = AperturePhotometry(calib.images, calib.stack)
-photometry.run()
+photometry.run(calib.phot)
 
 ```
 
+However, the package is designed to avoid pre-implemented black-boxes, in favor of transparent pipelines. For a practical illustration of that, check our [Photometry tutorial](https://lgrcia.github.io/prose-docs/build/html/notebooks/tutorials/photometry.nbconvert.html).
+
 ## Installation
 
-prose is written for python 3 and can be installed from pypi with:
+ *prose* is written for python 3 and can be installed from pypi with:
 
 ```shell
 pip install prose
