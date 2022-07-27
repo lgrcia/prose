@@ -110,7 +110,7 @@ class FitsManager:
                 assert Path(folder).exists(), f"Folder {folder} does not exists"
                 files += _get_files(folder)
         else:
-            assert Path(folders).exists(), f"Folder {folder} does not exists"
+            assert Path(folders).exists(), f"Folder {folders} does not exists"
             files = _get_files(folders)
 
         return files
