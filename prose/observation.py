@@ -324,7 +324,8 @@ class Observation(ApertureFluxes):
             ]).run(self.stack, show_progress=False)
         else:
             assert star in self.stack.cutouts_idxs, "star seems out of frame"
-            self.stack.psf = self.stack.cutouts[star].data
+            self.stack.psf = self.stack.cutouts[star].data.copy()
+            self.stack.psf /= self.stack.psf.sum()
             self.stack = model()(self.stack)
     @property
     def mean_epsf(self):

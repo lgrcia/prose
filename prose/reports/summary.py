@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from .. import Observation
-from ..tess import TFOPObservation
 import os
 from os import path
 from astropy.time import Time
