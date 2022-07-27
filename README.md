@@ -42,10 +42,14 @@ sequence = Sequence([
     blocks.SegmentedPeaks(),  # stars detection
     blocks.Cutouts(size=21),  # cutouts extraction
     blocks.MedianPSF(),       # PSF building
-    blocks.Moffat2D(),        # PSF modeling
+    blocks.psf.Moffat2D(),        # PSF modeling
 ])
 
-sequence.run([image])
+sequence.run(image)
+
+# plotting
+image.show() # detected stars
+image.plot_psf_model() # PSF model
 ```
 
 For more details check [Quickstart](https://lgrcia.github.io/prose/build/html/notebooks/quickstart.html).
