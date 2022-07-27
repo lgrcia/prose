@@ -11,27 +11,39 @@ class UploadToExofop:
     versiondate = '2020.01.24'
 
     """
-    def __init__(self,obs,report_destination,transcov='',skip_summary_upload=0,skip_file_upload=0,username=None,password=None
-                 ,notes='',tag_number=1,delta_mag=0):
+    def __init__(self,obs,report_destination,transcov='',skip_summary_upload=0,skip_file_upload=0,toi=None,username=None,password=None
+                 ,notes='',tag_number=1,delta_mag=0,print_responses=False):
         """
 
         Parameters
         ----------
         obs : Observation object
         report_destination : path or str
-        delta_mag : float
-            delta magnitude of faintest neighbor cleared, or delta magnitude of NEB, set to 0 to leave blank
+            Path where the prose report is
         transcov : str
             Full, Ingress, Egress or Out of Transit (CASE SENSITIVE!!!)
-        notes : str
-            public note such as "deep" etc. - do not put proprietary results here
         skip_summary_upload : float
-            set to 1 to skip uploading observation summary, set to 0 to upload observation summary
+            Set to 1 to skip uploading observation summary, set to 0 to upload observation summary
         skip_file_upload : float
-            set to 1 to skip file uploads, set to 0 to upload matching files
-        tag_number: str
+            Set to 1 to skip file uploads, set to 0 to upload matching files
+        toi : str
+            Toi number (number portion only including planet ! - i.e. no "TOI"). By default None, uses obs.toi
+        username : str
+            Exofop username for the upload
+        password :
+            Exofop password for the upload
+        notes : str
+            Public note in Times Series Observation - do not put proprietary results here
+        tag_number: int
+            Number added to the observation tag on exofop, by default is 1
+        delta_mag : float
+            delta magnitude of faintest neighbor cleared, or delta magnitude of NEB, set to 0 to leave blank
+        print_responses : bool
+            Whether to return the requests responses for the summary and file uploads, by default is False. To use in
+            the case of unsuccessful upload to identify the reason.
         """
         self.obs = obs
+        self.toi = toi
         self.report_destination = report_destination
         self.delta_mag = delta_mag
         self.transcov = transcov
@@ -45,6 +57,7 @@ class UploadToExofop:
         self.figures_path = None
         self.tag = None
         self.fileList = self.check_files()
+        self.print_responses = print_responses
 
 
     def check_files(self):
@@ -60,7 +73,10 @@ class UploadToExofop:
             return os.listdir(self.figures_path)
 
     def upload(self):
-        toi = "TOI" + self.obs.toi
+        if self.toi is None:
+            toi = "TOI" + self.obs.toi
+        else:
+            toi = "TOI" + self.toi
         observatory = self.obs.telescope.name
         telsize = str(self.obs.telescope.diameter / 100)
         camera = self.obs.telescope.camera_name
@@ -127,7 +143,8 @@ class UploadToExofop:
                     response2 = session.post('https://exofop.ipac.caltech.edu/tess/insert_tseries.php', data=entries)
                     if response2:
                         print('Added new Time Series...')
-                        #print(response2.text)
+                        if self.print_responses:
+                            print(response2.text)
                     else:
                         print('ERROR: Time Series Add failed.')
                 else:
@@ -175,7 +192,8 @@ class UploadToExofop:
                                     'id': tic
                                 }
                                 response3 = session.post('https://exofop.ipac.caltech.edu/tess/insert_file.php', files=files, data=payload)
-                                #print(response3.text)
+                                if self.print_responses:
+                                    print(response3.text)
 
                                 if response3:
                                     print('Uploading file: {}'.format(fileName))

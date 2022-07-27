@@ -20,6 +20,8 @@ class TFOPObservation(Observation):
         ----------
         photfile : str
             path of the `.phot` file to load
+        name : str, optional
+            To add if the TOI number is not given in target name (only number portion with planet: e.g. 1234.01), by default is None
         """
         super().__init__(photfile)
         if name is None:
@@ -104,7 +106,37 @@ class TFOPObservation(Observation):
         self.set_gaia_target(self.gaia_from_toi, verbose=verbose)
 
 
-    def auto_modeling(self,detrends=None,limb_darkening_coefs=None):
+    def auto_modeling(self,detrends=None,limb_darkening_coefs=True,tune=2000,draws=3000,cores=3,chains=2,target_accept=0.9,
+                      **kwargs):
+
+        """
+
+        Parameters
+        ----------
+        detrends : dict
+            detrending parameters, polynomial fit of systematics (airmass, sky, dx, dy, fwhm)
+        limb_darkening_coefs : bool or list
+            if True, automatic calculation of the quadratic limb darkening coefficients using Claret 2012 if effective temperature
+            of the star is < 5000K https://ui.adsabs.harvard.edu/abs/2012A%26A...546A..14C/abstract
+            or Claret 2013 if effective temperature => 5000K https://ui.adsabs.harvard.edu/abs/2013A%26A...552A..16C/abstract
+        tune : int
+            Number of iterations to tune, defaults to 1000. Samplers adjust the step sizes, scalings or similar during
+            tuning. Tuning samples will be drawn in addition to the number specified in the draws argument, and will be
+            discarded unless discard_tuned_samples is set to False. (See PyMC3 documentation)
+        draws : int
+            The number of samples to draw. (See PyMC3 documentation)
+        cores : int
+            The number of chains to run in parallel. (See PyMC3 documentation)
+        chains : int
+            The number of chains to sample. (See PyMC3 documentation)
+        target_accept : float
+            float in [0, 1]. The step size is tuned such that we approximate this acceptance rate. Higher values like
+            0.9 or 0.95 often work better for problematic posteriors. (See PyMC3 documentation)
+        Returns
+        -------
+        A model obtained with the exoplanet package using the default NUTS sampler. The maximum a posteriori is stored in self.opt, the trace in
+        self.samples and the values to be used in the transitmodel report page are stored in self.posteriors.
+        """
 
         import pymc3 as pm
         import exoplanet as xo
@@ -117,6 +149,14 @@ class TFOPObservation(Observation):
         X = self.polynomial(**detrends).T
         c = np.linalg.lstsq(X.T, self.diff_flux)[0]
 
+        if limb_darkening_coefs:
+            logg = self.exofop_priors['Stellar log(g) (cm/s^2)'].values[0]
+            teff = self.exofop_priors['Stellar Eff Temp (K)'].values[0]
+            ldcs = claret_2012(self.filter, teff, logg, 'L')
+
+        if isinstance(limb_darkening_coefs,list):
+            ldcs = limb_darkening_coefs
+
         with pm.Model() as model:
             # Systematics
             # -----------------
@@ -125,7 +165,7 @@ class TFOPObservation(Observation):
 
             # Stellar parameters
             # -----------------
-            u = xo.distributions.QuadLimbDark("u", testval=np.array(limb_darkening_coefs))
+            u = xo.distributions.QuadLimbDark("u", testval=np.array(ldcs))
             star = xo.LimbDarkLightCurve(u[0], u[1])
             m_s = pm.Normal('m_s',self.exofop_priors["Stellar Mass (M_Sun)"].values[0],self.exofop_priors["Stellar Mass (M_Sun) err"].values[0])
             r_s = pm.Normal('r_s', self.exofop_priors["Stellar Radius (R_Sun)"].values[0],self.exofop_priors["Stellar Radius (R_Sun) err"].values[0])
@@ -174,14 +214,15 @@ class TFOPObservation(Observation):
 
         with model:
             trace = pm.sample(
-                tune=2000,
-                draws=3000,
+                tune=tune,
+                draws=draws,
                 start=self.opt,
-                cores=3,
-                chains=2,
+                cores=cores,
+                chains=chains,
                 init="adapt_full",
-                target_accept=0.9,
-                return_inferencedata=False
+                target_accept=target_accept,
+                return_inferencedata=False,
+                **kwargs
             )
         variables = ["P", "r", 't0', 'b', 'u', 'r_s', 'm_s', 'ror', 'depth', 'a', 'a/r_s', 'i']
 
@@ -199,3 +240,52 @@ class TFOPObservation(Observation):
         for i in self.summary.index:
             self.posteriors[i] = self.summary['mean'][i]
             self.posteriors[i + '_e'] = self.summary['sd'][i]
+
+def claret_2012(filter, teff, logg, method):
+    """
+
+    Automatic calculation of the quadratic limb darkening coefficients using Claret 2012 if effective temperature
+    of the star is < 5000K https://ui.adsabs.harvard.edu/abs/2012A%26A...546A..14C/abstract
+    or Claret 2013 if effective temperature => 5000K https://ui.adsabs.harvard.edu/abs/2013A%26A...552A..16C/abstract
+    Parameters
+    ----------
+    filter : str
+        filter of the observation
+    teff : int or float
+        Effective temperature of the star in Kelvins
+    logg : float
+        Surface gravity in cm/s2
+    method : str
+        L or F Method (Least-Square or Flux Conservation)
+
+    Returns
+    -------
+    The quadratic limb darkening coefficients a and b in a given filter for a given star.
+    """
+    if teff < 5000:
+        df = pd.read_csv("https://cdsarc.cds.unistra.fr/ftp/J/A+A/546/A14/tableab.dat", sep='\s+')
+        df.columns = ['logg', 'Teff', 'z', 'xi', 'u1', 'u2', 'Filter', 'Method', 'Model']
+    else:
+        df = pd.read_csv("https://cdsarc.cds.unistra.fr/ftp/J/A+A/552/A16/tableab.dat", sep='\s+')
+        df.columns = ['logg', 'Teff', 'z', 'xi', 'u1', 'u2', 'Filter', 'Method', 'Model']
+
+    filters = []
+    if filter == 'I+z':
+        filters.append('I')
+        filters.append("z'")
+    if filter == 'z' or filter == 'r' or filter == 'g':
+        filters.append(filter + "'")
+    else:
+        filters.append(filter)
+
+    u1 = []
+    u2 = []
+    for k in filters:
+        df2 = df.loc[(df.Filter == k) & (df.Method == method)]
+        df2.reset_index(inplace=True, drop=True)
+        idxs = np.argwhere(np.abs(df2.Teff.to_numpy() - teff) == np.abs(df2.Teff.to_numpy() - teff).min()).flatten()
+        df3 = df2.iloc[idxs]
+        idxs2 = np.argwhere(np.abs(df3.logg.to_numpy() - logg) == np.abs(df3.logg.to_numpy() - logg).min()).flatten()
+        u1.append(df3.iloc[idxs2].u1.values[0])
+        u2.append(df3.iloc[idxs2].u2.values[0])
+    return np.mean(u1), np.mean(u2)

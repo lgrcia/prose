@@ -27,6 +27,8 @@ class TransitModel(LatexTemplate):
             trend model, by default None
         expected : tuple, optional
             tuple of (t0, duration) of expected transit, by default None
+        posteriors : dict
+            Results of the posterior distributions of the fit including mean and standard deviation.
         rms_bin : float, optional
             [description], by default 0.005
         style : str, optional
@@ -96,7 +98,7 @@ class TransitModel(LatexTemplate):
         open(self.tex_destination, "w").write(self.template.render(
             obstable=self.obstable
         ))
-        self.to_csv_report()
+        self.to_csv_report(destination)
 
     def plot_lc_model(self):
         viz.plot_systematics_signal(self.obs.time,self.obs.diff_flux,self.trend_model,self.transit_model)
@@ -111,11 +113,11 @@ class TransitModel(LatexTemplate):
                                         self.obs.opt['depth'], self.obs.opt['a'], self.obs.opt['a/r_s'], self.obs.opt['i']])
             fig.patch.set_facecolor('xkcd:white')
 
-    def to_csv_report(self):
+    def to_csv_report(self,destination):
         """
         This one adds de-trended light-curve
         """
-        destination = path.join(self.destination, "../..", 'measurements' + ".txt")
+        destination = path.join(destination,'measurements.txt')
 
         comparison_stars = self.obs.comps[self.obs.aperture]
         list_diff = ["DIFF_FLUX_C%s" % i for i in comparison_stars]
@@ -144,7 +146,7 @@ class TransitModel(LatexTemplate):
                 "EXPOSURE": self.obs.exptime,
             })
         )
-        df.to_csv(destination, sep="\t", index=False)
+        return df.to_csv(destination, sep="\t", index=False)
 
     def snr(self):
         lc = self.obs.diff_flux - self.transit_model - self.trend_model

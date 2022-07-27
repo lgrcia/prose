@@ -15,7 +15,7 @@ class TESSNotes( LatexTemplate):
             ["Predicted Tc", f"{(self.obs.ttf_priors['jd_mid'])} BJD-TDB"],
             ["Measured Tc", f"{self.t_model.posteriors['t0']-2450000:.4f} BJD-TDB"],
             ["List of NEBcheck stars NOT cleared", "See NEBcheck"],
-            ["Transit depth on target (min. flux)", f"{np.abs(min(self.t_model.transit_model)) * 1e3:.2e}"],
+            ["Transit depth on target (min. flux)", f"{np.abs(min(self.t_model.transit_model)) * 1e3:.1f} ppt"],
             ["Duration of the transit", f"{self.t_model.t14:.2f} min"],
             ["RMS per bin (%s min)" % f"{self.t_model.rms[1]:.1f}", f"{self.t_model.rms[0]:.2e}"],
             ["Meridian flip",self.obs.meridian_flip],
