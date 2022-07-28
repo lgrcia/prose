@@ -10,12 +10,13 @@ template_folder = path.abspath(path.join(path.dirname(__file__), "..", "..", "la
 
 
 class LatexTemplate:
-    def __init__(self, template_name, style="paper"):
+    def __init__(self, template_name=None, style="paper"):
         self.template_name = template_name
         self._style = style
         self.template = None
         self.dpi=150
-        self.load_template()
+        if template_name is not None:
+            self.load_template()
 
         # to be set
         self.destination = None

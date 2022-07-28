@@ -783,7 +783,7 @@ def corner_text(text, loc=(0.05, 0.05), va="bottom", ha='left', fontsize=12, c="
 
 
 def plot_systematics_signal(x, y, systematics, signal=None, ylim=None, offset=None, figsize=(6, 7), signal_label=None):
-    """Plot a systematics and signal model over data. systeamtics + signal is plotted on top, signal alone on detrended 
+    """Plot a systematics and signal model over data. systematics + signal is plotted on top, signal alone on detrended
     data on bottom
 
     Parameters
