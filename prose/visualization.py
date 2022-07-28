@@ -841,9 +841,11 @@ class HandlerEllipse(HandlerPatch):
         return [p]
 
 
-def circles_legend(colors, texts):
+def circles_legend(colors, texts, ax=None):
+    if ax is None:
+        ax = plt.gca()
     c = [mpatches.Circle((0.5, 0.5), radius = 0.25, fill=None, ec=colors[i]) for i in range(len(texts))]
-    plt.legend(c, texts , bbox_to_anchor=(1, 1.05), loc='upper right', ncol=3, handler_map={mpatches.Circle: HandlerEllipse()}, frameon=False)
+    ax.legend(c, texts , bbox_to_anchor=(1, 1.05), loc='upper right', ncol=3, handler_map={mpatches.Circle: HandlerEllipse()}, frameon=False)
 
 
 def plot_signal(x, y, label=None, **kwargs):

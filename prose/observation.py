@@ -43,15 +43,14 @@ class Observation(ApertureFluxes):
 
         utils.remove_sip(self.xarray.attrs)
 
-        self.phot = photfile
+        self.phot = photfile if isinstance(photfile, (Path, str)) else None
         self.telescope = Telescope.from_name(self.telescope)
         self.gaia_data = None
         self._meridian_flip = None
 
-
         if self.has_stack:
             self._stack = Image(data=self.x["stack"].values, header=clean_header(self.x.attrs))
-
+            
             if "stars" in self.x:
                 self.stack.stars_coords = self.x.stars.values
 
@@ -118,6 +117,7 @@ class Observation(ApertureFluxes):
 
         df.to_csv(destination, sep=sep, index=False)
 
+    # TODO: if None, phot if path was provided , if direct, autoname else filename
     def save(self, destination=None):
         """Save current observation
 
@@ -125,6 +125,7 @@ class Observation(ApertureFluxes):
         ----------
         destination : str, optional
             path to phot file, by default None
+            TODO: doc
         """
         destination = self.phot if destination is None else destination
         self.xarray.attrs.update(self.stack.header)
@@ -324,10 +325,11 @@ class Observation(ApertureFluxes):
             ]).run(self.stack, show_progress=False)
         else:
             assert star in self.stack.cutouts_idxs, "star seems out of frame"
-            self.stack.psf = self.stack.cutouts[star].data
+            self.stack.psf = self.stack.cutouts[star].data.copy()
+            self.stack.psf /= self.stack.psf.sum()
             self.stack = model()(self.stack)
 
-    def plot_psf_model(self, star=None, size=21, cmap="inferno", c="blueviolet", model=Gaussian2D, figsize=(5, 5)):
+    def plot_psf_model(self, star=None, size=21, cmap="inferno", c="blueviolet", model=Gaussian2D, figsize=(5, 5), axes=None):
         """Plot a PSF model fit of the a PSF
 
         After this method is called, the model parameters are accessible through the Observation.stack Image attributes
@@ -371,37 +373,7 @@ class Observation(ApertureFluxes):
         # Extracting and computing PSF model
         # ---------------------------------    
         self._compute_psf_model(star=star, model=model, size=size)
-        
-        # Plotting
-        # --------
-        data = self.stack.psf
-        model = self.stack.psf_model
-        
-        plt.figure(figsize=figsize)
-        gs = gridspec.GridSpec(2, 2, width_ratios=[9, 2], height_ratios=[2, 9])
-        gs.update(wspace=0, hspace=0)
-        #axtt = plt.subplot(gs[1, 1])
-        ax = plt.subplot(gs[1, 0])
-        axr = plt.subplot(gs[1, 1], sharey=ax)
-        axt = plt.subplot(gs[0, 0], sharex=ax)
-
-        ax.imshow(self.stack.psf, alpha=1, cmap=cmap, origin="lower")
-        ax.contour(self.stack.psf_model, colors="w", alpha=0.7)
-
-        x, y = np.indices(data.shape)
-
-        axt.plot(y[0], np.mean(data, axis=0), c=c, label="data")
-        axt.plot(y[0], np.mean(model, axis=0), "--", c="k", label="model")
-        axt.axis("off")
-        axt.set_title(f"{'Median' if star is None else f'Star {star}'} PSF Model ({self.stack.psf_model_block})", loc="left")
-        axt.legend()
-
-        axr.plot(np.mean(data, axis=1), y[0], c=c)
-        axr.plot(np.mean(model, axis=1), y[0], "--", c="k")
-        axr.axis("off")
-        ax.text(1, 1, f"FWHM x: {self.stack.fwhmx:.2f} pix\n"
-                    f"FWHM y: {self.stack.fwhmy:.2f} pix\n"
-                    f"angle: {self.stack.theta/np.pi*180:.2f}°", c="w")
+        self.stack.plot_psf_model(cmap=cmap, c=c, figsize=figsize, axes=axes)
 
 
     def plot_systematics(self, fields=None, ylim=None, amplitude_factor = None):
@@ -596,7 +568,7 @@ class Observation(ApertureFluxes):
 
     # TODO: plot_radial_psf
 
-    def plot_radial_psf(self, star=None, n=40, zscale=False, aperture=None, rin=None, rout=None):
+    def plot_radial_psf(self, star=None, n=40, zscale=False, aperture=None, rin=None, rout=None, axes=None):
         """Plot star cutout overalid with aperture and radial flux.
 
         Parameters
@@ -650,15 +622,19 @@ class Observation(ApertureFluxes):
 
         binned_radii, binned_pixels, _ = fast_binning(radii, pixels, bins=1)
 
-        fig = plt.figure(figsize=(9.5, 4))
-        fig.patch.set_facecolor('xkcd:white')
-        _ = plt.subplot(1, 5, (1, 3))
+        if axes is None:
+            fig = plt.figure(figsize=(9.5, 4))
+            fig.patch.set_facecolor('xkcd:white')
+            ax1 = plt.subplot(1, 5, (1, 3))
+            ax2 = plt.subplot(1, 5, (4, 5))
+        else:
+            ax1, ax2 = axes
 
-        plt.plot(radii, pixels, "o", fillstyle='none', c="0.7", ms=4)
-        plt.plot(binned_radii, binned_pixels, c="k")
-        plt.xlabel("distance from center (pixels)")
-        plt.ylabel("ADUs")
-        _, ylim = plt.ylim()
+        ax1.plot(radii, pixels, "o", fillstyle='none', c="0.7", ms=4)
+        ax1.plot(binned_radii, binned_pixels, c="k")
+        ax1.set_xlabel("distance from center (pixels)")
+        ax1.set_ylabel("ADUs")
+        _, ylim = ax1.set_ylim()
 
         if isinstance(aperture, int) or aperture is None:
             if "apertures_radii" in self.xarray:
@@ -669,10 +645,10 @@ class Observation(ApertureFluxes):
                     ap = apertures[aperture]
         if isinstance(aperture, float):
             ap = aperture
-        plt.xlim(0)
-        plt.text(ap, ylim, "APERTURE", ha="right", rotation="vertical", va="top")
-        plt.axvline(ap, c="k", alpha=0.1)
-        plt.axvspan(0, ap, color="0.9", alpha=0.1)
+        ax1.set_xlim(0)
+        ax1.text(ap, ylim, "APERTURE", ha="right", rotation="vertical", va="top")
+        ax1.axvline(ap, c="k", alpha=0.1)
+        ax1.axvspan(0, ap, color="0.9", alpha=0.1)
 
         if "annulus_rin" in self:
             if rin is None:
@@ -681,18 +657,17 @@ class Observation(ApertureFluxes):
                 rout = self.annulus_rout.mean()
 
         if rin is not None:
-            plt.axvline(rin, color="k", alpha=0.2)
+            ax1.axvline(rin, color="k", alpha=0.2)
 
         if rout is not None:
-            plt.axvline(rout, color="k", alpha=0.2)
+            ax1.axvline(rout, color="k", alpha=0.2)
             if rin is not None:
-                plt.axvspan(rin, rout, color="0.9", alpha=0.2)
-                _ = plt.text(rout, ylim, "ANNULUS", ha="right", rotation="vertical", va="top")
+                ax1.axvspan(rin, rout, color="0.9", alpha=0.2)
+                _ = ax1.text(rout, ylim, "ANNULUS", ha="right", rotation="vertical", va="top")
 
         n = np.max([np.max(radii), rout +2 if rout else 0])
-        plt.xlim(0, n)
-
-        ax2 = plt.subplot(1, 5, (4, 5))
+        ax1.set_xlim(0, n)
+        
         im = self.stack.data[int(y - n):int(y + n), int(x - n):int(x + n)]
         if zscale:
             im = z_scale(im)
@@ -764,20 +739,18 @@ class Observation(ApertureFluxes):
         return new_obs
 
 
-    def show_stars(self, size=10, view=None, n=None, flip=False,
-               comp_color="yellow", color=[0.51, 0.86, 1.], stars=None, legend=True, **kwargs):
+    def show_stars(self, view=None, n=None, flip=False,
+               comp_color="yellow", color=[0.51, 0.86, 1.], stars=None, legend=True, ax=None, **kwargs):
         """Show detected stars over stack image
         
         Parameters
         ----------
-        size : int, optional
-            size of the square figure, by default 10
-        flip : bool, optional
-            whether to flip image, by default False
         view : str, optional
             "all" to see all stars OR "reference" to have target and comparison stars hilighted, by default None
         n : int, optional
             max number of stars to show, by default None,
+        flip : bool, optional
+            whether to flip image, by default False
 
         Example
         -------
@@ -793,7 +766,7 @@ class Observation(ApertureFluxes):
         """
         self.assert_stack()
 
-        self.stack.show(stars=False)
+        ax = self.stack.show(stars=False, ax=ax)
         
         if stars is None:
             stars = self.stars
@@ -815,12 +788,12 @@ class Observation(ApertureFluxes):
             stars = np.array(image_size) - stars
 
         if view == "all":
-            viz.plot_marks(*stars.T, np.arange(len(stars)), color=color)
+            viz.plot_marks(*stars.T, np.arange(len(stars)), color=color, ax=ax)
 
             if "stars" in self.xarray:
                 others = np.arange(n, len(self.stars))
                 others = np.setdiff1d(others, self.target)
-                viz.plot_marks(*self.stars[others].T, alpha=0.4, color=color)
+                viz.plot_marks(*self.stars[others].T, alpha=0.4, color=color, ax=ax)
 
         elif view == "reference":
             x = self.xarray.isel(apertures=self.aperture)
@@ -831,14 +804,14 @@ class Observation(ApertureFluxes):
             others = np.setdiff1d(np.arange(len(stars)), x.comps.values)
             others = np.setdiff1d(others, self.target)
 
-            _ = viz.plot_marks(*stars[self.target], self.target, color=color)
-            _ = viz.plot_marks(*stars[comps].T, comps, color=comp_color)
-            _ = viz.plot_marks(*stars[others].T, alpha=0.4, color=color)
+            _ = viz.plot_marks(*stars[self.target], self.target, color=color, ax=ax)
+            _ = viz.plot_marks(*stars[comps].T, comps, color=comp_color, ax=ax)
+            _ = viz.plot_marks(*stars[others].T, alpha=0.4, color=color, ax=ax)
 
             if legend:
                 colors = [comp_color, color]
                 texts = ["Comparison stars", "Target"]
-                viz.circles_legend(colors, texts)
+                viz.circles_legend(colors, texts, ax=ax)
 
     def keep_good_stars(self, lower_threshold=3., upper_threshold=35000., trim=10, keep=None, inplace=True):
         """Keep only  stars with a median flux higher than `threshold`*sky. 
@@ -966,6 +939,59 @@ class Observation(ApertureFluxes):
         i = "a" + str(int(np.random.rand()*100000))
         widget = widget.replace("__divid__", i)
         display(HTML(widget))
+
+    def plot_summary(self, ylim=None, zscale=True):
+        fig = plt.figure(figsize=(16,8))
+        widths = [0.55, 0.35, 1, 0.7]
+        heights = [0.8, 0.4, 0.5]
+        specs = fig.add_gridspec(ncols=4, nrows=3, width_ratios=widths, height_ratios=heights)
+
+        image = self.stack
+
+        params = [
+            ("Telescope", f"{image.telescope.name}"),
+            ("Date", f"{image.night_date}"),
+            ("Filter", f"{image.filter}"),
+            ("Exposure", f"{image.exposure}"),
+            ("RA", f"{image.skycoord.ra:.4f}"),
+            ("DEC", f"{image.skycoord.dec:.4f}"),
+            ("Dimenion", f"{image.shape[0]}x{image.shape[1]} pixels"),
+        ]
+
+        # stack_zoom
+        ax_stack = fig.add_subplot(specs[0:2, 0:2])
+        self.stack.show_cutout(star=int(self.target), ax=ax_stack, zscale=zscale)
+        ax_stack.set_title("Target on stack", loc="left")
+
+        # radial psf
+        psf_ax1 = fig.add_subplot(specs[2,0])
+        psf_ax2 = fig.add_subplot(specs[2,1])
+        self.plot_radial_psf(star=int(self.target), axes=(psf_ax1, psf_ax2))
+
+        # light curve
+        ax_lc = fig.add_subplot(specs[0,2])
+        self.plot()
+        plt.xlabel(f"BJD")
+        plt.ylabel("diff. flux")
+        if ylim:
+            plt.ylim(ylim)
+        plt.title("Differential light curve", loc="left")
+
+        # table
+        ax_table = fig.add_subplot(specs[1::,2])
+        table = plt.table(params, loc=8, fontsize=35, cellLoc="left")
+        table.scale(1, 2)
+        plt.axis("off")
+
+        # systematics
+        ax_syst = fig.add_subplot(specs[0:3, 3])
+        self.plot_systematics()
+        plt.xlabel(f"BJD")
+        plt.ylabel("diff. flux")
+
+        fig.suptitle(f"{image.object} from {image.telescope.name} in {image.filter} on {image.night_date}", fontsize=13)
+        viz.paper_style([ax_lc, ax_syst])
+        plt.tight_layout()
 
     def plate_solve(self):
         """Plate solve the current py::stack
