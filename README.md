@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  A python framework to build FITS images pipelines.
+  A python package to build FITS images pipelines.
   <br>
   <p align="center">
     <a href="https://github.com/lgrcia/prose">
@@ -23,7 +23,7 @@
   </p>
 </p>
 
- *prose* is a Python tool to build pipelines dedicated to astronomical images processing (all based on pip packages 📦). Beyond providing all the blocks to do so, it features default pipelines to perform common tasks such as automated calibration, reduction and photometry.
+ *prose* is a Python package to build pipelines dedicated to astronomical image processing, all based on pipy packages 📦. Beyond providing the blocks to do so, it features default pipelines to perform common tasks such as automated calibration, reduction and photometry.
 
 ## Example
 
@@ -42,16 +42,20 @@ sequence = Sequence([
     blocks.SegmentedPeaks(),  # stars detection
     blocks.Cutouts(size=21),  # cutouts extraction
     blocks.MedianPSF(),       # PSF building
-    blocks.Moffat2D(),        # PSF modeling
+    blocks.psf.Moffat2D(),    # PSF modeling
 ])
 
-sequence.run([image])
+sequence.run(image)
+
+# plotting
+image.show()           # detected stars
+image.plot_psf_model() # PSF model
 ```
 
-For more details check [Quickstart](https://lgrcia.github.io/prose/build/html/notebooks/quickstart.html).
+While being run on a single image, a Sequence is designed to be run on list of images (paths) and provides the architecture to build powerful pipelines. For more details check [Quickstart](https://lgrcia.github.io/prose-docs/build/html/notebooks/quickstart.html) and [What is a pipeline?](https://lgrcia.github.io/prose-docs/build/html/core.html)
 
 ## Default pipelines
-
+ *prose* features default pipelines to perform common tasks like:
 
 ```python
 
@@ -59,23 +63,25 @@ from prose.pipeline import Calibration, AperturePhotometry
 
 destination = "reduced_folder"
 
-reduction = Calibration(images=[...], flats=[...])
-reduction.run(destination)
+reduction = Calibration(darks=[...], flats=[...])
+reduction.run(images, destination)
 
-photometry = AperturePhotometry(destination)
-photometry.run()
+photometry = AperturePhotometry(calib.images, calib.stack)
+photometry.run(calib.phot)
 
 ```
 
+However, the package is designed to avoid pre-implemented black-boxes, in favor of transparent pipelines. For a practical illustration of that, check our [Photometry tutorial](https://lgrcia.github.io/prose-docs/build/html/notebooks/tutorials/photometry.nbconvert.html).
+
 ## Installation
 
-prose is written for python 3 and can be installed from pypi with:
+ *prose* is written for python 3 and can be installed from pypi with:
 
 ```shell
 pip install prose
 ```
 
-To install it through conda, once in your newly created environment, go with:
+To install it through conda (recommended, within a fresh environment):
 
 
 ```shell

@@ -390,7 +390,7 @@ class Gaussian2D(PSFModel):
 
         import matplotlib.pyplot as plt
 
-        block = blocks.Gaussian2D()
+        block = blocks.psf.Gaussian2D()
         image = block(image)
 
     and vizualise the result
@@ -518,7 +518,7 @@ class Moffat2D(PSFModel):
 
         import matplotlib.pyplot as plt
 
-        block = blocks.Moffat2D()
+        block = blocks.psf.Moffat2D()
         image = block(image)
 
     and vizualise the result
