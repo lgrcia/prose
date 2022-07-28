@@ -42,13 +42,13 @@ sequence = Sequence([
     blocks.SegmentedPeaks(),  # stars detection
     blocks.Cutouts(size=21),  # cutouts extraction
     blocks.MedianPSF(),       # PSF building
-    blocks.psf.Moffat2D(),        # PSF modeling
+    blocks.psf.Moffat2D(),    # PSF modeling
 ])
 
 sequence.run(image)
 
 # plotting
-image.show() # detected stars
+image.show()           # detected stars
 image.plot_psf_model() # PSF model
 ```
 
