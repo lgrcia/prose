@@ -68,11 +68,15 @@ class Report(LatexTemplate):
         self.reports = reports
         self.paths = None
 
-    def compile(self):
+    def compile(self, destination=None, verbose=False):
         cwd = os.getcwd()
         os.chdir(self.destination)
-        os.system(f"pdflatex {self.report_name}")
+        os.system(f"pdflatex {self.report_name}{'' if verbose else ' >/dev/null 2>&1'}")
         os.chdir(cwd)
+
+        if destination is not None:
+            shutil.copy(str(self.destination / self.report_name) + ".pdf", destination)
+            shutil.rmtree(self.destination)
 
     def make(self, destination):
         self.make_report_folder(destination, figures=False)
