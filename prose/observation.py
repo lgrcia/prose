@@ -639,7 +639,7 @@ class Observation(ApertureFluxes):
             x, y = self.stars[star]
 
         Y, X = np.indices(self.stack.shape)
-        cutout_mask = (np.abs(X - x + 0.5) < n) & (np.abs(Y - y + 0.5) < n)
+        cutout_mask = (np.abs(X - x) < n) & (np.abs(Y - y) < n)
         inside = np.argwhere((cutout_mask).flatten()).flatten()
         radii = (np.sqrt((X - x) ** 2 + (Y - y) ** 2)).flatten()[inside]
         idxs = np.argsort(radii)
@@ -702,12 +702,13 @@ class Observation(ApertureFluxes):
         plt.imshow(im, cmap="Greys_r", aspect="auto", origin="lower")
 
         plt.axis("off")
+        center = (n+0.5, n+0.5)
         if aperture is not None:
-            ax2.add_patch(plt.Circle((n, n), aperture, ec='grey', fill=False, lw=2))
+            ax2.add_patch(plt.Circle(center, aperture, ec='grey', fill=False, lw=2))
         if rin is not None:
-            ax2.add_patch(plt.Circle((n, n), rin, ec='grey', fill=False, lw=2))
+            ax2.add_patch(plt.Circle(center, rin, ec='grey', fill=False, lw=2))
         if rout is not None:
-            ax2.add_patch(plt.Circle((n, n), rout, ec='grey', fill=False, lw=2))
+            ax2.add_patch(plt.Circle(center, rout, ec='grey', fill=False, lw=2))
         if star is None:
             ax2.text(0.05, 0.05, f"{self.target}", fontsize=12, color="white", transform=ax2.transAxes)
         else:
