@@ -376,6 +376,8 @@ class Image:
             overlay[0].set_axislabel('Right Ascension (J2000)')
             overlay[1].set_axislabel('Declination (J2000)')
 
+        return ax
+
     def show_cutout(self, star=None, size=200, **kwargs):
         """Show a zoomed cutout around a detected star or coordinates
 
@@ -568,7 +570,7 @@ class Image:
     def from_telescope(cls, telescope):
         return partial(cls, telescope=telescope)
 
-    def plot_psf_model(self, cmap="inferno", c="blueviolet", figsize=(5, 5)):
+    def plot_psf_model(self, cmap="inferno", c="blueviolet", figsize=(5, 5), axes=None):
         
         # Plotting
         # --------
@@ -576,13 +578,15 @@ class Image:
         data = self.psf
         model = self.psf_model
 
-        plt.figure(figsize=figsize)
-        gs = gridspec.GridSpec(2, 2, width_ratios=[9, 2], height_ratios=[2, 9])
-        gs.update(wspace=0, hspace=0)
+        if axes is None:
+            plt.figure(figsize=figsize)
+            axes = gridspec.GridSpec(2, 2, width_ratios=[9, 2], height_ratios=[2, 9])
+            axes.update(wspace=0, hspace=0)
+            
         #axtt = plt.subplot(gs[1, 1])
-        ax = plt.subplot(gs[1, 0])
-        axr = plt.subplot(gs[1, 1], sharey=ax)
-        axt = plt.subplot(gs[0, 0], sharex=ax)
+        ax = plt.subplot(axes[1, 0])
+        axr = plt.subplot(axes[1, 1], sharey=ax)
+        axt = plt.subplot(axes[0, 0], sharex=ax)
 
         ax.imshow(self.psf, alpha=1, cmap=cmap, origin="lower")
         ax.contour(self.psf_model, colors="w", alpha=0.7)

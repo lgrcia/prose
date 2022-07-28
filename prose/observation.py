@@ -77,7 +77,7 @@ class Observation(ApertureFluxes):
     # Loaders and savers (files and data)
     # ------------------------------------
     def __copy__(self):
-        copied = Observation(self.xarray.copy(), time_verbose=True)
+        copied = self.__class__(self.xarray.copy(), time_verbose=True)
         copied.phot = self.phot
         copied.telescope = self.telescope
         if self.has_stack:

@@ -8,8 +8,6 @@ import shutil
 from pathlib import Path
 from prose import Telescope, blocks
 from prose.reports import Report, Summary
-from prose.utils import register_args
-from prose.tess import TFOPObservation
 
 
 RAW = Path("synthetic_dataset")
@@ -129,25 +127,112 @@ class TestReduction(unittest.TestCase):
         calib = Calibration(bias=[], darks=[], flats=[], overwrite=True)
         calib.run(fm.all_images, TEST_FODLER / destination)
 
+    def test_sequence_reduction(self):
 
-class TestTFOPObservation(unittest.TestCase):
+        # simulated data
+        # --------------
+        import numpy as np
+        from prose.tutorials import simulate_observation
+        from prose import Telescope
 
-    OBS = TFOPObservation(PHOT)
+        time = np.linspace(0, 0.15, 100) + 2450000
+        target_dflux = 1 + np.sin(time*100)*1e-2
+        simulate_observation(time, target_dflux, RAW)
 
-    def __init__(self, *args, **kwargs):
-        unittest.TestCase.__init__(self, *args, **kwargs)
+        _ = Telescope({
+            "name": "A",
+            "trimming": [40, 40],
+            "pixel_scale": 0.66,
+            "latlong": [31.2027, 7.8586],
+            "keyword_light_images": "light"
+        })
 
-    def test_tess_ids(self):
-        result_file = TEST_FODLER / "tess-properties.txt"
-        file = open(result_file, "w")
-        assert self.OBS.tic_id == '170789802', "wrong tic id"
-        assert self.OBS.gaia_from_toi == "4877792060261482752", "Wrong gaia from TOI"
-        file.write(f"- TIC-id: {self.OBS.tic_id }\n")
-        file.write(f"- Gaia from TOI: {self.OBS.gaia_from_toi}\n")
-        file.write(f"- TOI-label: {self.OBS.tfop_prefix}\n")
+        # reduction
+        # ---------
+        from prose import FitsManager, Image, Sequence, blocks
 
-    def test_gaia_from_toi(self):
-        assert self.OBS.gaia_from_toi == "4877792060261482752", "Wrong gaia from TOI"
+        # ref
+        fm = FitsManager(RAW, depth=2)
+        ref = Image(fm.all_images[0])
+        calibration = Sequence([
+            blocks.Calibration(darks=fm.all_darks, bias=fm.all_bias, flats=fm.all_flats),
+            blocks.Trim(),
+            blocks.SegmentedPeaks(), # stars detection
+            blocks.Cutouts(),                   # making stars cutouts
+            blocks.MedianPSF(),                 # building PSF
+            blocks.psf.Moffat2D(),              # modeling PSF
+        ])
+
+        calibration.run(ref, show_progress=False)
+
+        # potometry
+        photometry = Sequence([
+            *calibration[0:-1],                
+            blocks.psf.Moffat2D(reference=ref),
+            blocks.detection.LimitStars(min=3),
+            blocks.Twirl(ref.stars_coords),    
+            blocks.Set(stars_coords=ref.stars_coords),
+            blocks.AffineTransform(data=False, inverse=True),
+            blocks.BalletCentroid(),                           
+            blocks.PhotutilsAperturePhotometry(scale=ref.fwhm),
+            blocks.Peaks(),
+            blocks.XArray(
+                ("time", "jd_utc"),
+                ("time", "bjd_tdb"),
+                ("time", "flip"),
+                ("time", "fwhm"),
+                ("time", "fwhmx"),
+                ("time", "fwhmy"),
+                ("time", "dx"),
+                ("time", "dy"),
+                ("time", "airmass"),
+                ("time", "exposure"),
+                ("time", "path"),
+                ("time", "sky"),
+                (("time", "apertures", "star"), "fluxes"),
+                (("time", "apertures", "star"), "errors"),
+                (("time", "apertures", "star"), "apertures_area"),
+                (("time", "apertures", "star"), "apertures_radii"),
+                (("time", "apertures"), "apertures_area"),
+                (("time", "apertures"), "apertures_radii"),
+                ("time", "annulus_rin"),
+                ("time", "annulus_rout"),
+                ("time", "annulus_area"),
+                (("time", "star"), "peaks"),
+                name="xarray"
+            ),
+            blocks.AffineTransform(stars=False, data=True),
+            blocks.Stack(ref, name="stack"),
+        ])
+
+        photometry.run(fm.all_images)
+
+        # diff flux
+        obs = Observation(photometry.xarray.to_observation(photometry.stack.stack, sequence=photometry))
+        obs.target = 0
+        obs.broeg2005()
+        obs.plot()
+        plt.savefig(TEST_FODLER / "sequence_reduction.png")
+
+
+# class TestTFOPObservation(unittest.TestCase):
+
+#     OBS = TFOPObservation(PHOT)
+
+#     def __init__(self, *args, **kwargs):
+#         unittest.TestCase.__init__(self, *args, **kwargs)
+
+#     def test_tess_ids(self):
+#         result_file = TEST_FODLER / "tess-properties.txt"
+#         file = open(result_file, "w")
+#         assert self.OBS.tic_id == '170789802', "wrong tic id"
+#         assert self.OBS.gaia_from_toi == "4877792060261482752", "Wrong gaia from TOI"
+#         file.write(f"- TIC-id: {self.OBS.tic_id }\n")
+#         file.write(f"- Gaia from TOI: {self.OBS.gaia_from_toi}\n")
+#         file.write(f"- TOI-label: {self.OBS.tfop_prefix}\n")
+
+#     def test_gaia_from_toi(self):
+#         assert self.OBS.gaia_from_toi == "4877792060261482752", "Wrong gaia from TOI"
 
 
 class TestObservation(unittest.TestCase):
@@ -215,7 +300,7 @@ class TestObservation(unittest.TestCase):
         plt.savefig(result_file)
         plt.close()
         result_file = TEST_FODLER / "test_plot_psf_model_other_star.png"
-        self.OBS.plot_psf_model(star=110, model=blocks.Moffat2D)
+        self.OBS.plot_psf_model(star=125, model=blocks.psf.Moffat2D)
         plt.savefig(result_file)
         plt.close()
 
