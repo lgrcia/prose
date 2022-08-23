@@ -55,3 +55,4 @@ test_results
 dev
 **/*.egg-info
 **.vscode
+**.fits
