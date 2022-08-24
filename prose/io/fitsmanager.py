@@ -49,7 +49,7 @@ class FitsManager:
         by default False
     """
     
-    def __init__(self, folders=None, files=None, depth=0, hdu=0, extension=".f*t*", file=None, batch_size=False, scan=None, verbose=True):
+    def __init__(self, folders=None, files=None, depth=0, hdu=0, extension=".f*t*", file=None, batch_size=False, scan=None, verbose=True, to_df=None):
         if file is None:
             file = ":memory:"
 
@@ -66,6 +66,11 @@ class FitsManager:
             assert files is None, "Only 'folders' or 'files' must be provided, not both"
             files = self.get_files(folders, extension, depth=depth, scan=scan)
         
+        if to_df is None:
+            self.fits_to_df = fits_to_df
+        else:
+            self.fits_to_df = to_df
+
         if files is not None:
             if len(files) > 0:
                 self.scan_files(files, batch_size=batch_size, hdu=hdu, verbose=verbose)
@@ -161,14 +166,14 @@ class FitsManager:
 
                 if batch_size is not False:
                     for batch in _progress(batches):
-                        df = fits_to_df(batch, verbose=False, hdu=hdu, verbose_os=verbose_os)
+                        df = self.fits_to_df(batch, verbose=False, hdu=hdu, verbose_os=verbose_os)
                         for row in df.values:
                             if telescope is not None:
                                 row[2] = telescope
                             self._insert(*row)
                         self.con.commit()
                 else:
-                    df = fits_to_df(files_to_scan, verbose=True, hdu=hdu, verbose_os=verbose_os)
+                    df = self.fits_to_df(files_to_scan, verbose=True, hdu=hdu, verbose_os=verbose_os)
                     for row in df.values:
                         if telescope is not None:
                             row[2] = telescope
