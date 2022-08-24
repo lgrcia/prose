@@ -116,7 +116,7 @@ class Telescope:
         return super(Telescope, self).__getattribute__(name)
 
     def load(self, file, verbose=True):
-        if isinstance(file, str) and path.exists(file):
+        if isinstance(file, str) and path.exists(file) and not path.isdir(file):
             with open(file, "r") as f:
                 telescope = yaml.load(f)
         elif isinstance(file, dict):
