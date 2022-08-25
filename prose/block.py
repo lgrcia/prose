@@ -10,7 +10,6 @@ class Block(object):
         1. :py:meth:`~prose.Block.run` on each image fed to the :py:class:`~prose.Sequence`
         2. :py:meth:`~prose.Block.terminate` called after the :py:class:`~prose.Sequence` is terminated
 
-
     Parameters
     ----------
     name : str, optional
@@ -38,7 +37,6 @@ class Block(object):
         self.unit_data = None
         self.processing_time = 0
         self.runs = 0
-        self._args = None
         self.in_sequence = False
         self.verbose = verbose
 
