@@ -118,5 +118,5 @@ class AffineTransform(Block):
                 image.discard = True
     
     @property
-    def citations(self, image):
+    def citations(self):
         return "scikit-image"

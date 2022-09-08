@@ -168,11 +168,8 @@ class Sequence:
     def params_str(self):
         return yaml.safe_dump(self.args, sort_keys=False)
 
-
-    from prose.citations import _all_citations
-
     def citations(self):
-        citations = [block.citations for block in self.blocks]
+        citations = [print(block.citations) for block in self.blocks]
         citations = [*citations, "astropy", "prose"]
         cites = {}
 
