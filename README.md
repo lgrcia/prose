@@ -1,7 +1,7 @@
 # prose
 
 <p align="center">
-    <img src="docs/source/prose_illustration.png" width="350">
+    <img src="https://github.com/lgrcia/prose/blob/master/docs/source/prose_illustration.png" width="350">
 </p>
 
 <p align="center">
@@ -75,7 +75,7 @@ However, the package is designed to avoid pre-implemented black-boxes, in favor 
 
 ## Installation
 
- *prose* is written for python 3 and can be installed from pypi with:
+ *prose* is written for python 3 and can be installed from [pypi](https://pypi.org/project/prose/) with:
 
 ```shell
 pip install prose
