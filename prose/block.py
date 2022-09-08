@@ -1,6 +1,7 @@
 from time import time
 import inspect
-from .console_utils import error, warning
+from .console_utils import warning
+
 
 class Block(object):
     """Single unit of processing acting on the :py:class:`~prose.Image` object
@@ -17,7 +18,7 @@ class Block(object):
 
     All prose blocks must be child of this parent class
     """
-    @staticmethod    
+    @staticmethod
     def __new__(cls, *args, **kwargs):
         s = inspect.signature(cls.__init__)
         # TODO:
@@ -28,11 +29,13 @@ class Block(object):
         defaults.update(argspecs)
         del defaults['self']
         cls._args = defaults
+        cls.__new__.__signature__ = s
         return super().__new__(cls)
 
     def __init__(self, name=None, verbose=False):
         """Instanciation
         """
+
         self.name = name
         self.unit_data = None
         self.processing_time = 0
@@ -40,10 +43,10 @@ class Block(object):
         self.in_sequence = False
         self.verbose = verbose
 
-    @property    
+    @property
     def args(self):
         return self._args
-    
+
     def _run(self, *args, **kwargs):
         t0 = time()
         self.run(*args, **kwargs)
@@ -65,8 +68,8 @@ class Block(object):
         """
         pass
 
-    @staticmethod
-    def citations():
+    @property
+    def citations(self):
         return None
 
     @staticmethod

@@ -329,12 +329,9 @@ class AstroAlignShift(Block):
         image.header["TDY"] = shift[1],
         image.header["ALIGNALG"] = self.__class__.__name__
 
+    @property
     def citations(self):
         return "astroalign"
-
-    @staticmethod
-    def doc():
-        return """"""
 
 
 class Twirl(Block):
