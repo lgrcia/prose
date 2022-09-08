@@ -61,12 +61,13 @@ class CatalogBlock(Block):
         catalog["x"], catalog["y"] = stars_coords
         catalog = catalog.to_pandas()
         image.catalogs[self.catalog_name] = catalog
+        stars_coords = stars_coords.T
     
         if self.mode == "replace":
-            image.stars_coords = stars_coords.T[np.all(np.isfinite(stars_coords), 0)]
-            idxs = np.flatnonzero(np.all(image.stars_coords < image.shape[::-1], 1))
-            image.stars_coords = image.stars_coords[idxs][0:self.limit]
-            catalog = catalog.iloc[idxs].reset_index()
+            mask = np.all(stars_coords < image.shape[::-1], 1) & np.all(stars_coords > 0, 1)
+            mask = mask & ~np.any(np.isnan(stars_coords), 1)
+            image.stars_coords = stars_coords[mask][0:self.limit]
+            catalog = catalog.iloc[np.flatnonzero(mask)].reset_index()
 
         elif self.mode == "crossmatch":
             xys = catalog[["x", "y"]].values
@@ -81,26 +82,26 @@ class CatalogBlock(Block):
 class PlateSolve(Block):
     
     
-    def __init__(self, ref_image=None, n=30, tolerance=10, radius=1, debug=False, **kwargs):
+    def __init__(self, reference=None, n=30, tolerance=10, radius=1, debug=False, **kwargs):
         super().__init__(**kwargs)
         self.radius = radius * u.arcmin.to("deg")
         self.n = n
-        self.ref_image = ref_image is not None
+        self.reference = reference
         self.tolerance = tolerance
         self.debug = debug
-        
-        if ref_image:
-            self.ref_image = self(ref_image)
     
     def run(self, image):
-        if not self.ref_image:
+        stars = image.stars_coords*image.pixel_scale.to("deg").value
+        stars = sparsify(stars, self.radius)/image.pixel_scale.to("deg").value
+
+        if self.reference is None:
             table = image_gaia_query(image, wcs=False, circular=True, fov=image.fov.max()).to_pandas()
-            self.gaias = np.array([table.ra, table.dec]).T
-            self.gaias = self.gaias[~np.any(np.isnan(self.gaias), 1)]
-            
-            gaias = sparsify(self.gaias, self.radius)
-            stars = image.stars_coords*image.pixel_scale.to("deg").value
-            stars = sparsify(stars, self.radius)/image.pixel_scale.to("deg").value
+            gaias = np.array([table.ra, table.dec]).T
+            gaias = gaias[~np.any(np.isnan(gaias), 1)]
+        else:
+            gaias = self.reference.catalogs["gaia"][["ra", "dec"]].values
+
+        gaias = sparsify(gaias, self.radius)
 
         image.wcs = twirl._compute_wcs(stars[0:self.n], gaias[0:self.n], n=self.n, tolerance=self.tolerance)
 

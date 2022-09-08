@@ -66,9 +66,9 @@ class PhotutilsCentroid(Block):
         in_limit = np.linalg.norm(image.stars_coords - stars_coords, axis=1) < self.limit
         image.stars_coords[in_limit] = stars_coords[in_limit]
 
-    @staticmethod
-    def citations():
-        return "photutils", "numpy"
+    @property
+    def citations(self):
+        return "photutils"
 
 class COM(PhotutilsCentroid):
     """Centroiding using ``photutils.centroids.centroid_com``
@@ -171,10 +171,9 @@ class CNNCentroid(Block):
             # change image.stars_coords
             image.stars_coords[stars_in] = aligned_stars_coords
 
-    @staticmethod
-    def citations():
-        return "tensorflow", "numpy"
-
+    @property
+    def citations(self):
+        return "tensorflow"
 
 class BalletCentroid(CNNCentroid):
     """Centroiding with  `ballet <https://github.com/lgrcia/ballet>`_.

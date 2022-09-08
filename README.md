@@ -71,7 +71,7 @@ photometry.run(calib.phot)
 
 ```
 
-However, the package is designed to avoid pre-implemented black-boxes, in favor of transparent pipelines. For a practical illustration of that, check our [Photometry tutorial](https://lgrcia.github.io/prose-docs/build/html/notebooks/tutorials/photometry.nbconvert.html).
+However, the package is designed to avoid pre-implemented black-boxes, in favor of transparent pipelines. For a practical illustration of that, check our [Photometry tutorial](https://lgrcia.github.io/prose-docs/build/html/notebooks/tutorials/photometry.html).
 
 ## Installation
 

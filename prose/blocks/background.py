@@ -24,3 +24,7 @@ class PhotutilsBackground2D(Block):
         if self.subtract:
             image.bkg = self.bkg
             image.data = image.data - self.bkg
+
+    @property
+    def citations(self):
+        return "photutils"

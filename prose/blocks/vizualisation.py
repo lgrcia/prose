@@ -42,6 +42,7 @@ class _Video(Block):
     def terminate(self):
         imageio.mimsave(self.destination, self.images, fps=self.fps)
 
+    @property
     def citations(self):
         return "imageio"
 

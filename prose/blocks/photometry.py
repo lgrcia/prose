@@ -233,8 +233,9 @@ class PhotutilsAperturePhotometry(Block):
                 airmass=image.get("keyword_airmass"),
             )
 
+    @property
     def citations(self):
-        return "astropy", "photutils"
+        return "photutils"
 
 
 class SEAperturePhotometry(Block):

@@ -119,7 +119,6 @@ class Stack(DataBlock):
 
 class StackStd(DataBlock):
     
-    
     def __init__(self, destination=None, overwrite=False, **kwargs):
         super(StackStd, self).__init__(**kwargs)
         self.images = []
@@ -389,6 +388,17 @@ class XArray(DataBlock):
         # xarr.attrs["prose_version"] = __version__
         return xarr
 
+    @property
+    def citations(self):
+        return {"xarray": """
+        @article{hoyer2017xarray,
+            title   = {xarray: {N-D} labeled arrays and datasets in {Python}},
+            author  = {Hoyer, S. and J. Hamman},
+            journal = {In revision, J. Open Res. Software},
+            year    = {2017}
+            }
+        """} 
+
 class LocalInterpolation(Block):
     
     def __init__(self, **kargs):
@@ -408,9 +418,6 @@ class LocalInterpolation(Block):
             ])
             padded_data[i, j] = mean
             image.data[i-1, j-1] = mean
-
-
-
 
 class Trim(Block):
     """Image trimming. If trim is not specified, triming is taken from the telescope characteristics
@@ -479,10 +486,11 @@ class Trim(Block):
         center = shape[::-1] / 2
         trim = self.trim if self.trim is not None else image.telescope.trimming[::-1]
         dimension = shape - 2 * np.array(trim)
-        trim_image = astopy_Cutout2D(image.data, center, dimension, wcs=None if self.skip_wcs else image.wcs)
+        trim_image = astopy_Cutout2D(image.data, center, dimension, wcs=None if self.skip_wcs else image.wcs, )
         image.data = trim_image.data
         if not self.skip_wcs:
             image.header.update(trim_image.wcs.to_header())
+            image.header["NAXIS2"], image.header["NAXIS1"] = trim_image.data.shape
 
     def draw_cutout(self, image, ax=None, lw=1, c="w"):
         w, h = image.shape - 2*np.array(self.trim)
@@ -591,6 +599,7 @@ class Calibration(Block):
         calibrated_image[~np.isfinite(calibrated_image)] = -1
         image.data = calibrated_image
 
+    @property
     def citations(self):
         return "astropy", "numpy"
 
@@ -773,3 +782,44 @@ class Del(Block):
     def run(self, image):
         for arg in self.args:
             del image.__dict__[arg]
+
+class Drizzle(Block):
+    
+    def __init__(self, reference, pixfrac=1.):
+        from drizzle import drizzle
+        super().__init__(self)
+        self.reference = reference
+        self.pixfrac = pixfrac
+        self.drizzle = drizzle.Drizzle(outwcs=reference.wcs, pixfrac=pixfrac)
+        self.image = None
+        
+    def run(self, image):
+        WCS = image.wcs
+        self.drizzle.add_image(image.data, image.wcs)
+    
+    def terminate(self):
+        data = self.drizzle.outsci
+        header = self.reference.header.copy()
+        header.update(self.drizzle.outwcs.to_header())
+        self.image = Image(data=data, header=header)
+
+    @property
+    def citations(self):
+        return {"drizzle": """
+@ARTICLE{drizzle,
+    author = {{Fruchter}, A.~S. and {Hook}, R.~N.},
+    title = "{Drizzle: A Method for the Linear Reconstruction of Undersampled Images}",
+    journal = {\pasp},
+    keywords = {Methods: Data Analysis, Techniques: Photometric, Astrophysics},
+    year = 2002,
+    month = feb,
+    volume = {114},
+    number = {792},
+    pages = {144-152},
+    doi = {10.1086/338393},
+    archivePrefix = {arXiv},
+    eprint = {astro-ph/9808087},
+    primaryClass = {astro-ph},
+    adsurl = {https://ui.adsabs.harvard.edu/abs/2002PASP..114..144F},
+    adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}"""}

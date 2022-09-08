@@ -135,6 +135,10 @@ class Cutouts(Block):
             image.cutouts = [image.cutouts[i] for i in image.cutouts_idxs]
             image.cutouts_idxs = np.arange(len(image.cutouts))
 
+    @property
+    def citations(self):
+        return "photutils"
+
 class MedianPSF(Block):
     """Get median psf from image.
 
@@ -227,6 +231,10 @@ class PSFModel(Block):
                 return differential_evolution(self.nll, bounds, x0=p0, args=(psf,)).x
             else:
                 return minimize(self.nll, self.p0, bounds=bounds, args=(psf,)).x
+    
+    @property
+    def citations(self):
+        return "scipy"
 
 
 class FWHM(PSFModel):
@@ -325,6 +333,7 @@ class FastGaussian(PSFModel):
             params = minimize(self.nll, p0, bounds=bounds, args=(psf)).x
             return params
 
+    @property
     def citations(self):
         return "scipy", "photutils"
 
@@ -453,6 +462,7 @@ class Gaussian2D(PSFModel):
 
         return self._minimize(psf, p0, bounds)
 
+    @property
     def citations(self):
         return "scipy"
 
@@ -586,6 +596,7 @@ class Moffat2D(PSFModel):
 
         return self._minimize(psf, p0, bounds)
 
+    @property
     def citations(self):
         return "scipy"
 
