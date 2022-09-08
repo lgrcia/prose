@@ -75,14 +75,15 @@ However, the package is designed to avoid pre-implemented black-boxes, in favor 
 
 ## Installation
 
- *prose* is written for python 3 and can be installed from [pypi](https://pypi.org/project/prose/) with:
+### latest
+
+*prose* is written for python 3 and can be installed from [pypi](https://pypi.org/project/prose/) with:
 
 ```shell
 pip install prose
 ```
 
 To install it through conda (recommended, within a fresh environment):
-
 
 ```shell
 conda install numpy scipy tensorflow netcdf4 numba
@@ -91,6 +92,21 @@ conda install numpy scipy tensorflow netcdf4 numba
 
 pip install prose
 ```
+
+### dev
+
+clone the repo
+
+```shell
+git clone https://github.com/lgrcia/prose.git
+```
+
+install locally (if within conda, same environment setup as above)
+
+```
+pip install -e {path_to_repo}
+```
+
 
 ## Helping us
 
