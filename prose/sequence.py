@@ -169,7 +169,7 @@ class Sequence:
         return yaml.safe_dump(self.args, sort_keys=False)
 
     def citations(self):
-        citations = [print(block.citations) for block in self.blocks]
+        citations = [block.citations for block in self.blocks]
         citations = [*citations, "astropy", "prose"]
         cites = {}
 
@@ -190,7 +190,7 @@ class Sequence:
             else:
                 add_citation(c)
                 
-        tex_citep = ",".join([f"{name} \citep{{{name}}}" for name in cites.keys() if name not in ["prose", "astropy"]])
+        tex_citep = ", ".join([f"{name} \citep{{{name}}}" for name in cites.keys() if name not in ["prose", "astropy"]])
         tex_citep += " and astropy \citep{astropy}"
         tex = f"This research made use of \\textsf{{prose}} \citep{{prose}} and its dependencies ({tex_citep})."""
 
