@@ -173,7 +173,7 @@ class MedianPSF(Block):
             image.psf =  np.median(normalized_cutouts[0:self.n], axis=0)
 
 
-class PSFModel(Block):
+class _PSFModel(Block):
 
     def __init__(self, reference=None, **kwargs):
         super().__init__(**kwargs)
@@ -237,7 +237,7 @@ class PSFModel(Block):
         return "scipy"
 
 
-class FWHM(PSFModel):
+class FWHM(_PSFModel):
     """
     Fast empirical FWHM
 
@@ -299,7 +299,7 @@ class FWHM(PSFModel):
         plt.ylabel("ADUs")
         f = 0
 
-class FastGaussian(PSFModel):
+class FastGaussian(_PSFModel):
     """
     Fit a symetric 2D Gaussian model to an image effective PSF
     """
@@ -338,7 +338,7 @@ class FastGaussian(PSFModel):
         return "scipy", "photutils"
 
 
-class Gaussian2D(PSFModel):
+class Gaussian2D(_PSFModel):
     r"""
     Fit an elliptical 2D Gaussian model to an image effective PSF
 
@@ -467,7 +467,7 @@ class Gaussian2D(PSFModel):
         return "scipy"
 
 
-class Moffat2D(PSFModel):
+class Moffat2D(_PSFModel):
     r"""
     Fit an elliptical 2D Moffat model to an image effective PSF
 

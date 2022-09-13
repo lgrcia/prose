@@ -175,10 +175,14 @@ class Sequence:
 
         def add_citation(c):
             if isinstance(c, str):
-                if c in _all_citations:
-                    cites[c] = _all_citations[c]
+                if c.strip("\n").strip(" ")[0] == "@":
+                    name = c.split("{")[1].split(",")[0]
+                    cites[name] = c
                 else:
-                    raise KeyError(f"{c} not in defautls citations, please provide it as a dict")
+                    if c in _all_citations:
+                        cites[c] = _all_citations[c]
+                    else:
+                        raise KeyError(f"{c} not in defautls citations, please provide it as a dict")
 
             elif isinstance(c, dict):
                 cites.update(c)

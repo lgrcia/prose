@@ -379,6 +379,9 @@ class XArray(DataBlock):
             self.variables = block.variables.copy()
 
     def to_observation(self, stack, sequence=None):
+        if len(stack.stars_coords) != len(self.xarray.star):
+            raise ValueError("stack stars_coords must be aligned to xarray stars_coords (stars_coords probably coming from the reference in the Stack block)")
+
         xarr = utils.image_in_xarray(stack, self.xarray, stars=True) # adding reference as a stack
         xarr = xarr.transpose("apertures", "star", "time", ...) # ... just needed
 

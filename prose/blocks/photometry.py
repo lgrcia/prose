@@ -60,7 +60,7 @@ class PhotutilsAperturePhotometry(Block):
         \sigma = \sqrt{S + (A_p + \frac{A_p}{A_n})(b + r^2 + \frac{gain^2}{2}) + scint }
 
 
-    .. image:: images/aperture_phot.png
+    .. image:: /static/aperture_phot.png
         :align: center
         :width: 110px
 

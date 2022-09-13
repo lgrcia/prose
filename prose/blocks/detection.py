@@ -18,7 +18,7 @@ except:
 # TODO: min_separation delete stars too close, but do not leave one...
 
 
-class StarsDetection(Block):
+class _StarsDetection(Block):
     """Base class for stars detection.
     """
     def __init__(self, n_stars=None, sort=True, min_separation=None, **kwargs):
@@ -47,7 +47,7 @@ class StarsDetection(Block):
             return None, None
 
 
-class DAOFindStars(StarsDetection):
+class DAOFindStars(_StarsDetection):
     """
     DAOPHOT stars detection with :code:`photutils` implementation.
 
@@ -89,7 +89,7 @@ class DAOFindStars(StarsDetection):
     def citations(self):
         return "photutils"
 
-class SegmentedPeaks(StarsDetection):
+class SegmentedPeaks(_StarsDetection):
     
     def __init__(
         self, 
@@ -252,7 +252,7 @@ class SegmentedPeaks(StarsDetection):
     def citations(self):
         return "scikit-image", "scipy"
 
-class SEDetection(StarsDetection):
+class SEDetection(_StarsDetection):
     
     def __init__(self, threshold=1.5, **kwargs):
         """
