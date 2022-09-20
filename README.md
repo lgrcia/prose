@@ -1,7 +1,7 @@
 # prose
 
 <p align="center">
-    <img src="docs/source/prose_illustration.png" width="350">
+    <img src="https://github.com/lgrcia/prose/blob/master/docs/source/prose_illustration.png" width="350">
 </p>
 
 <p align="center">
@@ -52,7 +52,7 @@ image.show()           # detected stars
 image.plot_psf_model() # PSF model
 ```
 
-While being run on a single image, a Sequence is designed to be run on list of images (paths) and provides the architecture to build powerful pipelines. For more details check [Quickstart](https://lgrcia.github.io/prose-docs/build/html/notebooks/quickstart.html) and [What is a pipeline?](https://lgrcia.github.io/prose-docs/build/html/core.html)
+While being run on a single image, a Sequence is designed to be run on list of images (paths) and provides the architecture to build powerful pipelines. For more details check [Quickstart](https://lgrcia.github.io/prose-docs/html/notebooks/quickstart.html) and [What is a pipeline?](https://lgrcia.github.io/prose-docs/html/rst/core.html)
 
 ## Default pipelines
  *prose* features default pipelines to perform common tasks like:
@@ -71,18 +71,19 @@ photometry.run(calib.phot)
 
 ```
 
-However, the package is designed to avoid pre-implemented black-boxes, in favor of transparent pipelines. For a practical illustration of that, check our [Photometry tutorial](https://lgrcia.github.io/prose-docs/build/html/notebooks/tutorials/photometry.html).
+However, the package is designed to avoid pre-implemented black-boxes, in favor of transparent pipelines. For a practical illustration of that, check our [Photometry tutorial](https://lgrcia.github.io/prose-docs/html/notebooks/photometry.html).
 
 ## Installation
 
- *prose* is written for python 3 and can be installed from pypi with:
+### latest
+
+*prose* is written for python 3 and can be installed from [pypi](https://pypi.org/project/prose/) with:
 
 ```shell
 pip install prose
 ```
 
 To install it through conda (recommended, within a fresh environment):
-
 
 ```shell
 conda install numpy scipy tensorflow netcdf4 numba
@@ -91,6 +92,21 @@ conda install numpy scipy tensorflow netcdf4 numba
 
 pip install prose
 ```
+
+### dev
+
+clone the repo
+
+```shell
+git clone https://github.com/lgrcia/prose.git
+```
+
+install locally (if within conda, same environment setup as above)
+
+```
+pip install -e {path_to_repo}
+```
+
 
 ## Helping us
 
