@@ -52,7 +52,7 @@ image.show()           # detected stars
 image.plot_psf_model() # PSF model
 ```
 
-While being run on a single image, a Sequence is designed to be run on list of images (paths) and provides the architecture to build powerful pipelines. For more details check [Quickstart](https://lgrcia.github.io/prose-docs/build/html/notebooks/quickstart.html) and [What is a pipeline?](https://lgrcia.github.io/prose-docs/build/html/core.html)
+While being run on a single image, a Sequence is designed to be run on list of images (paths) and provides the architecture to build powerful pipelines. For more details check [Quickstart](https://lgrcia.github.io/prose-docs/html/notebooks/quickstart.html) and [What is a pipeline?](https://lgrcia.github.io/prose-docs/html/rst/core.html)
 
 ## Default pipelines
  *prose* features default pipelines to perform common tasks like:
@@ -71,7 +71,7 @@ photometry.run(calib.phot)
 
 ```
 
-However, the package is designed to avoid pre-implemented black-boxes, in favor of transparent pipelines. For a practical illustration of that, check our [Photometry tutorial](https://lgrcia.github.io/prose-docs/build/html/notebooks/tutorials/photometry.html).
+However, the package is designed to avoid pre-implemented black-boxes, in favor of transparent pipelines. For a practical illustration of that, check our [Photometry tutorial](https://lgrcia.github.io/prose-docs/html/notebooks/photometry.html).
 
 ## Installation
 
