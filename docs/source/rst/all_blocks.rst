@@ -24,8 +24,8 @@
 	~prose.blocks.utils.Flip
 	~prose.blocks.psf.FWHM
 	~prose.blocks.catalogs.GaiaCatalog
-	~prose.blocks.centroids.Gaussian2D
 	~prose.blocks.psf.Gaussian2D
+	~prose.blocks.centroids.Gaussian2D
 	~prose.blocks.utils.Get
 	~prose.blocks.psf.HFD
 	~prose.blocks.utils.ImageBuffer
