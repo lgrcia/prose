@@ -33,8 +33,10 @@ class Block(object):
         return super().__new__(cls)
 
     def __init__(self, name=None, verbose=False):
-        """Instanciation
-        """
+        _name  = self.__class__.__name__
+        _issue = f"https://github.com/lgrcia/prose/issues/new?title=Missing+doc+for+{_name}&body=Documentation+is+missing+for+block+{_name}"
+
+        self.__doc__  = f"[**click to ask for documentation**]({_issue})"
 
         self.name = name
         self.unit_data = None
