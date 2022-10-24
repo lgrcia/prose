@@ -21,8 +21,16 @@ from . import blocks
 from prose import Sequence
 from matplotlib import gridspec
 from .blocks import catalogs
+from tqdm import tqdm
+from .console_utils import TQDM_BAR_FORMAT
 
 warnings.simplefilter('ignore', category=VerifyWarning)
+
+def _progress(do=True):
+    if do:
+        return lambda x: tqdm(x, unit="observations", ncols=80, bar_format=TQDM_BAR_FORMAT)
+    else:
+        return lambda x: x
 
 
 class Observation(ApertureFluxes):
@@ -88,7 +96,7 @@ class Observation(ApertureFluxes):
     def copy(self):
         return self.__copy__()
 
-    def to_csv(self, destination, sep=" "):
+    def to_csv(self, destination, sep=" ", old=True):
         """Export a typical csv of the observation's data
 
         Parameters
@@ -99,6 +107,22 @@ class Observation(ApertureFluxes):
         sep : str, optional
             separation string within csv, by default " "
         """
+
+        # TODO
+        new_fields = {
+            "bjd_tdb": "BJD-TDB",
+            "diff_flux": "DIFF_FLUX",
+            "diff_error": "ERROR",
+            "x": "dx_MOVE",
+            "y": "dy_MOVE",
+            "fwhm": "FWHM",
+            "fwhm_x": "FWHMx",
+            "fwhm_y": "FWHMy",
+            "sky": "SKYLEVEL",
+            "airmass": "AIRMASS",
+            "exposure": "EXPOSURE",
+        }
+
         df = pd.DataFrame(
             {
                 "BJD-TDB" if self.time_format == "bjd_tdb" else "JD-UTC": self.time,
@@ -118,7 +142,7 @@ class Observation(ApertureFluxes):
         df.to_csv(destination, sep=sep, index=False)
 
     # TODO: if None, phot if path was provided , if direct, autoname else filename
-    def save(self, destination=None):
+    def save(self, destination=None, verbose=True):
         """Save current observation
 
         Parameters
@@ -130,7 +154,8 @@ class Observation(ApertureFluxes):
         destination = self.phot if destination is None else destination
         self.xarray.attrs.update(self.stack.header)
         self.xarray.to_netcdf(destination)
-        info(f"saved {str(Path(destination).absolute())}")
+        if verbose:
+            info(f"saved {str(Path(destination).absolute())}")
 
     # Convenience
     # -----------
@@ -1031,17 +1056,23 @@ class Observation(ApertureFluxes):
             self.plate_solve()
         if name == "gaia":
             self.stack = blocks.catalogs.GaiaCatalog(correct_pm=correct_pm)(self.stack)
+        if name == "tess":
+            self.stack = blocks.catalogs.TESSCatalog()(self.stack)
+        else:
+            error(f"No catalog named {name}")
 
-    def set_catalog_target(self, catalog_name, designation):
+    def set_catalog_target(self, catalog_name, designation, verbose=True):
         self.query_catalog(catalog_name, correct_pm=True)
-        gaia_i = np.flatnonzero(self.stack.catalogs[catalog_name].id == designation)
+        i = np.flatnonzero(self.stack.catalogs[catalog_name].id == designation)
 
-        if len(gaia_i) == 0:
+        if len(i) == 0:
+            if verbose: error("No target found")
             self.target = None
         else:
-            gaia_i = gaia_i[0]
-            gxy = self.stack.catalogs[catalog_name][["x", "y"]].values[gaia_i]
-            self.target = int(np.argmin(np.linalg.norm(self.stars - gxy, axis=1)))
+            i = i[0]
+            catalog_xy = self.stack.catalogs[catalog_name][["x", "y"]].values[i]
+            self.target = int(np.argmin(np.linalg.norm(self.stars - catalog_xy, axis=1)))
+            if verbose: info(f"target is {self.target}")
 
     def set_gaia_target(self, gaia_id, verbose=False, raise_far=True):
         if not self.stack.plate_solved:

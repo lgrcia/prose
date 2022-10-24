@@ -10,6 +10,7 @@ from . import models
 from . import viz
 from .console_utils import info
 
+np.seterr(divide='ignore', invalid='ignore')
 
 def nu(n, sw, sr):
     return (sw ** 2) / n + sr ** 2

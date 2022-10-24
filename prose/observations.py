@@ -7,7 +7,7 @@ from tabulate import tabulate
 from tabulate import tabulate
 from . import viz
 from . import models
-from .console_utils import info
+from .console_utils import info, progress
 
 
 def phase_coverage(t, p):
@@ -90,7 +90,7 @@ class Observations:
     def stacked_trends(self):
         return np.hstack([o.trend for o in self.observations])
 
-    def plot(self, ylim=None, w=4, bins=0.005, color="k", std=True):
+    def plot_each(self, ylim=None, w=4, bins=0.005, color="k", std=True):
         # TODO: add viz.plot_lcs kwargs
         """Plot all observations in a grid plot
 
@@ -109,6 +109,9 @@ class Observations:
         )
 
         viz.paper_style()
+
+    def plot(self):
+        viz.plot(self.time, self.diff_flux)
 
     def polynomial_trend(self, verbose=True, **kwargs):
         if verbose:
@@ -297,4 +300,13 @@ class Observations:
 
     def mask_transits(self, epoch, period, duration):
         return Observations([o.mask_transits(epoch, period, duration) for o in self.observations], verbose=False)
+
+    def set_catalog_target(self, catalog, designation, verbose=True):
+        for obs in progress(verbose, unit="observations")(self.observations):
+            obs.query_catalog(catalog)
+            obs.set_catalog_target(catalog, designation, verbose=False)
+
+    def broeg2005(self, inplace=True, cut=True, nans=False, verbose=True):
+        for obs in progress(verbose, unit="observations")(self.observations):
+            obs.broeg2005(inplace=inplace, cut=cut, nans=nans)
 
