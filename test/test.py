@@ -208,7 +208,7 @@ class TestReduction(unittest.TestCase):
         photometry.run(fm.all_images)
 
         # diff flux
-        obs = Observation(photometry.xarray.to_observation(photometry.stack.stack, sequence=photometry))
+        obs = Observation(photometry.xarray.to_observation(photometry.stack.image, sequence=photometry))
         obs.target = 0
         obs.broeg2005()
         obs.plot()

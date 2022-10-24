@@ -76,7 +76,7 @@ class Stack(DataBlock):
         self._stack = None
         self._n_images = 0
         self._header = ref.header.copy() if ref else {}
-        self.stack = ref.copy() if ref else None
+        self.image = ref.copy() if ref else None
 
     def run(self, image):
         #TODO check that all images have same telescope?
@@ -101,11 +101,11 @@ class Stack(DataBlock):
         self._header["REDDATE"] = Time.now().to_value("fits")
         self._header["NIMAGES"] = self._n_images
 
-        if self.stack is None:
-            self.stack = Image(data=self._stack, header=self._header)
+        if self.image is None:
+            self.image = Image(data=self._stack, header=self._header)
         else:
-            self.stack.data = self._stack
-            self.stack.header = self._header
+            self.image.data = self._stack
+            self.image.header = self._header
 
     def concat(self, block):
         if self._stack is not None:
@@ -535,9 +535,12 @@ class Calibration(Block):
 
     def _produce_master(self, images, image_type):
         if images is not None:
-            assert isinstance(images, (list, np.ndarray)), "images must be list or array"
+            assert isinstance(images, (list, np.ndarray, str)), "images must be list or array or path"
             if len(images) == 0:
                 images = None
+
+        elif isinstance(images, str):
+            return self.loader(images)
 
         def _median(im):
             if self.easy_ram:
@@ -788,9 +791,9 @@ class Del(Block):
 
 class Drizzle(Block):
     
-    def __init__(self, reference, pixfrac=1.):
+    def __init__(self, reference, pixfrac=1., **kwargs):
         from drizzle import drizzle
-        super().__init__(self)
+        super().__init__(self, **kwargs)
         self.reference = reference
         self.pixfrac = pixfrac
         self.drizzle = drizzle.Drizzle(outwcs=reference.wcs, pixfrac=pixfrac)
