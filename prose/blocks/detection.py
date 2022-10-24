@@ -34,10 +34,12 @@ class StarsDetection(Block):
             if self.sort:
                 idxs = np.argsort(fluxes)[::-1]
                 coordinates = coordinates[idxs]
+                fluxes = fluxes[idxs]
                 for arg in args:
                     arg = [arg[i] for i in idxs]
             if self.n_stars is not None:
                 coordinates = coordinates[0:self.n_stars]
+                fluxes = fluxes[0:self.n_stars]
             if self.min_separation is not None:
                 coordinates = clean_stars_positions(coordinates, tolerance=self.min_separation)
 
@@ -286,7 +288,7 @@ class SEDetection(StarsDetection):
 class Peaks(Block):
 
     
-    def __init__(self, cutout=21, **kwargs):
+    def __init__(self, cutout=11, **kwargs):
         super().__init__(**kwargs)
         self.cutout = cutout
 
