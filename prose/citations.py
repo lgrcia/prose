@@ -1,40 +1,25 @@
-from .. import Block, Sequence
-
-
-def get_citations(*args):
-    """
-    Returns citation text and bib from a list of units or blocks (Inspired by :code:`exoplanet` from dfm)
-
-    Parameters
-    ----------
-    args
-
-    Returns
-    -------
-
-    """
-    citations = {}
-    for block_or_unit in args:
-        assert isinstance(block_or_unit, (Block, Sequence)), "args should be units or blocks"
-        block_or_unit_citations = block_or_unit.citations()
-        if block_or_unit_citations is not None:
-            for citation in block_or_unit_citations:
-                citations[citation] = _all_citations[citation]
-
-    txt = "This research made use of textsf{{prose}} citep{{prose}} and its dependencies citep{{{}}}.""".format(
-        ", ".join(["prose:{}".format(citation) for citation in citations.keys()]))
-
-    bib = "\n\n".join(citations.values())
-
-    return txt, bib
-
-
 _all_citations = {
 "prose": """
-TODO
+@ARTICLE{prose,
+       author = {{Garcia}, Lionel J. and {Timmermans}, Mathilde and {Pozuelos}, Francisco J. and {Ducrot}, Elsa and {Gillon}, Micha{\"e}l and {Delrez}, Laetitia and {Wells}, Robert D. and {Jehin}, Emmanu{\"e}l},
+        title = "{PROSE: a PYTHON framework for modular astronomical images processing}",
+      journal = {\mnras},
+     keywords = {instrumentation: detectors, methods: data analysis, planetary systems, Astrophysics - Instrumentation and Methods for Astrophysics, Astrophysics - Earth and Planetary Astrophysics},
+         year = 2022,
+        month = feb,
+       volume = {509},
+       number = {4},
+        pages = {4817-4828},
+          doi = {10.1093/mnras/stab3113},
+archivePrefix = {arXiv},
+       eprint = {2111.02814},
+ primaryClass = {astro-ph.IM},
+       adsurl = {https://ui.adsabs.harvard.edu/abs/2022MNRAS.509.4817G},
+      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
 """,
 "scipy": """
-@article{2020SciPy-NMeth,
+@article{scipy,
        author = {{Virtanen}, Pauli and {Gommers}, Ralf and {Oliphant},
          Travis E. and {Haberland}, Matt and {Reddy}, Tyler and
          {Cournapeau}, David and {Burovski}, Evgeni and {Peterson}, Pearu
@@ -59,7 +44,7 @@ TODO
 }
 """,
 "photutils": """
-@misc{Bradley_2019_2533376,
+@misc{photutils,
    author = {Larry Bradley and Brigitta Sip{\H o}cz and Thomas Robitaille and
              Erik Tollerud and Z\`e Vin{\'{\i}}cius and Christoph Deil and
              Kyle Barbary and Hans Moritz G{\"u}nther and Mihai Cara and
@@ -75,7 +60,7 @@ TODO
       url = {https://doi.org/10.5281/zenodo.2533376}
 }
 """,
-"skimage": """
+"scikit-image": """
 @article{scikit-image,
 	Author = {van der Walt, {S}t\'efan and {S}ch\"onberger, {J}ohannes {L}. and {Nunez-Iglesias}, {J}uan and {B}oulogne, {F}ran\c{c}ois and {W}arner, {J}oshua {D}. and {Y}ager, {N}eil and {G}ouillart, {E}mmanuelle and {Y}u, {T}ony and the scikit-image contributors},
 	Doi = {10.7717/peerj.453},
@@ -91,7 +76,7 @@ TODO
 	Bdsk-Url-1 = {https://doi.org/10.7717/peerj.453}}
 """,
 "tensorflow": """
-@misc{tensorflow2015-whitepaper,
+@misc{tensorflow,
 title={ {TensorFlow}: Large-Scale Machine Learning on Heterogeneous Systems},
 url={https://www.tensorflow.org/},
 note={Software available from tensorflow.org},
@@ -140,7 +125,7 @@ author={
 }
 """,
 "numpy": """
-@book{oliphant2006guide,
+@book{numpy,
  title={A guide to NumPy},
  author={Oliphant, Travis E},
  volume={1},
@@ -149,7 +134,7 @@ author={
 }
 """,
 "source extractor": """
-@article{ refId0,
+@article{sep0,
 	author = {{Bertin, E.} and {Arnouts, S.}},
 	title = {SExtractor: Software for source extraction},
 	DOI= "10.1051/aas:1996164",
@@ -162,7 +147,7 @@ author={
 }
 """,
 "sep": """
-@article{Barbary2016,
+@article{sep,
   doi = {10.21105/joss.00058},
   url = {https://doi.org/10.21105/joss.00058},
   year = {2016},
@@ -174,6 +159,67 @@ author={
   title = {SEP: Source Extractor as a library},
   journal = {Journal of Open Source Software}
 }
-
+""",
+"astropy": """
+@ARTICLE{astropy,
+       author = {{Astropy Collaboration} and {Price-Whelan}, A.~M. and
+         {Sip{\H{o}}cz}, B.~M. and {G{\"u}nther}, H.~M. and {Lim}, P.~L. and
+         {Crawford}, S.~M. and {Conseil}, S. and {Shupe}, D.~L. and
+         {Craig}, M.~W. and {Dencheva}, N. and {Ginsburg}, A. and {Vand
+        erPlas}, J.~T. and {Bradley}, L.~D. and {P{\'e}rez-Su{\'a}rez}, D. and
+         {de Val-Borro}, M. and {Aldcroft}, T.~L. and {Cruz}, K.~L. and
+         {Robitaille}, T.~P. and {Tollerud}, E.~J. and {Ardelean}, C. and
+         {Babej}, T. and {Bach}, Y.~P. and {Bachetti}, M. and {Bakanov}, A.~V. and
+         {Bamford}, S.~P. and {Barentsen}, G. and {Barmby}, P. and
+         {Baumbach}, A. and {Berry}, K.~L. and {Biscani}, F. and {Boquien}, M. and
+         {Bostroem}, K.~A. and {Bouma}, L.~G. and {Brammer}, G.~B. and
+         {Bray}, E.~M. and {Breytenbach}, H. and {Buddelmeijer}, H. and
+         {Burke}, D.~J. and {Calderone}, G. and {Cano Rodr{\'\i}guez}, J.~L. and
+         {Cara}, M. and {Cardoso}, J.~V.~M. and {Cheedella}, S. and {Copin}, Y. and
+         {Corrales}, L. and {Crichton}, D. and {D'Avella}, D. and {Deil}, C. and
+         {Depagne}, {\'E}. and {Dietrich}, J.~P. and {Donath}, A. and
+         {Droettboom}, M. and {Earl}, N. and {Erben}, T. and {Fabbro}, S. and
+         {Ferreira}, L.~A. and {Finethy}, T. and {Fox}, R.~T. and
+         {Garrison}, L.~H. and {Gibbons}, S.~L.~J. and {Goldstein}, D.~A. and
+         {Gommers}, R. and {Greco}, J.~P. and {Greenfield}, P. and
+         {Groener}, A.~M. and {Grollier}, F. and {Hagen}, A. and {Hirst}, P. and
+         {Homeier}, D. and {Horton}, A.~J. and {Hosseinzadeh}, G. and {Hu}, L. and
+         {Hunkeler}, J.~S. and {Ivezi{\'c}}, {\v{Z}}. and {Jain}, A. and
+         {Jenness}, T. and {Kanarek}, G. and {Kendrew}, S. and {Kern}, N.~S. and
+         {Kerzendorf}, W.~E. and {Khvalko}, A. and {King}, J. and {Kirkby}, D. and
+         {Kulkarni}, A.~M. and {Kumar}, A. and {Lee}, A. and {Lenz}, D. and
+         {Littlefair}, S.~P. and {Ma}, Z. and {Macleod}, D.~M. and
+         {Mastropietro}, M. and {McCully}, C. and {Montagnac}, S. and
+         {Morris}, B.~M. and {Mueller}, M. and {Mumford}, S.~J. and {Muna}, D. and
+         {Murphy}, N.~A. and {Nelson}, S. and {Nguyen}, G.~H. and
+         {Ninan}, J.~P. and {N{\"o}the}, M. and {Ogaz}, S. and {Oh}, S. and
+         {Parejko}, J.~K. and {Parley}, N. and {Pascual}, S. and {Patil}, R. and
+         {Patil}, A.~A. and {Plunkett}, A.~L. and {Prochaska}, J.~X. and
+         {Rastogi}, T. and {Reddy Janga}, V. and {Sabater}, J. and
+         {Sakurikar}, P. and {Seifert}, M. and {Sherbert}, L.~E. and
+         {Sherwood-Taylor}, H. and {Shih}, A.~Y. and {Sick}, J. and
+         {Silbiger}, M.~T. and {Singanamalla}, S. and {Singer}, L.~P. and
+         {Sladen}, P.~H. and {Sooley}, K.~A. and {Sornarajah}, S. and
+         {Streicher}, O. and {Teuben}, P. and {Thomas}, S.~W. and
+         {Tremblay}, G.~R. and {Turner}, J.~E.~H. and {Terr{\'o}n}, V. and
+         {van Kerkwijk}, M.~H. and {de la Vega}, A. and {Watkins}, L.~L. and
+         {Weaver}, B.~A. and {Whitmore}, J.~B. and {Woillez}, J. and
+         {Zabalza}, V. and {Astropy Contributors}},
+        title = "{The Astropy Project: Building an Open-science Project and Status of the v2.0 Core Package}",
+      journal = {\aj},
+     keywords = {methods: data analysis, methods: miscellaneous, methods: statistical, reference systems, Astrophysics - Instrumentation and Methods for Astrophysics},
+         year = 2018,
+        month = sep,
+       volume = {156},
+       number = {3},
+          eid = {123},
+        pages = {123},
+          doi = {10.3847/1538-3881/aabc4f},
+archivePrefix = {arXiv},
+       eprint = {1801.02634},
+ primaryClass = {astro-ph.IM},
+       adsurl = {https://ui.adsabs.harvard.edu/abs/2018AJ....156..123A},
+      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
 """
 }

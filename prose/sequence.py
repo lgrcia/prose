@@ -14,6 +14,7 @@ from .blocks.utils import DataBlock
 import sys
 import yaml
 from .utils import full_class_name
+from .citations import _all_citations
 
 def progress(name, x, **kwargs):
     return tqdm(
@@ -115,6 +116,7 @@ class Sequence:
     def __repr__(self) -> str:
         return self.__str__()
 
+    @property
     def citations(self):
         citations = [block.citations() for block in self.blocks if block.citations() is not None]
         return citations if len(citations) > 0 else None
@@ -165,6 +167,38 @@ class Sequence:
     @property
     def params_str(self):
         return yaml.safe_dump(self.args, sort_keys=False)
+
+    def citations(self):
+        citations = [block.citations for block in self.blocks]
+        citations = [*citations, "astropy", "prose"]
+        cites = {}
+
+        def add_citation(c):
+            if isinstance(c, str):
+                if c.strip("\n").strip(" ")[0] == "@":
+                    name = c.split("{")[1].split(",")[0]
+                    cites[name] = c
+                else:
+                    if c in _all_citations:
+                        cites[c] = _all_citations[c]
+                    else:
+                        raise KeyError(f"{c} not in defautls citations, please provide it as a dict")
+
+            elif isinstance(c, dict):
+                cites.update(c)
+
+        for c in citations:
+            if isinstance(c, (list, tuple)):
+                for cc in c:
+                    add_citation(cc)
+            else:
+                add_citation(c)
+                
+        tex_citep = ", ".join([f"{name} \citep{{{name}}}" for name in cites.keys() if name not in ["prose", "astropy"]])
+        tex_citep += " and astropy \citep{astropy}"
+        tex = f"This research made use of \\textsf{{prose}} \citep{{prose}} and its dependencies ({tex_citep})."""
+
+        return tex, "\n\n".join(cites.values())
 
 
 class MPSequence(Sequence):

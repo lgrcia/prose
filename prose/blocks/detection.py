@@ -18,7 +18,7 @@ except:
 # TODO: min_separation delete stars too close, but do not leave one...
 
 
-class StarsDetection(Block):
+class _StarsDetection(Block):
     """Base class for stars detection.
     """
     def __init__(self, n_stars=None, sort=True, min_separation=None, **kwargs):
@@ -49,7 +49,7 @@ class StarsDetection(Block):
             return None, None
 
 
-class DAOFindStars(StarsDetection):
+class DAOFindStars(_StarsDetection):
     """
     DAOPHOT stars detection with :code:`photutils` implementation.
 
@@ -87,97 +87,11 @@ class DAOFindStars(StarsDetection):
 
         image.stars_coords, image.peaks =  self.clean(peaks, coordinates)
 
+    @property
     def citations(self):
-        return "photutils", "numpy"
+        return "photutils"
 
-class SegmentedPeaks(StarsDetection):
-    """
-    Stars detection based on image segmentation.
-
-    |write| ``Image.stars_coords`` and ``Image.peaks``
-
-    Parameters
-    ----------
-    unit_euler : bool, optional
-        whether to impose the euler_number of the regions property to be one, by default False
-    threshold : int, optional
-        empirical stars detection threshold, by default 4
-    min_area : int, optional
-        minimum area (i.e. pixels above threshold) for a bright region to be considered a star, by default 3
-    minor_length : int, optional
-        minimum lenght (defined as the region axis_minor_length) for a bright region to be considered a star, by default 2
-    reference : Image, optional
-        a reference image on which to auto-compute the threshold, by default None. If provided, also provided n_stars that will serve as the target number of stars to detect
-    auto : bool, optional
-        auto-compute threshold for each image, by default False (This is very slow and should be True only outside of sequences)
-    n_stars : int, optional
-        number of stars to detect/keep, by default None (i.e. no constraint)
-    sort : bool, optional
-        whether to sort stars coordinates from the highest to the lowest intensity, by default True
-    min_separation : float, optional
-        minimum separation between sources, by default 5.0. If less than that, close sources are merged 
-    verbose : bool, optional
-        wether the block should be verbose, by default False
-
-
-    Example
-    -------
-
-    .. jupyter-execute::
-
-        from prose.tutorials import example_image
-        
-        image = example_image()
-
-    The simplest way to run this detection block is
-
-    .. jupyter-execute::
-
-        from prose.blocks import SegmentedPeaks
-        
-        image = SegmentedPeaks()(image)
-        image.show()
-
-
-    The number of stars can be easily constrained with ``n_stars`` 
-
-    .. jupyter-execute::
-
-        image = SegmentedPeaks(n_stars=5)(image)
-        image.show()
-
-
-    The algorithm relies on the ``threshold`` parameter that can be
-    auto-computed to reach a desired number of stars
-
-    .. jupyter-execute::
-
-        image = SegmentedPeaks(n_stars=50, auto=True, verbose=True)(image)
-        image.show()
-
-
-    however threshold optimisation is slow. When processing multiple images
-    (in a ``Sequence`` for example) you can provide a reference image on
-    which the threshold can be optimized once
-
-    .. jupyter-execute::
-
-        from tqdm.auto import tqdm
-        
-        print("threshold optimisation for multiple images")
-        # -------------------------------------------------
-        for _ in tqdm(range(3)):
-            SegmentedPeaks(n_stars=15, auto=True)(image)
-            
-            
-        print("threshold optimisation once")
-        # ----------------------------------
-        detection = SegmentedPeaks(n_stars=15, reference=image)
-        
-        for _ in tqdm(range(3)):
-            detection(image)
-
-    """
+class SegmentedPeaks(_StarsDetection):
     
     def __init__(
         self, 
@@ -191,8 +105,96 @@ class SegmentedPeaks(StarsDetection):
         sort=True, 
         min_separation=None,
         verbose=False,
+        a=3,
         **kwargs
     ):
+        """
+        Stars detection based on image segmentation.
+
+        |write| ``Image.stars_coords`` and ``Image.peaks``
+
+        Parameters
+        ----------
+        unit_euler : bool, optional
+            whether to impose the euler_number of the regions property to be one, by default False
+        threshold : int, optional
+            empirical stars detection threshold, by default 4
+        min_area : int, optional
+            minimum area (i.e. pixels above threshold) for a bright region to be considered a star, by default 3
+        minor_length : int, optional
+            minimum lenght (defined as the region axis_minor_length) for a bright region to be considered a star, by default 2
+        reference : Image, optional
+            a reference image on which to auto-compute the threshold, by default None. If provided, also provided n_stars that will serve as the target number of stars to detect
+        auto : bool, optional
+            auto-compute threshold for each image, by default False (This is very slow and should be True only outside of sequences)
+        n_stars : int, optional
+            number of stars to detect/keep, by default None (i.e. no constraint)
+        sort : bool, optional
+            whether to sort stars coordinates from the highest to the lowest intensity, by default True
+        min_separation : float, optional
+            minimum separation between sources, by default 5.0. If less than that, close sources are merged 
+        verbose : bool, optional
+            wether the block should be verbose, by default False
+
+
+        Example
+        -------
+
+        .. jupyter-execute::
+
+            from prose.tutorials import example_image
+            
+            image = example_image()
+
+        The simplest way to run this detection block is
+
+        .. jupyter-execute::
+
+            from prose.blocks import SegmentedPeaks
+            
+            image = SegmentedPeaks()(image)
+            image.show()
+
+
+        The number of stars can be easily constrained with ``n_stars`` 
+
+        .. jupyter-execute::
+
+            image = SegmentedPeaks(n_stars=5)(image)
+            image.show()
+
+
+        The algorithm relies on the ``threshold`` parameter that can be
+        auto-computed to reach a desired number of stars
+
+        .. jupyter-execute::
+
+            image = SegmentedPeaks(n_stars=50, auto=True, verbose=True)(image)
+            image.show()
+
+
+        however threshold optimisation is slow. When processing multiple images
+        (in a ``Sequence`` for example) you can provide a reference image on
+        which the threshold can be optimized once
+
+        .. jupyter-execute::
+
+            from tqdm.auto import tqdm
+            
+            print("threshold optimisation for multiple images")
+            # -------------------------------------------------
+            for _ in tqdm(range(3)):
+                SegmentedPeaks(n_stars=15, auto=True)(image)
+                
+                
+            print("threshold optimisation once")
+            # ----------------------------------
+            detection = SegmentedPeaks(n_stars=15, reference=image)
+            
+            for _ in tqdm(range(3)):
+                detection(image)
+        """
+        
         super().__init__(verbose=verbose, min_separation=min_separation, sort=sort, n_stars=n_stars, **kwargs)
         self.threshold = threshold
         self.unit_euler = unit_euler
@@ -248,28 +250,29 @@ class SegmentedPeaks(StarsDetection):
 
         image.stars_coords, image.fluxes =  self.clean(fluxes, coordinates)
 
+    @property
     def citations(self):
-        return "numpy", "skimage", "scipy"
+        return "scikit-image", "scipy"
 
-class SEDetection(StarsDetection):
-    """
-    Source Extractor detection
-
-    |write| ``Image.stars_coords`` and ``Image.peaks``
-
-    Parameters
-    ----------
-    threshold : float, optional
-        threshold factor for which to consider pixel as potential sources, by default 1.5
-    n_stars : int, optional
-        maximum number of stars to consider, by default None
-    min_separation : float, optional
-        minimum separation between sources, by default 5.0. If less than that, close sources are merged 
-    sort : bool, optional
-        whether to sort stars coordinates from the highest to the lowest intensity, by default True
-    """
+class SEDetection(_StarsDetection):
     
     def __init__(self, threshold=1.5, **kwargs):
+        """
+        Source Extractor detection.
+
+        |write| ``Image.stars_coords`` and ``Image.peaks``
+
+        Parameters
+        ----------
+        threshold : float, optional
+            threshold factor for which to consider pixel as potential sources, by default 1.5
+        n_stars : int, optional
+            maximum number of stars to consider, by default None
+        min_separation : float, optional
+            minimum separation between sources, by default 5.0. If less than that, close sources are merged 
+        sort : bool, optional
+            whether to sort stars coordinates from the highest to the lowest intensity, by default True
+        """
         super().__init__(**kwargs)
         self.threshold = threshold
 
@@ -281,6 +284,7 @@ class SEDetection(StarsDetection):
 
         image.stars_coords, image.peaks =  self.clean(fluxes, coordinates)
 
+    @property
     def citations(self):
         return "source extractor", "sep"
 
@@ -300,6 +304,9 @@ class Peaks(Block):
             if cut is not None:
                 image.peaks[i] = np.max(cut.data)
 
+    @property
+    def citations(self):
+        return "photutils"
 
 class LimitStars(Block):
 

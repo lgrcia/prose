@@ -866,23 +866,30 @@ class Observation(ApertureFluxes):
                 texts = ["Comparison stars", "Target"]
                 viz.circles_legend(colors, texts, ax=ax)
 
-    def keep_good_stars(self, lower_threshold=3., upper_threshold=35000., trim=10, keep=None, inplace=True):
-        """Keep only  stars with a median flux higher than `threshold`*sky. 
+    def keep_good_stars(self, threshold=3., upper_threshold=35000., trim=10, keep=None, inplace=True):
+        """Keep only  stars with a median flux higher than ``threshold*sky``. 
         
         This action will reorganize stars indexes (target id will be recomputed) and reset the differential fluxes to raw.
 
         Parameters
         ----------
-        lower_threshold : float
+        threshold : float
             threshold for which stars with flux/sky > threshold are kept, default is 3
-        trim : float
-            value in pixels above which stars are kept, default is 10 to avoid stars too close to the edge
-        keep : int or list
-            number of stars to exclude (starting from 0 if int).
-        inplace: bool
-            whether to replace current object or return a new one
+        upper_threshold : float
+            maximum value allowed for the peaks median in time, default is 35000
+        trim : int, optional
+            value in pixels above which stars are kept, default is 10 to avoid stars too close to the edge, default is 10
+        keep : int or list, optional
+            number of stars to exclude (starting from 0 if int), default is None (all stars kept)
+        inplace : bool
+            whether to replace current object or return a new one, by default True
+
+        Returns
+        -------
+        _type_
+            _description_
         """
-        good_stars = np.argwhere((np.median(self.peaks, 1)/np.median(self.sky) > lower_threshold) & (np.median(self.peaks, 1) < upper_threshold)).squeeze()
+        good_stars = np.argwhere((np.median(self.peaks, 1)/np.median(self.sky) > threshold) & (np.median(self.peaks, 1) < upper_threshold)).squeeze()
         mask = np.any(np.abs(self.stars[good_stars] - max(self.stack.shape) / 2) > (max(self.stack.shape) - 2 * trim) / 2, axis=1)
         bad_stars = np.argwhere(mask == True).flatten()
 

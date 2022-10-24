@@ -1,6 +1,7 @@
 from time import time
 import inspect
-from .console_utils import error, warning
+from .console_utils import warning
+
 
 class Block(object):
     """Single unit of processing acting on the :py:class:`~prose.Image` object
@@ -10,7 +11,6 @@ class Block(object):
         1. :py:meth:`~prose.Block.run` on each image fed to the :py:class:`~prose.Sequence`
         2. :py:meth:`~prose.Block.terminate` called after the :py:class:`~prose.Sequence` is terminated
 
-
     Parameters
     ----------
     name : str, optional
@@ -18,7 +18,7 @@ class Block(object):
 
     All prose blocks must be child of this parent class
     """
-    @staticmethod    
+    @staticmethod
     def __new__(cls, *args, **kwargs):
         s = inspect.signature(cls.__init__)
         # TODO:
@@ -29,23 +29,26 @@ class Block(object):
         defaults.update(argspecs)
         del defaults['self']
         cls._args = defaults
+        cls.__new__.__signature__ = s
         return super().__new__(cls)
 
     def __init__(self, name=None, verbose=False):
-        """Instanciation
-        """
+        _name  = self.__class__.__name__
+        _issue = f"https://github.com/lgrcia/prose/issues/new?title=Missing+doc+for+{_name}&body=Documentation+is+missing+for+block+{_name}"
+
+        self.__doc__  = f"[**click to ask for documentation**]({_issue})"
+
         self.name = name
         self.unit_data = None
         self.processing_time = 0
         self.runs = 0
-        self._args = None
         self.in_sequence = False
         self.verbose = verbose
 
-    @property    
+    @property
     def args(self):
         return self._args
-    
+
     def _run(self, *args, **kwargs):
         t0 = time()
         self.run(*args, **kwargs)
@@ -67,8 +70,8 @@ class Block(object):
         """
         pass
 
-    @staticmethod
-    def citations():
+    @property
+    def citations(self):
         return None
 
     @staticmethod

@@ -135,6 +135,10 @@ class Cutouts(Block):
             image.cutouts = [image.cutouts[i] for i in image.cutouts_idxs]
             image.cutouts_idxs = np.arange(len(image.cutouts))
 
+    @property
+    def citations(self):
+        return "photutils"
+
 class MedianPSF(Block):
     """Get median psf from image.
 
@@ -169,7 +173,7 @@ class MedianPSF(Block):
             image.psf =  np.median(normalized_cutouts[0:self.n], axis=0)
 
 
-class PSFModel(Block):
+class _PSFModel(Block):
 
     def __init__(self, reference=None, **kwargs):
         super().__init__(**kwargs)
@@ -227,9 +231,13 @@ class PSFModel(Block):
                 return differential_evolution(self.nll, bounds, x0=p0, args=(psf,)).x
             else:
                 return minimize(self.nll, self.p0, bounds=bounds, args=(psf,)).x
+    
+    @property
+    def citations(self):
+        return "scipy"
 
 
-class FWHM(PSFModel):
+class FWHM(_PSFModel):
     """
     Fast empirical FWHM
 
@@ -291,7 +299,7 @@ class FWHM(PSFModel):
         plt.ylabel("ADUs")
         f = 0
 
-class FastGaussian(PSFModel):
+class FastGaussian(_PSFModel):
     """
     Fit a symetric 2D Gaussian model to an image effective PSF
     """
@@ -325,11 +333,12 @@ class FastGaussian(PSFModel):
             params = minimize(self.nll, p0, bounds=bounds, args=(psf)).x
             return params
 
+    @property
     def citations(self):
         return "scipy", "photutils"
 
 
-class Gaussian2D(PSFModel):
+class Gaussian2D(_PSFModel):
     r"""
     Fit an elliptical 2D Gaussian model to an image effective PSF
 
@@ -453,11 +462,12 @@ class Gaussian2D(PSFModel):
 
         return self._minimize(psf, p0, bounds)
 
+    @property
     def citations(self):
         return "scipy"
 
 
-class Moffat2D(PSFModel):
+class Moffat2D(_PSFModel):
     r"""
     Fit an elliptical 2D Moffat model to an image effective PSF
 
@@ -586,6 +596,7 @@ class Moffat2D(PSFModel):
 
         return self._minimize(psf, p0, bounds)
 
+    @property
     def citations(self):
         return "scipy"
 

@@ -39,8 +39,6 @@ class Cutout2D(Block):
         image.data = aligned_image.data
         image.stars_coords += shift
 
-    def citations(self, image):
-        return "astropy", "numpy"
 
 class AffineTransform(Block):
     """

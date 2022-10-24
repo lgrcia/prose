@@ -268,7 +268,7 @@ class XYShift(Block):
 
     The goal of **xyshift** is to check all the possible shifts from one star with respect to all the others, and to identify the most common shifts between stars of two different images.
 
-    .. image:: images/xyshift_principle.png
+    .. image:: /static/xyshift_principle.png
 
     """
 
@@ -329,12 +329,9 @@ class AstroAlignShift(Block):
         image.header["TDY"] = shift[1],
         image.header["ALIGNALG"] = self.__class__.__name__
 
+    @property
     def citations(self):
         return "astroalign"
-
-    @staticmethod
-    def doc():
-        return """"""
 
 
 class Twirl(Block):
