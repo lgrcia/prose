@@ -1,3 +1,4 @@
+from numpy import block
 from prose import Observation, Telescope, FitsManager, viz
 from prose.pipeline import Calibration, AperturePhotometry
 import matplotlib.pyplot as plt
@@ -126,6 +127,42 @@ class TestReduction(unittest.TestCase):
         destination = fm.label(1)
         calib = Calibration(bias=[], darks=[], flats=[], overwrite=True)
         calib.run(fm.all_images, TEST_FODLER / destination)
+
+
+    def test_master_calib_as_input(self):
+
+        import numpy as np
+        from prose.tutorials import simulate_observation
+        from prose import Telescope
+
+        time = np.linspace(0, 0.15, 100) + 2450000
+        target_dflux = 1 + np.sin(time*100)*1e-2
+        simulate_observation(time, target_dflux, RAW)
+
+        _ = Telescope({
+            "name": "A",
+            "trimming": [40, 40],
+            "pixel_scale": 0.66,
+            "latlong": [31.2027, 7.8586],
+            "keyword_light_images": "light"
+        })
+
+        # reduction
+        # ---------
+        from prose import FitsManager, Image, Sequence, blocks
+
+        # ref
+        fm = FitsManager(RAW, depth=2)
+
+        calib1 = blocks.Calibration(darks=fm.all_darks, bias=fm.all_bias, flats=fm.all_flats)
+        Image(data=calib1.master_bias).writeto(RAW/"bias")
+        Image(data=calib1.master_dark).writeto(RAW/"darks")
+        Image(data=calib1.master_flat).writeto(RAW/"flats")
+
+        calib2 = blocks.Calibration(darks=str(RAW/"darks"), bias=str(RAW/"bias"), flats=str(RAW/"flats"))
+        assert np.allclose(calib1.master_bias, calib2.master_bias)
+        assert np.allclose(calib1.master_dark, calib2.master_dark)
+        assert np.allclose(calib1.master_flat, calib2.master_flat)
 
     def test_sequence_reduction(self):
 

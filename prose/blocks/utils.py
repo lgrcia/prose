@@ -539,8 +539,8 @@ class Calibration(Block):
             if len(images) == 0:
                 images = None
 
-        elif isinstance(images, str):
-            return self.loader(images)
+        if isinstance(images, str):
+            return self.loader(images).data
 
         def _median(im):
             if self.easy_ram:
