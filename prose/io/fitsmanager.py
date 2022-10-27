@@ -236,7 +236,7 @@ class FitsManager:
         sql_days = SQL_DAYS_BETWEEN.format(date=obs_dict["date"], future=future, past=past)
         sql_exposure = exposure_constraint(exposure=obs_dict["exposure"], tolerance=tolerance)
 
-        files[lights] = self.to_pandas(f"SELECT path from files where id = {i}").values.flatten()
+        files[lights] = self.to_pandas(f"SELECT path from files where id = {i} order by jd").values.flatten()
         dfs = []
 
         if show:
@@ -264,7 +264,7 @@ class FitsManager:
                     WHERE {sql_days} AND {query})
                 """))
 
-            _files = [self.to_pandas(f"select path from files where id={j}").values.flatten() for j in obs_ids]
+            _files = [self.to_pandas(f"select path from files where id={j} order by jd").values.flatten() for j in obs_ids]
             if len(_files) > 0:
                 _files = np.hstack(_files)
 
