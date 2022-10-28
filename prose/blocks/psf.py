@@ -17,7 +17,7 @@ from ..console_utils import info
 
 __all__ = ["MedianPSF", "Cutouts"]
 
-def cutouts(image, stars, size=15):
+def cutouts(image, stars, size=15, same=True):
     """Custom version to extract stars cutouts
 
     Parameters
@@ -46,8 +46,11 @@ def cutouts(image, stars, size=15):
         _stars = [None]*len(stars)
         stars = extract_stars(NDData(data=image), stars_tbl, size=size)
         idxs = np.array([s.id_label for s in stars])
-        for i, s in enumerate(stars):
-            _stars[idxs[i]] = s
+        if same:
+            for i, s in enumerate(stars):
+                _stars[idxs[i]] = s
+        else:
+            _stars = stars
         return idxs, _stars
     else:
         stars_tbl = Table(
