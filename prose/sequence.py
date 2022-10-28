@@ -58,6 +58,7 @@ class Sequence:
     def run(self, images, terminate=True, show_progress=True, loader=Image):
         self._set_blocks_in_sequence(True)
         self.images = images if not isinstance(images, (str, Path, Image)) else [images]
+        assert len(self.images) != 0, "Empty array or no images provided"
 
         if not show_progress:
             def _p(x, **kwargs): return x
