@@ -17,6 +17,7 @@ QMARKS_UNIQUE = ",".join(['?']*len(UNIQUE_FIELDS.split(",")))
 
 PWD = Path(__file__).parent
 
+
 def in_value(value):
     return f"'{value}'" if isinstance(value, str) else value
 
