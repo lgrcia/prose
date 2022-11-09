@@ -1,0 +1,3 @@
+include latex/*.tex
+include latex/*.cls
+include prose/io/*.sql

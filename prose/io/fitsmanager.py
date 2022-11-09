@@ -1,6 +1,5 @@
 import sqlite3
 import numpy as np
-from tqdm import tqdm
 import pandas as pd
 from pathlib import Path
 from .io import get_files, fits_to_df
@@ -332,7 +331,6 @@ class FitsManager:
     def darks(self, i, show=False, **kwargs):
         return self.observation_files(i, show=show, **kwargs)['darks']
 
-
     @property
     def all_flats(self):
         """fits paths of the observation flats images
@@ -365,11 +363,11 @@ class FitsManager:
         list of str
         """
         return self.files(imtype="reduced")
-    
+
     def label(self, i):
         date, telescope, filter, _, target, *_ = self.observations(id=i).values[0]
         return f"{telescope}_{date.replace('-', '')}_{target}_{filter}"
-        
+
     @property
     def obs_name(self):
         """Observation name ({telescope}_{date}_{target}_{filter}) if a single observation is present
@@ -381,7 +379,7 @@ class FitsManager:
 
     def __repr__(self):
         return str(self.observations())
-    
+
     def _repr_html_(self):
         return self.observations()._repr_html_()
 

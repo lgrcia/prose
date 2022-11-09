@@ -1,5 +1,5 @@
 from numpy import block
-from prose import Observation, Telescope, FitsManager, viz
+from prose import Observation, Telescope, FitsManager, viz, Sequence, blocks, tutorials
 from prose.pipeline import Calibration, AperturePhotometry
 import matplotlib.pyplot as plt
 import shutil
@@ -7,7 +7,6 @@ import unittest
 import shutil
 import shutil
 from pathlib import Path
-from prose import Telescope, blocks
 from prose.reports import Report, Summary
 
 
@@ -25,6 +24,13 @@ if TEST_FODLER.exists():
 
 # Creating new folders
 TEST_FODLER.mkdir(exist_ok=True)
+
+class TestSequence(unittest.TestCase):
+
+    def test_pass_sequence(self):
+        image = tutorials.example_image()
+        s = Sequence([blocks.Pass()])
+        s.run(image)
 
 class TestReport(unittest.TestCase):
 
