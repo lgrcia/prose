@@ -28,6 +28,7 @@ __all__ = [
     "SaveReduced",
     "RemoveBackground",
     "CleanCosmics",
+    "WriteTo",
     "Pass",
     "ImageBuffer",
     "Set",
