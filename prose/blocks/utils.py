@@ -184,6 +184,53 @@ class SaveReduced(Block):
     def concat(self, block):
         self.files = [*self.files, *block.files]
 
+class WriteTo(Block):
+    
+    def __init__(self, destination, label="processed", imtype=True, overwrite=False, name=None):
+        """Write image to FITS file
+
+        Parameters
+        ----------
+        destination : str
+            destination folder (folder and parents created if not existing)
+        label : str, optional
+            added at the end of filename as {original_path}_{label}.fits, by default "processed"
+        imtype : bool, optional
+            If bool, wether to set image imtype as label (image.header["IMTYPE"] = label). If str imtype label to set (image.header["IMTYPE"] = imtype) , by default True
+        overwrite : bool, optional
+            wether to overwrite existing file, by default False
+        name : str, optional
+            name of the block, by default None
+        """
+        super().__init__(name=name)
+        self.destination = Path(destination)
+        self.label = label
+        self.overwrite = overwrite
+        if isinstance(imtype, bool):
+            if imtype:
+                self.imtype = self.label
+            else:
+                self.imtype = None
+        else:
+            assert isinstance(imtype, str), "imtype must be a bool or a str"
+            self.imtype = imtype
+            
+        self.files = []
+        
+    def run(self, image):
+        self.destination.mkdir(exist_ok=True, parents=True)
+        
+        new_hdu = fits.PrimaryHDU(image.data)
+        new_hdu.header = image.header
+        
+        if self.imtype is not None:
+            image.header[image.telescope.keyword_image_type] = self.imtype
+        
+        fits_new_path = self.destination / (Path(image.path).stem + f"_{self.label}.fits")
+
+        new_hdu.writeto(fits_new_path, overwrite=self.overwrite)
+        self.files.append(fits_new_path)
+
 class RemoveBackground(Block):
 
     
@@ -518,7 +565,7 @@ class Calibration(Block):
     """
 
     
-    def __init__(self, darks=None, flats=None, bias=None, loader=Image, easy_ram=True, **kwargs):
+    def __init__(self, darks=None, flats=None, bias=None, loader=Image, easy_ram=True, verbose=True, **kwargs):
 
         super().__init__(**kwargs)
             
@@ -528,6 +575,7 @@ class Calibration(Block):
         self.master_bias = self._produce_master(bias, "bias")
         self.master_dark = self._produce_master(darks, "dark")
         self.master_flat = self._produce_master(flats, "flat")
+        self.verbose = verbose
 
     def calibration(self, image, exp_time):
         with np.errstate(divide='ignore', invalid='ignore'):
@@ -551,7 +599,7 @@ class Calibration(Block):
         _master = []
 
         if images is None:
-            info(f"No {image_type} images set")
+            if self.verbose: info(f"No {image_type} images set")
             if image_type == "dark":
                 return 0
             elif image_type == "bias":
@@ -559,7 +607,7 @@ class Calibration(Block):
             elif image_type == "flat":
                 return 1
         else:
-            info(f"Building master {image_type}")
+            if self.verbose: info(f"Building master {image_type}")
 
         for image_path in images:
             image = self.loader(image_path)
