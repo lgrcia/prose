@@ -17,7 +17,7 @@ from ..console_utils import info
 from pathlib import Path
 from . import Cutout2D
 import matplotlib.patches as patches
-from ..image import Image
+from ..core.image import Image
 from astropy.nddata import Cutout2D as astopy_Cutout2D
 from astropy.units.quantity import Quantity
 from astropy.stats import sigma_clipped_stats
@@ -42,7 +42,8 @@ __all__ = [
     "MedianStack",
     "XArray2",
     "MPCalibration",
-    "Del"
+    "Del",
+    "Function"
 ]
 
 class DataBlock(Block):
@@ -308,7 +309,8 @@ class Set(Block):
         self.kwargs = kwargs
 
     def run(self, image):
-        image.__dict__.update(self.kwargs)
+        for name, value in self.kwargs.items():
+            setattr(image, name, value)
 
 class Flip(Block):
     """Flip an image according to a reference
@@ -338,6 +340,15 @@ class Flip(Block):
         flip_value = image.flip
         if flip_value != self.reference_flip_value:
             image.data = image.data[::-1, ::-1]
+
+class Function(Block):
+
+    def __init__(self, f, name=None):
+        super().__init__(name=name)
+        self.f = f
+
+    def run(self, image):
+        self.f(image)
 
 # TODO document
 class Get(DataBlock):

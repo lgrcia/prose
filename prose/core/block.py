@@ -1,6 +1,6 @@
 from time import time
 import inspect
-from .console_utils import warning
+from ..console_utils import warning
 
 
 class Block(object):

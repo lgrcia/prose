@@ -257,6 +257,8 @@ class TestReduction(unittest.TestCase):
         obs.broeg2005()
         obs.plot()
         plt.savefig(TEST_FODLER / "sequence_reduction.png")
+        obs.save(TEST_FODLER / "sequence_reduction.phot")
+
 
 
 # class TestTFOPObservation(unittest.TestCase):

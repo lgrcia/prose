@@ -4,7 +4,7 @@ from .registration import clean_stars_positions
 from .. import Block
 from ..console_utils import info
 from scipy.interpolate import interp1d
-from ..sources import PointSource, auto_source, TraceSource
+from ..core.source import PointSource, auto_source, TraceSource
 from astropy.stats import sigma_clipped_stats
 from photutils import DAOStarFinder
 from ..blocks.psf import cutouts

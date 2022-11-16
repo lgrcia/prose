@@ -1,7 +1,5 @@
-from re import A
 from tqdm import tqdm
-import xarray
-from .console_utils import TQDM_BAR_FORMAT, warning, error
+from ..console_utils import TQDM_BAR_FORMAT, warning, error
 from collections import OrderedDict
 from tabulate import tabulate
 import numpy as np
@@ -10,11 +8,11 @@ from .image import Image
 from pathlib import Path
 from functools import partial
 import multiprocessing as mp
-from .blocks.utils import DataBlock
+from ..blocks.utils import DataBlock
 import sys
 import yaml
-from .utils import full_class_name
-from .citations import _all_citations
+from ..utils import full_class_name
+from ..citations import _all_citations
 
 def progress(name, x, **kwargs):
     return tqdm(

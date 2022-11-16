@@ -13,9 +13,9 @@ from . import visualization as viz
 from .io.fitsmanager import FitsManager
 from .fluxes import ApertureFluxes
 from .telescope import Telescope
-from .block import Block
-from .sequence import Sequence
-from .image import Image
+from .core.block import Block
+from .core.sequence import Sequence
+from .core.image import Image
 from .observation import Observation
 from .observations import Observations
 

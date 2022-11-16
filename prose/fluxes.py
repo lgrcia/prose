@@ -214,7 +214,7 @@ class ApertureFluxes:
 
     @property
     def aperture(self):
-        return self.xarray.attr.get('aperture', -1)
+        return self.xarray.attrs.get('aperture', -1)
         #TODO: aperture not set error over all Observation 
 
     @aperture.setter

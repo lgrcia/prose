@@ -209,12 +209,12 @@ class Observation(ApertureFluxes):
             return self._meridian_flip
         else:
             has_flip = hasattr(self.xarray, "flip")
-            if has_flip:
-                try:
-                    np.all(np.isnan(self.flip))
-                    return None
-                except TypeError:
-                    pass
+            # if has_flip:
+            #     try:
+            #         self.flip = np.array(self.flip, dtype='str')
+            #         np.all(np.isnan(self.flip))
+            #     except TypeError:
+            #         pass
 
             if has_flip:
                 if "WEST" in self.flip:

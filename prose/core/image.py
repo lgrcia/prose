@@ -1,20 +1,19 @@
 from astropy.time import Time
 import matplotlib.pyplot as plt
 import numpy as np
-#from .blocks.utils 
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 from astropy.coordinates import Angle
 from dateutil import parser as dparser
 from astropy.wcs import WCS
-from . import viz, utils, Telescope
-from .utils import gaia_query
+from .. import viz, utils, Telescope
+from ..utils import gaia_query
 from functools import partial
 from matplotlib import gridspec
 from astropy.io import fits
 from datetime import timedelta
 from pathlib import Path
-from .sources import PointSource
+from .source import PointSource
 
 class Image:
     r"""Base object containing FITS image data and metadata
