@@ -134,7 +134,7 @@ class Cutouts(Block):
         image.cutouts_idxs, image.cutouts = cutouts(image.data, image.stars_coords, size=self.size)
         if self.clean:
             if hasattr(image, "stars_coords"):
-                image.stars_coords = image.stars_coords[image.cutouts_idxs]
+                image.sources = image.sources[image.cutouts_idxs]
             image.cutouts = [image.cutouts[i] for i in image.cutouts_idxs]
             image.cutouts_idxs = np.arange(len(image.cutouts))
 

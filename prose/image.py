@@ -14,6 +14,7 @@ from matplotlib import gridspec
 from astropy.io import fits
 from datetime import timedelta
 from pathlib import Path
+from .sources import PointSource
 
 class Image:
     r"""Base object containing FITS image data and metadata
@@ -66,7 +67,8 @@ class Image:
             self.data = data
             self.header = header if header is not None else {}
             self.path = None
-
+        
+        self.sources = []
         self.telescope = None
         self.discard = False
         self.__dict__.update(kwargs)
@@ -106,6 +108,7 @@ class Image:
         new_self.data = new_self.data.copy()
         new_self.header = new_self.header.copy()
         new_self.catalogs = self.catalogs.copy()
+        new_self.sources = self.sources.copy()
         if not data:
             del new_self.__dict__["data"]
 
@@ -141,6 +144,26 @@ class Image:
     @wcs.setter
     def wcs(self, new_wcs):
         self.header.update(new_wcs.to_header())
+
+    # backward compatibility
+    # ----------------------
+    @property
+    def stars_coords(self):
+        return np.array([s.coords for s in self.sources])
+
+    @stars_coords.setter
+    def  stars_coords(self, coords):
+        self.sources = np.array([PointSource(coords=s) for s in coords])
+
+    @property 
+    def peaks(self):
+        return np.array([s.peak for s in self.sources])
+
+    @peaks.setter
+    def peaks(self, peaks):
+        for i, p in enumerate(peaks):
+            self.sources[i].peak = p
+    # ----------------------
 
     @property
     def exposure(self):
@@ -301,13 +324,10 @@ class Image:
         cmap="Greys_r", 
         ax=None, 
         figsize=(10,10), 
-        stars=None, 
-        stars_labels=True, 
+        stars=True, 
         zscale=True,
         frame=False,
         contrast=0.1,
-        ms=15,
-        fs=12,
         **kwargs
         ):
         """Show image data
@@ -363,12 +383,8 @@ class Image:
         else:
             _ = ax.imshow(utils.z_scale(self.data, contrast), cmap=cmap, origin="lower", **kwargs)
         
-        if stars is None:
-            stars = "stars_coords" in self.__dict__
-        
-        if stars and self.stars_coords is not None:
-            label = np.arange(len(self.stars_coords)) if stars_labels else None
-            viz.plot_marks(*self.stars_coords.T, label=label, ax=ax, ms=ms, offset=0.5*ms, fontsize=fs)
+        if stars:
+            self.plot_sources()
 
         if frame:
             overlay = ax.get_coords_overlay(self.wcs)
@@ -377,6 +393,22 @@ class Image:
             overlay[1].set_axislabel('Declination (J2000)')
 
         return ax
+
+    def plot_sources(self, ax=None, **kwargs):
+        if len(self.sources) > 0:
+            if ax is None:
+                ax = plt.gca()
+            xlim, ylim = np.array(ax.get_xlim()), np.array(ax.get_ylim())
+            xlim.sort()
+            ylim.sort()
+            x, y = self.stars_coords.T
+            within = np.argwhere(np.logical_and.reduce([xlim[0] < x,  x < xlim[1],  ylim[0] < y,  y < ylim[1]])).flatten()
+            
+            for i in within:
+                self.sources[i].plot(**kwargs)
+
+            ax.set_xlim(xlim)
+            ax.set_ylim(ylim)
 
     def show_cutout(self, star=None, size=200, **kwargs):
         """Show a zoomed cutout around a detected star or coordinates
@@ -399,13 +431,10 @@ class Image:
         else:
             raise ValueError("star type not understood")
 
-        self.show(**kwargs)
+        self.show(stars=False, **kwargs)
         plt.xlim(np.array([-size / 2, size / 2]) + x)
         plt.ylim(np.array([-size / 2, size / 2]) + y)
-        stars = kwargs.get("stars", False)
-        if stars and hasattr(self, "stars_coords"):
-            idxs = np.argwhere(np.max(np.abs(self.stars_coords - [x, y]), axis=1) < size).squeeze()
-            viz.plot_marks(*self.stars_coords[idxs].T, label=idxs)
+        self.plot_sources()
 
     @property
     def skycoord(self):

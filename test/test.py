@@ -8,6 +8,7 @@ import shutil
 import shutil
 from pathlib import Path
 from prose.reports import Report, Summary
+from prose.tutorials import example_image
 
 
 RAW = Path("synthetic_dataset")
@@ -364,6 +365,32 @@ class TestObservation(unittest.TestCase):
         viz.plot_marks(*gaias.T, color="y")
         plt.savefig(result_file)
         plt.close()
+
+class TestSourceAndDetection(unittest.TestCase):
+
+    def __init__(self, *args, **kwargs):
+        unittest.TestCase.__init__(self, *args, **kwargs)
+
+    def test_sourcedetection(self):
+        from prose.blocks.detection import AutoSourceDetection, PointSourceDetection, DAOFindStars, SEDetection, SegmentedPeaks
+        import matplotlib.pyplot as plt
+        from prose.tutorials import example_image
+
+        im = example_image()
+
+        classes = [AutoSourceDetection, PointSourceDetection, DAOFindStars, SEDetection, SegmentedPeaks]
+
+        plt.figure(None, (len(classes)*5, 5))
+
+        for i, c in enumerate(classes):
+            ax = plt.subplot(1, len(classes), i+1)
+            im2 = c()(im)
+            im2.show(ax=ax)
+            ax.set_title(c.__name__)
+
+        result_file = TEST_FODLER / "test_detection_blocks.png"
+        plt.tight_layout()
+        plt.savefig(result_file)
 
 
 class TestArgsRegistration(unittest.TestCase):
