@@ -80,6 +80,10 @@ class Stack(DataBlock):
         self._header = ref.header.copy() if ref else {}
         self.image = ref.copy() if ref else None
 
+    @property
+    def stack(self):
+        return self.image
+
     def run(self, image):
         #TODO check that all images have same telescope?
 
