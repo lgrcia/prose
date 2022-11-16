@@ -16,7 +16,6 @@
 	~prose.blocks.centroids.COM
 	~prose.blocks.alignment.Cutout2D
 	~prose.blocks.psf.Cutouts
-	~prose.blocks.detection.DAOFindStars
 	~prose.blocks.utils.DataBlock
 	~prose.blocks.utils.Del
 	~prose.blocks.utils.Drizzle
@@ -30,7 +29,6 @@
 	~prose.blocks.psf.HFD
 	~prose.blocks.utils.ImageBuffer
 	~prose.blocks.psf.KeepGoodStars
-	~prose.blocks.detection.LimitStars
 	~prose.blocks.vizualisation.LivePlot
 	~prose.blocks.utils.LocalInterpolation
 	~prose.blocks.psf.MedianPSF
@@ -38,15 +36,12 @@
 	~prose.blocks.psf.Moffat2D
 	~prose.blocks.utils.MPCalibration
 	~prose.blocks.utils.Pass
-	~prose.blocks.detection.Peaks
 	~prose.blocks.catalogs.PlateSolve
 	~prose.blocks.vizualisation.PlotVideo
 	~prose.blocks.centroids.Quadratic
 	~prose.blocks.vizualisation.RawVideo
 	~prose.blocks.utils.RemoveBackground
 	~prose.blocks.utils.SaveReduced
-	~prose.blocks.detection.SEDetection
-	~prose.blocks.detection.SegmentedPeaks
 	~prose.blocks.utils.Set
 	~prose.blocks.shepard.Shepard
 	~prose.blocks.utils.Stack

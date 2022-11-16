@@ -1,5 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@650&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@600&display=swap');
+
+:root {
+    color-scheme: light only;
+}
+
 body {
     --color-sidebar-background: white;
     --color-brand-primary: #1f74d4;
