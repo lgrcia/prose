@@ -49,12 +49,12 @@ setup(
             "sphinx",
             "nbsphinx",
             "jupyter-sphinx",
-            "sphinx_rtd_theme",
             "sphinx-copybutton",        
             "docutils",
             "jupyterlab",
             "myst-parser",
             "twine",
+            "furo"
         ]
     },
     zip_safe=True,
