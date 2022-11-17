@@ -26,7 +26,6 @@ extensions = [
     'nbsphinx',
     'jupyter_sphinx',
     'myst_parser',
-    'furo'
     ]
 
 autodoc_typehints = 'signature'
