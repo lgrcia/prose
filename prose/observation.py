@@ -406,19 +406,18 @@ class Observation(ApertureFluxes):
         -------
         dict
             PSF fit info (theta, std_x, std_y, fwhm_x, fwhm_y)
-
-
-        Example
-        -------
-        .. jupyter-execute::
-
-            from prose import Observation
-            from prose.tutorials import example_phot
-        
-            obs = Observation(example_phot)
-            obs.plot_psf_model()
-            
         """
+
+        # Example
+        # -------
+        # .. jupyter-execute::
+
+        #     from prose import Observation
+        #     from prose.tutorials import example_phot
+        
+        #     obs = Observation(example_phot)
+        #     obs.plot_psf_model()
+            
 
         self.assert_stack()
         
@@ -437,17 +436,18 @@ class Observation(ApertureFluxes):
             list of systematic to include (must be in self), by default None
         ylim : tuple, optional
             plot ylim, by default (0.98, 1.02)
-
-        Example
-        -------
-        .. jupyter-execute::
-
-            from prose import Observation
-            from prose.tutorials import example_phot
-        
-            obs = Observation(example_phot)
-            obs.plot_systematics()
         """
+
+        # Example
+        # -------
+        # .. jupyter-execute::
+
+        #     from prose import Observation
+        #     from prose.tutorials import example_phot
+        
+        #     obs = Observation(example_phot)
+        #     obs.plot_systematics()
+
         if fields is None:
             fields = ["dx", "dy", "fwhm", "airmass", "sky"]
 
@@ -488,19 +488,19 @@ class Observation(ApertureFluxes):
 
     def plot_raw_diff(self):
         """Plot raw target flux and differantial flux 
-
-
-        Example
-        -------
-        .. jupyter-execute::
-
-            from prose import Observation
-            from prose.tutorials import example_phot
-        
-            obs = Observation(example_phot)
-            obs.plot_raw_diff()
-
         """
+
+
+        # Example
+        # -------
+        # .. jupyter-execute::
+
+        #     from prose import Observation
+        #     from prose.tutorials import example_phot
+        
+        #     obs = Observation(example_phot)
+        #     obs.plot_raw_diff()
+
 
         plt.subplot(211)
         plt.title("Differential lightcurve", loc="left")
@@ -528,18 +528,18 @@ class Observation(ApertureFluxes):
             bin size used to estimate error, by default 0.005 (in days)
         aperture : int, optional
             chosen aperture, by default None
-
-        Example
-        -------
-        .. jupyter-execute::
-
-            from prose import Observation
-            from prose.tutorials import example_phot
-        
-            obs = Observation(example_phot)
-            obs.plot_precision()
-
         """
+
+        # Example
+        # -------
+        # .. jupyter-execute::
+
+        #     from prose import Observation
+        #     from prose.tutorials import example_phot
+        
+        #     obs = Observation(example_phot)
+        #     obs.plot_precision()
+
 
         n_bin = int(bins / (np.mean(self.exptime) / (60 * 60 * 24)))
 
@@ -639,18 +639,17 @@ class Observation(ApertureFluxes):
             radius of inner annulus to display, by default None corresponds to inner radius saved
         rout : [type], optional
             radius of outer annulus to display, by default None corresponds to outer radius saved
-
-        Example
-        -------
-        .. jupyter-execute::
-
-            from prose import Observation
-            from prose.tutorials import example_phot
-        
-            obs = Observation(example_phot)
-            obs.plot_radial_psf()
-
         """
+
+        # Example
+        # -------
+        # .. jupyter-execute::
+
+        #     from prose import Observation
+        #     from prose.tutorials import example_phot
+        
+        #     obs = Observation(example_phot)
+        #     obs.plot_radial_psf()
 
         self.assert_stack()
 
@@ -804,19 +803,19 @@ class Observation(ApertureFluxes):
             max number of stars to show, by default None,
         flip : bool, optional
             whether to flip image, by default False
+        """
 
-        Example
-        -------
-        .. jupyter-execute::
+        # Example
+        # -------
+        # .. jupyter-execute::
 
-            from prose import Observation
-            from prose.tutorials import example_phot
+        #     from prose import Observation
+        #     from prose.tutorials import example_phot
         
-            obs = Observation(example_phot)
-            obs.show_stars()
+        #     obs = Observation(example_phot)
+        #     obs.show_stars()
             
 
-        """
         self.assert_stack()
 
         ax = self.stack.show(stars=False, ax=ax)
@@ -973,18 +972,19 @@ class Observation(ApertureFluxes):
         ----------
         width : int, optional
             pixel width of the html widget, by default 500
-
-        Example
-        -------
-
-         .. jupyter-execute::
-
-            from prose import Observation
-            from prose.tutorials import example_phot
-
-            obs = Observation(example_phot)
-            obs.lc_widget()
         """
+
+        # Example
+        # -------
+
+        #  .. jupyter-execute::
+
+        #     from prose import Observation
+        #     from prose.tutorials import example_phot
+
+        #     obs = Observation(example_phot)
+        #     obs.lc_widget()
+
         from IPython.core.display import display, HTML
         import json
         from pathlib import Path
