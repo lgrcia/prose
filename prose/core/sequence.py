@@ -25,9 +25,16 @@ def progress(name, x, **kwargs):
     )
 
 class Sequence:
-    # TODO: add index self.i in image within unit loop
+    def __init__(self, blocks, name=None):
+        """A sequence of :py:class:`Block` objects to sequentially process images
 
-    def __init__(self, blocks, name=""):
+        Parameters
+        ----------
+        blocks : list
+            list of :py:class:`Block` objects
+        name : str, optional
+            name of the sequence, by default None
+        """
         self.name = name
         self.images = []
         self.blocks = blocks
@@ -40,6 +47,13 @@ class Sequence:
 
     @property
     def blocks(self):
+        """list of :py:class:`Block` objects
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         return list(self.blocks_dict.values())
 
     @blocks.setter
@@ -54,6 +68,19 @@ class Sequence:
             b.in_sequence = in_sequence
 
     def run(self, images, terminate=True, show_progress=True, loader=Image):
+        """Run the sequence
+
+        Parameters
+        ----------
+        images : list, str, :py:class:`Image`
+            :py:class:`Image` object or path (single or as a list) to be processed by the sequence
+        terminate : bool, optional
+            whether to run :py:class:`Sequence.terminate` at the end of the sequence, by default True
+        show_progress : bool, optional
+            whether to show a progress bar, by default True
+        loader : Image sub-class, optional
+            An Image sub-class to load images path(s) of provided as inputs, by default py:class:`Image`
+        """
         self._set_blocks_in_sequence(True)
         self.images = images if not isinstance(images, (str, Path, Image)) else [images]
         assert len(self.images) != 0, "Empty array or no images provided"
@@ -92,13 +119,15 @@ class Sequence:
                 block._run(image)
                 # This allows to discard image in any Block
                 if image.discard:
-                    self.add_discard(type(block).__name__, i)
+                    self._add_discard(type(block).__name__, i)
                     break
 
             del image
             self.n_processed_images += 1
 
     def terminate(self):
+        """Run the :py:class:`Block.terminate` method of all blocks
+        """
         for block in self.blocks:
             block.terminate()
         self._set_blocks_in_sequence(False)
@@ -116,15 +145,9 @@ class Sequence:
         return self.__str__()
 
     @property
-    def citations(self):
-        citations = [block.citations() for block in self.blocks if block.citations() is not None]
-        return citations if len(citations) > 0 else None
-
-    def insert_before(self, before, block):
-        pass
-
-    @property
     def processing_time(self):
+        """Total processing time of the sequence last run
+        """
         return np.sum([block.processing_time for block in self.blocks])
 
     def __getitem__(self, item):
@@ -133,7 +156,7 @@ class Sequence:
     # io
     # --
 
-    def add_discard(self, discard_block, i):
+    def _add_discard(self, discard_block, i):
         if discard_block not in self.discards:
             self.discards[discard_block] = []
         self.discards[discard_block].append(str(i))
@@ -168,6 +191,44 @@ class Sequence:
         return yaml.safe_dump(self.args, sort_keys=False)
 
     def citations(self):
+        """Citations aggregated from all blocks
+
+        Returns
+        -------
+        str
+            LaTex string to cite sequence block dependencies
+        str
+            LaTex bibtex items
+
+        Example
+        -------
+        .. jupyter-execute::
+
+            from prose import Sequence, blocks
+
+            sequence = Sequence([              
+                blocks.psf.Moffat2D(),
+                blocks.detection.LimitStars(min=3),
+                blocks.Set(stars_coords=None),
+                blocks.AffineTransform(data=False, inverse=True),
+                blocks.BalletCentroid(),                           
+                blocks.PhotutilsAperturePhotometry(scale=1.),
+                blocks.Peaks(),
+                blocks.XArray(
+                    ("time", "jd_utc"),
+                    ("time", "bjd_tdb"),
+                    ("time", "flip"),
+                    ("time", "fwhm"),
+                    ("time", "fwhmx"),
+                    name="xarray"
+                ),
+            ])
+
+            tex, bib = sequence.citations()
+
+            print(tex)
+            print(bib[0:500], "...")
+        """
         citations = [block.citations for block in self.blocks]
         citations = [*citations, "astropy", "prose"]
         cites = {}
@@ -239,7 +300,7 @@ class MPSequence(Sequence):
                     if self._has_data:
                         self.data.run(image, terminate=False, show_progress=False)
                 else:
-                    self.add_discard(image.discard_block, image.i)
+                    self._add_discard(image.discard_block, image.i)
 
     def terminate(self):
         if self._has_data:

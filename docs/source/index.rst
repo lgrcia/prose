@@ -44,6 +44,7 @@
    rst/installation.md
    notebooks/quickstart.ipynb
    rst/core
+   notebooks/sources.ipynb
    rst/blocks
    rst/api
    notebooks/acknowledgement.ipynb

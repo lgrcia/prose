@@ -3,27 +3,32 @@
 .. currentmodule:: prose
     
 
-What is a pipeline?
-===================
+Image, Block & Sequence
+=======================
 
 .. image:: ../static/pipeline.png
    :align: center
    :height: 400px
 
 
-A *pipeline*, strictly speaking, is a series of connected tubes running a fluid. In the scientific literature, the word refers to `processing pipelines <https://en.wikipedia.org/wiki/Pipeline_(computing)>`_ in which data are flowing, going through processing units as in tubes. |prose| contains the structure to build modular image processing pipelines with three key objects: ``Images`` going through ``Blocks`` assembled in ``Sequences``.
+.. A *pipeline*, strictly speaking, is a series of connected tubes running a fluid. In the scientific literature, the word refers to `processing pipelines <https://en.wikipedia.org/wiki/Pipeline_(computing)>`_ in which data are flowing, going through processing units as in tubes. 
+
+|prose| contains the structure to build modular image processing pipelines with three key objects: :class:`~prose.Image` going through a list of :class:`~prose.Block` assembled into a :class:`~prose.Sequence`.
 
 Image, Block and Sequence
 -------------------------------------
 
+- An :class:`~prose.Image` contains the :class:`~prose.Image` :attr:`~prose.Image.data` as well as its :attr:`~prose.Image.header` metadata.
+
 .. image:: ../static/image.png
    :align: center
    :width: 280px
+    
+- A :class:`~prose.Block` is a single unit of processing acting on the :class:`~prose.Image` object, which can |read| and |write| its attributes, or |modify|. 
 
+- A :class:`~prose.Sequence` is a succesion of :class:`~prose.Block`.
 
-An ``Image`` object contains the ``Image.data`` as well as metadata in ``Image.header``. A ``Block`` is a single unit of processing acting on the ``Image`` object, which can |read| and |write| any of its attributes or |modify|. Finally a ``Sequence`` is a succesion of ``Block``.
-
-With this architecture |prose| can deal with any type of FITS images (check ``Telescope`` object next).
+With this architecture |prose| can deal with any type of FITS images (check :class:`~prose.Telescope` object next).
 
 Example: Hello world
 --------------------

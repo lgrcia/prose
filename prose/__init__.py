@@ -18,6 +18,8 @@ from .core.sequence import Sequence
 from .core.image import Image
 from .observation import Observation
 from .observations import Observations
+from .core import source
+from .tutorials import example_image
 
 from pkg_resources import get_distribution
 __version__ = get_distribution('prose').version

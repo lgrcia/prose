@@ -1,5 +1,5 @@
 import numpy as np
-from . import viz, utils, Observation, models
+from . import viz, utils, Observation, models, Image
 from photutils.psf import extract_stars
 from astropy.table import Table
 from astropy.nddata import NDData
@@ -14,6 +14,9 @@ from datetime import datetime
 import xarray as xr
 import matplotlib.pyplot as plt
 import warnings
+import numpy as np
+import matplotlib.pyplot as plt
+from skimage.draw import line_aa
 
 
 def fits_image(data, header, destination):
@@ -272,3 +275,33 @@ def xo_lightcurve(time, period=3, r=0.1, t0=0, plot=False):
         plt.xlabel("time [days]")
 
     return light_curve.flatten()
+
+
+def source_example():
+
+    shape = (170, 60)
+    data = np.random.normal(loc=300., scale=10, size=shape)
+
+    X, Y = np.indices(data.shape)
+
+    def gaussian_psf(A, x, y, sx, sy, theta=0):
+        dx = X - x
+        dy = Y - y
+        a = (np.cos(theta) ** 2) / (2 * sx ** 2) + (np.sin(theta) ** 2) / (2 * sy ** 2)
+        b = -(np.sin(2 * theta)) / (4 * sx ** 2) + (np.sin(2 * theta)) / (4 * sy ** 2)
+        c = (np.sin(theta) ** 2) / (2 * sx ** 2) + (np.cos(theta) ** 2) / (2 * sy ** 2)
+        im = A * np.exp(-(a * dx ** 2 + 2 * b * dx * dy + c * dy ** 2))
+        return im
+
+    # star
+    data += gaussian_psf(400, 25, 30, 3.5, 3.5)
+
+    # galaxy
+    data += gaussian_psf(300, 80, 30, 10, 4, np.pi/4)
+
+    # line
+    x0 = 120
+    rr, cc, val = line_aa(x0, 10, x0+30, 50)
+    data[rr, cc] += val * 200
+
+    return Image(data=data.T, telescope="a")

@@ -203,7 +203,7 @@ class Peaks(Block):
     def citations(self):
         return "photutils"
 
-class SimplePointSourceDetection(SourceDetection):
+class _SimplePointSourceDetection(SourceDetection):
 
     def __init__(
         self, 
@@ -220,7 +220,7 @@ class SimplePointSourceDetection(SourceDetection):
         image.sources = self.clean(sources)
 
 
-class DAOFindStars(SimplePointSourceDetection):
+class DAOFindStars(_SimplePointSourceDetection):
     """
     DAOPHOT stars detection with :code:`photutils` implementation.
 
@@ -277,7 +277,7 @@ except:
     raise AssertionError("sep not installed")
 
 
-class SEDetection(SimplePointSourceDetection):
+class SEDetection(_SimplePointSourceDetection):
     
     def __init__(
         self, 

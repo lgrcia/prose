@@ -9,6 +9,7 @@ from .archive import sdss_image
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 import numpy as np
+from .simulations import source_example
 
 example_phot = "/Users/lgrcia/data/test_data_prose/Io_2021-11-28_TOI-4508.01_g'.phot"
 

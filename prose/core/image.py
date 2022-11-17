@@ -16,47 +16,43 @@ from pathlib import Path
 from .source import PointSource
 
 class Image:
-    r"""Base object containing FITS image data and metadata
-
-    When a FITS path (or header) is provided, keyword values are used to identify and instantiate a :py:class:`~prose.Telescope` object. Image attributes then use this object to retrieve specific image information such as ra, dec, untis... etc
-
-    Parameters
-    ----------
-    fitspath : str or Path, optional
-        file path , by default None
-    data : numpy.ndarray, optional
-        image data, by default None
-    header : dict-like, optional
-        image metadata, by default None 
-
-    Example
-    -------
-
-    .. jupyter-execute::
-
-        from prose.tutorials import image_sample
-
-        # loading and showing an example image
-        image = image_sample("05 38 44.851", "+04 32 47.68")
-        image.show()
-
-    .. jupyter-execute::
-        
-        image.header[0:10] # the 10 first lines
-
-    Once this object is instantiated, its parameters are mapped to the ones of the telescope, detected from the header information. This exposes conveniant attributres, for example:
-
-    .. jupyter-execute::
-
-        print(f"pixel scale : {image.pixel_scale:.2f}\nFOV: {image.fov}\nnight: {image.night_date}\n")
-
-    some of them being directly translated into astropy Quantity or datetime object.
-
-    """
-
     def __init__(self, fitspath=None, data=None, header=None, verbose=True, telescope=None, **kwargs):
-        """
-        Image instanciation
+        r"""Object containing image data and metadata
+
+        When a FITS path (or header) is provided, keyword values are used to identify and instantiate a :py:class:`~prose.Telescope` object. Image attributes then use this object to retrieve specific image information such as ra, dec, untis... etc
+
+        Parameters
+        ----------
+        fitspath : str or Path, optional
+            file path , by default None
+        data : numpy.ndarray, optional
+            image data, by default None
+        header : dict-like, optional
+            image metadata, by default None 
+
+        Example
+        -------
+
+        .. jupyter-execute::
+
+            from prose.tutorials import image_sample
+
+            # loading and showing an example image
+            image = image_sample("05 38 44.851", "+04 32 47.68")
+            image.show()
+
+        .. jupyter-execute::
+            
+            image.header[0:10] # the 10 first lines
+
+        Once this object is instantiated, its parameters are mapped to the ones of the telescope, detected from the header information. This exposes conveniant attributres, for example:
+
+        .. jupyter-execute::
+
+            print(f"pixel scale : {image.pixel_scale:.2f}\nFOV: {image.fov}\nnight: {image.night_date}\n")
+
+        some of them being directly translated into astropy Quantity or datetime object.
+
         """
         self.verbose = verbose
 
@@ -146,12 +142,23 @@ class Image:
 
     # backward compatibility
     # ----------------------
+    # TODO: handle SkyCoords input
+
     @property
     def stars_coords(self):
+        """Image sources pixel coordinates
+
+        Returns
+        -------
+        np.ndarray
+            coords 
+        """
         return np.array([s.coords for s in self.sources])
 
     @stars_coords.setter
     def  stars_coords(self, coords):
+        """Set Image sources pixel coordinates
+        """
         self.sources = np.array([PointSource(coords=s) for s in coords])
 
     @property 
@@ -160,6 +167,12 @@ class Image:
 
     @peaks.setter
     def peaks(self, peaks):
+        """Image sources peak values in ADUs
+
+        Returns
+        -------
+        np.array
+        """
         for i, p in enumerate(peaks):
             self.sources[i].peak = p
     # ----------------------
