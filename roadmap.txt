@@ -15,5 +15,5 @@
 ? check difference between using Background2D and BackgroundAnnulus
 
 2.3.0:
-- merge
-- publish
+x merge
+x publish

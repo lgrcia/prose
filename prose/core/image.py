@@ -13,7 +13,7 @@ from matplotlib import gridspec
 from astropy.io import fits
 from datetime import timedelta
 from pathlib import Path
-from .source import PointSource
+from .source import PointSource, PointSources
 
 class Image:
     def __init__(self, fitspath=None, data=None, header=None, verbose=True, telescope=None, **kwargs):
@@ -159,7 +159,7 @@ class Image:
     def  stars_coords(self, coords):
         """Set Image sources pixel coordinates
         """
-        self.sources = np.array([PointSource(coords=s) for s in coords])
+        self.sources = PointSources(np.array([PointSource(coords=s) for s in coords]))
 
     @property 
     def peaks(self):

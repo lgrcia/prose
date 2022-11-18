@@ -4,10 +4,19 @@ from .registration import clean_stars_positions
 from .. import Block
 from ..console_utils import info
 from scipy.interpolate import interp1d
-from ..core.source import PointSource, auto_source, TraceSource
+from ..core.source import *
 from astropy.stats import sigma_clipped_stats
 from photutils import DAOStarFinder
 from ..blocks.psf import cutouts
+
+__all__ = [
+    "SegmentedPeaks", 
+    "DAOFindStars", 
+    "SEDetection", 
+    "Peaks", 
+    "AutoSourceDetection", 
+    "PointSourceDetection"
+]
 
 class SourceDetection(Block):
     """Base class for sources detection.
@@ -103,7 +112,7 @@ class AutoSourceDetection(SourceDetection):
     def run(self, image):
         regions = self.regions(image)
         sources = np.array([auto_source(region) for region in regions])
-        image.sources = self.clean(sources)
+        image.sources = Sources(self.clean(sources))
     
 class PointSourceDetection(SourceDetection):
 
@@ -127,7 +136,7 @@ class PointSourceDetection(SourceDetection):
             regions = [regions[i] for i in idxs]
             
         sources = np.array([PointSource(region) for region in regions])
-        image.sources = self.clean(sources)
+        image.sources = PointSources(self.clean(sources))
 
     @property
     def citations(self):
@@ -145,7 +154,7 @@ class TraceDetection(SourceDetection):
         regions = [r for r in regions if r.axis_major_length > self.min_length]
             
         sources = np.array([TraceSource(region) for region in regions])
-        image.sources = sources
+        image.sources = Sources(sources)
 
     @property
     def citations(self):
@@ -217,7 +226,7 @@ class _SimplePointSourceDetection(SourceDetection):
     def run(self, image):
         coordinates, peaks = self.detect(image)
         sources = np.array([PointSource(coords=c, peak=p) for c, p in zip(coordinates, peaks)])
-        image.sources = self.clean(sources)
+        image.sources = PointSources(self.clean(sources))
 
 
 class DAOFindStars(_SimplePointSourceDetection):
