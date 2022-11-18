@@ -2,7 +2,7 @@ import numpy as np
 from scipy.spatial import KDTree
 from twirl import utils as tutils
 from skimage.transform import AffineTransform as skAT
-from ..block import Block
+from ..core.block import Block
 from ..console_utils import error
 from functools import partial
 
@@ -268,7 +268,7 @@ class XYShift(Block):
 
     The goal of **xyshift** is to check all the possible shifts from one star with respect to all the others, and to identify the most common shifts between stars of two different images.
 
-    .. image:: images/xyshift_principle.png
+    .. image:: /static/xyshift_principle.png
 
     """
 

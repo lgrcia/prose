@@ -26,11 +26,11 @@ except ModuleNotFoundError:
     TF_LOADED = True
 
 
-class PhotutilsCentroid(Block):
+class _PhotutilsCentroid(Block):
 
     
     def __init__(self, centroid_func, limit=None, cutout=21, **kwargs):
-        """Photutils centroiding (only prose >= 2.0.3)
+        """Photutils centroiding
 
         Parameters
         ----------
@@ -70,7 +70,7 @@ class PhotutilsCentroid(Block):
     def citations(self):
         return "photutils"
 
-class COM(PhotutilsCentroid):
+class COM(_PhotutilsCentroid):
     """Centroiding using ``photutils.centroids.centroid_com``
     
     |read| ``Image.stars_coords``
@@ -89,7 +89,7 @@ class COM(PhotutilsCentroid):
     def __init__(self, **kwargs):
         super().__init__(centroid_func=centroid_com, **kwargs)
 
-class Gaussian2D(PhotutilsCentroid):
+class Gaussian2D(_PhotutilsCentroid):
     """Centroiding using ``photutils.centroids.centroid_2dg``
     
     |read| ``Image.stars_coords``
@@ -108,7 +108,7 @@ class Gaussian2D(PhotutilsCentroid):
     def __init__(self, **kwargs):
         super().__init__(centroid_func=centroid_2dg, **kwargs)
 
-class Quadratic(PhotutilsCentroid):
+class Quadratic(_PhotutilsCentroid):
     """Centroiding using ``photutils.centroids.centroid_quadratic``
     
     |read| ``Image.stars_coords``
@@ -128,7 +128,7 @@ class Quadratic(PhotutilsCentroid):
         super().__init__(centroid_func=centroid_quadratic, **kwargs)
 
 
-class CNNCentroid(Block):
+class _CNNCentroid(Block):
 
     def __init__(self, cutout=15, filename=None, **kwargs):
         super().__init__(**kwargs)
@@ -175,7 +175,7 @@ class CNNCentroid(Block):
     def citations(self):
         return "tensorflow"
 
-class BalletCentroid(CNNCentroid):
+class BalletCentroid(_CNNCentroid):
     """Centroiding with  `ballet <https://github.com/lgrcia/ballet>`_.
 
     |write| ``Image.stars_coords``
@@ -200,7 +200,7 @@ class BalletCentroid(CNNCentroid):
         ])
 
 
-class OldNNCentroid(CNNCentroid):
+class _OldNNCentroid(_CNNCentroid):
 
     
     def __init__(self, **kwargs):

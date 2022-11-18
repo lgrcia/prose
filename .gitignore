@@ -56,3 +56,8 @@ dev
 **/*.egg-info
 **.vscode
 **.fits
+
+## docs
+docs/build
+docs/source/rst/generated
+**/.ipynb_checkpoints

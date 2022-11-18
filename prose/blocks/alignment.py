@@ -71,27 +71,42 @@ class AffineTransform(Block):
     """
 
     
-    def __init__(self, stars=True, data=True, inverse=False, output_shape=None, name=None):
+    def __init__(self, stars=True, data=True, inverse=False, output_shape=None, name=None, rotation=None, translation=None, scale=None, same_shape=True):
         super().__init__(name=name)
         self.data = data
         self.stars = stars
         self.inverse = inverse
         self.output_shape = output_shape
+        self.rotation = rotation
+        self.translation = translation
+        self.scale = scale
+        self.same_shape = same_shape
 
-    def run(self, image, **kwargs):
+    def run(self, image):
         if "transform" not in image.__dict__:
-            if "TROT" in image.header:
-                image.transform = skAffineTransform(
-                    rotation=image.header["TROT"],
-                    translation=(image.header["TDX"], image.header["TDY"]),
-                    scale=(image.header["TSCALEX"], image.header["TSCALEX"])
-                )
-            elif "TDX" in image.header:
-                image.transform = skAffineTransform(
-                    translation=(image.header["TDX"], image.header["TDY"]),
-                )
+            # translation
+            if self.translation is not None:
+                translation = self.translation
+            elif "TDX" in image.header and "TDY" in image.header:
+                translation = (image.header["TDX"], image.header["TDY"])
             else:
-                raise AssertionError("Could not find transformation matrix")
+                translation = None
+            
+            # rotation
+            if self.rotation is not None:
+                rotation = self.rotation
+            else:
+                rotation = image.header.get("TROT", None)
+
+            # scale
+            if self.scale is not None:
+                scale = self.scale
+            elif "TSCALEX" in image.header and "TSCALEY" in image.header:
+                scale = (image.header["TSCALEX"], image.header["TSCALEX"])
+            else:
+                scale = None
+
+            image.transform = skAffineTransform(rotation=rotation, translation=translation, scale=scale)
 
         transform = image.transform
 
@@ -106,17 +121,17 @@ class AffineTransform(Block):
                     image.data, 
                     transform.inverse, 
                     cval=np.nanmedian(image.data), 
-                    output_shape=self.output_shape
+                    output_shape=self.output_shape if self.same_shape else None
                 )
             except np.linalg.LinAlgError:
                 image.discard = True
 
         if self.stars:
-            try:
-                image.stars_coords = transform(image.stars_coords)
-            except np.linalg.LinAlgError:
-                image.discard = True
-    
-    @property
-    def citations(self):
-        return "scikit-image"
+            if hasattr(image, "stars_coords"):
+                try:
+                    image.stars_coords = transform(image.stars_coords)
+                except np.linalg.LinAlgError:
+                    image.discard = True
+
+    def citations(self, image):
+        return "astropy", "numpy"

@@ -1,4 +1,5 @@
-from prose import Observation, Telescope, FitsManager, viz
+from numpy import block
+from prose import Observation, Telescope, FitsManager, viz, Sequence, blocks, tutorials
 from prose.pipeline import Calibration, AperturePhotometry
 import matplotlib.pyplot as plt
 import shutil
@@ -6,8 +7,8 @@ import unittest
 import shutil
 import shutil
 from pathlib import Path
-from prose import Telescope, blocks
 from prose.reports import Report, Summary
+from prose.tutorials import example_image
 
 
 RAW = Path("synthetic_dataset")
@@ -24,6 +25,13 @@ if TEST_FODLER.exists():
 
 # Creating new folders
 TEST_FODLER.mkdir(exist_ok=True)
+
+class TestSequence(unittest.TestCase):
+
+    def test_pass_sequence(self):
+        image = tutorials.example_image()
+        s = Sequence([blocks.Pass()])
+        s.run(image)
 
 class TestReport(unittest.TestCase):
 
@@ -127,6 +135,42 @@ class TestReduction(unittest.TestCase):
         calib = Calibration(bias=[], darks=[], flats=[], overwrite=True)
         calib.run(fm.all_images, TEST_FODLER / destination)
 
+
+    def test_master_calib_as_input(self):
+
+        import numpy as np
+        from prose.tutorials import simulate_observation
+        from prose import Telescope
+
+        time = np.linspace(0, 0.15, 100) + 2450000
+        target_dflux = 1 + np.sin(time*100)*1e-2
+        simulate_observation(time, target_dflux, RAW)
+
+        _ = Telescope({
+            "name": "A",
+            "trimming": [40, 40],
+            "pixel_scale": 0.66,
+            "latlong": [31.2027, 7.8586],
+            "keyword_light_images": "light"
+        })
+
+        # reduction
+        # ---------
+        from prose import FitsManager, Image, Sequence, blocks
+
+        # ref
+        fm = FitsManager(RAW, depth=2)
+
+        calib1 = blocks.Calibration(darks=fm.all_darks, bias=fm.all_bias, flats=fm.all_flats)
+        Image(data=calib1.master_bias).writeto(RAW/"bias")
+        Image(data=calib1.master_dark).writeto(RAW/"darks")
+        Image(data=calib1.master_flat).writeto(RAW/"flats")
+
+        calib2 = blocks.Calibration(darks=str(RAW/"darks"), bias=str(RAW/"bias"), flats=str(RAW/"flats"))
+        assert np.allclose(calib1.master_bias, calib2.master_bias)
+        assert np.allclose(calib1.master_dark, calib2.master_dark)
+        assert np.allclose(calib1.master_flat, calib2.master_flat)
+
     def test_sequence_reduction(self):
 
         # simulated data
@@ -208,11 +252,13 @@ class TestReduction(unittest.TestCase):
         photometry.run(fm.all_images)
 
         # diff flux
-        obs = Observation(photometry.xarray.to_observation(photometry.stack.stack, sequence=photometry))
+        obs = Observation(photometry.xarray.to_observation(photometry.stack.image, sequence=photometry))
         obs.target = 0
         obs.broeg2005()
         obs.plot()
         plt.savefig(TEST_FODLER / "sequence_reduction.png")
+        obs.save(TEST_FODLER / "sequence_reduction.phot")
+
 
 
 # class TestTFOPObservation(unittest.TestCase):
@@ -321,6 +367,32 @@ class TestObservation(unittest.TestCase):
         viz.plot_marks(*gaias.T, color="y")
         plt.savefig(result_file)
         plt.close()
+
+class TestSourceAndDetection(unittest.TestCase):
+
+    def __init__(self, *args, **kwargs):
+        unittest.TestCase.__init__(self, *args, **kwargs)
+
+    def test_sourcedetection(self):
+        from prose.blocks.detection import AutoSourceDetection, PointSourceDetection, DAOFindStars, SEDetection, SegmentedPeaks
+        import matplotlib.pyplot as plt
+        from prose.tutorials import example_image
+
+        im = example_image()
+
+        classes = [AutoSourceDetection, PointSourceDetection, DAOFindStars, SEDetection, SegmentedPeaks]
+
+        plt.figure(None, (len(classes)*5, 5))
+
+        for i, c in enumerate(classes):
+            ax = plt.subplot(1, len(classes), i+1)
+            im2 = c()(im)
+            im2.show(ax=ax)
+            ax.set_title(c.__name__)
+
+        result_file = TEST_FODLER / "test_detection_blocks.png"
+        plt.tight_layout()
+        plt.savefig(result_file)
 
 
 class TestArgsRegistration(unittest.TestCase):

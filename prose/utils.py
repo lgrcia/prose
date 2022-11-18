@@ -516,3 +516,10 @@ def full_class_name(o):
     if module == 'builtins':
         return klass.__qualname__ # avoid outputs like 'builtins.str'
     return module + '.' + klass.__qualname__
+
+
+def binn2D(arr, factor):
+    new_shape = np.array(arr.shape) // factor
+    shape = (new_shape[0], factor,
+             new_shape[1], factor)
+    return np.mean(arr.reshape(shape).mean(-1), 1)

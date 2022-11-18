@@ -1,6 +1,5 @@
 import sqlite3
 import numpy as np
-from tqdm import tqdm
 import pandas as pd
 from pathlib import Path
 from .io import get_files, fits_to_df
@@ -16,6 +15,7 @@ UNIQUE_FIELDS = ",".join(UNIQUE_FIELDS_LIST)
 QMARKS_UNIQUE = ",".join(['?']*len(UNIQUE_FIELDS.split(",")))
 
 PWD = Path(__file__).parent
+
 
 def in_value(value):
     return f"'{value}'" if isinstance(value, str) else value
@@ -49,7 +49,7 @@ class FitsManager:
         by default False
     """
     
-    def __init__(self, folders=None, files=None, depth=0, hdu=0, extension=".f*t*", file=None, batch_size=False, scan=None, verbose=True):
+    def __init__(self, folders=None, files=None, depth=0, hdu=0, extension=".f*t*", file=None, batch_size=False, scan=None, verbose=True, to_df=None):
         if file is None:
             file = ":memory:"
 
@@ -66,6 +66,11 @@ class FitsManager:
             assert files is None, "Only 'folders' or 'files' must be provided, not both"
             files = self.get_files(folders, extension, depth=depth, scan=scan)
         
+        if to_df is None:
+            self.fits_to_df = fits_to_df
+        else:
+            self.fits_to_df = to_df
+
         if files is not None:
             if len(files) > 0:
                 self.scan_files(files, batch_size=batch_size, hdu=hdu, verbose=verbose)
@@ -161,14 +166,14 @@ class FitsManager:
 
                 if batch_size is not False:
                     for batch in _progress(batches):
-                        df = fits_to_df(batch, verbose=False, hdu=hdu, verbose_os=verbose_os)
+                        df = self.fits_to_df(batch, verbose=False, hdu=hdu, verbose_os=verbose_os)
                         for row in df.values:
                             if telescope is not None:
                                 row[2] = telescope
                             self._insert(*row)
                         self.con.commit()
                 else:
-                    df = fits_to_df(files_to_scan, verbose=True, hdu=hdu, verbose_os=verbose_os)
+                    df = self.fits_to_df(files_to_scan, verbose=True, hdu=hdu, verbose_os=verbose_os)
                     for row in df.values:
                         if telescope is not None:
                             row[2] = telescope
@@ -326,7 +331,6 @@ class FitsManager:
     def darks(self, i, show=False, **kwargs):
         return self.observation_files(i, show=show, **kwargs)['darks']
 
-
     @property
     def all_flats(self):
         """fits paths of the observation flats images
@@ -359,11 +363,11 @@ class FitsManager:
         list of str
         """
         return self.files(imtype="reduced")
-    
+
     def label(self, i):
         date, telescope, filter, _, target, *_ = self.observations(id=i).values[0]
         return f"{telescope}_{date.replace('-', '')}_{target}_{filter}"
-        
+
     @property
     def obs_name(self):
         """Observation name ({telescope}_{date}_{target}_{filter}) if a single observation is present
@@ -375,7 +379,7 @@ class FitsManager:
 
     def __repr__(self):
         return str(self.observations())
-    
+
     def _repr_html_(self):
         return self.observations()._repr_html_()
 

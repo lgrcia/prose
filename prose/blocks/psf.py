@@ -17,7 +17,7 @@ from ..console_utils import info
 
 __all__ = ["MedianPSF", "Cutouts"]
 
-def cutouts(image, stars, size=15):
+def cutouts(image, stars, size=15, same=True):
     """Custom version to extract stars cutouts
 
     Parameters
@@ -46,8 +46,11 @@ def cutouts(image, stars, size=15):
         _stars = [None]*len(stars)
         stars = extract_stars(NDData(data=image), stars_tbl, size=size)
         idxs = np.array([s.id_label for s in stars])
-        for i, s in enumerate(stars):
-            _stars[idxs[i]] = s
+        if same:
+            for i, s in enumerate(stars):
+                _stars[idxs[i]] = s
+        else:
+            _stars = stars
         return idxs, _stars
     else:
         stars_tbl = Table(
@@ -131,7 +134,7 @@ class Cutouts(Block):
         image.cutouts_idxs, image.cutouts = cutouts(image.data, image.stars_coords, size=self.size)
         if self.clean:
             if hasattr(image, "stars_coords"):
-                image.stars_coords = image.stars_coords[image.cutouts_idxs]
+                image.sources = image.sources[image.cutouts_idxs]
             image.cutouts = [image.cutouts[i] for i in image.cutouts_idxs]
             image.cutouts_idxs = np.arange(len(image.cutouts))
 
@@ -173,7 +176,7 @@ class MedianPSF(Block):
             image.psf =  np.median(normalized_cutouts[0:self.n], axis=0)
 
 
-class PSFModel(Block):
+class _PSFModel(Block):
 
     def __init__(self, reference=None, **kwargs):
         super().__init__(**kwargs)
@@ -237,7 +240,7 @@ class PSFModel(Block):
         return "scipy"
 
 
-class FWHM(PSFModel):
+class FWHM(_PSFModel):
     """
     Fast empirical FWHM
 
@@ -299,7 +302,7 @@ class FWHM(PSFModel):
         plt.ylabel("ADUs")
         f = 0
 
-class FastGaussian(PSFModel):
+class FastGaussian(_PSFModel):
     """
     Fit a symetric 2D Gaussian model to an image effective PSF
     """
@@ -338,7 +341,7 @@ class FastGaussian(PSFModel):
         return "scipy", "photutils"
 
 
-class Gaussian2D(PSFModel):
+class Gaussian2D(_PSFModel):
     r"""
     Fit an elliptical 2D Gaussian model to an image effective PSF
 
@@ -467,7 +470,7 @@ class Gaussian2D(PSFModel):
         return "scipy"
 
 
-class Moffat2D(PSFModel):
+class Moffat2D(_PSFModel):
     r"""
     Fit an elliptical 2D Moffat model to an image effective PSF
 

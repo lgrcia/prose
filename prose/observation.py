@@ -21,8 +21,16 @@ from . import blocks
 from prose import Sequence
 from matplotlib import gridspec
 from .blocks import catalogs
+from tqdm import tqdm
+from .console_utils import TQDM_BAR_FORMAT
 
 warnings.simplefilter('ignore', category=VerifyWarning)
+
+def _progress(do=True):
+    if do:
+        return lambda x: tqdm(x, unit="observations", ncols=80, bar_format=TQDM_BAR_FORMAT)
+    else:
+        return lambda x: x
 
 
 class Observation(ApertureFluxes):
@@ -88,7 +96,7 @@ class Observation(ApertureFluxes):
     def copy(self):
         return self.__copy__()
 
-    def to_csv(self, destination, sep=" "):
+    def to_csv(self, destination, sep=" ", old=True):
         """Export a typical csv of the observation's data
 
         Parameters
@@ -99,6 +107,22 @@ class Observation(ApertureFluxes):
         sep : str, optional
             separation string within csv, by default " "
         """
+
+        # TODO
+        new_fields = {
+            "bjd_tdb": "BJD-TDB",
+            "diff_flux": "DIFF_FLUX",
+            "diff_error": "ERROR",
+            "x": "dx_MOVE",
+            "y": "dy_MOVE",
+            "fwhm": "FWHM",
+            "fwhm_x": "FWHMx",
+            "fwhm_y": "FWHMy",
+            "sky": "SKYLEVEL",
+            "airmass": "AIRMASS",
+            "exposure": "EXPOSURE",
+        }
+
         df = pd.DataFrame(
             {
                 "BJD-TDB" if self.time_format == "bjd_tdb" else "JD-UTC": self.time,
@@ -118,7 +142,7 @@ class Observation(ApertureFluxes):
         df.to_csv(destination, sep=sep, index=False)
 
     # TODO: if None, phot if path was provided , if direct, autoname else filename
-    def save(self, destination=None):
+    def save(self, destination=None, verbose=True):
         """Save current observation
 
         Parameters
@@ -130,7 +154,8 @@ class Observation(ApertureFluxes):
         destination = self.phot if destination is None else destination
         self.xarray.attrs.update(self.stack.header)
         self.xarray.to_netcdf(destination)
-        info(f"saved {str(Path(destination).absolute())}")
+        if verbose:
+            info(f"saved {str(Path(destination).absolute())}")
 
     # Convenience
     # -----------
@@ -184,12 +209,12 @@ class Observation(ApertureFluxes):
             return self._meridian_flip
         else:
             has_flip = hasattr(self.xarray, "flip")
-            if has_flip:
-                try:
-                    np.all(np.isnan(self.flip))
-                    return None
-                except TypeError:
-                    pass
+            # if has_flip:
+            #     try:
+            #         self.flip = np.array(self.flip, dtype='str')
+            #         np.all(np.isnan(self.flip))
+            #     except TypeError:
+            #         pass
 
             if has_flip:
                 if "WEST" in self.flip:
@@ -381,19 +406,18 @@ class Observation(ApertureFluxes):
         -------
         dict
             PSF fit info (theta, std_x, std_y, fwhm_x, fwhm_y)
-
-
-        Example
-        -------
-        .. jupyter-execute::
-
-            from prose import Observation
-            from prose.tutorials import example_phot
-        
-            obs = Observation(example_phot)
-            obs.plot_psf_model()
-            
         """
+
+        # Example
+        # -------
+        # .. jupyter-execute::
+
+        #     from prose import Observation
+        #     from prose.tutorials import example_phot
+        
+        #     obs = Observation(example_phot)
+        #     obs.plot_psf_model()
+            
 
         self.assert_stack()
         
@@ -412,17 +436,18 @@ class Observation(ApertureFluxes):
             list of systematic to include (must be in self), by default None
         ylim : tuple, optional
             plot ylim, by default (0.98, 1.02)
-
-        Example
-        -------
-        .. jupyter-execute::
-
-            from prose import Observation
-            from prose.tutorials import example_phot
-        
-            obs = Observation(example_phot)
-            obs.plot_systematics()
         """
+
+        # Example
+        # -------
+        # .. jupyter-execute::
+
+        #     from prose import Observation
+        #     from prose.tutorials import example_phot
+        
+        #     obs = Observation(example_phot)
+        #     obs.plot_systematics()
+
         if fields is None:
             fields = ["dx", "dy", "fwhm", "airmass", "sky"]
 
@@ -463,19 +488,19 @@ class Observation(ApertureFluxes):
 
     def plot_raw_diff(self):
         """Plot raw target flux and differantial flux 
-
-
-        Example
-        -------
-        .. jupyter-execute::
-
-            from prose import Observation
-            from prose.tutorials import example_phot
-        
-            obs = Observation(example_phot)
-            obs.plot_raw_diff()
-
         """
+
+
+        # Example
+        # -------
+        # .. jupyter-execute::
+
+        #     from prose import Observation
+        #     from prose.tutorials import example_phot
+        
+        #     obs = Observation(example_phot)
+        #     obs.plot_raw_diff()
+
 
         plt.subplot(211)
         plt.title("Differential lightcurve", loc="left")
@@ -503,18 +528,18 @@ class Observation(ApertureFluxes):
             bin size used to estimate error, by default 0.005 (in days)
         aperture : int, optional
             chosen aperture, by default None
-
-        Example
-        -------
-        .. jupyter-execute::
-
-            from prose import Observation
-            from prose.tutorials import example_phot
-        
-            obs = Observation(example_phot)
-            obs.plot_precision()
-
         """
+
+        # Example
+        # -------
+        # .. jupyter-execute::
+
+        #     from prose import Observation
+        #     from prose.tutorials import example_phot
+        
+        #     obs = Observation(example_phot)
+        #     obs.plot_precision()
+
 
         n_bin = int(bins / (np.mean(self.exptime) / (60 * 60 * 24)))
 
@@ -614,18 +639,17 @@ class Observation(ApertureFluxes):
             radius of inner annulus to display, by default None corresponds to inner radius saved
         rout : [type], optional
             radius of outer annulus to display, by default None corresponds to outer radius saved
-
-        Example
-        -------
-        .. jupyter-execute::
-
-            from prose import Observation
-            from prose.tutorials import example_phot
-        
-            obs = Observation(example_phot)
-            obs.plot_radial_psf()
-
         """
+
+        # Example
+        # -------
+        # .. jupyter-execute::
+
+        #     from prose import Observation
+        #     from prose.tutorials import example_phot
+        
+        #     obs = Observation(example_phot)
+        #     obs.plot_radial_psf()
 
         self.assert_stack()
 
@@ -639,7 +663,7 @@ class Observation(ApertureFluxes):
             x, y = self.stars[star]
 
         Y, X = np.indices(self.stack.shape)
-        cutout_mask = (np.abs(X - x + 0.5) < n) & (np.abs(Y - y + 0.5) < n)
+        cutout_mask = (np.abs(X - x) < n) & (np.abs(Y - y) < n)
         inside = np.argwhere((cutout_mask).flatten()).flatten()
         radii = (np.sqrt((X - x) ** 2 + (Y - y) ** 2)).flatten()[inside]
         idxs = np.argsort(radii)
@@ -702,12 +726,13 @@ class Observation(ApertureFluxes):
         plt.imshow(im, cmap="Greys_r", aspect="auto", origin="lower")
 
         plt.axis("off")
+        center = (n+0.5, n+0.5)
         if aperture is not None:
-            ax2.add_patch(plt.Circle((n, n), aperture, ec='grey', fill=False, lw=2))
+            ax2.add_patch(plt.Circle(center, aperture, ec='grey', fill=False, lw=2))
         if rin is not None:
-            ax2.add_patch(plt.Circle((n, n), rin, ec='grey', fill=False, lw=2))
+            ax2.add_patch(plt.Circle(center, rin, ec='grey', fill=False, lw=2))
         if rout is not None:
-            ax2.add_patch(plt.Circle((n, n), rout, ec='grey', fill=False, lw=2))
+            ax2.add_patch(plt.Circle(center, rout, ec='grey', fill=False, lw=2))
         if star is None:
             ax2.text(0.05, 0.05, f"{self.target}", fontsize=12, color="white", transform=ax2.transAxes)
         else:
@@ -778,19 +803,19 @@ class Observation(ApertureFluxes):
             max number of stars to show, by default None,
         flip : bool, optional
             whether to flip image, by default False
+        """
 
-        Example
-        -------
-        .. jupyter-execute::
+        # Example
+        # -------
+        # .. jupyter-execute::
 
-            from prose import Observation
-            from prose.tutorials import example_phot
+        #     from prose import Observation
+        #     from prose.tutorials import example_phot
         
-            obs = Observation(example_phot)
-            obs.show_stars()
+        #     obs = Observation(example_phot)
+        #     obs.show_stars()
             
 
-        """
         self.assert_stack()
 
         ax = self.stack.show(stars=False, ax=ax)
@@ -840,23 +865,30 @@ class Observation(ApertureFluxes):
                 texts = ["Comparison stars", "Target"]
                 viz.circles_legend(colors, texts, ax=ax)
 
-    def keep_good_stars(self, lower_threshold=3., upper_threshold=35000., trim=10, keep=None, inplace=True):
-        """Keep only  stars with a median flux higher than `threshold`*sky. 
+    def keep_good_stars(self, threshold=3., upper_threshold=35000., trim=10, keep=None, inplace=True):
+        """Keep only  stars with a median flux higher than ``threshold*sky``. 
         
         This action will reorganize stars indexes (target id will be recomputed) and reset the differential fluxes to raw.
 
         Parameters
         ----------
-        lower_threshold : float
+        threshold : float
             threshold for which stars with flux/sky > threshold are kept, default is 3
-        trim : float
-            value in pixels above which stars are kept, default is 10 to avoid stars too close to the edge
-        keep : int or list
-            number of stars to exclude (starting from 0 if int).
-        inplace: bool
-            whether to replace current object or return a new one
+        upper_threshold : float
+            maximum value allowed for the peaks median in time, default is 35000
+        trim : int, optional
+            value in pixels above which stars are kept, default is 10 to avoid stars too close to the edge, default is 10
+        keep : int or list, optional
+            number of stars to exclude (starting from 0 if int), default is None (all stars kept)
+        inplace : bool
+            whether to replace current object or return a new one, by default True
+
+        Returns
+        -------
+        _type_
+            _description_
         """
-        good_stars = np.argwhere((np.median(self.peaks, 1)/np.median(self.sky) > lower_threshold) & (np.median(self.peaks, 1) < upper_threshold)).squeeze()
+        good_stars = np.argwhere((np.median(self.peaks, 1)/np.median(self.sky) > threshold) & (np.median(self.peaks, 1) < upper_threshold)).squeeze()
         mask = np.any(np.abs(self.stars[good_stars] - max(self.stack.shape) / 2) > (max(self.stack.shape) - 2 * trim) / 2, axis=1)
         bad_stars = np.argwhere(mask == True).flatten()
 
@@ -940,18 +972,19 @@ class Observation(ApertureFluxes):
         ----------
         width : int, optional
             pixel width of the html widget, by default 500
-
-        Example
-        -------
-
-         .. jupyter-execute::
-
-            from prose import Observation
-            from prose.tutorials import example_phot
-
-            obs = Observation(example_phot)
-            obs.lc_widget()
         """
+
+        # Example
+        # -------
+
+        #  .. jupyter-execute::
+
+        #     from prose import Observation
+        #     from prose.tutorials import example_phot
+
+        #     obs = Observation(example_phot)
+        #     obs.lc_widget()
+
         from IPython.core.display import display, HTML
         import json
         from pathlib import Path
@@ -1030,17 +1063,23 @@ class Observation(ApertureFluxes):
             self.plate_solve()
         if name == "gaia":
             self.stack = blocks.catalogs.GaiaCatalog(correct_pm=correct_pm)(self.stack)
+        if name == "tess":
+            self.stack = blocks.catalogs.TESSCatalog()(self.stack)
+        else:
+            error(f"No catalog named {name}")
 
-    def set_catalog_target(self, catalog_name, designation):
+    def set_catalog_target(self, catalog_name, designation, verbose=True):
         self.query_catalog(catalog_name, correct_pm=True)
-        gaia_i = np.flatnonzero(self.stack.catalogs[catalog_name].id == designation)
+        i = np.flatnonzero(self.stack.catalogs[catalog_name].id == designation)
 
-        if len(gaia_i) == 0:
+        if len(i) == 0:
+            if verbose: error("No target found")
             self.target = None
         else:
-            gaia_i = gaia_i[0]
-            gxy = self.stack.catalogs[catalog_name][["x", "y"]].values[gaia_i]
-            self.target = int(np.argmin(np.linalg.norm(self.stars - gxy, axis=1)))
+            i = i[0]
+            catalog_xy = self.stack.catalogs[catalog_name][["x", "y"]].values[i]
+            self.target = int(np.argmin(np.linalg.norm(self.stars - catalog_xy, axis=1)))
+            if verbose: info(f"target is {self.target}")
 
     def set_gaia_target(self, gaia_id, verbose=False, raise_far=True):
         if not self.stack.plate_solved:

@@ -17,7 +17,7 @@ from ..console_utils import info
 from pathlib import Path
 from . import Cutout2D
 import matplotlib.patches as patches
-from ..image import Image
+from ..core.image import Image
 from astropy.nddata import Cutout2D as astopy_Cutout2D
 from astropy.units.quantity import Quantity
 from astropy.stats import sigma_clipped_stats
@@ -28,6 +28,7 @@ __all__ = [
     "SaveReduced",
     "RemoveBackground",
     "CleanCosmics",
+    "WriteTo",
     "Pass",
     "ImageBuffer",
     "Set",
@@ -41,7 +42,8 @@ __all__ = [
     "MedianStack",
     "XArray2",
     "MPCalibration",
-    "Del"
+    "Del",
+    "Function"
 ]
 
 class DataBlock(Block):
@@ -76,7 +78,11 @@ class Stack(DataBlock):
         self._stack = None
         self._n_images = 0
         self._header = ref.header.copy() if ref else {}
-        self.stack = ref.copy() if ref else None
+        self.image = ref.copy() if ref else None
+
+    @property
+    def stack(self):
+        return self.image
 
     def run(self, image):
         #TODO check that all images have same telescope?
@@ -101,11 +107,11 @@ class Stack(DataBlock):
         self._header["REDDATE"] = Time.now().to_value("fits")
         self._header["NIMAGES"] = self._n_images
 
-        if self.stack is None:
-            self.stack = Image(data=self._stack, header=self._header)
+        if self.image is None:
+            self.image = Image(data=self._stack, header=self._header)
         else:
-            self.stack.data = self._stack
-            self.stack.header = self._header
+            self.image.data = self._stack
+            self.image.header = self._header
 
     def concat(self, block):
         if self._stack is not None:
@@ -184,6 +190,53 @@ class SaveReduced(Block):
     def concat(self, block):
         self.files = [*self.files, *block.files]
 
+class WriteTo(Block):
+    
+    def __init__(self, destination, label="processed", imtype=True, overwrite=False, name=None):
+        """Write image to FITS file
+
+        Parameters
+        ----------
+        destination : str
+            destination folder (folder and parents created if not existing)
+        label : str, optional
+            added at the end of filename as {original_path}_{label}.fits, by default "processed"
+        imtype : bool, optional
+            If bool, wether to set image imtype as label (image.header["IMTYPE"] = label). If str imtype label to set (image.header["IMTYPE"] = imtype) , by default True
+        overwrite : bool, optional
+            wether to overwrite existing file, by default False
+        name : str, optional
+            name of the block, by default None
+        """
+        super().__init__(name=name)
+        self.destination = Path(destination)
+        self.label = label
+        self.overwrite = overwrite
+        if isinstance(imtype, bool):
+            if imtype:
+                self.imtype = self.label
+            else:
+                self.imtype = None
+        else:
+            assert isinstance(imtype, str), "imtype must be a bool or a str"
+            self.imtype = imtype
+            
+        self.files = []
+        
+    def run(self, image):
+        self.destination.mkdir(exist_ok=True, parents=True)
+        
+        new_hdu = fits.PrimaryHDU(image.data)
+        new_hdu.header = image.header
+        
+        if self.imtype is not None:
+            image.header[image.telescope.keyword_image_type] = self.imtype
+        
+        fits_new_path = self.destination / (Path(image.path).stem + f"_{self.label}.fits")
+
+        new_hdu.writeto(fits_new_path, overwrite=self.overwrite)
+        self.files.append(fits_new_path)
+
 class RemoveBackground(Block):
 
     
@@ -260,7 +313,8 @@ class Set(Block):
         self.kwargs = kwargs
 
     def run(self, image):
-        image.__dict__.update(self.kwargs)
+        for name, value in self.kwargs.items():
+            setattr(image, name, value)
 
 class Flip(Block):
     """Flip an image according to a reference
@@ -290,6 +344,15 @@ class Flip(Block):
         flip_value = image.flip
         if flip_value != self.reference_flip_value:
             image.data = image.data[::-1, ::-1]
+
+class Function(Block):
+
+    def __init__(self, f, name=None):
+        super().__init__(name=name)
+        self.f = f
+
+    def run(self, image):
+        self.f(image)
 
 # TODO document
 class Get(DataBlock):
@@ -379,6 +442,9 @@ class XArray(DataBlock):
             self.variables = block.variables.copy()
 
     def to_observation(self, stack, sequence=None):
+        if len(stack.stars_coords) != len(self.xarray.star):
+            raise ValueError("stack stars_coords must be aligned to xarray stars_coords (stars_coords probably coming from the reference in the Stack block)")
+
         xarr = utils.image_in_xarray(stack, self.xarray, stars=True) # adding reference as a stack
         xarr = xarr.transpose("apertures", "star", "time", ...) # ... just needed
 
@@ -515,7 +581,7 @@ class Calibration(Block):
     """
 
     
-    def __init__(self, darks=None, flats=None, bias=None, loader=Image, easy_ram=True, **kwargs):
+    def __init__(self, darks=None, flats=None, bias=None, loader=Image, easy_ram=True, verbose=True, **kwargs):
 
         super().__init__(**kwargs)
             
@@ -525,6 +591,7 @@ class Calibration(Block):
         self.master_bias = self._produce_master(bias, "bias")
         self.master_dark = self._produce_master(darks, "dark")
         self.master_flat = self._produce_master(flats, "flat")
+        self.verbose = verbose
 
     def calibration(self, image, exp_time):
         with np.errstate(divide='ignore', invalid='ignore'):
@@ -532,9 +599,12 @@ class Calibration(Block):
 
     def _produce_master(self, images, image_type):
         if images is not None:
-            assert isinstance(images, (list, np.ndarray)), "images must be list or array"
+            assert isinstance(images, (list, np.ndarray, str)), "images must be list or array or path"
             if len(images) == 0:
                 images = None
+
+        if isinstance(images, str):
+            return self.loader(images).data
 
         def _median(im):
             if self.easy_ram:
@@ -545,7 +615,7 @@ class Calibration(Block):
         _master = []
 
         if images is None:
-            info(f"No {image_type} images set")
+            if self.verbose: info(f"No {image_type} images set")
             if image_type == "dark":
                 return 0
             elif image_type == "bias":
@@ -553,7 +623,7 @@ class Calibration(Block):
             elif image_type == "flat":
                 return 1
         else:
-            info(f"Building master {image_type}")
+            if self.verbose: info(f"Building master {image_type}")
 
         for image_path in images:
             image = self.loader(image_path)
@@ -785,9 +855,9 @@ class Del(Block):
 
 class Drizzle(Block):
     
-    def __init__(self, reference, pixfrac=1.):
+    def __init__(self, reference, pixfrac=1., **kwargs):
         from drizzle import drizzle
-        super().__init__(self)
+        super().__init__(self, **kwargs)
         self.reference = reference
         self.pixfrac = pixfrac
         self.drizzle = drizzle.Drizzle(outwcs=reference.wcs, pixfrac=pixfrac)

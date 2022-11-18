@@ -10,6 +10,7 @@ from . import models
 from . import viz
 from .console_utils import info
 
+np.seterr(divide='ignore', invalid='ignore')
 
 def nu(n, sw, sr):
     return (sw ** 2) / n + sr ** 2
@@ -213,7 +214,7 @@ class ApertureFluxes:
 
     @property
     def aperture(self):
-        return self.xarray.attr.get('aperture', -1)
+        return self.xarray.attrs.get('aperture', -1)
         #TODO: aperture not set error over all Observation 
 
     @aperture.setter

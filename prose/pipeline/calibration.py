@@ -195,7 +195,7 @@ class Calibration:
         # Saving outpout
         # first image serves as reference for info (not reference image because it
         # can be from another observation (we encountered this use case)
-        self.stack = self.calibration.stack.stack
+        self.stack = self.calibration.stack.image
         self.save()
 
     @property

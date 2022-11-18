@@ -239,46 +239,6 @@ class PhotutilsAperturePhotometry(Block):
 
 
 class SEAperturePhotometry(Block):
-    r"""
-    OUTDATED - TODO
-
-    Aperture photometry using `sep <https://sep.readthedocs.io>`_, a python wrapper around the C Source Extractor.
-
-    The error (e.g. in ADU) is then computed following:
-
-    .. math::
-
-        \sigma = \sqrt{S + (A_p + \frac{A_p}{A_n})(b + r^2 + \frac{gain^2}{2}) + scint }
-
-
-    .. image:: images/aperture_phot.png
-        :align: center
-        :width: 110px
-
-    with :math:`S` the flux (ADU) within an aperture of area :math:`A_p`, :math:`b` the background flux (ADU) within an annulus of area :math:`A_n`, :math:`r` the read-noise (ADU) and :math:`scint` is a scintillation term expressed as:
-
-
-    .. math::
-
-        scint = \frac{S_fd^{2/3} airmass^{7/4} h}{16T}
-
-    with :math:`S_f` a scintillation factor, :math:`d` the aperture diameter (m), :math:`h` the altitude (m) and :math:`T` the exposure time.
-
-    The positions of individual stars are taken from :code:`Image.stars_coords` so one of the detection block should be used, placed before this one.
-
-
-    Parameters
-    ----------
-    fits_explorer : FitsManager
-        FitsManager containing a single observation
-    apertures : ndarray or list, optional
-        apertures in fraction of fwhm, by default None, i.e. np.arange(0.1, 10, 0.25)
-    r_in : int, optional
-        radius of the inner annulus in fraction of fwhm, by default 5
-    r_out : int, optional
-        radius of the outer annulus in fraction of fwhm, by default 8
-    """
-
     
     def __init__(self, apertures=None, r_in=5, r_out=8, fwhm_scale=True, **kwargs):
 
@@ -301,50 +261,52 @@ class SEAperturePhotometry(Block):
         self.annulus_area = None
         self.fwhm_scale = fwhm_scale
 
+    def set_apertures(self, stars_coords, fwhm=1):
+
+        self.annulus_final_rin = self.annulus_inner_radius * fwhm
+        self.annulus_final_rout = self.annulus_outer_radius * fwhm
+        self.aperture_final_r = fwhm*self.apertures
+
+        self.annulus_area = np.pi * (self.annulus_final_rout - self.annulus_final_ri)**2
+        self.circular_apertures_area = np.pi * self.aperture_final_r**2
+
+        self.apertures = np.repeat(self.aperture_final_r[..., None], len(stars_coords), axis=1)
+        self.n_stars = len(stars_coords)
+
     def run(self, image):
-        if self.fwhm_scale:
-            r_in = self.annulus_inner_radius * image.fwhm
-            r_out = self.annulus_outer_radius * image.fwhm
-            r = self.apertures * image.fwhm
-        else:
-            r_in = self.annulus_inner_radius
-            r_out = self.annulus_outer_radius
-            r = self.apertures
+        try:
+            if self._has_fix_scale:
+                self.set_apertures(image.stars_coords, self.scale)
+            elif self.scale:
+                self.set_apertures(image.stars_coords, image.fwhm)
+            else:
+                self.set_apertures(image.stars_coords)
+        except ZeroDivisionError: # temporary
+            image.discard=True
+            return None
 
-        self.n_stars = len(image.stars_coords)
-        image.fluxes = np.zeros((self.n_apertures, self.n_stars))
+        data = image.data.copy()
+        data[data < 0] = 0
 
-        data = image.data.copy().byteswap().newbyteorder()
+        x, y = image.stars_coords.T
+        image.apertures_area = self.circular_apertures_area
+        image.annulus_sky = sep.sum_circann(data, x, y, self.annulus_final_rin, self.annulus_final_rout, subpix=0)
+        image.sky = image.annulus_sky.median()
+        image.annulus_area = self.annulus_area
+        image.annulus_rin = self.annulus_final_rin
+        image.annulus_rout = self.annulus_final_rout
+        image.apertures_radii = self.aperture_final_r
 
-        for i, _r in enumerate(r):
-            image.fluxes[i, :], fluxerr, flag = sep.sum_circle(
-                data, 
-                *image.stars_coords.T, 
-                _r, bkgann=(r_in, r_out), subpix=0)
+        fluxes = sep.sum_circle(data, x, y, self.apertures, subpix=0)
 
-        image.sky = 0
-        image.apertures_area = np.pi * r**2
-        image.annulus_area = np.pi * (r_out**2 - r_in**2)
+        # dummy values if negative or nan
+        fluxes[np.isnan(fluxes)] = 1
+        fluxes[fluxes < 0 ] = 1
 
-        # fluxes = np.zeros((self.n_apertures, self.n_stars))
-        # bkg = np.zeros((self.n_apertures, self.n_stars))
-
-        # for i, _r in enumerate(r):
-        #     fluxes[i, :], _, _ = sep.sum_circle(
-        #         data, 
-        #         *image.stars_coords.T, 
-        #         _r, bkgann=(r_in, r_out), subpix=0)
-            
-        #     bkg[i, :], _, _ = sep.sum_circann(data, *image.stars_coords.T, r_in, r_out, subpix=0)
-
-        #     image.fluxes = fluxes - bkg
-
-        # image.sky = np.mean(bkg)
-        # image.apertures_area = np.pi * r**2
-        # image.annulus_area = np.pi * (r_out**2 - r_in**2)
-        # image.header["sky"] = np.mean(image.sky)
+        image.fluxes = fluxes
 
         self.compute_error(image)
+        image.header["sky"] = np.mean(image.sky)
 
     def compute_error(self, image):
 

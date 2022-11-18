@@ -9,6 +9,7 @@ from .archive import sdss_image
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 import numpy as np
+from .simulations import source_example
 
 example_phot = "/Users/lgrcia/data/test_data_prose/Io_2021-11-28_TOI-4508.01_g'.phot"
 
@@ -18,13 +19,13 @@ def image_sample(*coords):
     fov = [12, 12]*u.arcmin
     return sdss_image(skycoord, fov)
 
-def example_image(seed=43):
+def example_image(seed=43, n=300, w=600):
     np.random.seed(seed)
 
     # Creating the observation
-    obs = ObservationSimulation(600, Telescope.from_name("A"))
+    obs = ObservationSimulation(w, Telescope.from_name("A"))
     obs.set_psf((3.5, 3.5), 45, 4)
-    obs.add_stars(300, [0, 1])
+    obs.add_stars(n, [0, 1])
     return Image(data=obs.image(0, 300), header=dict(TELESCOP="A"))
 
 def simulate_observation(time, dflux, destination, dx=3):

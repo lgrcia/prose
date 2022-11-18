@@ -42,7 +42,7 @@ def image_gaia_query(image, *args, limit=3000, correct_pm=True, wcs=True, circul
 
     return table
 
-class CatalogBlock(Block):
+class _CatalogBlock(Block):
 
     
     def __init__(self, name, mode=None, limit=10000, **kwargs):
@@ -112,11 +112,11 @@ class PlateSolve(Block):
 
 
 
-class GaiaCatalog(CatalogBlock):
+class GaiaCatalog(_CatalogBlock):
     
     
     def __init__(self, correct_pm=True, limit=10000, **kwargs):
-        CatalogBlock.__init__(self, "gaia", limit=limit, **kwargs)
+        _CatalogBlock.__init__(self, "gaia", limit=limit, **kwargs)
         self.correct_pm = correct_pm
 
     def get_catalog(self, image):
@@ -132,14 +132,14 @@ class GaiaCatalog(CatalogBlock):
         return table
 
     def run(self, image):
-        CatalogBlock.run(self, image)
+        _CatalogBlock.run(self, image)
 
 
-class TESSCatalog(CatalogBlock):
+class TESSCatalog(_CatalogBlock):
     
     
     def __init__(self, limit=10000, **kwargs):
-        CatalogBlock.__init__(self, "tess", limit=limit, **kwargs)
+        _CatalogBlock.__init__(self, "tess", limit=limit, **kwargs)
 
     def get_catalog(self, image):
         max_fov = image.fov.max()*np.sqrt(2)/2
@@ -150,4 +150,4 @@ class TESSCatalog(CatalogBlock):
         return table
 
     def run(self, image):
-        CatalogBlock.run(self, image)
+        _CatalogBlock.run(self, image)
