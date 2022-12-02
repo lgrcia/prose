@@ -1,7 +1,13 @@
-2.3.0:
-- merge
+3.0.0:
+- save image as hdf5 with associated products
+- keep Observation?
+- Make full use of photutils.segmentation instead of skimage
+- Documentation make clearer argument type (like `~numpy.array`)
+- A clear documentation on image axes and angle orientation (like source.coord or source.orientation). Indeed this differs from numpy convention opposite from the way we usually deal with geometric points
+- use astropy lazy property 
 
 2.3.1:
+- put into dev branch
 - Turn all cutouts to prose.cutouts.Cutouts objects which must include:
     - cutout fitting
     - profile from cutout (almost done, test for single stars on small cutout)
@@ -11,10 +17,6 @@
 ? try photutils segmented detection, compare against skimage
 ? check difference between using Background2D and BackgroundAnnulus
 
-3.0.0:
-- save image as hdf5 with associated products
-- keep Observation?
-- Make full use of photutils.segmentation instead of skimage
-- Documentation make clearer argument type (like `~numpy.array`)
-- A clear documentation on image axes and angle orientation (like source.coord or source.orientation). Indeed this differs from numpy convention opposite from the way we usually deal with geometric points
-- use astropy lazy property
+2.3.0:
+- merge
+- publish
