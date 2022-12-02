@@ -166,12 +166,15 @@ class FitsManager:
 
                 if batch_size is not False:
                     for batch in _progress(batches):
-                        df = self.fits_to_df(batch, verbose=False, hdu=hdu, verbose_os=verbose_os)
-                        for row in df.values:
-                            if telescope is not None:
-                                row[2] = telescope
-                            self._insert(*row)
-                        self.con.commit()
+                        try:
+                            df = self.fits_to_df(batch, verbose=False, hdu=hdu, verbose_os=verbose_os)
+                            for row in df.values:
+                                if telescope is not None:
+                                    row[2] = telescope
+                                self._insert(*row)
+                            self.con.commit()
+                        except:
+                            "ERROR, batch ignored"
                 else:
                     df = self.fits_to_df(files_to_scan, verbose=True, hdu=hdu, verbose_os=verbose_os)
                     for row in df.values:
