@@ -8,6 +8,16 @@ import matplotlib.pyplot as plt
 
 color = [0.51, 0.86, 1.]
 
+__all__ = [
+    "Source",
+    "PointSource",
+    "ExtendedSource",
+    "TraceSource",
+    "auto_source",
+    "Sources",
+    "PointSources"
+]
+
 def distance(p1, p2):
     return np.sqrt(np.power(p1[0] - p2[0], 2) + np.power(p1[1] - p2[1], 2))
 
@@ -453,6 +463,85 @@ class TraceSource(Source):
 
     def annulus(self, r0=1.05, r1=1.4, scale=True):
         return self.rectangular_annulus(r0, r1, scale=scale)
+
+class Sources:
+
+    def __init__(self, sources, source_type=None):
+        """List of sources
+
+        Parameters
+        ----------
+        sources : list-like
+            list of sources
+        """
+        self.source_type = source_type
+        if self.source_type is not None:
+            for s in sources:
+                assert isinstance(s, self.source_type), f"list can only contain {self.source_type}"
+        self.sources = sources
+
+    def __getitem__(self, i):
+        return self.sources[i]
+
+    def __len__(self):
+        return len(self.sources)
+
+    def __str__(self):
+        return str(self.sources)
+
+    def __repr__(self):
+        return self.sources.__repr__()
+
+    def copy(self):
+        return self.__class__(self.sources.copy())
+            
+    @property
+    def coords(self):
+        return np.array([source.coords for source in self.sources])
+
+    def apertures(self, r, scale=True):
+        return [source.aperture(r, scale=scale) for source in self.sources]
+
+
+class PointSources(Sources):
+    
+    def __init__(self, sources):
+        """List of point sources
+
+        Mainly used to produce optimized global photutils.aperture objects for faster photometry
+
+        Parameters
+        ----------
+        sources : list-like
+            list of point like sources
+        """
+        super().__init__(sources, source_type=PointSource)
+        
+    def apertures(self, r, **kwargs):
+        """`photutils.aperture.CircularAperture` centered on all sources
+
+        Parameters
+        ----------
+        r : float
+            radius
+        Returns
+        -------
+        photutils.aperture.CircularAperture
+        """
+        return CircularAperture(self.coords, r)
+    
+    def annulus(self, r0, r1):
+        """`photutils.aperture.CircularAnnulus` centered on all sources
+
+        Parameters
+        ----------
+        r0, r1 : float
+            inner and outer annulus radii
+        Returns
+        -------
+        photutils.aperture.CircularAperture
+        """
+        return CircularAnnulus(self.coords, r0, r1)
 
 
     

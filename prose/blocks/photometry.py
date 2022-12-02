@@ -321,3 +321,92 @@ class SEAperturePhotometry(Block):
                 image.exposure,
                 airmass=image.header[image.telescope.keyword_airmass],
             )
+
+
+# -------
+from prose import Block
+import numpy as np
+from photutils.aperture import aperture_photometry, Aperture
+from astropy.table import vstack
+
+def apertures_photometry(image, apertures):
+    all_fluxes = []
+    areas = []
+    if isinstance(apertures, Aperture):
+        all_fluxes = apertures.do_photometry(image.data)[0]
+        areas.append(apertures.area)
+    else:
+        for ap in apertures:
+            all_fluxes.append(ap.do_photometry(image.data)[0][0])
+            areas.append(ap.area)
+    return np.array(all_fluxes), np.array(areas)
+
+class AperturePhotometry(Block):
+
+    def __init__(self, r, scale=None, name=None, verbose=False, label="apertures"):
+        super().__init__(name, verbose)
+        if isinstance(r, (float, int)):
+            r = [r]
+            
+        self.r = r
+        self.scale = scale
+        self.label = label
+        
+    def run(self, image):
+        sources = image.sources
+        fluxes = np.zeros((len(sources), len(self.r)))
+        areas = np.zeros_like(fluxes)
+        for i, r in enumerate(self.r):
+            if self.scale is None:
+                apertures = sources.apertures(r, scale=False)
+            elif self.scale == 'image':
+                apertures = sources.apertures(r*image.fwhm, scale=False)
+            elif self.scale == 'source':
+                apertures = sources.apertures(r, scale=True)
+            fluxes[:, i], areas[:, i] = apertures_photometry(image, apertures)
+
+        image.fluxes = fluxes
+        image.errors = np.sqrt(fluxes)
+        image.apertures_area = areas
+
+    def apertures(self, image, **kwargs):
+        sources = image.sources
+        fluxes = np.zeros((len(sources), len(self.r)))
+        areas = np.zeros_like(fluxes)
+        apertures = []
+        for i, r in enumerate(self.r):
+            if self.scale is None:
+                apertures.append(sources.apertures(r, scale=False))
+            elif self.scale == 'image':
+                apertures.append(sources.apertures(r*image.fwhm, scale=False))
+            elif self.scale == 'source':
+                apertures.append(sources.apertures(r, scale=True))
+        
+        return apertures
+
+        
+class AnnulusPhotometry(Block):
+    
+    def __init__(self, r0=1.1, r1=1.5, scale=True, name=None, verbose=False, subtract=True):
+        super().__init__(name, verbose)
+            
+        self.r0 = r0
+        self.r1 = r1
+        self.scale = scale
+        self.subtract = subtract
+        self.label = label
+        
+    def run(self, image):
+        sources = image.sources
+        fluxes = np.zeros(len(sources))
+        for i, s in enumerate(sources):
+            annulus = s.annulus(self.r0, self.r1, scale=self.scale)
+            table = aperture_photometry(image.data, annulus)
+            fluxes[i] = table["aperture_sum"].value[0]
+                
+        setattr(image, f"{self.label}_fluxes", np.atleast_2d(fluxes).T)
+        
+        if self.subtract is not None:
+            label = f"{self.subtract}_fluxes"
+            fluxes = getattr(image, label) - getattr(image, f"{self.label}_fluxes")
+            setattr(image, label, fluxes)
