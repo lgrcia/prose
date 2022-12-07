@@ -9,6 +9,7 @@ import shutil
 from pathlib import Path
 from prose.reports import Report, Summary
 from prose.tutorials import example_image
+import numpy as np
 
 
 RAW = Path("synthetic_dataset")
@@ -394,6 +395,26 @@ class TestSourceAndDetection(unittest.TestCase):
         plt.tight_layout()
         plt.savefig(result_file)
 
+    def test_source_orientation(self):
+        from prose.blocks.detection import AutoSourceDetection
+        import matplotlib.pyplot as plt
+        from prose.tutorials import source_example
+
+        im = source_example()
+        im = AutoSourceDetection()(im)
+        print(im.sources[2].orientation, np.arctan2(40, 30))
+        computed = np.rad2deg(im.sources[2].orientation)
+        expected = np.rad2deg(np.arctan2(40, 30))
+        im.show(stars=False)
+        for s in im.sources:
+            plt.plot(*s.vertexes.T, c="k")
+            plt.plot(*s.co_vertexes.T, c="k")
+            s.aperture(1.1, True).plot(color="yellow")
+            s.annulus(1, 1.2).plot(color="r")
+        plt.tight_layout()
+        plt.savefig(TEST_FODLER / "test_source_orientation.png")
+        print(computed, expected)
+        assert np.abs(computed - expected) < 1, ""
 
 class TestArgsRegistration(unittest.TestCase):
 
