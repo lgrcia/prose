@@ -17,7 +17,7 @@
     <a href="https://arxiv.org/abs/2111.02814">
       <img src="https://img.shields.io/badge/paper-yellow.svg?style=flat" alt="paper"/>
     </a>
-    <a href="https://lgrcia.github.io/prose-docs">
+    <a href="https://prose.readthedocs.io">
       <img src="https://img.shields.io/badge/documentation-black.svg?style=flat" alt="documentation"/>
     </a>
   </p>
@@ -52,7 +52,7 @@ image.show()           # detected stars
 image.plot_psf_model() # PSF model
 ```
 
-While being run on a single image, a Sequence is designed to be run on list of images (paths) and provides the architecture to build powerful pipelines. For more details check [Quickstart](https://lgrcia.github.io/prose-docs/html/notebooks/quickstart.html) and [What is a pipeline?](https://lgrcia.github.io/prose-docs/html/rst/core.html)
+While being run on a single image, a Sequence is designed to be run on list of images (paths) and provides the architecture to build powerful pipelines. For more details check [Quickstart](https://prose.readthedocs.io/en/latest/notebooks/quickstart.html) and [What is a pipeline?](https://prose.readthedocs.io/en/latest/rst/core.html)
 
 ## Default pipelines
  *prose* features default pipelines to perform common tasks like:
@@ -71,7 +71,7 @@ photometry.run(calib.phot)
 
 ```
 
-However, the package is designed to avoid pre-implemented black-boxes, in favor of transparent pipelines. For a practical illustration of that, check our [Photometry tutorial](https://lgrcia.github.io/prose-docs/html/notebooks/photometry.html).
+However, the package is designed to avoid pre-implemented black-boxes, in favor of transparent pipelines. For a practical illustration of that, check our [Photometry tutorial](https://prose.readthedocs.io/en/latest/notebooks/photometry.html).
 
 ## Installation
 
