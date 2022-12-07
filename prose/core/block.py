@@ -18,19 +18,19 @@ class Block(object):
 
     All prose blocks must be child of this parent class
     """
-    @staticmethod
-    def __new__(cls, *args, **kwargs):
-        s = inspect.signature(cls.__init__)
-        # TODO:
-        # make copy if copy function available on each args and kwargs
+    # @staticmethod
+    # def __new__(cls, *args, **kwargs):
+    #     s = inspect.signature(cls.__init__)
+    #     # TODO:
+    #     # make copy if copy function available on each args and kwargs
 
-        defaults = {name: value.default for name, value in s.parameters.items() if value.default != inspect._empty}
-        argspecs = s.bind(None, *args, **kwargs).arguments
-        defaults.update(argspecs)
-        del defaults['self']
-        cls._args = defaults
-        cls.__new__.__signature__ = s
-        return super().__new__(cls)
+    #     defaults = {name: value.default for name, value in s.parameters.items() if value.default != inspect._empty}
+    #     argspecs = s.bind(None, *args, **kwargs).arguments
+    #     defaults.update(argspecs)
+    #     del defaults['self']
+    #     cls._args = defaults
+    #     cls.__new__.__signature__ = s
+    #     return super().__new__(cls)
 
     def __init__(self, name=None, verbose=False):
         _name  = self.__class__.__name__
