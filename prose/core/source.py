@@ -312,6 +312,16 @@ class Source:
     def __str__(self):
         table = "\n".join([f"  {n}".ljust(8) + f"{v}" for n, v in self._repr_dict().items()])
         return f"{self._desc}\n  {'-'*(len(self._desc)-2)}\n{table}"
+
+    def centroid_isophote(self):
+        isolist = self.fit_isophotes()
+        origin = np.array(self._region.bbox)[0:2][::-1]
+        return np.array([isolist[0].x0, isolist[0].y0]) + origin
+
+    def centroid_max(self):
+        y0, x0 = np.unravel_index(np.argmax(self._region.image_intensity), self._region.image.shape)
+        dy, dx, _, _ = self._region.bbox
+        return np.array([x0+dx, y0+dy])
     
 def auto_source(region, i=None, trace=0.3, extended=0.9, discard=False):
     if region is None:
@@ -410,18 +420,6 @@ class ExtendedSource(Source):
             extension to minor/major axis, by default 6
         """
         self.plot_ellipse(radius, **kwargs)
-
-    def compute_centroid(self, method="max"):
-        """Recompute source centroid (inplace). To use this method, source must be obtained from a region 
-        """
-        if method == "max":
-            y0, x0 = np.unravel_index(np.argmax(self._region.image_intensity), self._region.image.shape)
-            dy, dx, _, _ = self._region.bbox
-            self.coords = np.array([x0+dx, y0+dy])
-        elif method == "isophote":
-            isolist = self.fit_isophotes()
-            origin = np.array(self._region.bbox)[0:2][::-1]
-            self.coords = np.array([isolist[0].x0, isolist[0].y0]) + origin
 
     def aperture(self, r=1, scale=True):
         return self.elliptical_aperture(r, scale=scale)

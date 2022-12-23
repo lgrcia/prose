@@ -52,7 +52,7 @@ class Cutout:
         Y, X = np.indices(self.data.shape)
         radii = (np.sqrt((X - x) ** 2 + (Y - y) ** 2)).flatten()
         d, values = self.profile(radii)
-        return binning(d, values, 1)
+        return binning(d, values, binn, mean_method=np.median)
     
     def profile(self, d):
         idxs = np.argsort(d)
@@ -89,8 +89,8 @@ class Cutout:
     
     def plot_axes(self, ax=None, c="w", alpha=0.2, lw=1, **kwargs):
         xlim, ylim = plt.xlim(), plt.ylim()
-        plt.axline(* self.central_source.a_extent, c=c, alpha=alpha, lw=lw, **kwargs)
-        plt.axline(*self.central_source.b_extent, c=c, alpha=alpha, lw=lw, **kwargs)
+        plt.axline(* self.central_source.vertexes, c=c, alpha=alpha, lw=lw, **kwargs)
+        plt.axline(*self.central_source.co_vertexes, c=c, alpha=alpha, lw=lw, **kwargs)
         plt.xlim(xlim); plt.ylim(ylim)
         
     def mask(self, central=False, single=False):
