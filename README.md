@@ -25,6 +25,16 @@
 
  *prose* is a Python package to build pipelines dedicated to astronomical image processing, all based on pipy packages 📦. Beyond providing the blocks to do so, it features default pipelines to perform common tasks such as automated calibration, reduction and photometry.
 
+*powered by*
+<p align="center">
+  <a href="https://www.astropy.org/">
+  <img src="https://docs.astropy.org/en/stable/_static/astropy_banner.svg" height=50/>
+  </a>
+  <a href="https://photutils.readthedocs.io">
+  <img src="https://photutils.readthedocs.io/en/stable/_static/photutils_banner.svg" height=50/>
+  </a>
+  <p align="center">
+
 ## Example
 
 Here is a quick example pipeline to characterize the point-spread-function (PSF) of an example image
