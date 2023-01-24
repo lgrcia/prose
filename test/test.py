@@ -75,9 +75,9 @@ class TestBlocksCentroids(TestBlocks):
         self.image = PointSourceDetection()(self.image)
 
     def test_Balletentroid(self):
-        from prose.blocks.centroids import BalletCentroid
+        from prose.blocks.centroids import CentroidBallet
 
-        BalletCentroid()(self.image)
+        CentroidBallet()(self.image)
 
 
 class TestBlocksPSF(TestBlocks):

@@ -4,7 +4,7 @@ from ..utils import easy_median
 import numpy as np
 
 __all__ = [
-    "SortSources", "Get"
+    "SortSources", "Get", "Calibration", "CleanBadPixels"
 ]
 
 # TODO: document and test

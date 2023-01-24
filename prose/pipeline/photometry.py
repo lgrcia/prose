@@ -224,7 +224,7 @@ class AperturePhotometry(Photometry):
                  sigclip=3.,
                  psf=blocks.psf.Gaussian2D,
                  photometry=blocks.PhotutilsAperturePhotometry,
-                 centroid=blocks.BalletCentroid,
+                 centroid=blocks.CentroidBallet,
                  show=False,
                  verbose=True,
                  twirl=True):

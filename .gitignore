@@ -58,6 +58,7 @@ dev
 **.fits
 
 ## docs
-docs/build
-docs/source/rst/generated
+docs/_build
+docs/md/generated
+_docs
 **/.ipynb_checkpoints

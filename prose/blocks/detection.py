@@ -85,7 +85,13 @@ class _SourceDetection(Block):
         return regions
     
 class AutoSourceDetection(_SourceDetection):
+    """Blah
 
+    Parameters
+    ----------
+    _SourceDetection : _type_
+        _description_
+    """
     def __init__(
         self, 
         threshold=4, 

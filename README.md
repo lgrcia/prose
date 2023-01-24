@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  A python package to build FITS images pipelines.
+  A python package to build image processing pipelines. Built for Astronomy
   <br>
   <p align="center">
     <a href="https://github.com/lgrcia/prose">
@@ -23,7 +23,7 @@
   </p>
 </p>
 
- *prose* is a Python package to build pipelines dedicated to astronomical image processing, all based on pipy packages 📦. Beyond providing the blocks to do so, it features default pipelines to perform common tasks such as automated calibration, reduction and photometry.
+ *prose* is a Python package to build image processing pipelines, built for Astronomy and using only pip packages 📦. Beyond featuring the blocks to build pipelines from scratch, it provides pre-implemented ones to perform common tasks such as automated calibration, reduction and photometry.
 
 *powered by*
 <p align="center">

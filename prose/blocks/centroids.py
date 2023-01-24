@@ -9,10 +9,10 @@ from astropy.utils.exceptions import AstropyUserWarning
 
 
 __all__ = [
-    "COM",
-    "Gaussian2D",
-    "Quadratic",
-    "BalletCentroid",
+    "CentroidCOM",
+    "CentroidGaussian2D",
+    "CentroidQuadratic",
+    "CentroidBallet",
 ]
 
 TF_LOADED = False
@@ -72,7 +72,7 @@ class _PhotutilsCentroid(Block):
         return "photutils"
 
 
-class COM(_PhotutilsCentroid):
+class CentroidCOM(_PhotutilsCentroid):
     """Centroiding using ``photutils.centroids.centroid_com``
     
     |read| ``Image.sources``
@@ -91,7 +91,7 @@ class COM(_PhotutilsCentroid):
     def __init__(self, limit=None, cutout=21):
         super().__init__(centroid_func=centroid_com, limit=limit, cutout=cutout)
 
-class Gaussian2D(_PhotutilsCentroid):
+class CentroidGaussian2D(_PhotutilsCentroid):
     """Centroiding using ``photutils.centroids.centroid_2dg``
     
     |read| ``Image.sources``
@@ -110,7 +110,7 @@ class Gaussian2D(_PhotutilsCentroid):
     def __init__(self, limit=None, cutout=21):
         super().__init__(centroid_func=centroid_2dg, limit=limit, cutout=cutout)
 
-class Quadratic(_PhotutilsCentroid):
+class CentroidQuadratic(_PhotutilsCentroid):
     """Centroiding using ``photutils.centroids.centroid_quadratic``
     
     |read| ``Image.sources``
@@ -172,7 +172,7 @@ class _CNNCentroid(Block):
     def citations(self):
         return "tensorflow"
 
-class BalletCentroid(_CNNCentroid):
+class CentroidBallet(_CNNCentroid):
     """Centroiding with  `ballet <https://github.com/lgrcia/ballet>`_.
 
     |write| ``Image.stars_coords``

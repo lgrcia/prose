@@ -45,16 +45,20 @@ setup(
         "twirl",
     ],
     extras_require={
-        'docs': [
+        "docs": [
             "sphinx",
             "nbsphinx",
-            "jupyter-sphinx",
-            "sphinx-copybutton",        
             "docutils",
             "jupyterlab",
             "myst-parser",
             "twine",
-            "furo"
+            "sphinx-book-theme",
+            "black",
+            "myst_nb",
+            "sphinx-copybutton",
+            "jupyter",
+            "ipywidgets",
+            "black"
         ]
     },
     zip_safe=True,

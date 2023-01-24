@@ -1,4 +1,4 @@
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 from ..console_utils import TQDM_BAR_FORMAT, warning, error
 from collections import OrderedDict
 from tabulate import tabulate
@@ -18,8 +18,6 @@ def progress(name, x, **kwargs):
         x,
         desc=name,
         unit="images",
-        ncols=80,
-        bar_format=TQDM_BAR_FORMAT,
         **kwargs
     )
 

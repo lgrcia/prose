@@ -1,0 +1,27 @@
+```{image} _static/prose_illustration.png
+:width: 300px
+:align: center
+```
+
++++
+
+A Python package to build image processing pipelines, built for Astronomy and using only pip packages 📦. Beyond featuring the blocks to build pipelines from scratch, it provides pre-implemented ones to perform common tasks such as automated calibration, reduction and photometry.
+
+```{admonition} Where to start?
+:class: tip 
+🌌 [Install](md/installation.md) prose and read about its [core objects](ipynb/core.ipynb).
+
+📦 Explore the library of pre-implemented [blocks](md/blocks.rst)
+
+✨ Obtain a light curve from raw images by following the [Basic Photometry tutorial](ipynb/photometry.ipynb)
+```
+
+```{toctree}
+:maxdepth: 2
+:caption: Table of content
+
+md/get_started
+../md/tutorials
+../md/case_studies
+../md/api
+```
