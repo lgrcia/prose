@@ -1,5 +1,9 @@
 # prose
 
+```{warning} 
+This is prose 3.0.0, a version still under construction. [Latest doc here](https://prose.readthedocs.io/en/latest/)
+```
+
 ```{image} _static/prose_illustration.png
 :width: 300px
 :align: center
