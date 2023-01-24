@@ -11,7 +11,7 @@ This is prose 3.0.0, a version still under construction. [Latest doc here](https
 
 +++
 
-A Python package to build image processing pipelines, built for Astronomy and using only pip packages 📦. Beyond featuring the blocks to build pipelines from scratch, it provides pre-implemented ones to perform common tasks such as automated calibration, reduction and photometry.
+A Python package to build image processing pipelines, built for Astronomy. Beyond featuring the blocks to build pipelines from scratch, it provides pre-implemented ones to perform common tasks such as automated calibration, reduction and photometry.
 
 ```{admonition} Where to start?
 :class: tip 

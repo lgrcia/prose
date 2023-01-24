@@ -23,7 +23,7 @@
   </p>
 </p>
 
- *prose* is a Python package to build image processing pipelines, built for Astronomy and using only pip packages 📦. Beyond featuring the blocks to build pipelines from scratch, it provides pre-implemented ones to perform common tasks such as automated calibration, reduction and photometry.
+ *prose* is a Python package to build image processing pipelines, built for Astronomy. Beyond featuring the blocks to build pipelines from scratch, it provides pre-implemented ones to perform common tasks such as automated calibration, reduction and photometry.
 
 *powered by*
 <p align="center">
@@ -51,8 +51,8 @@ image = example_image()
 sequence = Sequence([
     blocks.SegmentedPeaks(),  # stars detection
     blocks.Cutouts(size=21),  # cutouts extraction
-    blocks.MedianPSF(),       # PSF building
-    blocks.psf.Moffat2D(),    # PSF modeling
+    blocks.MedianEPSF(),       # PSF building
+    blocks.Moffat2D(),    # PSF modeling
 ])
 
 sequence.run(image)
