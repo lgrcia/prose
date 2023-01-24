@@ -1,3 +1,5 @@
+# prose
+
 ```{image} _static/prose_illustration.png
 :width: 300px
 :align: center
