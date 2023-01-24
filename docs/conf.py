@@ -82,7 +82,7 @@ myst_enable_extensions = [
 ]
 
 templates_path = ["_templates"]
-nb_execution_mode = "off"
+nb_execution_mode = "auto"
 
 
 rst_prolog = """
