@@ -43,6 +43,9 @@ setup(
         "jinja2",
         "tensorflow",
         "twirl",
+        "jax",
+        "jaxlib",
+        "jaxopt",
     ],
     extras_require={
         "docs": [
