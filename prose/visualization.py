@@ -14,7 +14,6 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.ticker import AutoMinorLocator
 from matplotlib.legend_handler import HandlerPatch
 import matplotlib.patches as mpatches
-from .models import transit
 
 
 def plot(

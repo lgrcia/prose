@@ -11,7 +11,6 @@ import multiprocessing as mp
 import sys
 import yaml
 from ..utils import full_class_name
-from ..citations import _all_citations
 
 def progress(name, x, **kwargs):
     return tqdm(

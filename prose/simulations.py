@@ -1,10 +1,9 @@
 import numpy as np
-from . import viz, utils, models, Image, Telescope
+from . import viz, utils, Image, Telescope
 from photutils.psf import extract_stars
 from astropy.table import Table
 from astropy.nddata import NDData
 import celerite2 as celerite
-from .utils import distances
 from os import path
 from astropy.time import Time
 import os
@@ -14,11 +13,9 @@ from datetime import datetime
 import xarray as xr
 import matplotlib.pyplot as plt
 import warnings
-import numpy as np
-import matplotlib.pyplot as plt
 from skimage.draw import line_aa
 from .archive import sdss_image
-from astropy.coordinates import SkyCoord
+import shutil
 from astropy import units as u
 
 def fits_image(data, header, destination):
@@ -191,7 +188,7 @@ class ObservationSimulation:
 
     def clean_around_target(self, radius):
         close_by = np.setdiff1d(np.argwhere(
-            np.array(distances(self.positions[:, :, 0].T, self.positions[self.target, :, 0])) < radius).flatten(),
+            np.array(utils.distances(self.positions[:, :, 0].T, self.positions[self.target, :, 0])) < radius).flatten(),
                                 self.target)
         self.remove_stars(close_by)
 
@@ -338,3 +335,69 @@ def image_sample(*coords, fov=12):
     skycoord = utils.check_skycoord(coords)
     fov = [fov, fov]*u.arcmin
     return sdss_image(skycoord, fov)
+
+def disorganised_folder(destination):
+
+    if path.exists(destination):
+        shutil.rmtree(destination)
+
+    os.mkdir(destination)
+
+    # Telescope A with filter a
+    for i in range(5):
+        data = np.random.random((10, 10))
+        fits_image(data, dict(JD=i, TELESCOP="A", FILTER="a"), path.join(destination, f"A-test{i}.fits"))
+
+        # Telescope A with filter a
+    for i in range(5):
+        data = np.random.random((10, 10))
+        fits_image(data, dict(JD=i, TELESCOP="A", FILTER="ab"), path.join(destination, f"A-test{i}-ab.fits"))
+
+    # Telescope B
+    for i in range(5):
+        data = np.random.random((20, 10))
+        fits_image(data, dict(JD=i, TELESCOP="B", FILTER="b"), path.join(destination, f"B-test{i}.fits"))
+
+    # Telescope A with filter b
+    for i in range(5):
+        data = np.random.random((10, 10))
+        fits_image(data, dict(JD=i, TELESCOP="A", FILTER="b"), path.join(destination, f"A-bis-test{i}.fits"))
+    # some calibration files
+    for i in range(2):
+        data = np.random.random((10, 10))
+        fits_image(
+            data,
+            dict(JD=i, TELESCOP="A", IMAGETYP="dark"), path.join(destination, f"A-bis-test_d{i}.fits"))
+    for i in range(2):
+        data = np.random.random((10, 10))
+        fits_image(
+            data,
+            dict(JD=i, TELESCOP="A", FILTER="b", IMAGETYP="flat"), path.join(destination, f"A-bis-testf1_{i}.fits"))
+    for i in range(2):
+        data = np.random.random((10, 10))
+        fits_image(
+            data,
+            dict(JD=i, TELESCOP="A", FILTER="c", IMAGETYP="flat"), path.join(destination, f"A-bis-testf2_{i}.fits"))
+
+    for i in range(2):
+        data = np.random.random((10, 10))
+        fits_image(
+            data,
+            dict(JD=i, TELESCOP="A", FILTER="c", IMAGETYP="dark", EXPTIME=8), path.join(destination, f"A-bis-testf2_{i}_8s_dark.fits"))
+
+
+def moving_object(time, destination):
+
+    # Creating the observation
+    obs = ObservationSimulation(600, Telescope.from_name("A"))
+    obs.set_psf((3.5, 3.5), 45, 4)
+    obs.add_stars(300, time)
+    obs.positions[0] = ((obs.time/obs.time.max())[:, None]*(np.array(obs.shape)-50)).T
+
+    # constant fluxes
+    for i, f in enumerate(obs.fluxes):
+        obs.fluxes[i, :] = f[0]
+
+    # Cleaning the field
+    obs.remove_stars(np.argwhere(obs.fluxes.mean(1) < 20).flatten())
+    obs.save_fits(destination, calibration=True)
