@@ -1,24 +1,21 @@
 from skimage.measure import label, regionprops
 import numpy as np
-from .registration import clean_stars_positions
-from .. import Block
+from ..utils import clean_stars_positions
+from .. import Block, Image
 from ..console_utils import info
 from scipy.interpolate import interp1d
 from ..core.source import *
 from astropy.stats import sigma_clipped_stats
 from photutils import DAOStarFinder
-from ..blocks.psf import cutouts
 
 __all__ = [
-    "SegmentedPeaks", 
     "DAOFindStars", 
     "SEDetection", 
-    "Peaks", 
     "AutoSourceDetection", 
     "PointSourceDetection"
 ]
 
-class SourceDetection(Block):
+class _SourceDetection(Block):
     """Base class for sources detection.
     """
     def __init__(
@@ -73,7 +70,7 @@ class SourceDetection(Block):
         if self.verbose:
             info(f"threshold = {self.threshold:.2f}")
         
-    def regions(self, image, threshold=None):
+    def regions(self, image: Image, threshold=None):
         flat_data = image.data.flatten()
         median = np.median(flat_data)
         if threshold is None:
@@ -87,7 +84,7 @@ class SourceDetection(Block):
         
         return regions
     
-class AutoSourceDetection(SourceDetection):
+class AutoSourceDetection(_SourceDetection):
 
     def __init__(
         self, 
@@ -114,7 +111,7 @@ class AutoSourceDetection(SourceDetection):
         sources = np.array([auto_source(region) for region in regions])
         image.sources = Sources(self.clean(sources))
     
-class PointSourceDetection(SourceDetection):
+class PointSourceDetection(_SourceDetection):
 
     def __init__(
         self, 
@@ -143,7 +140,7 @@ class PointSourceDetection(SourceDetection):
         return "scikit-image", "scipy"
 
 
-class TraceDetection(SourceDetection):
+class TraceDetection(_SourceDetection):
 
     def __init__(self, min_length=5, **kwargs):
         super().__init__(**kwargs)
@@ -192,6 +189,7 @@ class SegmentedPeaks(PointSourceDetection):
         self.min_area = min_area
         self.minor_length = minor_length
 
+# TODO
 class Peaks(Block):
 
     
@@ -200,7 +198,7 @@ class Peaks(Block):
         self.cutout = cutout
 
     def run(self, image, **kwargs):
-        idxs, cuts = cutouts(image.data, image.stars_coords, size=self.cutout)
+        idxs, cuts = cutouts(image.data, image.sources.coords, size=self.cutout)
         peaks = np.ones(len(image.stars_coords)) * -1
         for j, i in enumerate(idxs):
             cut = cuts[j]
@@ -212,7 +210,7 @@ class Peaks(Block):
     def citations(self):
         return "photutils"
 
-class _SimplePointSourceDetection(SourceDetection):
+class _SimplePointSourceDetection(_SourceDetection):
 
     def __init__(
         self, 
@@ -299,7 +297,7 @@ class SEDetection(_SimplePointSourceDetection):
         """
         Source Extractor detection.
 
-        |write| ``Image.stars_coords`` and ``Image.peaks``
+        |write| ``Image.sources`` and ``Image.peaks``
 
         Parameters
         ----------
@@ -327,3 +325,6 @@ class SEDetection(_SimplePointSourceDetection):
     @property
     def citations(self):
         return "source extractor", "sep"
+
+class AlignSources(Block):
+    pass #TODO

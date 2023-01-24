@@ -33,6 +33,8 @@ def get_files(
 
     Parameters
     ----------
+    extension: str
+        wildcard pattern for file extension
     folder : str
         Folder to be analyzed
     depth : int

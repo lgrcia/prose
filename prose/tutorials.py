@@ -19,15 +19,6 @@ def image_sample(*coords):
     fov = [12, 12]*u.arcmin
     return sdss_image(skycoord, fov)
 
-def example_image(seed=43, n=300, w=600):
-    np.random.seed(seed)
-
-    # Creating the observation
-    obs = ObservationSimulation(w, Telescope.from_name("A"))
-    obs.set_psf((3.5, 3.5), 45, 4)
-    obs.add_stars(n, [0, 1])
-    return Image(data=obs.image(0, 300), header=dict(TELESCOP="A"))
-
 def simulate_observation(time, dflux, destination, dx=3):
     n = len(time)
 

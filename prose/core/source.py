@@ -126,9 +126,11 @@ class Source:
         copy.peak = self.peak
         copy.orientation = self.orientation
         copy.i = self.i
-        copy.coords = self.coords
+        copy.coords = self.coords.copy()
         return copy
 
+    def __copy__(self):
+        return self.copy()
     
     def plot_circle(self, radius, c=color, ax=None, label=True, fontsize=12, **kwargs):
         """Plot a circle centered on source
@@ -476,10 +478,13 @@ class Sources:
         if self.source_type is not None:
             for s in sources:
                 assert isinstance(s, self.source_type), f"list can only contain {self.source_type}"
-        self.sources = sources
+        self.sources = np.array(sources)
 
     def __getitem__(self, i):
-        return self.sources[i]
+        if isinstance(i, int):
+            return self.sources[i]
+        else:
+            return self.__class__(self.sources[i])
 
     def __len__(self):
         return len(self.sources)
@@ -491,14 +496,29 @@ class Sources:
         return self.sources.__repr__()
 
     def copy(self):
-        return self.__class__(self.sources.copy())
+        return self.__class__([s.copy() for s in self.sources])
+
+    def __copy__(self):
+        return self.copy()
             
     @property
     def coords(self):
         return np.array([source.coords for source in self.sources])
 
-    def apertures(self, r, scale=True):
+    @coords.setter
+    def coords(self, new_coords):
+        for source, new_coord in zip(self.sources, new_coords):
+            source.coords = new_coord
+
+    def apertures(self, r, scale=False):
         return [source.aperture(r, scale=scale) for source in self.sources]
+    
+    def annulus(self, rin, rout, scale=False):
+        return [source.annulus(rin, rout, scale=scale) for source in self.sources]
+
+    def plot(self, *args, **kwargs):
+        for s in self.sources:
+            s.plot(*args, **kwargs)
 
 
 class PointSources(Sources):

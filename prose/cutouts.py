@@ -1,28 +1,41 @@
-from prose.utils import z_scale
-from prose.utils import index_binning, binning
+from .utils import z_scale
+from .utils import index_binning, binning
+from .core.image import Image
+from .core.source import PointSource
 import matplotlib.pyplot as plt
 import numpy as np
 
 class Cutout:
-    def __init__(self, image, coords, shape=(50, 50), fill=np.nan):
-        self.shape = np.array(shape)
-        
-        # get image.data cutout
-        self.data = np.zeros(shape)
-        p = np.max(shape)
-        pad_data = np.pad(image.data, p, constant_values=(fill, fill))
-        dx, dy = (np.array(coords[::-1] + p) + (np.array(shape)[:, None]/2 * [-1, 1]).T).T.astype(int)
-        self.data = pad_data[dx[0]:dx[1], dy[0]:dy[1]]
-        self.origin = np.array([dy[0], dx[0]]) - p
-        
-        # get sources
-        sources_in = np.all(np.abs(image.stars_coords - coords) < self.shape[::-1]/2, 1)
-        sources = image.sources[sources_in]
+    def __init__(self, image, coords=None, shape=(50, 50), fill=np.nan):
         self.sources = []
-        for s in sources:
-            _s = s.copy()
-            _s.coords = _s.coords - self.origin
-            self.sources.append(_s)
+
+        # from Image
+        if isinstance(image, Image):
+            assert coords is not None, "cutout coordinates must be specified if a prose.Image is provided"
+            assert shape is not None, "cutout shape must be specified if a prose.Image is provided"
+            # get image.data cutout
+            self.data = np.zeros(shape)
+            p = np.max(shape)
+            pad_data = np.pad(image.data, p, constant_values=(fill, fill))
+            dx, dy = (np.array(coords[::-1] + p) + (np.array(shape)[:, None]/2 * [-1, 1]).T).T.astype(int)
+            self.data = pad_data[dx[0]:dx[1], dy[0]:dy[1]]
+            self.shape = np.array(shape)
+            self.origin = np.array([dy[0], dx[0]]) - p
+        
+            # get sources
+            sources_in = np.all(np.abs(image.stars_coords - coords) < self.shape[::-1]/2, 1)
+            sources = image._sources[sources_in]
+            
+            for s in sources:
+                _s = s.copy()
+                _s.coords = _s.coords - self.origin
+                self.sources.append(_s)
+        else:
+            self.shape = np.array(image.shape)
+            self.data = image
+            self.sources.append(PointSource(coords=self.shape/2))
+            self.origin = np.array([0, 0])
+
         
     @property
     def center(self):
@@ -104,3 +117,7 @@ class Cutout:
             mask[_mask.bbox.iymin:_mask.bbox.iymax, _mask.bbox.ixmin:_mask.bbox.ixmax] = _mask.data
 
         return mask
+    
+    def to_source(self, lower_percentile=30):
+        mask = self.data > np.percentile(self.data, lower_percentile)
+        

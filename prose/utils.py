@@ -14,6 +14,8 @@ import inspect
 from scipy import ndimage
 from functools import wraps
 from collections import OrderedDict
+import numpy as np
+from astropy.stats import gaussian_sigma_to_fwhm
 
 earth2sun = (c.R_earth / c.R_sun).value
 
@@ -115,32 +117,6 @@ def binning(x, y, bins, error=None, std=False, mean_method=np.mean,
         return np.array(final_bins), np.array(binned_flux)
 
 
-# @numba.jit(fastmath=True, parallel=False, nopython=True)
-# def fast_binning(x, y, bins, error=None, std=False):
-#     bins = np.arange(np.min(x), np.max(x), bins)
-#     d = np.digitize(x, bins)
-#
-#     binned_x = []
-#     binned_y = []
-#     binned_error = []
-#
-#     for i in range(1, np.max(d) + 1):
-#         s = np.where(d == i)
-#         if len(s[0]) > 0:
-#             s = s[0]
-#             binned_y.append(np.mean(y[s]))
-#             binned_x.append(np.mean(x[s]))
-#             binned_error.append(np.std(y[s]) / np.sqrt(len(s)))
-#
-#             if error is not None:
-#                 err = error[s]
-#                 binned_error.append(np.sqrt(np.sum(np.power(err, 2))) / len(err))
-#             else:
-#                 binned_error.append(np.std(y[s]) / np.sqrt(len(s)))
-#
-#     return np.array(binned_x), np.array(binned_y), np.array(binned_error)
-
-
 @numba.jit(fastmath=True, parallel=False, nopython=True)
 def fast_binning(x, y, bins, error=None, std=False):
     bins = np.arange(np.min(x), np.max(x), bins)
@@ -208,8 +184,6 @@ def fast_points_binning(x, y, n):
 
 
 def z_scale(data, c=0.05):
-    if type(data) == str:
-        data = fits.getdata(data)
     interval = ZScaleInterval(contrast=c)
     return interval(data.copy())
 
@@ -523,3 +497,94 @@ def binn2D(arr, factor):
     shape = (new_shape[0], factor,
              new_shape[1], factor)
     return np.mean(arr.reshape(shape).mean(-1), 1)
+
+import numpy as np
+from scipy.spatial import KDTree
+from twirl import utils as tutils
+from skimage.transform import AffineTransform as skAT
+from functools import partial
+
+def distance(p1, p2):
+    return np.sqrt(np.power(p1[0] - p2[0], 2) + np.power(p1[1] - p2[1], 2))
+
+
+def distances(coords, coord):
+    return [
+        np.sqrt(((coord[0] - x)**2 + (coord[1] - y)**2))
+        for x, y in zip(coords[0].flatten(), coords[1].flatten())
+    ]
+
+def clean_stars_positions(positions, tolerance=50, output_id=False):
+    keep = []
+
+    distance_to_others = np.array(
+        [[distance(v, w) for w in positions] for v in positions]
+    )
+    for i, _distances in enumerate(distance_to_others):
+        _distances[i] = np.inf
+        close_stars = np.flatnonzero(_distances < tolerance)
+        if len(close_stars) == 0:
+            keep.append(i)
+
+    if output_id:
+        return positions[np.unique(keep)], np.unique(keep)
+    else:
+        return positions[np.unique(keep)]
+
+
+def cross_match(S1, S2, tolerance=10, return_idxs=False, none=True):
+    # cleaning
+    s1 = S1.copy()
+    s2 = S2.copy()
+    
+    s1[np.any(np.isnan(s1), 1)] = (1e15, 1e15)
+    s2[np.any(np.isnan(s2), 1)] = (1e15, 1e15)
+    
+    # matching
+    matches = []
+
+    for i, s in enumerate(s1):
+        distances = np.linalg.norm(s - s2, axis=1)
+        closest = np.argmin(distances)
+        if distances[closest] < tolerance:
+            matches.append([i, closest])
+        else:
+            if none:
+                matches.append([i, np.nan])
+
+    matches = np.array(matches)
+
+    if return_idxs:
+        return matches
+    else:
+        if len(matches) > 0:
+            return s1[matches[:, 0]], s2[matches[:, 1]]
+        else:
+            return np.array([]), np.array([])
+
+def moments(data):
+    """Returns (height, x, y, width_x, width_y)
+    the gaussian parameters of a 2D distribution by calculating its
+    moments """
+    height = data.max()
+    background = data.min()
+    data = data-np.min(data)
+    total = data.sum()
+    x, y = np.indices(data.shape)
+    x = (x * data).sum() / total
+    y = (y * data).sum() / total
+    col = data[:, int(y)]
+    width_x = np.sqrt(abs((np.arange(col.size) - y) ** 2 * col).sum() / col.sum())
+    row = data[int(x), :]
+    width_y = np.sqrt(abs((np.arange(row.size) - x) ** 2 * row).sum() / row.sum())
+    width_x /= gaussian_sigma_to_fwhm
+    width_y /= gaussian_sigma_to_fwhm
+    return {
+        "amplitude": height, 
+        "x": x, 
+        "y": y, 
+        "sigma_x": width_x, 
+        "sigma_y": width_y, 
+        "background": background,
+        "theta": 0.
+    }

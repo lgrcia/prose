@@ -4,11 +4,10 @@ from collections import OrderedDict
 from tabulate import tabulate
 import numpy as np
 from time import time
-from .image import Image
+from .image import FITSImage, Image
 from pathlib import Path
 from functools import partial
 import multiprocessing as mp
-from ..blocks.utils import DataBlock
 import sys
 import yaml
 from ..utils import full_class_name
@@ -67,7 +66,7 @@ class Sequence:
         for b in self.blocks:
             b.in_sequence = in_sequence
 
-    def run(self, images, terminate=True, show_progress=True, loader=Image):
+    def run(self, images, terminate=True, show_progress=True, loader=FITSImage):
         """Run the sequence
 
         Parameters
@@ -108,7 +107,7 @@ class Sequence:
         for block_name, discarded in self.discards.items():
             warning(f"{block_name} discarded image{'s' if len(discarded)>1 else ''} {', '.join(discarded)}")
 
-    def _run(self, loader=Image):
+    def _run(self, loader=FITSImage):
         for i, image in enumerate(self.progress(self.images)):
             if isinstance(image, (str, Path)):
                 image = loader(image)
@@ -263,7 +262,7 @@ class Sequence:
 
 class MPSequence(Sequence):
 
-    def __init__(self, blocks, data_blocks=None, name="", loader=Image):
+    def __init__(self, blocks, data_blocks=None, name="", loader=FITSImage):
         super().__init__(blocks, name=name, loader=loader)
         if data_blocks is None:
             self.data = None
@@ -275,7 +274,7 @@ class MPSequence(Sequence):
     def check_data_blocks(self):
         bad_blocks = []
         for b in self.blocks: 
-            if isinstance(b, DataBlock):
+            if b._data_block:
                 bad_blocks.append(f"{b.__class__.__name__}")
         if len(bad_blocks) > 0:
             bad_blocks = ', '.join(list(np.unique(bad_blocks)))

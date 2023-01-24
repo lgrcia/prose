@@ -3,7 +3,7 @@ from .. import Block
 import numpy as np
 from os import path
 from prose import CONFIG
-from .psf import cutouts
+from .geometry import Cutouts
 import warnings
 from astropy.utils.exceptions import AstropyUserWarning
 
@@ -29,7 +29,7 @@ except ModuleNotFoundError:
 class _PhotutilsCentroid(Block):
 
     
-    def __init__(self, centroid_func, limit=None, cutout=21, **kwargs):
+    def __init__(self, centroid_func, limit=None, cutout=21, name=None):
         """Photutils centroiding
 
         Parameters
@@ -41,41 +41,43 @@ class _PhotutilsCentroid(Block):
         cutout : int, optional
             size of the cutout to be used for centroiding, by default 21
         """
-        super().__init__(**kwargs)
+        super().__init__(name=name)
         self.cutout = cutout
         self.centroid_func = centroid_func
         if limit is None:
             limit = cutout/2
-
         self.limit = limit
 
     def run(self, image):
         # *%+#@ photutils check (see photutils.centroids.core code...)
-        in_image = np.all(image.stars_coords < image.shape[::-1] - (1, 1), axis=1)
-        in_image = np.logical_and(in_image, np.all(image.stars_coords > (0, 0), axis=1))
-        x, y = image.stars_coords[in_image].T.copy()
+        in_image = np.all(image.sources.coords < image.shape[::-1] - (1, 1), axis=1)
+        in_image = np.logical_and(in_image, np.all(image.sources.coords > (0, 0), axis=1))
+        x, y = image.sources.coords[in_image].T.copy()
 
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', AstropyUserWarning)
-            centroid_stars_coords = np.array(centroid_sources(
+            centroid_sources_coords = np.array(centroid_sources(
                 image.data, x, y, box_size=self.cutout, centroid_func=self.centroid_func
             )).T
 
-        stars_coords = image.stars_coords.copy()
-        stars_coords[in_image] = centroid_stars_coords
-        in_limit = np.linalg.norm(image.stars_coords - stars_coords, axis=1) < self.limit
-        image.stars_coords[in_limit] = stars_coords[in_limit]
+        sources_coords = image.sources.coords.copy()
+        sources_coords[in_image] = centroid_sources_coords
+        in_limit = np.linalg.norm(image.sources.coords - sources_coords, axis=1) < self.limit
+        final_sources_coords = image.sources.coords.copy()
+        final_sources_coords[in_limit] = sources_coords[in_limit]
+        image.sources.coords = final_sources_coords
 
     @property
     def citations(self):
         return "photutils"
 
+
 class COM(_PhotutilsCentroid):
     """Centroiding using ``photutils.centroids.centroid_com``
     
-    |read| ``Image.stars_coords``
+    |read| ``Image.sources``
 
-    |write| ``Image.stars_coords``
+    |write| ``Image.sources``
 
     Parameters
     ----------
@@ -86,15 +88,15 @@ class COM(_PhotutilsCentroid):
     """
 
     
-    def __init__(self, **kwargs):
-        super().__init__(centroid_func=centroid_com, **kwargs)
+    def __init__(self, limit=None, cutout=21):
+        super().__init__(centroid_func=centroid_com, limit=limit, cutout=cutout)
 
 class Gaussian2D(_PhotutilsCentroid):
     """Centroiding using ``photutils.centroids.centroid_2dg``
     
-    |read| ``Image.stars_coords``
+    |read| ``Image.sources``
 
-    |write| ``Image.stars_coords``
+    |write| ``Image.sources``
 
     Parameters
     ----------
@@ -105,15 +107,15 @@ class Gaussian2D(_PhotutilsCentroid):
     """
 
     
-    def __init__(self, **kwargs):
-        super().__init__(centroid_func=centroid_2dg, **kwargs)
+    def __init__(self, limit=None, cutout=21):
+        super().__init__(centroid_func=centroid_2dg, limit=limit, cutout=cutout)
 
 class Quadratic(_PhotutilsCentroid):
     """Centroiding using ``photutils.centroids.centroid_quadratic``
     
-    |read| ``Image.stars_coords``
+    |read| ``Image.sources``
     
-    |write| ``Image.stars_coords``
+    |write| ``Image.sources``
 
     Parameters
     ----------
@@ -124,8 +126,8 @@ class Quadratic(_PhotutilsCentroid):
     """
     
     
-    def __init__(self, **kwargs):
-        super().__init__(centroid_func=centroid_quadratic, **kwargs)
+    def __init__(self, limit=None, cutout=21):
+        super().__init__(centroid_func=centroid_quadratic, limit=limit, cutout=cutout)
 
 
 class _CNNCentroid(Block):
@@ -149,27 +151,22 @@ class _CNNCentroid(Block):
     def build_model(self):
         raise NotImplementedError()
 
-    def run(self, image, **kwargs):
-        initial_positions = image.stars_coords.copy()
-        stars_in, stars = cutouts(image.data.copy(), initial_positions.copy(), self.cutout)
-        if len(stars_in) > 0:
+    def run(self, image):
+        cutouts = [image.cutout(coords, (15, 15)) for coords in image.sources.coords]
+        cutouts_reshaped = []
+        for cutout in cutouts:
             # Take normalised and reshaped data of stars that are not None
-            stars_data_reshaped = []
-            pos_int = []
-            for i in stars_in:
-                im = stars[i]
-                stars_data_reshaped.append((im.data / np.max(im.data)).reshape(self.cutout, self.cutout, 1))
-                pos_int.append([im.bbox.ixmin, im.bbox.iymin])
-            stars_data_reshaped = np.array(stars_data_reshaped)
-            pos_int = np.array(pos_int)
-            current_stars_coords = image.stars_coords[stars_in].copy()
-            # apply model
-            aligned_stars_coords = pos_int + self.model(stars_data_reshaped, training=False).numpy()[:, ::-1]
-            # if coords is nan (any of x, y), keep old coord
-            nan_mask = np.any(np.isnan(aligned_stars_coords), 1)
-            aligned_stars_coords[nan_mask] = current_stars_coords[nan_mask]
-            # change image.stars_coords
-            image.stars_coords[stars_in] = aligned_stars_coords
+            cutouts_reshaped.append((cutout.data / np.max(cutout.data)).reshape(*cutout.shape, 1))
+        
+        cutouts_origins = image.sources.coords - cutout.shape/2
+        cutouts_reshaped = np.array(cutouts_reshaped)
+        # apply model
+        centroids = cutouts_origins + self.model(cutouts_reshaped, training=False).numpy()[:, ::-1]
+        # if coords is nan (any of x, y), keep old coord
+        nan_mask = np.any(np.isnan(centroids), 1)
+        centroids[nan_mask] = image.sources.coords[nan_mask]
+        # change image.stars_coords
+        image.sources.coords = centroids
 
     @property
     def citations(self):
@@ -199,7 +196,7 @@ class BalletCentroid(_CNNCentroid):
             Dense(2),
         ])
 
-
+# For reference
 class _OldNNCentroid(_CNNCentroid):
 
     
@@ -219,7 +216,3 @@ class _OldNNCentroid(_CNNCentroid):
             self.tf_layers.Dense(2048, activation='relu'),
             self.tf_layers.Dense(2),
         ])
-
-
-
-

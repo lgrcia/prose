@@ -112,7 +112,7 @@ class Telescope:
         elif name == "dec_unit":
             return str_to_astropy_unit(self.__dict__[name])
         elif name == "pixel_scale":
-            return self.__dict__[name] * u.arcsec
+            return self.__dict__.get(name, None)
         return super(Telescope, self).__getattribute__(name)
 
     def load(self, file, verbose=True):

@@ -103,6 +103,19 @@ class FitsManager:
             
 
     def get_files(self, folders, extension, scan=None, depth=0):
+        """Return path of files with specific extension in the specified folder(s) 
+
+        Parameters
+        ----------
+        folders : str or list of str
+            path or list of paths of folders to look into
+        extension : str
+            wildcard pattern for file extension
+        scan : function, optional
+            function to use, called on each folder path, by default None
+        depth : int, optional
+            number of sub-folders to look into, by default 0
+        """
         def _get_files(folder):
             if scan is None:
                 return get_files(extension, folder, depth=depth)
@@ -189,6 +202,20 @@ class FitsManager:
             raise AssertionError(f"No files provided")
 
     def observations(self, hide_exposure=True, **kwargs):
+        """return a pandas DataFrame of observations given some metadata constraints in the form of wildcards
+
+        Parameters
+        ----------
+        hide_exposure : bool, optional
+            wether to include exposure in the pandas.DataFrame header, by default True
+        **kwargs:
+            wildcards value for telescope, target, filter, type or id, default is '*'
+
+        Returns
+        -------
+        pd.DataFrame
+            pandas DataFrame filtered with kwargs wildcards
+        """
         columns = {c[1]: "%" for c in self.con.execute("PRAGMA table_info(observations)").fetchall()[1:-3]}
         inputs = kwargs.copy()
             
@@ -212,6 +239,13 @@ class FitsManager:
         return df.set_index(["id"])
 
     def calibrations(self, **kwargs):
+        """return a pandas DataFrame of calibrations observations given some metadata constraints in the form of wildcards
+
+        Parameters
+        ----------
+        **kwargs:
+            wildcards value for telescope, target, filter or id, default is '*'
+        """
         darks = self.observations(type="dark", **kwargs)
         flats = self.observations(type="flat", **kwargs)
         bias = self.observations(type="bias", **kwargs)
@@ -219,6 +253,20 @@ class FitsManager:
         return pd.concat([darks, flats, bias], axis=0)
         
     def files(self, id=None, path=False, exposure=0, tolerance=1000, **kwargs):
+        """Return a pandas DataFrame of files given some metadata constraints in the form of wildcards
+
+        Parameters
+        ----------
+        id : int, optional
+            id of the observation for which files are retrieved, by default None, i.e. all files
+        path : bool, optional
+            whether to include files paths in the pandas.DataFrame header, by default False
+        exposure : int, optional
+            exposure constraint on the files to retrieve, by default 0
+        tolerance : int, optional
+            tolerance on the exposure constraint, by default 1000. For example: if exposure is set to 10 and tolerance to 2, all
+            files with exposure = 10 +- 2 will be retrieved
+        """
         columns = {c[1]: "%" for c in self.con.execute("PRAGMA table_info(files)").fetchall()}
         if not path:
             del columns["path"]

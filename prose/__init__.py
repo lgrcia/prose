@@ -11,15 +11,12 @@ CONFIG.check_builtins_changes()
 from . import visualization as viz
 
 from .io.fitsmanager import FitsManager
-from .fluxes import ApertureFluxes
 from .telescope import Telescope
 from .core.block import Block
 from .core.sequence import Sequence
-from .core.image import Image
-from .observation import Observation
-from .observations import Observations
+from .core.image import Image, FITSImage
 from .core import source
-from .tutorials import example_image
+from .simulations import example_image
 
 from pkg_resources import get_distribution
 __version__ = get_distribution('prose').version

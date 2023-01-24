@@ -6,7 +6,6 @@ colorama
 scikit-image
 pandas>=1.1
 tqdm
-astroalign
 photutils
 astroquery
 pyyaml

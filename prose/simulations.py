@@ -1,10 +1,10 @@
 import numpy as np
-from . import viz, utils, Observation, models, Image
+from . import viz, utils, models, Image, Telescope
 from photutils.psf import extract_stars
 from astropy.table import Table
 from astropy.nddata import NDData
 import celerite2 as celerite
-from prose.blocks.registration import distances
+from .utils import distances
 from os import path
 from astropy.time import Time
 import os
@@ -17,7 +17,9 @@ import warnings
 import numpy as np
 import matplotlib.pyplot as plt
 from skimage.draw import line_aa
-
+from .archive import sdss_image
+from astropy.coordinates import SkyCoord
+from astropy import units as u
 
 def fits_image(data, header, destination):
 
@@ -304,4 +306,35 @@ def source_example():
     rr, cc, val = line_aa(x0, 10, x0+30, 50)
     data[rr, cc] += val * 200
 
-    return Image(data=data.T, telescope="a")
+    return Image(computed=data.T, telescope="a")
+
+
+def example_image(seed=43, n=300, w=600):
+    np.random.seed(seed)
+
+    # Creating the observation
+    obs = ObservationSimulation(w, Telescope.from_name("A"))
+    obs.set_psf((3.5, 3.5), 45, 4)
+    obs.add_stars(n, [0, 1])
+    return Image(obs.image(0, 300), metadata=dict(TELESCOP="A"))
+
+def simulate_observation(time, dflux, destination, dx=3):
+    n = len(time)
+
+    # Creating the observation
+    obs = ObservationSimulation(600, Telescope.from_name("A"))
+    obs.set_psf((3.5, 3.5), 45, 4)
+    obs.add_stars(300, time)
+    obs.set_target(0, dflux)
+    obs.positions += np.random.uniform(-dx, dx, (2, n))[np.newaxis, :]
+
+    # Cleaning the field
+    obs.remove_stars(np.argwhere(obs.fluxes.mean(1) < 20).flatten())
+    obs.clean_around_target(50)
+    obs.save_fits(destination, calibration=True)
+
+def image_sample(*coords, fov=12):
+    # example: "05 38 44.851", "+04 32 47.68",
+    skycoord = utils.check_skycoord(coords)
+    fov = [fov, fov]*u.arcmin
+    return sdss_image(skycoord, fov)
