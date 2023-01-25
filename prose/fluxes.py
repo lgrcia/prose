@@ -157,7 +157,7 @@ class Fluxes:
     fluxes: np.ndarray
     time: np.ndarray = None
     errors: np.ndarray = None
-    data: defaultdict[dict] = field(default_factory=lambda: defaultdict(dict))
+    data: dict = None
     apertures: np.ndarray = None
     weights: np.ndarray = None
     target: int = None
@@ -165,6 +165,8 @@ class Fluxes:
     
     def __post_init__(self):
         assert self.fluxes.ndim in [2, 3], "fluxes must be 2 or 3 dimensional"
+        if self.data is None:
+            self.data = {}
         
     def _target_attr(self, name, full=False):
         assert self.__dict__[name] is not None, f"{name} not provided"
