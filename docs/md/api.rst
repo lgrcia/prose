@@ -1,7 +1,6 @@
-.. _api:
-
 API
 ===
+
 
 .. currentmodule:: prose
 

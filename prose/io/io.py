@@ -5,7 +5,7 @@ import numpy as np
 from ..telescope import Telescope
 from datetime import timedelta
 from astropy.io import fits
-from ..console_utils import tqdm, warning
+from ..console_utils import progress, warning
 from astropy.time import Time
 import os
 import zipfile
@@ -97,10 +97,7 @@ def fits_to_df(
     telescope = None
     df_list = []
 
-    def progress(x):
-        return tqdm(x, "Parsing FITS") if verbose else x
-
-    for i in progress(files):
+    for i in progress(verbose, desc="Parsing FITS")(files):
         try:
             header = fits.getheader(i, hdu)
         except OSError as err:

@@ -5,6 +5,7 @@ from skimage.transform import warp
 import numpy as np
 
 __all__ = [
+    "Align",
     "AlignReferenceSources",
     "AlignReferenceWCS"
 ]

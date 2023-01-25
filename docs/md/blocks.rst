@@ -62,7 +62,6 @@ Alignment & Geometry
 
    Trim
    Cutouts
-   SetAffineTransform
    ComputeTransform
    
    Align

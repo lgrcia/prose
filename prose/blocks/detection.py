@@ -57,7 +57,7 @@ class _SourceDetection(Block):
             return _sources
 
         else:
-            return None
+            return []
     
     # TODO: obsolete, redo
     def auto_threshold(self, image):

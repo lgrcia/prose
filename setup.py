@@ -34,7 +34,7 @@ setup(
         "pyyaml",
         "tabulate",
         "requests",
-        "imageio",
+        "imageio[ffmpeg]",
         "sep",
         "xarray",
         "numba",

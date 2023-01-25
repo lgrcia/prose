@@ -3,23 +3,22 @@ from ..console_utils import info
 from ..utils import easy_median
 import numpy as np
 
-__all__ = [
-    "SortSources", "Get", "Calibration", "CleanBadPixels"
-]
+__all__ = ["Apply", "SortSources", "Get", "Calibration", "CleanBadPixels"]
 
 # TODO: document and test
 class SortSources(Block):
-
     def __init__(self, name=None, verbose=False, key="cutout_sum"):
         super().__init__(name, verbose)
         if isinstance(key, str):
             if key == "cutout_sum":
-                def key(cutout): return np.nansum(cutout.data)
-        
+
+                def key(cutout):
+                    return np.nansum(cutout.data)
+
         assert callable(key)
 
         self.key = key
-    
+
     def run(self, image: Image):
         keys = np.array([self.key(cutout) for cutout in image.cutouts])
         idxs = np.argsort(keys)[::-1]
@@ -28,28 +27,51 @@ class SortSources(Block):
             s.i = i
         image._sources = Sources(sources)
 
-# TODO document
+
+class Apply(Block):
+    """Apply a function to an image
+
+    Parameters
+    ----------
+    kwargs : function
+        function to apply of the form f(image) -> None
+    """
+
+    def __init__(self, function, name=None):
+        super().__init__(name=name)
+        self.function = function
+
+    def run(self, image):
+        self.function(image)
+
+
 class Get(Block):
-    
-    def __init__(self, *names, name="get", **getters):
+    def __init__(self, *names, name="get", arrays=False, **getters):
         super().__init__(name=name)
         getters.update({name: lambda image: getattr(image, name) for name in names})
         self.getters = getters
         self.values = {name: [] for name in getters.keys()}
+        self.arrays = True
 
     def run(self, image: Image):
         for name, get in self.getters.items():
             value = get(image)
             self.values[name].append(value)
 
+    def terminate(self):
+        if self.arrays:
+            for key, value in self.values.items():
+                self.values[key] = np.array(value)
+
     def __getitem__(self, key):
         return self.values[key]
-    
+
     def __getattr__(self, key):
         if key in self.getters.keys():
             return self.values[key]
         else:
             raise AttributeError()
+
 
 class Calibration(Block):
     """

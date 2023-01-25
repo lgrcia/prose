@@ -16,6 +16,7 @@ from .core.block import Block
 from .core.sequence import Sequence
 from .core.image import Image, FITSImage
 from .core import source
+from .fluxes import Fluxes
 from .simulations import example_image
 
 from pkg_resources import get_distribution

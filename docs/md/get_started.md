@@ -6,6 +6,4 @@
 installation
 ../ipynb/quickstart
 ../ipynb/core
-../ipynb/sources
-../md/blocks
 ```

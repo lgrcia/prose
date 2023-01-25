@@ -89,71 +89,13 @@ def stability_aperture(fluxes):
     return np.mean(lc_c, axis=1)
 
 
-def binning(x, y, bins, error=None, std=False, mean_method=np.mean,
-            mean_error_method=lambda x: np.sqrt(np.sum(np.power(x, 2))) / len(x)):
-
-    bins = np.arange(np.min(x), np.max(x), bins)
-    d = np.digitize(x, bins)
-
-    final_bins = []
-    binned_flux = []
-    binned_error = []
-    _std = []
-
-    for i in range(1, np.max(d) + 1):
-        s = np.where(d == i)
-        if len(s[0]) > 0:
-            binned_flux.append(mean_method(y[s[0]]))
-            final_bins.append(np.mean(x[s[0]]))
-            _std.append(np.std(y[s[0]]) / np.sqrt(len(s[0])))
-            if error is not None:
-                binned_error.append(mean_error_method(error[s[0]]))
-
-    if std:
-        return np.array(final_bins), np.array(binned_flux), np.array(_std)
-    elif error is not None and isinstance(error, (np.ndarray, list)):
-        return np.array(final_bins), np.array(binned_flux), np.array(binned_error)
+def index_binning(x, size):
+    if isinstance(size, float):
+        bins = np.arange(np.min(x), np.max(x), size)
     else:
-        return np.array(final_bins), np.array(binned_flux)
-
-
-@numba.jit(fastmath=True, parallel=False, nopython=True)
-def fast_binning(x, y, bins, error=None, std=False):
-    bins = np.arange(np.min(x), np.max(x), bins)
-    d = np.digitize(x, bins)
-
-    n = np.max(d) + 2
-
-    binned_x = np.empty(n)
-    binned_y = np.empty(n)
-    binned_error = np.empty(n)
-
-    binned_x[:] = -np.pi
-    binned_y[:] = -np.pi
-    binned_error[:] = -np.pi
-
-    for i in range(0, n):
-        s = np.where(d == i)
-        if len(s[0]) > 0:
-            s = s[0]
-            binned_y[i] = np.mean(y[s])
-            binned_x[i] = np.mean(x[s])
-            binned_error[i] = np.std(y[s]) / np.sqrt(len(s))
-
-            if error is not None:
-                err = error[s]
-                binned_error[i] = np.sqrt(np.sum(np.power(err, 2))) / len(err)
-            else:
-                binned_error[i] = np.std(y[s]) / np.sqrt(len(s))
-
-    nans = binned_x == -np.pi
-
-    return binned_x[~nans], binned_y[~nans], binned_error[~nans]
-
-
-@numba.jit(fastmath=True, parallel=False, nopython=True)
-def index_binning(x, bins):
-    bins = np.arange(np.min(x), np.max(x), bins)
+        x = np.arange(0, len(x))
+        bins = np.arange(0., len(x), size)
+        
     d = np.digitize(x, bins)
     n = np.max(d) + 2
     indexes = []
@@ -165,22 +107,6 @@ def index_binning(x, bins):
             indexes.append(s)
 
     return indexes
-
-
-@numba.jit(fastmath=True, parallel=False, nopython=True)
-def fast_points_binning(x, y, n):
-    n = int(len(x) / n)
-    bins = np.linspace(x.min(), x.max(), n)
-    digitized = np.digitize(x, bins)
-    binned_mean = np.zeros(n)
-    binned_std = np.zeros(n)
-    binned_time = np.zeros(n)
-    for i in range(1, len(bins)):
-        binned_mean[i] = y[digitized == i].mean()
-        binned_std[i] = y[digitized == i].std()
-        binned_time[i] = x[digitized == i].mean()
-
-    return binned_time, binned_mean, binned_std
 
 
 def z_scale(data, c=0.05):

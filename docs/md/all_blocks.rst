@@ -11,6 +11,7 @@
 	~prose.blocks.alignment.AlignReferenceSources
 	~prose.blocks.alignment.AlignReferenceWCS
 	~prose.blocks.detection.AlignSources
+	~prose.blocks.utils.Apply
 	~prose.blocks.detection.AutoSourceDetection
 	~prose.blocks.utils.Calibration
 	~prose.blocks.centroids.CentroidBallet

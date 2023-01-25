@@ -17,7 +17,7 @@ class AperturePhotometry(Block):
 
     def run(self, image: Image):
         if self.scale:
-            fwhm = image.epsf_params["sigma_x"] * gaussian_sigma_to_fwhm
+            fwhm = image.epsf.params["sigma_x"] * gaussian_sigma_to_fwhm
             radii = np.array(fwhm * self._radii)
         else:
             radii = np.array(self._radii)
@@ -25,7 +25,7 @@ class AperturePhotometry(Block):
         apertures = [image.sources.apertures(r) for r in radii]
         aperture_fluxes = np.array(
             [aperture_photometry(image.data, a)["aperture_sum"].data for a in apertures]
-        )
+        ).T
 
         image.aperture = {"fluxes": aperture_fluxes, "radii": radii}
 
@@ -39,13 +39,29 @@ class _AnnulusPhotometry(Block):
 
 
 class AnnulusBackground(_AnnulusPhotometry):
-    def __init__(self, name=None, rin=5, rout=8, sigma=3, scale=True):
+    def __init__(self, rin: float=5, rout: float=8, sigma: float=3, scale=True, name: str=None,):
+        """Estimate background around each source using an annulus aperture
+
+        Parameters
+        ----------
+
+        rin : float, optional
+            inner radius of the annulus, by default 5
+        rout : float, optional
+            outer radius of the annulus, by default 8
+        sigma : float, optional
+            sigma clipping applied to pixel within annulus before taking the median value, by default 3.
+        scale : bool, optional
+            wether to scale annulus to EPSF fwhm, by default True. If True, each image must contain an effective PSF and its model (e.g. using :py:class:`~prose.blocks.psf.MedianEPSF` and one of :py:class:`~prose.blocks.psf.Gaussian2D`)
+        name : str, optional
+            name of the block, by default None
+        """
         super().__init__(name=name, rin=rin, rout=rout, scale=scale)
         self.sigma = sigma
 
     def run(self, image: Image):
         if self.scale:
-            fwhm = image.computed["epsf_params"]["sigma_x"] * gaussian_sigma_to_fwhm
+            fwhm = image.epsf.params["sigma_x"] * gaussian_sigma_to_fwhm
             rin = float(fwhm * self.rin)
             rout = float(fwhm * self.rout)
         else:

@@ -1,7 +1,9 @@
 # prose
 
 ```{warning} 
-This is prose 3.0.0, a version still under construction. [Latest doc here](https://prose.readthedocs.io/en/latest/)
+This is prose **3.0.0**, a version still under construction. [Latest doc here](https://prose.readthedocs.io/en/latest/)
+
+✖️ mark a documentation yet to be written, reach out for support or priority
 ```
 
 ```{image} _static/prose_illustration.png
@@ -29,5 +31,5 @@ A Python package to build image processing pipelines, built for Astronomy. Beyon
 md/get_started
 ../md/tutorials
 ../md/case_studies
-../md/api
+../md/reference
 ```

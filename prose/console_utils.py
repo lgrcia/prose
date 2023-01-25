@@ -3,9 +3,11 @@ import shlex
 import struct
 import platform
 import subprocess
+import warnings
 from . import CONFIG
 from datetime import datetime
-from tqdm import tqdm as _tqdm
+from tqdm import TqdmExperimentalWarning
+from tqdm.autonotebook import tqdm
 
 def color(s, i):
     return f"\u001b[38;5;{i}m{s}\x1b[0m"
@@ -14,14 +16,13 @@ TQDM_BAR_FORMAT = "%s {l_bar}%s{bar}%s{r_bar}" % (
     color("RUN", 12), "\u001b[38;5;12m", "\x1b[0m"
 )
 
-def tqdm(x, desc="run", unit="images", **kwargs):
-    return _tqdm(x, desc=desc, unit=unit, ncols=80, bar_format=TQDM_BAR_FORMAT, **kwargs)
-
 def progress(show, **kwargs):
-    if show:
-        return lambda x: tqdm(x, **kwargs)
-    else:
-        return lambda x: x
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=TqdmExperimentalWarning)
+        if show:
+            return lambda x: tqdm(x, **kwargs)
+        else:
+            return lambda x: x
 
 def get_terminal_size():
     """ getTerminalSize()

@@ -1,5 +1,4 @@
 import matplotlib
-from .utils import binning
 import numpy as np
 from . import utils
 import matplotlib.offsetbox

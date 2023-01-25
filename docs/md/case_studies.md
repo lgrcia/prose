@@ -4,7 +4,7 @@
 :maxdepth: 2
 
 ../ipynb/transit.ipynb
-../ipynb/occultation.ipynb
+../ipynb/hiaka.ipynb
 ../ipynb/comet.ipynb
 ../ipynb/satellite.ipynb
 ../ipynb/diagnostic.ipynb

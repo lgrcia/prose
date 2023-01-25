@@ -1,5 +1,6 @@
 :root {
     --pst-color-inline-code: 33, 125, 224;
+    --mystnb-source-margin-color: darkgrey;
 }
 
 
@@ -42,4 +43,104 @@
 h2 {
     text-decoration: underline;
     font-size: 22px;
+}
+
+
+/* Code cells */
+
+.highlight pre {
+    line-height: 20px !important;
+    font-weight: 500 !important;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace !important;
+    font-size: 13px;
+}
+
+div.cell_output pre {
+    background-color: white !important;
+}
+
+.highlight pre {
+    padding: 12px !important;
+}
+
+
+/* no cell number */
+
+.prompt {
+    display: none !important;
+}
+
+.rst-content code.literal {
+    color: #575757
+}
+
+.docutils.literal.notranslate pre {
+    color: #575757
+}
+
+.xr-attrs dt {
+    background: inherit !important;
+    color: inherit !important;
+    border-top: inherit !important;
+}
+
+div.nboutput.container div.output_area>div {
+    text-align: left !important;
+}
+
+div.nboutput.container div.output_area {
+    text-align: center !important;
+}
+
+.highlight .nn {
+    color: black !important;
+    font-weight: normal !important;
+}
+
+.highlight .kn,
+.highlight .k,
+.highlight .kc,
+.highlight .ow {
+    color: #d73a49 !important;
+    font-weight: normal !important;
+}
+
+.highlight .mi,
+.highlight .mf,
+.highlight .nb,
+.highlight .bp {
+    color: #005cc5 !important
+}
+
+.highlight .c1,
+.highlight .o {
+    color: #6a737d !important
+}
+
+.highlight .sa,
+.highlight .sé,
+.highlight .s2,
+.highlight .sd {
+    color: #032f62 !important
+}
+
+.highlight .nd {
+    color: #005cc5 !important;
+    font-weight: normal !important;
+}
+
+.highlight .p,
+.highlight .mi,
+.highlight .mf {
+    font-weight: normal !important;
+}
+
+.highlight .si {
+    color: #70a0d0 !important;
+}
+
+code,
+code span.pre {
+    background: none;
+    color: var(--color-brand-primary)
 }
