@@ -7,7 +7,7 @@ from time import time
 from .image import FITSImage, Image
 from pathlib import Path
 from functools import partial
-import multiprocessing as mp
+import multiprocess as mp
 import sys
 import yaml
 from ..utils import full_class_name
@@ -33,6 +33,7 @@ class Sequence:
         """
         self.name = name
         self.images = []
+        self.blocks_dict = None
         self.blocks = blocks
 
         self.data = {}
@@ -257,16 +258,17 @@ class Sequence:
         return tex, "\n\n".join(cites.values())
 
 
-class MPSequence(Sequence):
+class SequenceParallel(Sequence):
 
-    def __init__(self, blocks, data_blocks=None, name="", loader=FITSImage):
-        super().__init__(blocks, name=name, loader=loader)
+    def __init__(self, blocks, data_blocks=None, name=""):
+        super().__init__(blocks, name=name)
         if data_blocks is None:
             self.data = None
             self._has_data = False
         else:
             self.data = Sequence(data_blocks)
             self._has_data = True
+    
 
     def check_data_blocks(self):
         bad_blocks = []
@@ -278,7 +280,7 @@ class MPSequence(Sequence):
             error(f"Data blocks [{bad_blocks}] cannot be used in MPSequence\n\nConsider using the data_blocks kwargs")
             sys.exit()
     
-    def _run(self, telescope=None):
+    def _run(self, loader=FITSImage):
         self.check_data_blocks()
 
         self.n_processed_images = 0
@@ -290,7 +292,7 @@ class MPSequence(Sequence):
             for image in self.progress(pool.imap(partial(
                 _run_all,
                 blocks=processed_blocks,
-                loader=self.loader
+                loader=loader
             ), images_i), total=n):
                 if not image.discard:
                     if self._has_data:

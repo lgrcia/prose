@@ -3,7 +3,7 @@ from ..console_utils import info
 from ..utils import easy_median
 import numpy as np
 
-__all__ = ["Apply", "SortSources", "Get", "Calibration", "CleanBadPixels"]
+__all__ = ["Apply", "SortSources", "Get", "Calibration", "CleanBadPixels", "Del"]
 
 # TODO: document and test
 class SortSources(Block):
@@ -103,16 +103,14 @@ class Calibration(Block):
         self.loader = loader
         self.easy_ram = easy_ram
 
+        self.shapes = {}
+
         self.master_bias = self._produce_master(bias, "bias")
         self.master_dark = self._produce_master(darks, "dark")
         self.master_flat = self._produce_master(flats, "flat")
+        
+        self._share()
         self.verbose = verbose
-
-    def calibration(self, image, exp_time):
-        with np.errstate(divide="ignore", invalid="ignore"):
-            return (
-                image - (self.master_dark * exp_time + self.master_bias)
-            ) / self.master_flat
 
     def _produce_master(self, images, image_type):
         if images is not None:
@@ -137,52 +135,40 @@ class Calibration(Block):
             if self.verbose:
                 info(f"No {image_type} images set")
             if image_type == "dark":
-                return 0
+                master = np.array([0.])
             elif image_type == "bias":
-                return 0
+                master = np.array([0.])
             elif image_type == "flat":
-                return 1
+                master = np.array([1.])
         else:
             if self.verbose:
                 info(f"Building master {image_type}")
 
-        for image_path in images:
-            image = self.loader(image_path)
-            if image_type == "dark":
-                _dark = (image.data - self.master_bias) / image.exposure.value
-                _master.append(_dark)
-            elif image_type == "bias":
-                _master.append(image.data)
-            elif image_type == "flat":
-                _flat = (
-                    image.data
-                    - self.master_bias
-                    - self.master_dark * image.exposure.value
-                )
-                _flat /= np.mean(_flat)
-                _master.append(_flat)
-                del image
+            for image_path in images:
+                image = self.loader(image_path)
+                if image_type == "dark":
+                    _dark = (image.data - self.master_bias) / image.exposure.value
+                    _master.append(_dark)
+                elif image_type == "bias":
+                    _master.append(image.data)
+                elif image_type == "flat":
+                    _flat = (
+                        image.data
+                        - self.master_bias
+                        - self.master_dark * image.exposure.value
+                    )
+                    _flat /= np.mean(_flat)
+                    _master.append(_flat)
+                    del image
 
-        if len(_master) > 0:
-            med = _median(_master)
-            return med
-        else:
-            return None
+            if len(_master) > 0:
+                master = _median(_master)
+            else:
+                master = None
 
-    def show_masters(self, figsize=(20, 80)):
-        plt.figure(figsize=figsize)
-        plt.subplot(131)
-        plt.title("Master bias")
-        im = plt.imshow(utils.z_scale(self.master_bias), cmap="Greys_r", origin="lower")
-        viz.add_colorbar(im)
-        plt.subplot(132)
-        plt.title("Master dark")
-        im = plt.imshow(utils.z_scale(self.master_dark), cmap="Greys_r", origin="lower")
-        viz.add_colorbar(im)
-        plt.subplot(133)
-        plt.title("Master flat")
-        im = plt.imshow(utils.z_scale(self.master_flat), cmap="Greys_r", origin="lower")
-        viz.add_colorbar(im)
+        self.shapes[image_type] = master.shape
+        
+        return master
 
     def run(self, image):
         data = image.data
@@ -191,20 +177,35 @@ class Calibration(Block):
         calibrated_data[~np.isfinite(calibrated_data)] = -1
         image.data = calibrated_data
 
-    @property
-    def citations(self):
-        return "astropy", "numpy"
+    def calibration(self, image, exp_time):
+        bias = np.memmap('__bias.array', dtype='float32', mode='r', shape=self.shapes["bias"])
+        dark = np.memmap('__dark.array', dtype='float32', mode='r', shape=self.shapes["dark"])
+        flat = np.memmap('__flat.array', dtype='float32', mode='r', shape=self.shapes["flat"])
+        with np.errstate(divide='ignore', invalid='ignore'):
+            return (image - (dark * exp_time + bias)) / flat
 
-    @property
-    def shared(self):
+    def run(self, image):
+        data = image.data
+        calibrated_image = self.calibration(data, image.exposure.value)
+        calibrated_image[calibrated_image < 0] = np.nan
+        calibrated_image[~np.isfinite(calibrated_image)] = -1
+        image.data = calibrated_image
+
+
+    def _share(self):
         for imtype in ["bias", "dark", "flat"]:
             data = self.__dict__[f"master_{imtype}"]
             m = np.memmap(
                 f"__{imtype}.array", dtype="float32", mode="w+", shape=data.shape
             )
-            m[:, :] = data[:, :]
-
-        return MPCalibration()
+            if data.ndim == 2:
+                m[:, :] = data[:, :]
+            else:
+                m[:] = data[:]
+    
+    @property
+    def citations(self):
+        return "astropy", "numpy"
 
 
 class CleanBadPixels(Block):
@@ -295,3 +296,13 @@ class CleanBadPixels(Block):
 
     def run(self, image):
         image.data = self.clean(image.data.copy())
+
+class Del(Block):
+
+    def __init__(self, *names, name="del"):
+        super().__init__(name=name)
+        self.names = names
+
+    def run(self, image):
+        for name in self.names:
+            setattr(image, name, None)

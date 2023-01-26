@@ -46,6 +46,7 @@ setup(
         "jax",
         "jaxlib",
         "jaxopt",
+        "multiprocess"
     ],
     extras_require={
         "docs": [

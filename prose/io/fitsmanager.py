@@ -285,6 +285,16 @@ class FitsManager:
         df = self.to_pandas(f"select {','.join(columns.keys())} from files where {where} order by jd")
         return df
     
+    def paths(self, **kwargs):
+        """Get the paths of all files matching the kwargs query (see prose.FitsImage.files)
+
+        Returns
+        -------
+        list
+            list of files paths
+        """
+        return self.files(**kwargs, path=True).path.values
+
     def observation_files(self, i, past=1e3, future=0, tolerance=1e15, same_telescope=True, lights="images", show=True):
         files = {}
 

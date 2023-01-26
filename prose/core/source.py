@@ -45,7 +45,7 @@ def clean_stars_positions(positions, tolerance=50):
 # - I don't like this as_scalar behavior, I prefer separate Source and Sources
 
 class Source:
-    def __init__(self, region=None, coords=None, peak=0, i=None):
+    def __init__(self, region=None, coords=None, peak=0, i=None, keep_region=False):
         """Representation of a source in an image
 
         Parameters
@@ -80,7 +80,7 @@ class Source:
 
         self.i = i
         self.discarded = False
-        self._region = region
+        self._region = region if keep_region else None
 
     @property
     def vertexes(self):
