@@ -1,10 +1,9 @@
 import numpy as np
 from . import utils
-from dataclasses import dataclass, field
-from collections import defaultdict
+from dataclasses import dataclass
 from copy import deepcopy
 import matplotlib.pyplot as plt
-import warnings
+import pickle
 
 
 def binned_white_function(x, bins: int=12):
@@ -39,7 +38,7 @@ def weights(fluxes: np.ndarray, tolerance: float=1e-3, max_iteration: int=200, b
     """
     
     # normalize
-    dfluxes = fluxes/np.expand_dims(np.mean(fluxes, -1), -1)
+    dfluxes = fluxes/np.expand_dims(np.nanmean(fluxes, -1), -1)
     binned_white = binned_white_function(fluxes, bins=bins)
     
     i = 0
@@ -86,7 +85,7 @@ def diff(fluxes: np.ndarray, weights: np.ndarray=None):
     np.ndarray
         Differential fluxes if weights is provided, else normalized fluxes
     """
-    diff_fluxes = fluxes/np.expand_dims(np.mean(fluxes, -1), -1)
+    diff_fluxes = fluxes/np.expand_dims(np.nanmean(fluxes, -1), -1)
     if weights is not None:
         # not to divide flux by itself
         sub = np.expand_dims((~np.eye(fluxes.shape[-2]).astype(bool)).astype(int), 0)
@@ -97,7 +96,7 @@ def diff(fluxes: np.ndarray, weights: np.ndarray=None):
     return diff_fluxes
 
 def auto_diff_1d(fluxes, i=None):
-    dfluxes = fluxes / np.expand_dims(np.mean(fluxes, -1), -1)
+    dfluxes = fluxes / np.expand_dims(np.nanmean(fluxes, -1), -1)
     w = weights(dfluxes)
     if i is not None:
         idxs = np.argsort(w)[::-1]
@@ -275,3 +274,11 @@ class Fluxes:
             _new.errors = np.array([np.sqrt(np.sum(np.power(self.errors[i], 2)))/len(i) for i in idxs]).T
             
         return _new
+
+    def save(self, path):
+        with open(path, "wb") as f:
+            pickle.dump(dataclasses.asdict(self), f)
+        
+    def load(path):
+        with open(path, "rb") as f:
+            return Fluxes(**pickle.load(f))

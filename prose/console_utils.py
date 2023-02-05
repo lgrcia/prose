@@ -7,7 +7,9 @@ import warnings
 from . import CONFIG
 from datetime import datetime
 from tqdm import TqdmExperimentalWarning
-from tqdm.autonotebook import tqdm
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", category=TqdmExperimentalWarning)
+    from tqdm.autonotebook import tqdm
 
 def color(s, i):
     return f"\u001b[38;5;{i}m{s}\x1b[0m"
@@ -17,12 +19,10 @@ TQDM_BAR_FORMAT = "%s {l_bar}%s{bar}%s{r_bar}" % (
 )
 
 def progress(show, **kwargs):
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=TqdmExperimentalWarning)
-        if show:
-            return lambda x: tqdm(x, **kwargs)
-        else:
-            return lambda x: x
+    if show:
+        return lambda x: tqdm(x, **kwargs)
+    else:
+        return lambda x: x
 
 def get_terminal_size():
     """ getTerminalSize()
