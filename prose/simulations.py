@@ -303,7 +303,7 @@ def source_example():
     rr, cc, val = line_aa(x0, 10, x0+30, 50)
     data[rr, cc] += val * 200
 
-    return Image(computed=data.T, telescope="a")
+    return Image(data.T)
 
 
 def example_image(seed=43, n=300, w=600):

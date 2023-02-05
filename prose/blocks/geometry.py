@@ -20,44 +20,7 @@ class Trim(Block):
         whether to skip applying trim to WCS, by default False
     trim : tuple, int or flot, optional
         (x, y) trim values, by default None which uses the ``trim`` value from the image telescope definition. If an int or a float is provided trim will be be applied to both axes.
-
-
-    Example
-    -------
-
-    In what follows we generate an example image and apply a trimming on it
-
-    .. jupyter-execute::
-
-        from prose.tutorials import example_image
-        from prose.blocks import Trim
-
-        # our example image
-        image = example_image()
-
-        # Creating and applying the Trim block
-        trim = Trim(trim=100)
-        trimmed_image = trim(image)
-
-    We can now see the resulting trimmed image against its original shape
-
-    .. jupyter-execute::
-
-        import matplotlib.pyplot as plt
-
-        plt.figure(figsize=(12, 4))
-
-        ax1 = plt.subplot(121)
-        image.show(ax=ax1)
-        trim.draw_cutout(image)
-        plt.axis("off")
-        _ = plt.title("original image (white = cutout)", loc="left")
-
-        ax2 = plt.subplot(122)
-        trimmed_image.show(ax=ax2)
-        plt.axis("off")
-        _ = plt.title("trimmed image", loc="left")
-
+        
     """
 
     def __init__(self, trim=None, skip_wcs=True, name=None, verbose=False):

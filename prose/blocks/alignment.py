@@ -57,6 +57,11 @@ class AlignReferenceSources(Block):
         self.compute_transform.run(image)
         sources = self.reference.sources.copy()
         sources.coords = image.transform.inverse(sources.coords.copy())
+
+        # check if alignment potentially failed
+        if np.abs(np.std(sources.coords) - np.std(self.reference.sources.coords)) > 100:
+            image.discard = True
+
         image.sources = sources
 
 

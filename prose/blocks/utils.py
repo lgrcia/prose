@@ -3,7 +3,15 @@ from ..console_utils import info
 from ..utils import easy_median
 import numpy as np
 
-__all__ = ["Apply", "SortSources", "Get", "Calibration", "CleanBadPixels", "Del"]
+__all__ = [
+    "LimitSources",
+    "Apply",
+    "SortSources",
+    "Get",
+    "Calibration",
+    "CleanBadPixels",
+    "Del",
+]
 
 # TODO: document and test
 class SortSources(Block):
@@ -95,6 +103,7 @@ class Calibration(Block):
         loader=FITSImage,
         easy_ram=True,
         verbose=True,
+        shared=True,
         **kwargs,
     ):
 
@@ -108,9 +117,11 @@ class Calibration(Block):
         self.master_bias = self._produce_master(bias, "bias")
         self.master_dark = self._produce_master(darks, "dark")
         self.master_flat = self._produce_master(flats, "flat")
-        
+
         self._share()
         self.verbose = verbose
+
+        self.calibration = self._calibration_shared if shared else self._calibration
 
     def _produce_master(self, images, image_type):
         if images is not None:
@@ -135,11 +146,11 @@ class Calibration(Block):
             if self.verbose:
                 info(f"No {image_type} images set")
             if image_type == "dark":
-                master = np.array([0.])
+                master = np.array([0.0])
             elif image_type == "bias":
-                master = np.array([0.])
+                master = np.array([0.0])
             elif image_type == "flat":
-                master = np.array([1.])
+                master = np.array([1.0])
         else:
             if self.verbose:
                 info(f"Building master {image_type}")
@@ -167,7 +178,7 @@ class Calibration(Block):
                 master = None
 
         self.shapes[image_type] = master.shape
-        
+
         return master
 
     def run(self, image):
@@ -177,12 +188,23 @@ class Calibration(Block):
         calibrated_data[~np.isfinite(calibrated_data)] = -1
         image.data = calibrated_data
 
-    def calibration(self, image, exp_time):
-        bias = np.memmap('__bias.array', dtype='float32', mode='r', shape=self.shapes["bias"])
-        dark = np.memmap('__dark.array', dtype='float32', mode='r', shape=self.shapes["dark"])
-        flat = np.memmap('__flat.array', dtype='float32', mode='r', shape=self.shapes["flat"])
-        with np.errstate(divide='ignore', invalid='ignore'):
+    def _calibration_shared(self, image, exp_time):
+        bias = np.memmap(
+            "__bias.array", dtype="float32", mode="r", shape=self.shapes["bias"]
+        )
+        dark = np.memmap(
+            "__dark.array", dtype="float32", mode="r", shape=self.shapes["dark"]
+        )
+        flat = np.memmap(
+            "__flat.array", dtype="float32", mode="r", shape=self.shapes["flat"]
+        )
+        with np.errstate(divide="ignore", invalid="ignore"):
             return (image - (dark * exp_time + bias)) / flat
+
+    def _calibration(self, image, exp_time):
+        with np.errstate(divide='ignore', invalid='ignore'):
+            return (image - (self.master_dark * exp_time + self.master_bias)) / self.master_flat
+
 
     def run(self, image):
         data = image.data
@@ -190,7 +212,6 @@ class Calibration(Block):
         calibrated_image[calibrated_image < 0] = np.nan
         calibrated_image[~np.isfinite(calibrated_image)] = -1
         image.data = calibrated_image
-
 
     def _share(self):
         for imtype in ["bias", "dark", "flat"]:
@@ -202,7 +223,7 @@ class Calibration(Block):
                 m[:, :] = data[:, :]
             else:
                 m[:] = data[:]
-    
+
     @property
     def citations(self):
         return "astropy", "numpy"
@@ -297,8 +318,8 @@ class CleanBadPixels(Block):
     def run(self, image):
         image.data = self.clean(image.data.copy())
 
-class Del(Block):
 
+class Del(Block):
     def __init__(self, *names, name="del"):
         super().__init__(name=name)
         self.names = names
@@ -306,3 +327,25 @@ class Del(Block):
     def run(self, image):
         for name in self.names:
             setattr(image, name, None)
+
+
+class LimitSources(Block):
+    def __init__(self, min: int = 4, max: int = 10000, name=None):
+        """Limit number of sources. If not in between min and max sources, image is discarded
+
+        Parameters
+        ----------
+        min : int, optional
+            minimum number of sources, by default 4
+        max : int, optional
+            maximum number of sources, by default 10000
+        """
+
+        super().__init__(name=name)
+        self.min = min
+        self.max = max
+
+    def run(self, image):
+        n = len(image.sources)
+        if n < self.min or n > self.max:
+            image.discard = True

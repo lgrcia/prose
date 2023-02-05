@@ -38,6 +38,7 @@ class Sequence:
 
         self.data = {}
         self.n_processed_images = None
+        self.last_image = None
 
     def __getattr__(self, item):
         return self.blocks_dict[item]
@@ -109,7 +110,8 @@ class Sequence:
         for i, image in enumerate(self.progress(self.images)):
             if isinstance(image, (str, Path)):
                 image = loader(image)
-
+            
+            self.last_image = image
             image.i = i
 
             for block in self.blocks:

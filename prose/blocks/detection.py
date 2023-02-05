@@ -138,8 +138,8 @@ class PointSourceDetection(_SourceDetection):
             idxs = np.flatnonzero([r.euler_number == 1 for r in regions])
             regions = [regions[i] for i in idxs]
             
-        sources = np.array([PointSource(region) for region in regions])
-        image.sources = PointSources(self.clean(sources))
+        sources = np.array([PointSource.from_region(region) for region in regions])
+        image.sources = Sources(self.clean(sources), source_type="PointSource")
 
     @property
     def citations(self):
@@ -156,27 +156,13 @@ class TraceDetection(_SourceDetection):
         regions = self.regions(image)
         regions = [r for r in regions if r.axis_major_length > self.min_length]
             
-        sources = np.array([TraceSource(region) for region in regions])
+        sources = np.array([TraceSource.from_region(region) for region in regions])
         image.sources = Sources(sources)
 
     @property
     def citations(self):
         return "scikit-image", "scipy"
 
-class LimitStars(Block):
-
-    def __init__(self, min=4, max=10000, **kwargs):
-        super().__init__(**kwargs)
-        self.min = min
-        self.max = max
-        
-    def run(self, image):
-        n = len(image.sources) 
-        if n == 0:
-            image.discard = True
-        else:
-            if n < self.min or n > self.max:
-                image.discard = True
 
 # backward compatibility
 class SegmentedPeaks(PointSourceDetection):
@@ -230,7 +216,7 @@ class _SimplePointSourceDetection(_SourceDetection):
     def run(self, image):
         coordinates, peaks = self.detect(image)
         sources = np.array([PointSource(coords=c, peak=p) for c, p in zip(coordinates, peaks)])
-        image.sources = PointSources(self.clean(sources))
+        image.sources = Sources(self.clean(sources), source_type="PointSource")
 
 
 class DAOFindStars(_SimplePointSourceDetection):
