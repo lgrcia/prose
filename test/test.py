@@ -99,6 +99,27 @@ class TestBlocksPSF(TestBlocks):
         im = Cutouts()(self.image)
         im = MedianEPSF()(im)
         
+class TestObjectsCopy(unittest.TestCase):
+    def __init__(self, *args, **kwargs):
+        unittest.TestCase.__init__(self, *args, **kwargs)
+        im = example_image()
+        self.image = blocks.PointSourceDetection()(im)
+        self.image = blocks.Cutouts()(self.image)
+
+    def test_copy_sources(self):
+        from prose.core.source import Source, Sources
+        sources = Sources([Source(coords=c) for c in np.random.rand(10, 2)])
+        assert id(sources[0]) != id(sources.copy()[0])
+        assert id(sources[0].coords) != id(sources.copy()[0].coords)
+
+    def test_copy_image(self):
+        self.image.a = 3
+        image_copy = self.image.copy()
+        image_copy.a = 5
+        assert image_copy.a != self.image.a
+        assert id(self.image.sources) != id(image_copy.sources)
+        assert id(self.image.cutouts) != id(image_copy.cutouts)
+        
 
 class TestAlignment(unittest.TestCase):
     def __init__(self, *args, **kwargs):

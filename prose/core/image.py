@@ -12,24 +12,54 @@ from pathlib import Path
 from ..core.source import Sources
 from matplotlib import gridspec
 from pathlib import Path
-from prose import Telescope
-from prose.core.image import *
 from astropy.nddata import Cutout2D as astopy_Cutout2D
 from astropy.wcs.wcs import WCS
 from astropy.io.fits.hdu.base import _BaseHDU
 from PIL import Image
-from copy import deepcopy, copy
+from copy import deepcopy
+from dataclasses import dataclass, asdict
+import pickle
 
+@dataclass
 class Image:
-    def __init__(self, data=None, metadata=None, computed=None):
-        self.data = data
-        self.metadata = metadata if metadata is not None else {}
+    data: np.ndarray = None
+    metadata: dict = None
+    catalogs: dict = None
+    _sources: Sources|dict = None
+    origin: tuple = (0, 0)
+    discard: bool = False
+    computed: dict = None
 
-        self.catalogs = {}
-        self._sources = Sources([])
-        self.discard = False
-        self.origin = (0, 0)
-        self.computed = computed if computed is not None else {}
+    def __post_init__(self):
+        assert isinstance(self.data, np.ndarray) or self.data is None, f"data must be a np.ndarray, not {type(self.data)}" 
+        if self.metadata is None:
+            self.metadata = {}
+        if self.catalogs is None:
+            self.catalogs = {}
+        if self.computed is None:
+            self.computed = {}
+        if isinstance(self._sources, dict):
+            self._sources = Sources(**self._sources)
+        if self._sources is None:
+            self._sources = Sources([])
+            
+    def __setattr__(self, name, value):
+        if hasattr(self, name):
+            super().__setattr__(name, value)
+        else:
+            if "computed" in self.__dict__:
+                self.computed[name] = value
+            else:
+                super().__setattr__(name, value)
+            
+    def __getattr__(self, name):
+        if "computed" not in self.__dict__:
+            super.__getattr__(self, name)
+        else:
+            if name in self.computed:
+                return self.computed[name]
+            else:
+                raise AttributeError()
 
     def copy(self, data=True):
         """Copy of image object
@@ -44,18 +74,7 @@ class Image:
         Image
             copied object
         """
-        new_self = Image(
-            deepcopy(self.data) if data else None,
-            deepcopy(self.metadata),
-            deepcopy(self.computed),
-        )
-
-        del new_self.__dict__["catalogs"]
-        del new_self.__dict__["_sources"]
-
-        new_self.catalogs = deepcopy(self.catalogs)
-        new_self._sources = copy(self._sources)
-
+        new_self = deepcopy(self)
         return new_self
 
     def __copy__(self):
@@ -69,6 +88,7 @@ class Image:
         zscale=True,
         frame=False,
         contrast=0.1,
+        sources=True,
         **kwargs,
     ):
         """Show image data
@@ -133,6 +153,13 @@ class Image:
             overlay.grid(color="white", ls="dotted")
             overlay[0].set_axislabel("Right Ascension (J2000)")
             overlay[1].set_axislabel("Declination (J2000)")
+
+        if sources:
+            if self.sources is not None:
+                self.sources.plot()
+
+        ax.set_xlim(0, self.shape[1]-1)
+        ax.set_ylim(0, self.shape[0]-1)
 
     def _from_metadata_with_unit(self, name):
         unit_name = f"{name}_unit"
@@ -226,31 +253,30 @@ class Image:
         else:
             self._sources = Sources(np.array(new_sources))
 
-    def show_cutout(self, star=None, size=200, **kwargs):
-        """Show a zoomed cutout around a detected star or coordinates
+    # def show_cutout(self, star=None, size=200, **kwargs):
+    #     """Show a zoomed cutout around a detected star or coordinates
 
-        Parameters
-        ----------
-        star : [type], optional
-            detected star id or (x, y) coordinate, by default None
-        size : int, optional
-            side size of square cutout in pixel, by default 200
-        **kwargs passed to self.show
-        """
+    #     Parameters
+    #     ----------
+    #     star : [type], optional
+    #         detected star id or (x, y) coordinate, by default None
+    #     size : int, optional
+    #         side size of square cutout in pixel, by default 200
+    #     **kwargs passed to self.show
+    #     """
 
-        if star is None:
-            x, y = self.stars_coords[self.target]
-        elif isinstance(star, int):
-            x, y = self.stars_coords[star]
-        elif isinstance(star, (tuple, list, np.ndarray)):
-            x, y = star
-        else:
-            raise ValueError("star type not understood")
+    #     if star is None:
+    #         x, y = self.stars_coords[self.target]
+    #     elif isinstance(star, int):
+    #         x, y = self.stars_coords[star]
+    #     elif isinstance(star, (tuple, list, np.ndarray)):
+    #         x, y = star
+    #     else:
+    #         raise ValueError("star type not understood")
 
-        self.show(stars=False, **kwargs)
-        plt.xlim(np.array([-size / 2, size / 2]) + x)
-        plt.ylim(np.array([-size / 2, size / 2]) + y)
-        self.plot_sources()
+    #     self.show(stars=False, **kwargs)
+    #     plt.xlim(np.array([-size / 2, size / 2]) + x)
+    #     plt.ylim(np.array([-size / 2, size / 2]) + y)
 
     def cutout(self, coords, shape, wcs=True):
         """Return a list of Image cutouts from the image
@@ -259,8 +285,8 @@ class Image:
         ----------
         coords : np.ndarray
             (N, 2) array of cutouts center coordinates 
-        shape : tuple
-            The shape of the cutouts to extract
+        shape : tuple or int
+            The shape of the cutouts to extract. If int, shape is (shape, shape)
         wcs : bool, optional
             wether to compute and include cutouts WCS (takes more time), by default True
 
@@ -269,6 +295,12 @@ class Image:
         list of Image
             image cutouts
         """
+        if isinstance(shape, (int, float)):
+            shape = (shape, shape)
+
+        if isinstance(coords, int):
+            coords = self.sources.coords[coords]
+
         new_image = astopy_Cutout2D(
             self.data,
             coords,
@@ -294,6 +326,7 @@ class Image:
         image = Image(new_image.data, deepcopy(self.metadata), deepcopy(self.computed))
         image._sources = Sources(new_sources)
         image.wcs = new_image.wcs
+        image.origin = tuple(np.array(new_image.bbox_original).T[0][::-1])
 
         return image
 
@@ -374,24 +407,79 @@ class Image:
         axr.plot(np.mean(self.data, axis=1), y[0], c=c)
         axr.plot(np.mean(data, axis=1), y[0], "--", c="k")
         axr.axis("off")
-    
-    def __setattr__(self, name, value):
-        if hasattr(self, name):
-            super().__setattr__(name, value)
-        else:
-            if "computed" in self.__dict__:
-                self.computed[name] = value
-            else:
-                super().__setattr__(name, value)
-            
-    def __getattr__(self, name):
-        if "computed" not in self.__dict__:
-            super.__getattr__(self, name)
-        else:
-            if name in self.computed:
-                return self.computed[name]
-            else:
-                raise AttributeError()
+
+    def asdict(self, image_dtype='int16', low_data=True):
+        im_dict = asdict(self.copy())
+        if low_data:
+            im_dict["data"] = utils.z_scale(im_dict["data"])*(2**7 - 1)
+            image_dtype = 'int8'
+        im_dict["data"] = im_dict["data"].astype(image_dtype)
+        return im_dict
+
+    def save(self, filepath, image_dtype='int16', low_data=True):
+        with open(filepath, "wb") as f:
+            pickle.dump(self.asdict(image_dtype=image_dtype, low_data=low_data), f)
+        
+    @classmethod
+    def load(cls, filepath):
+        return cls(**pickle.load(open(filepath, "rb")))
+
+    def symetric_profile(self, source, binn=1.):
+        x, y = source.coords
+        Y, X = np.indices(self.shape)
+        radii = (np.sqrt((X - x) ** 2 + (Y - y) ** 2)).flatten()
+        d, values = self.profile(radii)
+        idxs = utils.index_binning(d, binn)
+        mean = lambda x: np.array([np.mean(x[i]) for i in idxs])
+        return mean(d), mean(values)
+
+    def profile(self, d):
+        idxs = np.argsort(d)
+        _d = d[idxs]
+        pixels = self.data.flatten()
+        pixels = pixels[idxs]
+
+        return _d, pixels 
+
+    def major_profile(self, source, binn=1., debug=False):
+        p1 = source.coords[:, None, None]
+        p2 = (source.vertexes[0])[:, None, None]
+        Y, X = np.indices(self.data.shape)
+        p3 = np.array([X, Y])
+
+        # projection
+        # https://stackoverflow.com/questions/61341712/calculate-projected-point-location-x-y-on-given-line-startx-y-endx-y
+        l2 = np.sum((p1-p2)**2)
+        assert l2 != 0, 'p1 and p2 are the same points'
+        distances = (np.sum((p3 - p1) * (p2 - p1), 0) / np.sqrt(l2))
+        flat_distance = distances.flatten()
+        idxs = utils.index_binning(flat_distance, binn)
+        distance = np.array([flat_distance[i].mean() for i in idxs])
+        values =  np.array([np.nanmax(self.data.flatten()[i]) for i in idxs])
+
+        if debug:
+            D = np.zeros(self.data.flatten().shape)
+            for i, j in enumerate(idxs):
+                D[j] = i
+            plt.figure()
+            plt.imshow(np.reshape(D, self.shape), origin="lower")
+
+        return distance, values
+
+    @property
+    def label(self):
+        """A conveniant {Telescope}_{Date}_{Object}_{Filter} string
+
+        Returns
+        -------
+        str
+        """
+        return "_".join([
+            self.metadata["telescope"],
+            self.night_date.strftime("%Y%m%d"),
+            self.metadata["object"],
+            self.filter
+        ])
 
 def str_to_astropy_unit(unit_string):
     return u.__dict__[unit_string]

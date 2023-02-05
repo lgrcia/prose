@@ -5,6 +5,9 @@ from photutils.isophote import Ellipse as IsoEllipse
 from astropy.utils import lazyproperty
 import numpy as np
 import matplotlib.pyplot as plt
+from dataclasses import dataclass
+from typing import Literal
+import copy
 
 color = [0.51, 0.86, 1.]
 
@@ -14,8 +17,7 @@ __all__ = [
     "ExtendedSource",
     "TraceSource",
     "auto_source",
-    "Sources",
-    "PointSources"
+    "Sources"
 ]
 
 def distance(p1, p2):
@@ -44,43 +46,38 @@ def clean_stars_positions(positions, tolerance=50):
 # - We will use it, as region so that users have access to it if needed
 # - I don't like this as_scalar behavior, I prefer separate Source and Sources
 
+@dataclass
 class Source:
-    def __init__(self, region=None, coords=None, peak=0, i=None, keep_region=False):
-        """Representation of a source in an image
+    a: float= 1.
+    b: float= 1.
+    orientation: float= 0.
+    coords: np.ndarray= None
+    peak: float= 0.
+    i: int= None
+    discarded: bool= False
+
+    @classmethod
+    def from_region(cls, region, keep_region: bool=False, **kwargs):
+        """Source from region
 
         Parameters
         ----------
-        region : skimage.measure.RegionProperties, optional
-            An skimage RegionProperties containing the source, by default None. Only one of 'coords' or 'region' must be provided
-        coords : array, optional
-            Pixel coordinates of the source, by default None. Only one of 'coords' or 'region' must be provided
-        peak : float, optional
-            maximum pixel value of the source, by default 0
-        i : int, optional
-            index identifier of the source, by default None
+        region : skimage.measure.RegionProperties
+            An skimage RegionProperties containing the source
+        keep_region: bool, optional
+            wether to keep region object in source
+        **kwargs:
+            other sources attributes to set
         """
-        # assert (region is not None) or (coords is not None), "One of 'coords' or 'region' must be provided"
-        # if (region is not None) and (coords is not None):
-        #     AssertionError("Only one of 'coords' or 'region' must be provided")
-        # if (region is not None) and (peak != 0):
-        #     AssertionError("Providing 'peak' has no effect when 'region' is provided")
-
-        if region is not None:
-            self.a = region.axis_major_length/2
-            self.b = region.axis_minor_length/2
-            self.orientation = np.pi/2 - region.orientation
-            self.coords = np.array(region.centroid_weighted[::-1])
-            self.peak = region.intensity_max
-        else:
-            self.a = 1.
-            self.b = 1.
-            self.orientation = 0.
-            self.coords = coords
-            self.peak = peak
-
-        self.i = i
-        self.discarded = False
-        self._region = region if keep_region else None
+        source = cls(
+            a=region.axis_major_length/2, 
+            b=region.axis_minor_length/2, 
+            orientation=np.pi/2 - region.orientation, 
+            coords=np.array(region.centroid_weighted[::-1]),
+            peak = region.intensity_max,
+            **kwargs
+            )
+        return source
 
     @property
     def vertexes(self):
@@ -308,7 +305,6 @@ class Source:
             "coords": f"{self.coords[0]:.2f}".rjust(n) + f"{self.coords[1]:.2f}".rjust(n),
             "a, b": f"{self.a:.2f}".rjust(n) + f"{self.b:.2f}".rjust(n),
             "e": f"{self.b/self.a:.2f}".rjust(n),
-            "region": str(self._region is not None).rjust(n)
             }
 
     def __str__(self):
@@ -324,25 +320,29 @@ class Source:
         y0, x0 = np.unravel_index(np.argmax(self._region.image_intensity), self._region.image.shape)
         dy, dx, _, _ = self._region.bbox
         return np.array([x0+dx, y0+dy])
+
+    @property
+    def area(self):
+        return self.a*self.b
     
 def auto_source(region, i=None, trace=0.3, extended=0.9, discard=False):
     if region is None:
-        return DiscardedSource(region, i=i)
+        return DiscardedSource.from_region(region, i=i)
     a = region.axis_major_length
     b = region.axis_minor_length
     if a == 0.:
         if discard:
-            return DiscardedSource(region, i=i)
+            return DiscardedSource.from_region(region, i=i)
         else:
-            return PointSource(region, i=i)
+            return PointSource.from_region(region, i=i)
     eccentricity = b/a
     if eccentricity <= extended:
         if eccentricity <= trace:
-            return TraceSource(region, i=i)
+            return TraceSource.from_region(region, i=i)
         else:
-            return ExtendedSource(region, i=i)
+            return ExtendedSource.from_region(region, i=i)
     else:
-        return PointSource(region, i=i)
+        return PointSource.from_region(region, i=i)
 
 class DiscardedSource(Source):
     def __init__(self, region, i=None):
@@ -355,22 +355,8 @@ class DiscardedSource(Source):
         ax.plot(*self.coords, "x", c=c, ms=ms, **kwargs)
     
 class PointSource(Source):
-    def __init__(self, region=None, coords=None, peak=0, i=None):
-        """Point source (star)
-
-        Parameters
-        ----------
-        region : skimage.measure.RegionProperties, optional
-            An skimage RegionProperties containing the source, by default None. Only one of 'coords' or 'region' must be provided
-        coords : array, optional
-            Pixel coordinates of the source, by default None. Only one of 'coords' or 'region' must be provided
-        peak : float, optional
-            maximum pixel value of the source, by default 0
-        i : int, optional
-            index identifier of the source, by default None
-        """
-        super().__init__(region=region, coords=coords, peak=peak, i=i)
-
+    """Point source (star)
+    """
     @property
     def _symbol(self):
         return chr(8226)
@@ -393,22 +379,9 @@ class PointSource(Source):
 
     
 class ExtendedSource(Source):
-    def __init__(self, region=None, coords=None, peak=0, i=None):
-        """Extended source (comet, galaxy or lensed source)
-
-        Parameters
-        ----------
-        region : skimage.measure.RegionProperties, optional
-            An skimage RegionProperties containing the source, by default None. Only one of 'coords' or 'region' must be provided
-        coords : array, optional
-            Pixel coordinates of the source, by default None. Only one of 'coords' or 'region' must be provided
-        peak : float, optional
-            maximum pixel value of the source, by default 0
-        i : int, optional
-            index identifier of the source, by default None
-        """
-        super().__init__(region=region, coords=coords, peak=peak, i=i)
-
+    """Extended source (comet, galaxy or lensed source)
+    """
+    
     @property
     def _symbol(self):
         return chr(11053)
@@ -431,22 +404,8 @@ class ExtendedSource(Source):
 
 
 class TraceSource(Source):
-    def __init__(self, region=None, coords=None, peak=0, i=None):
-        """Trace source (diffracted spectrum, satellite streak or cosmic ray)
-
-        Parameters
-        ----------
-        region : skimage.measure.RegionProperties, optional
-            An skimage RegionProperties containing the source, by default None. Only one of 'coords' or 'region' must be provided
-        coords : array, optional
-            Coordinates of the source, by default None. Only one of 'coords' or 'region' must be provided
-        peak : float, optional
-            maximum pixel value of the source, by default 0
-        i : int, optional
-            index identifier of the source, by default None
-        """
-        super().__init__(region=region, coords=coords, peak=peak, i=i)
-        self.discarded = True
+    """Trace source (diffracted spectrum, satellite streak or cosmic ray)
+    """
         
     def plot(self, offset=10, ax=None, c=color, label=True, fontsize=12):
         if ax is None:
@@ -464,21 +423,19 @@ class TraceSource(Source):
     def annulus(self, r0=1.05, r1=1.4, scale=True):
         return self.rectangular_annulus(r0, r1, scale=scale)
 
+@dataclass
 class Sources:
+    sources: list|np.ndarray=None
+    source_type: Literal["PointSource", None]= None
 
-    def __init__(self, sources, source_type=None):
-        """List of sources
+    def __post_init__(self):
+        if self.sources is None:
+            self.sources = []
 
-        Parameters
-        ----------
-        sources : list-like
-            list of sources
-        """
-        self.source_type = source_type
         if self.source_type is not None:
-            for s in sources:
-                assert isinstance(s, self.source_type), f"list can only contain {self.source_type}"
-        self.sources = np.array(sources)
+            for s in self.sources:
+                assert s.__class__.__name__ == self.source_type, f"list can only contain {self.source_type}"
+        self.sources = np.array(self.sources)
 
     def __getitem__(self, i):
         if isinstance(i, int):
@@ -496,7 +453,7 @@ class Sources:
         return self.sources.__repr__()
 
     def copy(self):
-        return self.__class__([s.copy() for s in self.sources])
+        return copy.deepcopy(self)
 
     def __copy__(self):
         return self.copy()
@@ -511,55 +468,19 @@ class Sources:
             source.coords = new_coord
 
     def apertures(self, r, scale=False):
-        return [source.aperture(r, scale=scale) for source in self.sources]
+        if self.source_type == "PointSource":
+            return CircularAperture(self.coords, r)
+        else:
+            return [source.aperture(r, scale=scale) for source in self.sources]
     
     def annulus(self, rin, rout, scale=False):
-        return [source.annulus(rin, rout, scale=scale) for source in self.sources]
+        if self.source_type == "PointSource":
+            return CircularAnnulus(self.coords, rin, rout)
+        else:
+            return [source.annulus(rin, rout, scale=scale) for source in self.sources]
 
     def plot(self, *args, **kwargs):
         for s in self.sources:
             s.plot(*args, **kwargs)
-
-
-class PointSources(Sources):
-    
-    def __init__(self, sources):
-        """List of point sources
-
-        Mainly used to produce optimized global photutils.aperture objects for faster photometry
-
-        Parameters
-        ----------
-        sources : list-like
-            list of point like sources
-        """
-        super().__init__(sources, source_type=PointSource)
-        
-    def apertures(self, r, **kwargs):
-        """`photutils.aperture.CircularAperture` centered on all sources
-
-        Parameters
-        ----------
-        r : float
-            radius
-        Returns
-        -------
-        photutils.aperture.CircularAperture
-        """
-        return CircularAperture(self.coords, r)
-    
-    def annulus(self, r0, r1):
-        """`photutils.aperture.CircularAnnulus` centered on all sources
-
-        Parameters
-        ----------
-        r0, r1 : float
-            inner and outer annulus radii
-        Returns
-        -------
-        photutils.aperture.CircularAperture
-        """
-        return CircularAnnulus(self.coords, r0, r1)
-
 
     
