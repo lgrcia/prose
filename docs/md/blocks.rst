@@ -49,26 +49,19 @@ PSF
 Alignment & Geometry
 --------------------
 
-.. currentmodule:: prose.blocks
-
 .. image:: ../_static/matching.png
    :align: center
    :height: 220px
-
 
 .. autosummary::
    :template: blocksum.rst
    :nosignatures:
 
-   Trim
-   Cutouts
-   ComputeTransform
-   
-   Align
-   Drizzle
-   AlignReferenceSources
-   AlignReferenceWCS
-
+   ~prose.blocks.geometry.Trim
+   ~prose.blocks.geometry.Cutouts
+   ~prose.blocks.alignment.Align
+   ~prose.blocks.alignment.AlignReferenceSources
+   ~prose.blocks.alignment.AlignReferenceWCS
 
 Centroiding
 -----------
@@ -92,7 +85,6 @@ Photometry
 .. image:: ../_static/photometry.png
    :align: center
    :width: 220px
-
 
 .. autosummary::
    :template: blocksum.rst

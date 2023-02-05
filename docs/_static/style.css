@@ -1,5 +1,5 @@
 :root {
-    --pst-color-inline-code: 33, 125, 224;
+    /* --pst-color-inline-code: 33, 125, 224; */
     --mystnb-source-margin-color: darkgrey;
 }
 
@@ -139,8 +139,15 @@ div.nboutput.container div.output_area {
     color: #70a0d0 !important;
 }
 
-code,
+/* code,
 code span.pre {
     background: none;
     color: var(--color-brand-primary)
+} */
+
+/* Dataframe */
+
+.cell_output .dataframe {
+    font-size: 0.85em;
+    width: 100%;
 }

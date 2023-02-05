@@ -116,9 +116,8 @@ from prose import Block
 
 files = glob("../prose/blocks/*.py")
 classes = []
-
 for f in files:
-    module = f.split("../")[1].rstrip(".py").replace("/", ".")
+    module = f.split("../")[1].replace(".py", "").replace("/", ".")
     if module in sys.modules:
         for cls_name, cls_obj in inspect.getmembers(sys.modules[module]):
             if  cls_name.split(".")[-1][0] != "_":

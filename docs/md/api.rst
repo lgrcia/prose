@@ -9,12 +9,13 @@ Image processing
 
 Core objects to deal with astronomical image representation and processing. See the `fits manager`_ or quickstart_ tutorials.
 
-.. _quickstart: ../notebooks/quickstart.ipynb
-.. _`fits manager`: ../notebooks/fits_manager.ipynb
+.. _quickstart: ../ipynb/quickstart.html
+.. _`fits manager`: ../ipynb/fitsmanager.html
 
 
 .. autosummary::
    :nosignatures:
+   :toctree: generated
    :template: class.rst
 
    Telescope
@@ -35,6 +36,7 @@ Objects to represent sources in astronomical images. See the sources_ tutorial.
 
 .. autosummary::
    :nosignatures:
+   :toctree: generated
    :template: class.rst
 
    PointSource
@@ -49,7 +51,7 @@ Other
 
 .. autosummary::
    :nosignatures:
+   :toctree: generated
    :template: class.rst
 
-   fluxes.ApertureFluxes
-   Observation
+   Fluxes

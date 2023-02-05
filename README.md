@@ -64,25 +64,6 @@ image.plot_psf_model() # PSF model
 
 While being run on a single image, a Sequence is designed to be run on list of images (paths) and provides the architecture to build powerful pipelines. For more details check [Quickstart](https://prose.readthedocs.io/en/latest/notebooks/quickstart.html) and [What is a pipeline?](https://prose.readthedocs.io/en/latest/rst/core.html)
 
-## Default pipelines
- *prose* features default pipelines to perform common tasks like:
-
-```python
-
-from prose.pipeline import Calibration, AperturePhotometry
-
-destination = "reduced_folder"
-
-reduction = Calibration(darks=[...], flats=[...])
-reduction.run(images, destination)
-
-photometry = AperturePhotometry(calib.images, calib.stack)
-photometry.run(calib.phot)
-
-```
-
-However, the package is designed to avoid pre-implemented black-boxes, in favor of transparent pipelines. For a practical illustration of that, check our [Photometry tutorial](https://prose.readthedocs.io/en/latest/notebooks/photometry.html).
-
 ## Installation
 
 ### latest
@@ -96,27 +77,8 @@ pip install prose
 To install it through conda (recommended, within a fresh environment):
 
 ```shell
-conda install numpy scipy tensorflow netcdf4 numba
-
-# then 
-
-pip install prose
+conda env create -f {prose_repo}/environment.yml -n prose
 ```
-
-### dev
-
-clone the repo
-
-```shell
-git clone https://github.com/lgrcia/prose.git
-```
-
-install locally (if within conda, same environment setup as above)
-
-```
-pip install -e {path_to_repo}
-```
-
 
 ## Helping us
 

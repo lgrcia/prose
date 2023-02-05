@@ -7,5 +7,4 @@
 ../ipynb/hiaka.ipynb
 ../ipynb/comet.ipynb
 ../ipynb/satellite.ipynb
-../ipynb/diagnostic.ipynb
 ```
