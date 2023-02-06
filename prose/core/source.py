@@ -6,8 +6,7 @@ from astropy.utils import lazyproperty
 import numpy as np
 import matplotlib.pyplot as plt
 from dataclasses import dataclass
-from typing import Literal
-from typing import Union
+from typing import Literal, Union
 import copy
 
 color = [0.51, 0.86, 1.]
@@ -426,7 +425,7 @@ class TraceSource(Source):
 
 @dataclass
 class Sources:
-    sources: Union(list, np.ndarray)=None
+    sources: Union[list, np.ndarray]=None
     source_type: Literal["PointSource", None]= None
 
     def __post_init__(self):
