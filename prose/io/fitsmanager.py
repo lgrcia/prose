@@ -189,7 +189,7 @@ class FitsManager:
                         except:
                             "ERROR, batch ignored"
                 else:
-                    df = self.fits_to_df(files_to_scan, verbose=True, hdu=hdu, verbose_os=verbose_os)
+                    df = self.fits_to_df(files_to_scan, verbose=verbose, hdu=hdu, verbose_os=verbose_os)
                     for row in df.values:
                         if telescope is not None:
                             row[2] = telescope

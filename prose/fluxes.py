@@ -3,6 +3,7 @@ from . import utils
 from dataclasses import dataclass
 from copy import deepcopy
 import matplotlib.pyplot as plt
+import warnings
 import pickle
 
 
@@ -221,8 +222,10 @@ class Fluxes:
         return _new
     
     def autodiff(self, target=None):
-        diff_fluxes, weights = auto_diff(self.fluxes, target)
-        
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', RuntimeWarning)
+            diff_fluxes, weights = auto_diff(self.fluxes, target)
+            
         _new = deepcopy(self)
         _new.fluxes = diff_fluxes
         _new.weights = weights

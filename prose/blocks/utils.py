@@ -1,6 +1,7 @@
 from ..core import Block, Image, Sources, FITSImage
 from ..console_utils import info
 from ..utils import easy_median
+from ..fluxes import Fluxes
 import numpy as np
 
 __all__ = [
@@ -11,6 +12,7 @@ __all__ = [
     "Calibration",
     "CleanBadPixels",
     "Del",
+    "GetFluxes"
 ]
 
 # TODO: document and test
@@ -54,12 +56,12 @@ class Apply(Block):
 
 
 class Get(Block):
-    def __init__(self, *names, name="get", arrays=False, **getters):
+    def __init__(self, *names, name="get", arrays=True, **getters):
         super().__init__(name=name)
         getters.update({name: lambda image: getattr(image, name) for name in names})
         self.getters = getters
         self.values = {name: [] for name in getters.keys()}
-        self.arrays = True
+        self.arrays = arrays
 
     def run(self, image: Image):
         for name, get in self.getters.items():
@@ -349,3 +351,24 @@ class LimitSources(Block):
         n = len(image.sources)
         if n < self.min or n > self.max:
             image.discard = True
+
+
+class GetFluxes(Get):
+    
+    def __init__(self, data=None, time='jd'):
+        self.data_keys = data if data is not None else []
+        get_bkg = lambda im: im.aperture["fluxes"]
+        get_fluxes = lambda im: im.annulus["median"][:, None] * np.pi*(im.aperture['radii']**2)
+        self._time_key = time
+        super().__init__(time, *self.data_keys, _bkg=get_bkg, _fluxes=get_fluxes)
+        self.fluxes=None
+        
+    def terminate(self):
+        super().terminate()
+        raw_fluxes = (self._fluxes - self._bkg).T
+        time = np.array(self.values[self._time_key])
+        del self.values["_fluxes"]
+        self.values["bkg"] = self.values["_bkg"]
+        del self.values["_bkg"]
+        del self.values[self._time_key]
+        self.fluxes = Fluxes(time=time, fluxes=raw_fluxes, data=self.values)
