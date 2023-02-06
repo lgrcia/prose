@@ -19,13 +19,14 @@ from PIL import Image
 from copy import deepcopy
 from dataclasses import dataclass, asdict
 import pickle
+from typing import Union
 
 @dataclass
 class Image:
     data: np.ndarray = None
     metadata: dict = None
     catalogs: dict = None
-    _sources: Sources|dict = None
+    _sources: Union[Sources, dict] = None
     origin: tuple = (0, 0)
     discard: bool = False
     computed: dict = None
