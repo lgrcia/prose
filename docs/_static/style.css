@@ -151,3 +151,12 @@ code span.pre {
     font-size: 0.85em;
     width: 100%;
 }
+
+/* prose logo font  */
+#site-navigation h1.site-logo {
+    font-style: italic;
+    font-weight: bold;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    color: #404040;
+    font-size: 2rem;
+}
