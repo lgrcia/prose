@@ -360,7 +360,7 @@ class GetFluxes(Get):
         get_bkg = lambda im: im.aperture["fluxes"]
         get_fluxes = lambda im: im.annulus["median"][:, None] * np.pi*(im.aperture['radii']**2)
         self._time_key = time
-        super().__init__(time, *self.data_keys, _bkg=get_bkg, _fluxes=get_fluxes)
+        super().__init__(time, *self.data_keys, _bkg=get_bkg, _fluxes=get_fluxes, name="fluxes")
         self.fluxes=None
         
     def terminate(self):
