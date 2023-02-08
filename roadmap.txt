@@ -1,17 +1,31 @@
+This is a roadmap document to organize the development of prose and its features
+
+legend:
+-: to do
+n: discarded
+x: done
+?: to keep?
+
+# Roadmap
+
 3.0.0:
-- save image as hdf5 with associated products
+n save image as hdf5 with associated products
 - keep Observation?
-- Make full use of photutils.segmentation instead of skimage?
+n Make full use of photutils.segmentation instead of skimage?
 - Documentation make clearer argument type (like `~numpy.array`)
 - A clear documentation on image axes and angle orientation (like source.coord or source.orientation). Indeed this differs from numpy convention opposite from the way we usually deal with geometric points
-- use astropy lazy property 
-- switch to jax for all blocks with optimization
-- A cutout should be an Image!!
+n use astropy lazy property 
+x switch to jax for all blocks with optimization
+x A cutout should be an Image!!
 - Sources must hold WCS info like ra dec 
-- A Data block holding image metadata has a dataframe, and containing the computed data
+x A Data block holding image metadata has a dataframe, and containing the computed data
 - A QuickStack(n=15) block capable of retaining only the best images (and make a stack)
-- A Data class that can be saved and loaded
+x A Data class that can be saved and loaded
 - Document catalog blocks
+- adapt Fluxes to 1D as well
+- rewrite the catalogs tutorial from 2.3.1
+- rewrite the archive tutorial from 2.3.1
+- fix blocks and sequence citations
 
 2.3.1:
 x put into dev branch
