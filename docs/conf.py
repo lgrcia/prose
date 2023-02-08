@@ -99,6 +99,8 @@ rst_prolog = """
 .. role:: blockmodify
 .. |modify| replace:: :blockmodify:`modify data`
 
+.. _JAX: https://jax.readthedocs.io/en/latest/
+
 """
 
 html_css_files = ['style.css']
