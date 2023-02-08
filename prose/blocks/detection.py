@@ -16,18 +16,35 @@ __all__ = [
 ]
 
 class _SourceDetection(Block):
-    """Base class for sources detection.
-    """
     def __init__(
         self, 
-        threshold=4, 
-        n=None, 
-        sort=True, 
-        min_separation=None, 
-        name=None, 
-        min_area=0, 
-        minor_length=0
+        threshold:float=4, 
+        n:int=None, 
+        sort:bool=True, 
+        min_separation:float=None, 
+        min_area:str=0, 
+        minor_length:str=0,
+        name:str=None
     ):
+        """Base class for sources detection.
+
+        Parameters
+        ----------
+        threshold : float, optional
+            detection threshold for sources, by default 4
+        n : int, optional
+            number of sources to detect, by default None
+        sort : bool, optional
+            whether to sort per ADU peak value (from the greatest), by default True
+        min_separation : float, optional
+            minimum separation in pixels from one source to the other. Between two sources, greater ADU is kept, by default None
+        min_area : str, optional
+            minimum area in pixels of the sources to detect, by default 0
+        minor_length : str, optional
+            minimum length of semi-major axis of sources to detect, by default 0
+        name : str, optional
+            name of the block, by default None
+        """
         super().__init__(name=name)
         self.n = n
         self.sort = sort
@@ -85,13 +102,6 @@ class _SourceDetection(Block):
         return regions
     
 class AutoSourceDetection(_SourceDetection):
-    """Blah
-
-    Parameters
-    ----------
-    _SourceDetection : _type_
-        _description_
-    """
     def __init__(
         self, 
         threshold=4, 
@@ -102,6 +112,25 @@ class AutoSourceDetection(_SourceDetection):
         min_area=0, 
         minor_length=0
     ):
+        """Detect all sources
+
+        Parameters
+        ----------
+        threshold : float, optional
+            detection threshold for sources, by default 4
+        n : int, optional
+            number of sources to detect, by default None
+        sort : bool, optional
+            whether to sort per ADU peak value (from the greatest), by default True
+        min_separation : float, optional
+            minimum separation in pixels from one source to the other. Between two sources, greater ADU is kept, by default None
+        min_area : str, optional
+            minimum area in pixels of the sources to detect, by default 0
+        minor_length : str, optional
+            minimum length of semi-major axis of sources to detect, by default 0
+        name : str, optional
+            name of the block, by default None
+        """
         super().__init__(
             threshold=threshold, 
             n=n, 
@@ -126,6 +155,27 @@ class PointSourceDetection(_SourceDetection):
         minor_length=2,
         **kwargs
     ):
+        """Detect point sources (as :py:class:`~prose.core.source.PointSource`)
+
+        Parameters
+        ----------
+        unit_euler : bool, optional
+            whether to consider sources with euler number == 1, by default False
+        min_area : str, optional
+            minimum area in pixels of the sources to detect, by default 0
+        minor_length : str, optional
+            minimum length of semi-major axis of sources to detect, by default 0
+        threshold : float, optional
+            detection threshold for sources, by default 4
+        n : int, optional
+            number of sources to detect, by default None
+        sort : bool, optional
+            whether to sort per ADU peak value (from the greatest), by default True
+        min_separation : float, optional
+            minimum separation in pixels from one source to the other. Between two sources, greater ADU is kept, by default None
+        name : str, optional
+            name of the block, by default None
+        """
 
         super().__init__(min_area=min_area, minor_length=minor_length, **kwargs)
         self.unit_euler = unit_euler
@@ -148,14 +198,30 @@ class PointSourceDetection(_SourceDetection):
 
 class TraceDetection(_SourceDetection):
 
-    def __init__(self, min_length=5, **kwargs):
-        super().__init__(**kwargs)
-        self.min_length = min_length
+    def __init__(self, minor_length=5, **kwargs):
+        """Detect trace sources  (as :py:class:`~prose.core.source.TraceSource`)
+
+        Parameters
+        ----------
+        minor_length : str, optional
+            minimum length of semi-major axis of sources to detect, by default 0
+        min_area : str, optional
+            minimum area in pixels of the sources to detect, by default 0
+        threshold : float, optional
+            detection threshold for sources, by default 4
+        n : int, optional
+            number of sources to detect, by default None
+        sort : bool, optional
+            whether to sort per ADU peak value (from the greatest), by default True
+        min_separation : float, optional
+            minimum separation in pixels from one source to the other. Between two sources, greater ADU is kept, by default None
+        name : str, optional
+            name of the block, by default None
+        """
+        super().__init__(minor_length=minor_length, **kwargs)
     
     def run(self, image):
         regions = self.regions(image)
-        regions = [r for r in regions if r.axis_major_length > self.min_length]
-            
         sources = np.array([TraceSource.from_region(region) for region in regions])
         image.sources = Sources(sources)
 
@@ -175,6 +241,10 @@ class SegmentedPeaks(PointSourceDetection):
         n_stars=None,
         **kwargs
     ):
+        """Detect point sources (backward compatibility)
+
+        Same as :py:class:`~prose.blocks.PointSourceDetection`
+        """
 
         super().__init__(n=n_stars, min_area=min_area, minor_length=minor_length, **kwargs)
         self.unit_euler = unit_euler

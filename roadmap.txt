@@ -11,6 +11,7 @@
 - A Data block holding image metadata has a dataframe, and containing the computed data
 - A QuickStack(n=15) block capable of retaining only the best images (and make a stack)
 - A Data class that can be saved and loaded
+- Document catalog blocks
 
 2.3.1:
 x put into dev branch

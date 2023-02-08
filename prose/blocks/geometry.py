@@ -3,12 +3,15 @@ import numpy as np
 from skimage.transform import AffineTransform
 from scipy.spatial import KDTree
 from twirl import utils as twirl_utils
+from typing import Union
 
 __all__ = ["Trim", "Cutouts"]
 
 
 class Trim(Block):
-    """Image trimming. If trim is not specified, triming is taken from the "overscan" in image metadata
+    """Image trimming
+    
+    If trim is not specified, triming is taken from the "overscan" in image metadata
 
     |write| ``Image.header``
 
@@ -41,7 +44,22 @@ class Trim(Block):
 
 
 class Cutouts(Block):
-    def __init__(self, shape=50, wcs=False, name=None):
+    def __init__(self, shape:Union[int, tuple]=50, wcs:bool=False, name:str=None):
+        """Create cutouts around all sources
+
+        |read| :code:`Image.sources`
+
+        |write| :code:`Image.cutouts`
+
+        Parameters
+        ----------
+        shape : int or tuple, optional
+            cutout shape, by default 50
+        wcs : bool, optional
+            whether to compute cutouts WCS, by default False
+        name : str, optional
+            name of the blocks, by default None
+        """
         super().__init__(name=name)
         if isinstance(shape, int):
             shape = (shape, shape)

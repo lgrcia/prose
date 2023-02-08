@@ -7,7 +7,18 @@ __all__ = ["AperturePhotometry", "AnnulusBackground"]
 
 
 class AperturePhotometry(Block):
-    def __init__(self, name=None, radii=None, scale=True):
+    def __init__(self, radii:np.ndarray=None, scale:bool=True, name=None):
+        """Perform aperture photometry of each sources
+
+        Parameters
+        ----------
+        radii : np.ndarray, optional
+            apertures radii (definition vary depending of sources), by default None
+        scale : bool, optional
+            whether to scale radii with :code:`Image.fwhm` usually present in :code:`Image.epsf`, by default True
+        name : str, optional
+            name of the block, by default None
+        """
         super().__init__(name=name)
         if radii is None:
             self._radii = np.linspace(0.3, 8, 40)

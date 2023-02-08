@@ -1,6 +1,6 @@
 import numpy as np
 from . import utils
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import warnings
@@ -280,7 +280,7 @@ class Fluxes:
 
     def save(self, path):
         with open(path, "wb") as f:
-            pickle.dump(dataclasses.asdict(self), f)
+            pickle.dump(asdict(self), f)
         
     def load(path):
         with open(path, "rb") as f:

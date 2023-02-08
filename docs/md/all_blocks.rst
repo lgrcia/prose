@@ -48,4 +48,5 @@
 	~prose.blocks.catalogs.TESSCatalog
 	~prose.blocks.detection.TraceDetection
 	~prose.blocks.geometry.Trim
+	~prose.blocks.utils.WriteTo
 

@@ -31,6 +31,22 @@ class Image:
     discard: bool = False
     computed: dict = None
 
+    """TODO docstring
+
+    Returns
+    -------
+    _type_
+        _description_
+
+    Raises
+    ------
+    AttributeError
+        _description_
+    TypeError
+        _description_
+    """
+    
+
     def __post_init__(self):
         assert isinstance(self.data, np.ndarray) or self.data is None, f"data must be a np.ndarray, not {type(self.data)}" 
         if self.metadata is None:
@@ -486,7 +502,7 @@ def str_to_astropy_unit(unit_string):
     return u.__dict__[unit_string]
 
 
-def FITSImage(filepath_or_hdu, verbose=False, load_units=True, load_data=True, telescope=None):
+def FITSImage(filepath_or_hdu, verbose=False, load_units=True, load_data=True, telescope=None) -> Image:
     """Create an image from a FITS file
 
     Parameters
@@ -502,13 +518,7 @@ def FITSImage(filepath_or_hdu, verbose=False, load_units=True, load_data=True, t
 
     Returns
     -------
-    _type_
-        _description_
-
-    Raises
-    ------
-    ValueError
-        _description_
+    :py:class:`~prose.Image`
     """
     if isinstance(filepath_or_hdu, (str, Path)):
         values = fits.getdata(filepath_or_hdu).astype(float) if load_data else None

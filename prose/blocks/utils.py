@@ -1,6 +1,8 @@
 from ..core import Block, Image, Sources, FITSImage
 from ..console_utils import info
 from ..utils import easy_median
+from astropy.io import fits
+from pathlib import Path
 from ..fluxes import Fluxes
 import numpy as np
 
@@ -12,16 +14,32 @@ __all__ = [
     "Calibration",
     "CleanBadPixels",
     "Del",
-    "GetFluxes"
+    "GetFluxes",
+    "WriteTo"
 ]
 
 # TODO: document and test
 class SortSources(Block):
-    def __init__(self, name=None, verbose=False, key="cutout_sum"):
+    def __init__(self, verbose=False, key="cutout_sum", name=None):
+        """Sort sources given a function
+        TODO
+
+        Parameters
+        ----------
+        verbose : bool, optional
+            _description_, by default False
+        key : str, optional
+            _description_, by default "cutout_sum"
+        name : _type_, optional
+            _description_, by default None
+        Returns
+        -------
+        _type_
+            _description_
+        """
         super().__init__(name, verbose)
         if isinstance(key, str):
             if key == "cutout_sum":
-
                 def key(cutout):
                     return np.nansum(cutout.data)
 
@@ -56,7 +74,36 @@ class Apply(Block):
 
 
 class Get(Block):
-    def __init__(self, *names, name="get", arrays=True, **getters):
+    def __init__(self, *names, name:str="get", arrays:bool=True, **getters):
+        """Retrieve and store properties from an :py:class:`~prose.Image`
+
+        If a list of paths is provided to a :py:class:`~prose.Sequence`, each image is 
+        created at the beginning of the sequence, and deleted at the end, so that 
+        computed data stored as :py:class:`prose.Image` properties are deleted at each iteration. 
+        Using the Get blocks provides a way to retain any daa stored in images before 
+        they are deleted.
+
+        When a sequence is finished, this block has a `values` property, a dictionary
+        where all retained properties are accessible by name, and consist of a list with 
+        a length corresponding to the number of images processed. The parameters of this 
+        dictionary are the args and kwargs provided to the block (see Example). 
+
+        Parameters
+        ----------
+        *names: str
+            names of properties to retain
+        name : str, optional
+            name of the block, by default "get"
+        arrays : bool, optional
+            whether to convert each array of data as a numpy array , by default True
+        **getters: function
+            name and functions
+
+        Example
+        -------
+        TODO
+
+        """
         super().__init__(name=name)
         getters.update({name: lambda image: getattr(image, name) for name in names})
         self.getters = getters
@@ -84,30 +131,37 @@ class Get(Block):
 
 
 class Calibration(Block):
-    """
-    Flat, Bias and Dark calibration
-
-    Parameters
-    ----------
-    darks : list
-        list of dark files paths
-    flats : list
-        list of flat files paths
-    bias : list
-        list of bias files paths
-    """
 
     def __init__(
         self,
-        darks=None,
-        flats=None,
-        bias=None,
+        darks:list=None,
+        flats:list=None,
+        bias:list=None,
         loader=FITSImage,
-        easy_ram=True,
-        verbose=True,
-        shared=True,
+        easy_ram:bool=True,
+        verbose:bool=True,
+        shared:bool=False,
         **kwargs,
     ):
+        """Flat, Bias and Dark calibration
+
+        Parameters
+        ----------
+        darks : list, optional
+            list of dark files paths, by default None
+        flats : list, optional
+            list of flat files paths, by default None
+        bias : list, optional
+            list of bias files paths, by default None
+        loader : object, optional
+            loader used to load str path to :py:class:`~prose.Image`, by default :py:class:`~prose.FITSImage`
+        easy_ram : bool, optional
+            whether to compute the master median per chunks, going easy on the RAM, by default True
+        verbose : bool, optional
+            whether to log information about master calibration images building, by default True
+        shared : bool, optional
+            whether to allow the master calibration images to be shared, useful for multi-processing, by default False
+        """
 
         super().__init__(**kwargs)
 
@@ -323,6 +377,17 @@ class CleanBadPixels(Block):
 
 class Del(Block):
     def __init__(self, *names, name="del"):
+        """Remove a property from an Image
+
+        In general this is use in multi-processing sequences to avoid large image properties to be copied in-between processes
+
+        Parameters
+        ----------
+        *names: str
+            properties to be deleted from image
+        name : str, optional
+            name of the block, by default "del"
+        """
         super().__init__(name=name)
         self.names = names
 
@@ -355,7 +420,18 @@ class LimitSources(Block):
 
 class GetFluxes(Get):
     
-    def __init__(self, data=None, time='jd'):
+    def __init__(self, data:list=None, time:str='jd'):
+        """A conveniant class to get fluxes and background from aperture and annulus blocks
+
+        |read| :code:`Image.aperture`, :code:`Image.annulus` and :code:`Image.{time}`
+
+        Parameters
+        ----------
+        data : list, optional
+            list of image properties to retain as times-series associated with fluxes (like fwhm, airmass... etc), by default None
+        time : str, optional
+            The image property corresponding to time, by default 'jd'
+        """
         self.data_keys = data if data is not None else []
         get_bkg = lambda im: im.aperture["fluxes"]
         get_fluxes = lambda im: im.annulus["median"][:, None] * np.pi*(im.aperture['radii']**2)
@@ -372,3 +448,53 @@ class GetFluxes(Get):
         del self.values["_bkg"]
         del self.values[self._time_key]
         self.fluxes = Fluxes(time=time, fluxes=raw_fluxes, data=self.values)
+
+
+class WriteTo(Block):
+    
+    def __init__(self, destination, label="processed", imtype=True, overwrite=False, name=None):
+        """Write image to FITS file
+
+        Parameters
+        ----------
+        destination : str
+            destination folder (folder and parents created if not existing)
+        label : str, optional
+            added at the end of filename as {original_path}_{label}.fits, by default "processed"
+        imtype : bool, optional
+            If bool, wether to set image imtype as label (`image.header["IMTYPE"] = label`). If a `str`, label to set for imtype (`image.header["IMTYPE"] = imtype`) , by default True
+        overwrite : bool, optional
+            wether to overwrite existing file, by default False
+        name : str, optional
+            name of the block, by default None
+        """
+        super().__init__(name=name)
+        self.destination = Path(destination)
+        self.label = label
+        self.overwrite = overwrite
+        if isinstance(imtype, bool):
+            if imtype:
+                self.imtype = self.label
+            else:
+                self.imtype = None
+        else:
+            assert isinstance(imtype, str), "imtype must be a bool or a str"
+            self.imtype = imtype
+            
+        self.files = []
+        
+    def run(self, image):
+        self.destination.mkdir(exist_ok=True, parents=True)
+        
+        new_hdu = fits.PrimaryHDU(image.data)
+        new_hdu.header = image.fits_header
+        
+        if self.imtype is not None:
+            image.fits_header[image.telescope.keyword_image_type] = self.imtype
+        
+        fits_new_path = self.destination / (Path(image.metadata["path"]).stem + f"_{self.label}.fits")
+
+        new_hdu.writeto(fits_new_path, overwrite=self.overwrite)
+        self.files.append(fits_new_path)
+
+    

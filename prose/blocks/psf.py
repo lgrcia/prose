@@ -43,7 +43,7 @@ def moments(data):
 
 class MedianEPSF(Block):
     def __init__(self, max_sources=1, name=None, normalize=True):
-        """Stack cutouts into a median effective PSF
+        """Stack cutouts into :code:`Image.epsf`: a median effective PSF
 
         |read| Image.source
 
@@ -113,7 +113,18 @@ class _JAXPSFModel(_PSFModelBase):
 
 
 class JAXGaussian2D(_JAXPSFModel):
-    def __init__(self, reference_image=None, name=None, verbose=False):
+    def __init__(self, reference_image:Image=None, name=None, verbose=False):
+        """Model :code:`Image.epsf` as a 2D Gaussian profile, powered by `JAX <https://jax.readthedocs.io/en/latest/>`_
+
+        Parameters
+        ----------
+        reference_image : Image, optional
+            reference image to provided initial parameters, by default None
+        name : str, optional
+            name of the block, by default None
+        verbose : bool, optional
+            whether to log fitting info, by default False
+        """
         super().__init__(reference_image, name, verbose)
 
     def model_function(self):
@@ -137,7 +148,18 @@ class JAXGaussian2D(_JAXPSFModel):
 
 
 class JAXMoffat2D(_JAXPSFModel):
-    def __init__(self, reference_image=None, name=None, verbose=False):
+    def __init__(self, reference_image:Image=None, name=None, verbose=False):
+        """Model :code:`Image.epsf` as a 2D Moffat profile, powered by `JAX <https://jax.readthedocs.io/en/latest/>`_
+        
+        Parameters
+        ----------
+        reference_image : Image, optional
+            reference image to provided initial parameters, by default None
+        name : str, optional
+            name of the block, by default None
+        verbose : bool, optional
+            whether to log fitting info, by default False
+        """
         super().__init__(reference_image, name, verbose)
 
     def model_function(self):
@@ -160,7 +182,18 @@ class JAXMoffat2D(_JAXPSFModel):
 
 
 class Gaussian2D(_PSFModelBase):
-    def __init__(self, reference_image=None, name=None, verbose=False):
+    def __init__(self, reference_image:Image=None, name:str=None, verbose:bool=False):
+        """Model :code:`Image.epsf` as a 2D Gaussian profile
+
+        Parameters
+        ----------
+        reference_image : Image, optional
+            reference image to provided initial parameters, by default None
+        name : str, optional
+            name of the block, by default None
+        verbose : bool, optional
+            whether to log fitting info, by default False
+        """
         super().__init__(reference_image, name, verbose)
 
     def optimize(self, data):
@@ -204,7 +237,18 @@ class Gaussian2D(_PSFModelBase):
 
 
 class Moffat2D(_PSFModelBase):
-    def __init__(self, reference_image=None, name=None, verbose=False):
+    def __init__(self, reference_image:Image=None, name=None, verbose=False):
+        """Model :code:`Image.epsf` as a 2D Moffat profile
+
+        Parameters
+        ----------
+        reference_image : Image, optional
+            reference image to provided initial parameters, by default None
+        name : str, optional
+            name of the block, by default None
+        verbose : bool, optional
+            whether to log fitting info, by default False
+        """
         super().__init__(reference_image, name, verbose)
 
     def optimize(self, data):
