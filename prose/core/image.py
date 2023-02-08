@@ -19,6 +19,7 @@ from PIL import Image
 from copy import deepcopy
 from dataclasses import dataclass, asdict
 import pickle
+from astropy.time import Time
 from typing import Union
 
 @dataclass
@@ -76,7 +77,7 @@ class Image:
             if name in self.computed:
                 return self.computed[name]
             else:
-                raise AttributeError()
+                raise AttributeError(f"{name} cannot be interpreted as Image attribute")
 
     def copy(self, data=True):
         """Copy of image object
@@ -564,6 +565,8 @@ def FITSImage(filepath_or_hdu, verbose=False, load_units=True, load_data=True, t
         )
 
     image = Image(values, metadata, {})
+    if image.metadata["jd"] is None:
+        image.metadata["jd"] = Time(image.date).jd
     image.fits_header = header
     image.wcs = WCS(header)
     image.telescope = telescope

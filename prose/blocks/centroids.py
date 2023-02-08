@@ -192,6 +192,15 @@ class CentroidBallet(_CNNCentroid):
         self.import_and_check_model()
 
     def build_model(self):
+        try:
+            import os
+
+            os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+            from tensorflow.keras.models import Sequential
+            from tensorflow.keras.layers import Dense, Conv2D, MaxPooling2D, Flatten
+        except ModuleNotFoundError:
+            TF_LOADED = True
+
         self.model = Sequential(
             [
                 Conv2D(

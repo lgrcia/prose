@@ -28,8 +28,7 @@ class AperturePhotometry(Block):
 
     def run(self, image: Image):
         if self.scale:
-            fwhm = image.epsf.params["sigma_x"] * gaussian_sigma_to_fwhm
-            radii = np.array(fwhm * self._radii)
+            radii = np.array(image.fwhm * self._radii)
         else:
             radii = np.array(self._radii)
 

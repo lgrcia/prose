@@ -133,3 +133,17 @@ class TestAlignment(unittest.TestCase):
         from prose.blocks.alignment import AlignReferenceSources
 
         im = AlignReferenceSources(self.image.copy())(self.image.copy())
+
+class TestBlockGet(unittest.TestCase):
+    def __init__(self, *args, **kwargs):
+        unittest.TestCase.__init__(self, *args, **kwargs)
+        self.image = example_image()
+        self.image.a = 3
+        self.image.b = 6
+        self.image.fits_header = {"C": 42}
+            
+    def test_keyword(self):
+        from prose.blocks import Get
+        g = Get("a", "b", "keyword:C", arrays=False)
+        g(self.image)
+        assert g.values == {"a":[3], "b":[6], "c":[42]}

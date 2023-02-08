@@ -94,7 +94,14 @@ class _PSFModelBase(Block):
         params = self.optimize(image.epsf.data)
         image.epsf.params = params
         image.epsf.model = self.model
+        image.epsf.fwhm = gaussian_sigma_to_fwhm * np.mean(
+            [params["sigma_x"], params["sigma_y"]]
+        )
+        image.fwhm = image.epsf.fwhm
         self._last_init = params
+
+    def model(self):
+        return self.model_function()
 
 
 class _JAXPSFModel(_PSFModelBase):
@@ -113,9 +120,18 @@ class _JAXPSFModel(_PSFModelBase):
 
 
 class JAXGaussian2D(_JAXPSFModel):
-    def __init__(self, reference_image:Image=None, name=None, verbose=False):
+    def __init__(self, reference_image: Image = None, name=None, verbose=False):
         """Model :code:`Image.epsf` as a 2D Gaussian profile (powered by `JAX`_)
+
+        |read| :code:`Image.epsf``
+
+        |write| 
         
+        - :code:`Image.epsf.params`
+        - :code:`Image.epsf.model`
+        - :code:`Image.epsf.fwhm`
+        - :code:`Image.fwhm`
+
         Parameters
         ----------
         reference_image : Image, optional
@@ -148,8 +164,17 @@ class JAXGaussian2D(_JAXPSFModel):
 
 
 class JAXMoffat2D(_JAXPSFModel):
-    def __init__(self, reference_image:Image=None, name=None, verbose=False):
+    def __init__(self, reference_image: Image = None, name=None, verbose=False):
         """Model :code:`Image.epsf` as a 2D Moffat profile (powered by `JAX`_)
+
+        |read| :code:`Image.epsf``
+
+        |write| 
+        
+        - :code:`Image.epsf.params`
+        - :code:`Image.epsf.model`
+        - :code:`Image.epsf.fwhm`
+        - :code:`Image.fwhm`
 
 
         Parameters
@@ -183,8 +208,19 @@ class JAXMoffat2D(_JAXPSFModel):
 
 
 class Gaussian2D(_PSFModelBase):
-    def __init__(self, reference_image:Image=None, name:str=None, verbose:bool=False):
+    def __init__(
+        self, reference_image: Image = None, name: str = None, verbose: bool = False
+    ):
         """Model :code:`Image.epsf` as a 2D Gaussian profile
+
+        |read| :code:`Image.epsf``
+
+        |write| 
+        
+        - :code:`Image.epsf.params`
+        - :code:`Image.epsf.model`
+        - :code:`Image.epsf.fwhm`
+        - :code:`Image.fwhm`
 
         Parameters
         ----------
@@ -236,10 +272,33 @@ class Gaussian2D(_PSFModelBase):
 
         return model
 
+    def model(self):
+        def _model(params):
+            height = params["amplitude"]
+            xo = params["x"]
+            yo = params["y"]
+            sx = params["sigma_x"]
+            sy = params["sigma_y"]
+            theta = params["theta"]
+            m = params["background"]
+            return self.model_function()(height, xo, yo, sx, sy, theta, m)
 
+        return _model
+
+
+# TODO
 class Moffat2D(_PSFModelBase):
-    def __init__(self, reference_image:Image=None, name=None, verbose=False):
+    def __init__(self, reference_image: Image = None, name=None, verbose=False):
         """Model :code:`Image.epsf` as a 2D Moffat profile
+
+        |read| :code:`Image.epsf``
+
+        |write| 
+        
+        - :code:`Image.epsf.params`
+        - :code:`Image.epsf.model`
+        - :code:`Image.epsf.fwhm`
+        - :code:`Image.fwhm`
 
         Parameters
         ----------

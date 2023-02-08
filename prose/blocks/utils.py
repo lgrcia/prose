@@ -4,6 +4,7 @@ from ..utils import easy_median
 from astropy.io import fits
 from pathlib import Path
 from ..fluxes import Fluxes
+from functools import partial
 import numpy as np
 
 __all__ = [
@@ -74,7 +75,7 @@ class Apply(Block):
 
 
 class Get(Block):
-    def __init__(self, *names, name:str="get", arrays:bool=True, **getters):
+    def __init__(self, *attributes, name:str="get", arrays:bool=True, **getters):
         """Retrieve and store properties from an :py:class:`~prose.Image`
 
         If a list of paths is provided to a :py:class:`~prose.Sequence`, each image is 
@@ -86,11 +87,14 @@ class Get(Block):
         When a sequence is finished, this block has a `values` property, a dictionary
         where all retained properties are accessible by name, and consist of a list with 
         a length corresponding to the number of images processed. The parameters of this 
-        dictionary are the args and kwargs provided to the block (see Example). 
+        dictionary are the args and kwargs provided to the block (see Example).
+
+        If Image is constructed from a FITS image, header values can be retrieved using the 
+        syntax "keyword:KEY" (see example todo)
 
         Parameters
         ----------
-        *names: str
+        *attributes: str
             names of properties to retain
         name : str, optional
             name of the block, by default "get"
@@ -105,7 +109,18 @@ class Get(Block):
 
         """
         super().__init__(name=name)
-        getters.update({name: lambda image: getattr(image, name) for name in names})
+        new_getters = {}
+        def get_from_header(image, key=None): return image.fits_header[key]
+        def get(image, key=None): return getattr(image, key)
+
+        for attr in attributes:
+            if "keyword:" in attr:
+                attr = attr.split("keyword:")[-1]
+                new_getters[attr.lower()] = partial(get_from_header, key=attr)
+            else:
+                new_getters[attr.lower()] = partial(get, key=attr)
+
+        getters.update(new_getters)
         self.getters = getters
         self.values = {name: [] for name in getters.keys()}
         self.arrays = arrays
@@ -432,22 +447,22 @@ class GetFluxes(Get):
         time : str, optional
             The image property corresponding to time, by default 'jd'
         """
-        self.data_keys = data if data is not None else []
-        get_bkg = lambda im: im.aperture["fluxes"]
-        get_fluxes = lambda im: im.annulus["median"][:, None] * np.pi*(im.aperture['radii']**2)
         self._time_key = time
-        super().__init__(time, *self.data_keys, _bkg=get_bkg, _fluxes=get_fluxes, name="fluxes")
+        self.data_keys = data if data is not None else []
+        get_fluxes= lambda im: im.aperture["fluxes"]
+        get_bkg = lambda im: im.annulus["median"]
+        get_area = lambda im: np.pi*(im.aperture['radii']**2)
+        get_time = lambda im: getattr(im, self._time_key)
+        super().__init__(*self.data_keys, _time=get_time, _bkg=get_bkg, _fluxes=get_fluxes, _area=get_area, name="fluxes")
         self.fluxes=None
         
     def terminate(self):
         super().terminate()
-        raw_fluxes = (self._fluxes - self._bkg).T
-        time = np.array(self.values[self._time_key])
-        del self.values["_fluxes"]
-        self.values["bkg"] = self.values["_bkg"]
-        del self.values["_bkg"]
-        del self.values[self._time_key]
-        self.fluxes = Fluxes(time=time, fluxes=raw_fluxes, data=self.values)
+        raw_fluxes = (self._fluxes - self._bkg[:, :, None] * self._area[:, None, :]).T
+        time = self._time
+        data = {"bkg":np.mean(self._bkg, -1)}
+        data.update({key: value for key, value in self.values.items() if key[0] != "_"})
+        self.fluxes = Fluxes(time=time, fluxes=raw_fluxes, data=data)
 
 
 class WriteTo(Block):

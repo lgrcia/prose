@@ -3,6 +3,7 @@ from . import utils
 from dataclasses import dataclass, asdict
 from copy import deepcopy
 import matplotlib.pyplot as plt
+import pandas as pd
 import warnings
 import pickle
 
@@ -162,6 +163,12 @@ class Fluxes:
     weights: np.ndarray = None
     target: int = None
     aperture: int = None
+
+    def _is_target_aperture_set(self):
+        if self.ndim == 2:
+            return self.target is not None
+        else:
+            return self.target is not None and self.aperture is not None
     
     def __post_init__(self):
         assert self.fluxes.ndim in [2, 3], "fluxes must be 2 or 3 dimensional"
@@ -221,15 +228,14 @@ class Fluxes:
         _new.weights = weights
         return _new
     
-    def autodiff(self, target=None):
+    def autodiff(self):
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', RuntimeWarning)
-            diff_fluxes, weights = auto_diff(self.fluxes, target)
+            diff_fluxes, weights = auto_diff(self.fluxes, self.target)
             
         _new = deepcopy(self)
         _new.fluxes = diff_fluxes
         _new.weights = weights
-        _new.target = target
         _new.aperture = _new.best_aperture_index()
         
         return _new
@@ -285,3 +291,12 @@ class Fluxes:
     def load(path):
         with open(path, "rb") as f:
             return Fluxes(**pickle.load(f))
+
+    @property
+    def dataframe(self):
+        df_dict = self.data.copy()
+        df_dict.update({"time": self.time})
+        if self._is_target_aperture_set:
+            df_dict.update({"flux": self.flux})
+
+        return pd.DataFrame(df_dict)
