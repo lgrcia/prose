@@ -150,13 +150,16 @@ class PlateSolve(Block):
 
 class GaiaCatalog(_CatalogBlock):
     def __init__(self, correct_pm=True, limit=10000, mode=None):
-        """Query gaia catalog. Catalog is written in Image.catalogs as a pandas DataFrame. If mode is ""crossmatch" the index of catalog sources in the DataFrame matches with the index of sources in Image.sources
+        """Query gaia catalog
+        
+        Catalog is written in Image.catalogs as a pandas DataFrame. If mode is ""crossmatch" the index of catalog sources in the DataFrame matches with the index of sources in Image.sources
 
-        |read| Image.sources if mode is "crossmatch"
+        |read| :code:`Image.sources` if mode is "crossmatch"
 
-        |write| 
-        - Image.sources if mode is "crossmatch"
-        - Image.catalogs
+        |write|
+
+        - :code:`Image.sources` if mode is "crossmatch"
+        - :code:`Image.catalogs`
 
         Parameters
         ----------
@@ -184,13 +187,17 @@ class GaiaCatalog(_CatalogBlock):
 
 class TESSCatalog(_CatalogBlock):
     def __init__(self, limit=10000, mode=None):
-        """Query TESS (TIC) catalog. Catalog is written in Image.catalogs as a pandas DataFrame. If mode is ""crossmatch" the index of catalog sources in the DataFrame matches with the index of sources in Image.sources
+        """Query TESS (TIC) catalog
+        
+        Catalog is written in Image.catalogs as a pandas DataFrame. If mode is ""crossmatch" the index of catalog sources in the DataFrame matches with the index of sources in Image.sources
+        
+        |read| :code:`Image.sources` if mode is "crossmatch"
 
-        |read| Image.sources if mode is "crossmatch"
+        |write|
 
-        |write| 
-        - Image.sources if mode is "crossmatch"
-        - Image.catalogs
+        - :code:`Image.sources` if mode is "crossmatch"
+        - :code:`Image.catalogs`
+
 
         Parameters
         ----------

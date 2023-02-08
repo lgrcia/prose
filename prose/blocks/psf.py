@@ -114,8 +114,8 @@ class _JAXPSFModel(_PSFModelBase):
 
 class JAXGaussian2D(_JAXPSFModel):
     def __init__(self, reference_image:Image=None, name=None, verbose=False):
-        """Model :code:`Image.epsf` as a 2D Gaussian profile, powered by `JAX <https://jax.readthedocs.io/en/latest/>`_
-
+        """Model :code:`Image.epsf` as a 2D Gaussian profile (powered by `JAX`_)
+        
         Parameters
         ----------
         reference_image : Image, optional
@@ -149,8 +149,9 @@ class JAXGaussian2D(_JAXPSFModel):
 
 class JAXMoffat2D(_JAXPSFModel):
     def __init__(self, reference_image:Image=None, name=None, verbose=False):
-        """Model :code:`Image.epsf` as a 2D Moffat profile, powered by `JAX <https://jax.readthedocs.io/en/latest/>`_
-        
+        """Model :code:`Image.epsf` as a 2D Moffat profile (powered by `JAX`_)
+
+
         Parameters
         ----------
         reference_image : Image, optional
