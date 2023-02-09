@@ -38,7 +38,6 @@
 	~prose.blocks.psf.Moffat2D
 	~prose.blocks.detection.Peaks
 	~prose.blocks.catalogs.PlateSolve
-	~prose.blocks.vizualisation.PlotVideo
 	~prose.blocks.detection.PointSourceDetection
 	~prose.blocks.vizualisation.RawVideo
 	~prose.blocks.detection.SEDetection
@@ -48,5 +47,6 @@
 	~prose.blocks.catalogs.TESSCatalog
 	~prose.blocks.detection.TraceDetection
 	~prose.blocks.geometry.Trim
+	~prose.blocks.vizualisation.VideoPlot
 	~prose.blocks.utils.WriteTo
 

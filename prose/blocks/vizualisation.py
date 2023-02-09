@@ -6,6 +6,9 @@ from prose.visualization import corner_text
 from skimage.transform import resize
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 import time
+import io
+import shutil
+import tempfile
 
 def im_to_255(image, factor=0.25):
     if factor !=1:
@@ -65,32 +68,38 @@ class RawVideo(_Video):
         self.images.append(im_to_255(data, factor=self.scale))
         
         
-class PlotVideo(_Video):
+class VideoPlot(_Video):
 
-    def __init__(self, plot_function, destination, fps=10, antialias=False, **kwargs):
-        super().__init__(destination, fps=fps, **kwargs)
+    def __init__(self, plot_function, destination, fps=10, name=None):
+        """Make a video out of a plotting function
+
+        Parameters
+        ----------
+        plot_function : function
+            a plotting function taking an :py:class:`prose.Image` as input
+        destination : str or Path
+            destination of the video, including extension
+        fps : int, optional
+            frame per seconds, by default 10
+        antialias : bool, optional
+            wether pyplot antialias should be used, by default False
+        """
+        super().__init__(destination, fps=fps, name=name)
         self.plot_function = plot_function
-        self._init_alias = plt.rcParams['text.antialiased']
-        plt.rcParams['text.antialiased'] = antialias
-
-    def to_rbg(self):
-        fig = plt.gcf()
-        canvas = FigureCanvasAgg(fig)
-        canvas.draw()
-        width, height = fig.canvas.get_width_height()
-        returned = np.frombuffer(canvas.tostring_rgb(), dtype='uint8').reshape(height, width, 3)
-        plt.imshow(returned)
-        plt.close()
-        return returned
-
+        self.destination = destination
+        self._temp = tempfile.mkdtemp()
+        self._images = []
+        
     def run(self, image):
-        super().run(image)
         self.plot_function(image)
-        self.images.append(self.to_rbg())
-
+        buf = io.BytesIO()
+        plt.savefig(buf)
+        self.images.append(imageio.imread(buf))
+        plt.close()
+    
     def terminate(self):
         super().terminate()
-        plt.rcParams['text.antialiased'] = self._init_alias
+        shutil.rmtree(self._temp)
 
 
 class LivePlot(Block):
