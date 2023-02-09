@@ -2,7 +2,6 @@ from datetime import timedelta
 import numpy as np
 from astropy.visualization import ZScaleInterval
 from astropy.io import fits
-import numba
 import astropy.constants as c
 import urllib
 from astropy.time import Time

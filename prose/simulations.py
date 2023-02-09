@@ -10,7 +10,6 @@ import os
 from tqdm import tqdm
 from astropy.io import fits
 from datetime import datetime
-import xarray as xr
 import matplotlib.pyplot as plt
 import warnings
 from skimage.draw import line_aa
@@ -225,7 +224,7 @@ class ObservationSimulation:
                             {'TELESCOP': self.telescope.name, 'JD': time, 'DATE-OBS': date, "IMAGETYP": "flat", "FILTER": "a"},
                             path.join(destination, f"fake-flat-{i}.fits"))
 
-
+# TODO delete
 def observation_to_model(time, t0=0.1, r=0.06417):
     # transit signal
     # lc = xo_lightcurve(time, period=0.7, r=7e-2, t0=0.1, plot=True)
