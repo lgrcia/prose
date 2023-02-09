@@ -22,8 +22,8 @@ class _SourceDetection(Block):
         n:int=None, 
         sort:bool=True, 
         min_separation:float=None, 
-        min_area:str=0, 
-        minor_length:str=0,
+        min_area:float=0, 
+        minor_length:float=0,
         name:str=None
     ):
         """Base class for sources detection.
@@ -38,9 +38,9 @@ class _SourceDetection(Block):
             whether to sort per ADU peak value (from the greatest), by default True
         min_separation : float, optional
             minimum separation in pixels from one source to the other. Between two sources, greater ADU is kept, by default None
-        min_area : str, optional
+        min_area : float, optional
             minimum area in pixels of the sources to detect, by default 0
-        minor_length : str, optional
+        minor_length : float, optional
             minimum length of semi-major axis of sources to detect, by default 0
         name : str, optional
             name of the block, by default None
@@ -97,7 +97,7 @@ class _SourceDetection(Block):
         threshold = threshold*np.nanstd(flat_data) + median
             
         regions = regionprops(label(image.data > threshold), image.data)
-        regions = [r for r in regions if r.area > self.min_area and r.axis_minor_length > self.minor_length]
+        regions = [r for r in regions if r.area > self.min_area and r.axis_major_length > self.minor_length]
         
         return regions
     
