@@ -11,22 +11,34 @@ __all__ = [
 ]
 
 
+# TODO test inverse
 class Align(Block):
-    def __init__(self, name=None, verbose=False):
-        super().__init__(name, verbose)
+    def __init__(self, reference, name=None):
+        """Align image data to a reference
+
+        Parameters
+        ----------
+        reference: :py:class:`~prose.Image`
+            reference image to align images on
+        name : str, optional
+            name of the block, by default None
+        """
+        super().__init__(name)
+        self.reference = reference
+        self.compute_transform = ComputeTransform(self.reference)
 
     def run(self, image: Image):
-        super().run(image)
+        self.compute_transform.run(image)
         transform = image.transform
 
-        if self.inverse:
-            transform = transform.inverse
+        #if self.inverse:
+        #    transform = transform.inverse
         try:
             image.data = warp(
                 image.data,
                 image.transform.inverse,
                 cval=np.nanmedian(image.data),
-                output_shape=self.output_shape if self.same_shape else None,
+                output_shape=image.shape,
             )
         except np.linalg.LinAlgError:
             image.discard = True

@@ -16,7 +16,8 @@ __all__ = [
     "CleanBadPixels",
     "Del",
     "GetFluxes",
-    "WriteTo"
+    "WriteTo",
+    "SelectiveStack"
 ]
 
 # TODO: document and test
@@ -512,4 +513,37 @@ class WriteTo(Block):
         new_hdu.writeto(fits_new_path, overwrite=self.overwrite)
         self.files.append(fits_new_path)
 
+
+class SelectiveStack(Block):
+    
+    def __init__(self, n=5,  name=None):
+        """Build a median stack image from the `n` best-FWHM images
+
+        |read| :code:`Image.fwhm`
+
+        Parameters
+        ----------
+        n : int, optional
+            number of images to use, by default 5
+        name : str, optional
+            name of the blocks, by default None
+        """
+        super().__init__(name=name)
+        self.n = n
+        self._images = []
+        self._sigmas = []
+    
+    def run(self, image: Image):
+        sigma = image.fwhm
+        if len(self._images) < self.n:
+            self._images.append(image)
+            self._sigmas.append(sigma)
+        else:
+            i = np.argmax(self._sigmas)
+            if self._sigmas[i] > sigma:
+                self._sigmas[i] = sigma
+                self._images[i] = image
+    
+    def terminate(self):
+        self.stack = Image(easy_median([im.data for im in self._images]))
     
