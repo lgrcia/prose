@@ -253,13 +253,6 @@ class Calibration(Block):
 
         return master
 
-    def run(self, image):
-        data = image.data
-        calibrated_data = self.calibration(data, image.exposure.value)
-        calibrated_data[calibrated_data < 0] = np.nan
-        calibrated_data[~np.isfinite(calibrated_data)] = -1
-        image.data = calibrated_data
-
     def _calibration_shared(self, image, exp_time):
         bias = np.memmap(
             "__bias.array", dtype="float32", mode="r", shape=self.shapes["bias"]
