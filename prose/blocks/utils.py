@@ -16,7 +16,8 @@ __all__ = [
     "CleanBadPixels",
     "Del",
     "GetFluxes",
-    "WriteTo"
+    "WriteTo",
+    "SelectiveStack"
 ]
 
 # TODO: document and test
@@ -124,6 +125,7 @@ class Get(Block):
         self.getters = getters
         self.values = {name: [] for name in getters.keys()}
         self.arrays = arrays
+        self._parallel_friendly = True
 
     def run(self, image: Image):
         for name, get in self.getters.items():
@@ -189,10 +191,12 @@ class Calibration(Block):
         self.master_dark = self._produce_master(darks, "dark")
         self.master_flat = self._produce_master(flats, "flat")
 
-        self._share()
+        if shared:
+            self._share()
         self.verbose = verbose
 
         self.calibration = self._calibration_shared if shared else self._calibration
+        self._parallel_friendly = shared
 
     def _produce_master(self, images, image_type):
         if images is not None:
@@ -201,9 +205,6 @@ class Calibration(Block):
             ), "images must be list or array or path"
             if len(images) == 0:
                 images = None
-
-        if isinstance(images, str):
-            return self.loader(images).data
 
         def _median(im):
             if self.easy_ram:
@@ -252,13 +253,6 @@ class Calibration(Block):
 
         return master
 
-    def run(self, image):
-        data = image.data
-        calibrated_data = self.calibration(data, image.exposure.value)
-        calibrated_data[calibrated_data < 0] = np.nan
-        calibrated_data[~np.isfinite(calibrated_data)] = -1
-        image.data = calibrated_data
-
     def _calibration_shared(self, image, exp_time):
         bias = np.memmap(
             "__bias.array", dtype="float32", mode="r", shape=self.shapes["bias"]
@@ -294,6 +288,8 @@ class Calibration(Block):
                 m[:, :] = data[:, :]
             else:
                 m[:] = data[:]
+
+            del self.__dict__[f"master_{imtype}"]
 
     @property
     def citations(self):
@@ -426,6 +422,7 @@ class LimitSources(Block):
         super().__init__(name=name)
         self.min = min
         self.max = max
+        self._parallel_friendly = True
 
     def run(self, image):
         n = len(image.sources)
@@ -435,7 +432,7 @@ class LimitSources(Block):
 
 class GetFluxes(Get):
     
-    def __init__(self, data:list=None, time:str='jd'):
+    def __init__(self,  *args, time:str='jd', **kwargs):
         """A conveniant class to get fluxes and background from aperture and annulus blocks
 
         |read| :code:`Image.aperture`, :code:`Image.annulus` and :code:`Image.{time}`
@@ -448,14 +445,14 @@ class GetFluxes(Get):
             The image property corresponding to time, by default 'jd'
         """
         self._time_key = time
-        self.data_keys = data if data is not None else []
         get_fluxes= lambda im: im.aperture["fluxes"]
         get_bkg = lambda im: im.annulus["median"]
         get_area = lambda im: np.pi*(im.aperture['radii']**2)
         get_time = lambda im: getattr(im, self._time_key)
-        super().__init__(*self.data_keys, _time=get_time, _bkg=get_bkg, _fluxes=get_fluxes, _area=get_area, name="fluxes")
+        super().__init__(*args, _time=get_time, _bkg=get_bkg, _fluxes=get_fluxes, _area=get_area, name="fluxes", **kwargs)
         self.fluxes=None
-        
+        self._parallel_friendly = True
+
     def terminate(self):
         super().terminate()
         raw_fluxes = (self._fluxes - self._bkg[:, :, None] * self._area[:, None, :]).T
@@ -512,4 +509,37 @@ class WriteTo(Block):
         new_hdu.writeto(fits_new_path, overwrite=self.overwrite)
         self.files.append(fits_new_path)
 
+
+class SelectiveStack(Block):
+    
+    def __init__(self, n=5,  name=None):
+        """Build a median stack image from the `n` best-FWHM images
+
+        |read| :code:`Image.fwhm`
+
+        Parameters
+        ----------
+        n : int, optional
+            number of images to use, by default 5
+        name : str, optional
+            name of the blocks, by default None
+        """
+        super().__init__(name=name)
+        self.n = n
+        self._images = []
+        self._sigmas = []
+    
+    def run(self, image: Image):
+        sigma = image.fwhm
+        if len(self._images) < self.n:
+            self._images.append(image)
+            self._sigmas.append(sigma)
+        else:
+            i = np.argmax(self._sigmas)
+            if self._sigmas[i] > sigma:
+                self._sigmas[i] = sigma
+                self._images[i] = image
+    
+    def terminate(self):
+        self.stack = Image(easy_median([im.data for im in self._images]))
     

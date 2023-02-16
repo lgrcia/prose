@@ -296,7 +296,7 @@ class Image:
     #     plt.xlim(np.array([-size / 2, size / 2]) + x)
     #     plt.ylim(np.array([-size / 2, size / 2]) + y)
 
-    def cutout(self, coords, shape, wcs=True):
+    def cutout(self, coords, shape, wcs=True, sources=True):
         """Return a list of Image cutouts from the image
 
         Parameters
@@ -330,16 +330,17 @@ class Image:
 
         # get sources
         new_sources = []
-        if len(self._sources) > 0:
-            sources_in = np.all(
-                np.abs(self.sources.coords - coords) < np.array(shape)[::-1] / 2, 1
-            )
-            sources = self._sources[sources_in]
+        if sources:
+            if len(self._sources) > 0:
+                sources_in = np.all(
+                    np.abs(self.sources.coords - coords) < np.array(shape)[::-1] / 2, 1
+                )
+                _sources = self._sources[sources_in]
 
-            for s in sources:
-                _s = s.copy()
-                _s.coords = _s.coords - coords + np.array(shape)[::-1] / 2
-                new_sources.append(_s)
+                for s in _sources:
+                    _s = s.copy()
+                    _s.coords = _s.coords - coords + np.array(shape)[::-1] / 2
+                    new_sources.append(_s)
 
         image = Image(new_image.data, deepcopy(self.metadata), deepcopy(self.computed))
         image._sources = Sources(new_sources)

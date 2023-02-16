@@ -32,6 +32,7 @@ class Trim(Block):
         if isinstance(trim, (int, float)):
             trim = (trim, trim)
         self.trim = trim
+        self._parallel_friendly = True
 
     def run(self, image):
         trim = self.trim if self.trim is not None else image.metadata["overscan"]
@@ -44,7 +45,7 @@ class Trim(Block):
 
 
 class Cutouts(Block):
-    def __init__(self, shape:Union[int, tuple]=50, wcs:bool=False, name:str=None):
+    def __init__(self, shape:Union[int, tuple]=50, wcs:bool=False, name:str=None, sources: bool=False):
         """Create cutouts around all sources
 
         |read| :code:`Image.sources`
@@ -59,16 +60,20 @@ class Cutouts(Block):
             whether to compute cutouts WCS, by default False
         name : str, optional
             name of the blocks, by default None
+        sources: bool, optional
+            whether to keep sources in cutouts, by default False
         """
         super().__init__(name=name)
         if isinstance(shape, int):
             shape = (shape, shape)
         self.shape = shape
         self.wcs = wcs
+        self.sources = sources
+        self._parallel_friendly = True
 
     def run(self, image: Image):
         image.cutouts = [
-            image.cutout(coords, self.shape, wcs=self.wcs)
+            image.cutout(coords, self.shape, wcs=self.wcs, sources=self.sources)
             for coords in image.sources.coords
         ]
         f = 0
@@ -77,6 +82,7 @@ class Cutouts(Block):
 class SetAffineTransform(Block):
     def __init__(self, name=None, verbose=False):
         super().__init__(name, verbose)
+        self._parallel_friendly = True
 
     def run(self, image):
         rotation = image.__dict__.get("rotation", 0)
@@ -111,6 +117,7 @@ class ComputeTransform(Block):
         self.quads_ref, self.stars_ref = twirl_utils.quads_stars(ref_coords, n=n)
         self.KDTree = KDTree(self.quads_ref)
         self.discard = discard
+        self._parallel_friendly = True
 
     def run(self, image):
         if len(image.sources.coords) >= 5:

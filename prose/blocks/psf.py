@@ -61,6 +61,7 @@ class MedianEPSF(Block):
         super().__init__(name=name)
         self.max_sources = max_sources
         self.normalize = normalize
+        self._parallel_friendly = True
 
     def run(self, image):
         good_cutouts = np.array(
@@ -76,10 +77,11 @@ class MedianEPSF(Block):
 class _PSFModelBase(Block):
     def __init__(self, reference_image=None, name=None, verbose=False):
         super().__init__(name, verbose)
-        self._init = reference_image.epsf_params if reference_image else None
+        self._init = reference_image.epsf.params if reference_image else None
         self.shape = (0, 0)  # reference_image.epsf.shape if reference_image else None
         self.x, self.y = None, None
         self._last_init = None
+        self._parallel_friendly = True
 
     def run(self, image: Image):
         if np.all(image.epsf.shape != self.shape):
