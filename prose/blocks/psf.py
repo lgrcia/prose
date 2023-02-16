@@ -1,11 +1,15 @@
 import numpy as np
 from .. import Block, Image
-from jax.config import config
 
-config.update("jax_enable_x64", True)
-import jax
-import jax.numpy as jnp
-from jaxopt import ScipyMinimize
+try:
+   from jax.config import config
+   config.update("jax_enable_x64", True)
+   import jax
+   import jax.numpy as jnp
+   from jaxopt import ScipyMinimize
+except ModuleNotFoundError:
+    pass
+
 from astropy.stats import gaussian_sigma_to_fwhm
 from scipy.optimize import minimize
 

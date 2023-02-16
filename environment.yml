@@ -19,7 +19,4 @@ dependencies:
     - celerite2
     - requests
     - ipython
-    - jax
-    - jaxlib
-    - jaxopt
     - -e .

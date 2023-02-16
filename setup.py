@@ -43,9 +43,6 @@ setup(
         "jinja2",
         "tensorflow",
         "twirl",
-        "jax",
-        "jaxlib",
-        "jaxopt",
         "multiprocess"
     ],
     extras_require={
