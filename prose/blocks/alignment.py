@@ -62,20 +62,20 @@ class AlignReferenceSources(Block):
             _description_, by default False
         """
         super().__init__(name, verbose)
-        self.reference = reference
-        self.compute_transform = ComputeTransform(self.reference)
+        self.reference_sources = reference.sources
+        self.compute_transform = ComputeTransform(reference)
 
     def run(self, image: Image):
         self.compute_transform.run(image)
-        sources = self.reference.sources.copy()
+        sources = self.reference_sources.copy()
         sources.coords = image.transform.inverse(sources.coords.copy())
 
         # check if alignment potentially failed
-        if np.abs(np.std(sources.coords) - np.std(self.reference.sources.coords)) > 100:
+        if np.abs(np.std(sources.coords) - np.std(self.reference_sources.coords)) > 100:
             image.discard = True
 
         image.sources = sources
-
+        self._parallel_friendly = True
 
 class AlignReferenceWCS(Block):
     def __init__(self, reference: Image, name=None, verbose=False, n=6):

@@ -125,6 +125,7 @@ class Get(Block):
         self.getters = getters
         self.values = {name: [] for name in getters.keys()}
         self.arrays = arrays
+        self._parallel_friendly = True
 
     def run(self, image: Image):
         for name, get in self.getters.items():
@@ -190,10 +191,12 @@ class Calibration(Block):
         self.master_dark = self._produce_master(darks, "dark")
         self.master_flat = self._produce_master(flats, "flat")
 
-        self._share()
+        if shared:
+            self._share()
         self.verbose = verbose
 
         self.calibration = self._calibration_shared if shared else self._calibration
+        self._parallel_friendly = shared
 
     def _produce_master(self, images, image_type):
         if images is not None:
@@ -202,9 +205,6 @@ class Calibration(Block):
             ), "images must be list or array or path"
             if len(images) == 0:
                 images = None
-
-        if isinstance(images, str):
-            return self.loader(images).data
 
         def _median(im):
             if self.easy_ram:
@@ -288,6 +288,8 @@ class Calibration(Block):
                 m[:, :] = data[:, :]
             else:
                 m[:] = data[:]
+
+            del self.__dict__[f"master_{imtype}"]
 
     @property
     def citations(self):
@@ -420,6 +422,7 @@ class LimitSources(Block):
         super().__init__(name=name)
         self.min = min
         self.max = max
+        self._parallel_friendly = True
 
     def run(self, image):
         n = len(image.sources)
@@ -429,7 +432,7 @@ class LimitSources(Block):
 
 class GetFluxes(Get):
     
-    def __init__(self, data:list=None, time:str='jd'):
+    def __init__(self,  *args, time:str='jd', **kwargs):
         """A conveniant class to get fluxes and background from aperture and annulus blocks
 
         |read| :code:`Image.aperture`, :code:`Image.annulus` and :code:`Image.{time}`
@@ -442,14 +445,14 @@ class GetFluxes(Get):
             The image property corresponding to time, by default 'jd'
         """
         self._time_key = time
-        self.data_keys = data if data is not None else []
         get_fluxes= lambda im: im.aperture["fluxes"]
         get_bkg = lambda im: im.annulus["median"]
         get_area = lambda im: np.pi*(im.aperture['radii']**2)
         get_time = lambda im: getattr(im, self._time_key)
-        super().__init__(*self.data_keys, _time=get_time, _bkg=get_bkg, _fluxes=get_fluxes, _area=get_area, name="fluxes")
+        super().__init__(*args, _time=get_time, _bkg=get_bkg, _fluxes=get_fluxes, _area=get_area, name="fluxes", **kwargs)
         self.fluxes=None
-        
+        self._parallel_friendly = True
+
     def terminate(self):
         super().terminate()
         raw_fluxes = (self._fluxes - self._bkg[:, :, None] * self._area[:, None, :]).T
