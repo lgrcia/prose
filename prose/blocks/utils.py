@@ -455,6 +455,8 @@ class GetFluxes(Get):
         def get_time(im):
             if self._time_key in im.computed.keys():
                 return getattr(im, self._time_key)
+            elif im.jd is not None:
+                return im.jd
             else:
                 return im.i
             

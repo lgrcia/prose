@@ -245,7 +245,8 @@ class Fluxes:
         return i
     
     def estimate_best_aperture(self, target=None, method="stddiff"):
-        self.target = target
+        if target is None:
+            target = self.target
         self.aperture = self.best_aperture_index(method=method)
 
     def estimate_error(self):
@@ -291,6 +292,9 @@ class Fluxes:
     def load(path):
         with open(path, "rb") as f:
             return Fluxes(**pickle.load(f))
+
+    def copy(self):
+        return deepcopy(self)
 
     @property
     def dataframe(self):

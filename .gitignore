@@ -63,4 +63,4 @@ docs/md/generated
 _docs
 **/.ipynb_checkpoints
 docs/ipynb
-!docs/ipynb/*.ipynb
+!docs/ipynb/**.ipynb
