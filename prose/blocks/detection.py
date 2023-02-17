@@ -89,7 +89,7 @@ class _SourceDetection(Block):
         
     def regions(self, image: Image, threshold=None):
         flat_data = image.data.flatten()
-        median = np.median(flat_data)
+        median = np.nanmedian(flat_data)
         if threshold is None:
             threshold = self.threshold
                     
