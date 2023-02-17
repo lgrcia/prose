@@ -446,9 +446,20 @@ class GetFluxes(Get):
         """
         self._time_key = time
         get_fluxes= lambda im: im.aperture["fluxes"]
-        get_bkg = lambda im: im.annulus["median"]
-        get_area = lambda im: np.pi*(im.aperture['radii']**2)
-        get_time = lambda im: getattr(im, self._time_key)
+        def get_bkg(im):
+            if "annulus" in im.computed.keys():
+                return im.annulus["median"]
+            else:
+                return np.zeros(len(im.sources))
+            
+        def get_time(im):
+            if self._time_key in im.computed.keys():
+                return getattr(im, self._time_key)
+            else:
+                return im.i
+            
+        def get_area(im): return np.pi*(im.aperture['radii']**2)
+
         super().__init__(*args, _time=get_time, _bkg=get_bkg, _fluxes=get_fluxes, _area=get_area, name="fluxes", **kwargs)
         self.fluxes=None
         self._parallel_friendly = True
@@ -460,6 +471,7 @@ class GetFluxes(Get):
         data = {"bkg":np.mean(self._bkg, -1)}
         data.update({key: value for key, value in self.values.items() if key[0] != "_"})
         self.fluxes = Fluxes(time=time, fluxes=raw_fluxes, data=data)
+
 
 
 class WriteTo(Block):

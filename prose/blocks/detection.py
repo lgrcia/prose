@@ -97,7 +97,7 @@ class _SourceDetection(Block):
         threshold = threshold*np.nanstd(flat_data) + median
             
         regions = regionprops(label(image.data > threshold), image.data)
-        regions = [r for r in regions if r.area > self.min_area and r.axis_major_length > self.minor_length]
+        regions = [r for r in regions if r.area >= self.min_area and r.axis_major_length >= self.minor_length]
         
         return regions
     

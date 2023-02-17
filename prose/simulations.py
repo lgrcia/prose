@@ -17,6 +17,18 @@ from .archive import sdss_image
 import shutil
 from astropy import units as u
 
+def simple_images(fluxes, coords, bkg=0., shape=(100,100), std=0.):
+    images = []
+    if isinstance(bkg, float):
+        bkg = np.ones(coords.shape[0])*bkg
+    for _fluxes, _coords, _bkg in zip(fluxes.T, coords, bkg):
+        im = np.random.normal(scale=std, size=shape) + _bkg
+        for f, (x0, y0) in zip(_fluxes, _coords):
+            im[int(x0), int(y0)] += f
+        Im = Image(im)
+        images.append(Im)
+    return images
+
 def fits_image(data, header, destination):
 
     header = dict(
@@ -223,43 +235,6 @@ class ObservationSimulation:
                     fits_image(np.ones_like(im),
                             {'TELESCOP': self.telescope.name, 'JD': time, 'DATE-OBS': date, "IMAGETYP": "flat", "FILTER": "a"},
                             path.join(destination, f"fake-flat-{i}.fits"))
-
-# TODO delete
-def observation_to_model(time, t0=0.1, r=0.06417):
-    # transit signal
-    # lc = xo_lightcurve(time, period=0.7, r=7e-2, t0=0.1, plot=True)
-    flux = models.transit(time, 0.1, 0.06417, 5.2e-3, c=20).flatten() + 1 
-    error = 2e-3
-    flux += error*np.random.randn(len(time))
-
-    # Sky correlated signal
-    sky = sim_signal(time, w=0.2)
-    sky_flux = 5*sky + 0.35*sky**2
-    sky_flux -= sky_flux.mean()
-
-    # dy correlated signal
-    dy = sim_signal(time, w=0.1)
-    dy_flux = 2*dy + 0.35*dy**2
-    dy_flux -= dy_flux.mean()
-
-    flux += dy_flux + sky_flux
-
-    x = xr.Dataset(dict(
-        diff_fluxes=xr.DataArray(flux[None, None, :], dims=("apertures", "star", "time")),
-        diff_errors=xr.DataArray(error*np.ones_like(time)[None, None, :], dims=("apertures", "star", "time")),
-        fluxes=xr.DataArray(np.ones_like(time)[None, None, :], dims=("apertures", "star", "time")),
-        errors=xr.DataArray(np.ones_like(time)[None, None, :], dims=("apertures", "star", "time")),
-        sky=xr.DataArray(sky, dims="time"),
-        dy=xr.DataArray(dy, dims="time"),
-    ), attrs=dict(
-        telescope="Saint-Ex",
-        aperture=0,
-        target=0,
-    ), coords=dict(
-        time=time
-    ))
-    
-    return Observation(x)
 
 
 def xo_lightcurve(time, period=3, r=0.1, t0=0, plot=False):
