@@ -3,8 +3,8 @@
 ```{toctree}
 :maxdepth: 2
 
-../ipynb/transit.ipynb
-../ipynb/hiaka.ipynb
-../ipynb/comet.ipynb
-../ipynb/satellite.ipynb
+../ipynb/casestudies/transit.ipynb
+../ipynb/casestudies/hiaka.ipynb
+../ipynb/casestudies/comet.ipynb
+../ipynb/casestudies/satellite.ipynb
 ```

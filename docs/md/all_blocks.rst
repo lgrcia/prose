@@ -42,6 +42,7 @@
 	~prose.blocks.vizualisation.RawVideo
 	~prose.blocks.detection.SEDetection
 	~prose.blocks.detection.SegmentedPeaks
+	~prose.blocks.utils.SelectiveStack
 	~prose.blocks.geometry.SetAffineTransform
 	~prose.blocks.utils.SortSources
 	~prose.blocks.catalogs.TESSCatalog

@@ -213,14 +213,6 @@ class Sequence:
                 blocks.BalletCentroid(),                           
                 blocks.PhotutilsAperturePhotometry(scale=1.),
                 blocks.Peaks(),
-                blocks.XArray(
-                    ("time", "jd_utc"),
-                    ("time", "bjd_tdb"),
-                    ("time", "flip"),
-                    ("time", "fwhm"),
-                    ("time", "fwhmx"),
-                    name="xarray"
-                ),
             ])
 
             tex, bib = sequence.citations()

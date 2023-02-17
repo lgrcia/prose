@@ -208,7 +208,7 @@ class Source:
             radius = r*self.a
         else:
             radius = r
-        return CircularAperture(self.coords, radius)
+        return CircularAperture(self.coords, float(np.abs(radius)))
 
     def elliptical_aperture(self, r, scale=True):
         """`photutils.aperture.EllipticalAperture` centered on the source
@@ -235,7 +235,7 @@ class Source:
             a, b = 2*r*self.a, 2*r*self.b
         else:
             a, b = 2*r, 2*r*self.eccentricity
-        return RectangularAperture(self.coords, a, b, self.orientation)
+        return RectangularAperture(self.coords, float(np.abs(a)), float(np.abs(b)), self.orientation)
 
     def circular_annulus(self, r0, r1, scale=False):
         if scale:

@@ -2,8 +2,6 @@ dependencies:
   - python>=3.8
   - numpy
   - scipy
-  - numba
-  - tensorflow
   - pip
   - pip:
     - astropy>=4.0
