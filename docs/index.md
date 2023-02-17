@@ -1,5 +1,5 @@
-```{image} _static/prose_illustration.png
-:width: 300px
+```{image} _static/prose3.png
+:width: 420px
 :align: center
 ```
 
