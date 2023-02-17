@@ -76,6 +76,24 @@ class MedianEPSF(Block):
 
 class _PSFModelBase(Block):
     def __init__(self, reference_image=None, name=None, verbose=False):
+        """The base block for PSF fitting.
+
+        In this class:
+        
+        - self._opt_model is the model that goes into optimization
+        - self.model is a model that is expecting a dict of params as input
+        - self.model_function return the model function that goes into optimization
+
+
+        Parameters
+        ----------
+        reference_image : _type_, optional
+            _description_, by default None
+        name : _type_, optional
+            _description_, by default None
+        verbose : bool, optional
+            _description_, by default False
+        """
         super().__init__(name, verbose)
         self._init = reference_image.epsf.params if reference_image else None
         self.shape = (0, 0)  # reference_image.epsf.shape if reference_image else None
@@ -87,7 +105,7 @@ class _PSFModelBase(Block):
         if np.all(image.epsf.shape != self.shape):
             self.shape = image.epsf.shape
             self.x, self.y = np.indices(self.shape)
-            self.model = self.model_function()
+            self._opt_model = self.model_function()
 
         if self._last_init is None:
             init = moments(image.epsf.data)
@@ -102,6 +120,7 @@ class _PSFModelBase(Block):
         image.fwhm = image.epsf.fwhm
         self._last_init = params
 
+    @property
     def model(self):
         return self.model_function()
 
@@ -113,7 +132,7 @@ class _JAXPSFModel(_PSFModelBase):
     def optimize(self, data):
         @jax.jit
         def nll(params):
-            ll = jnp.sum(jnp.power((self.model(params) - data), 2))
+            ll = jnp.sum(jnp.power((self._opt_model(params) - data), 2))
             return ll
 
         opt = ScipyMinimize(fun=nll)
@@ -237,7 +256,7 @@ class Gaussian2D(_PSFModelBase):
 
     def optimize(self, data):
         def nll(params):
-            ll = np.sum(np.power((self.model(*params) - data), 2))
+            ll = np.sum(np.power((self._opt_model(*params) - data), 2))
             return ll
 
         keys = ["amplitude", "x", "y", "sigma_x", "sigma_y", "theta", "background"]
@@ -274,6 +293,7 @@ class Gaussian2D(_PSFModelBase):
 
         return model
 
+    @property
     def model(self):
         def _model(params):
             height = params["amplitude"]
@@ -315,10 +335,10 @@ class Moffat2D(_PSFModelBase):
 
     def optimize(self, data):
         def nll(params):
-            ll = np.sum(np.power((self.model(*params) - data), 2))
+            ll = np.sum(np.power((self._opt_model(*params) - data), 2))
             return ll
 
-        keys = ["amplitude", "x", "y", "sigma_x", "sigma_y", "theta", "background"]
+        keys = ["amplitude", "x", "y", "sigma_x", "sigma_y", "theta", "background", "beta"]
         p0 = [self._last_init[k] for k in keys]
         w = np.max(data.shape)
         bounds = [
@@ -329,25 +349,37 @@ class Moffat2D(_PSFModelBase):
             (0.5, w),
             (-np.pi, np.pi),
             (0, np.mean(data)),
+            (1, 8),
         ]
 
         opt = minimize(nll, p0, bounds=bounds).x
         return dict(zip(keys, opt))
 
     def model_function(self):
-        def model(height, xo, yo, sx, sy, theta, m):
-            dx = self.x - xo
-            dy = self.y - yo
-            a = (np.cos(theta) ** 2) / (2 * sx**2) + (np.sin(theta) ** 2) / (
-                2 * sy**2
-            )
-            b = -(np.sin(2 * theta)) / (4 * sx**2) + (np.sin(2 * theta)) / (
-                4 * sy**2
-            )
-            c = (np.sin(theta) ** 2) / (2 * sx**2) + (np.cos(theta) ** 2) / (
-                2 * sy**2
-            )
-            psf = height * np.exp(-(a * dx**2 + 2 * b * dx * dy + c * dy**2))
-            return psf + m
+        def model(height, xo, yo, sx, sy, theta, m, beta):
+            # https://pixinsight.com/doc/tools/DynamicPSF/DynamicPSF.html
+            dx_ = self.x - xo
+            dy_ = self.y - yo
+            dx = dx_*np.cos(theta) + dy_*np.sin(theta)
+            dy = -dx_*np.sin(theta) + dy_*np.cos(theta)
+        
+            return m + height / np.power(1 + (dx/sx)**2 + (dy/sy)**2, beta) 
 
         return model
+
+    @property
+    def model(self):
+        def _model(params):
+            height = params["amplitude"]
+            xo = params["x"]
+            yo = params["y"]
+            sx = params["sigma_x"]
+            sy = params["sigma_y"]
+            theta = params["theta"]
+            m = params["background"]
+            beta = params["beta"]
+            return self.model_function()(height, xo, yo, sx, sy, theta, m, beta)
+
+        return _model
+
+
