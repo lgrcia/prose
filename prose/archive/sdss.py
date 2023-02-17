@@ -1,41 +1,9 @@
 import numpy as np
-from astropy.coordinates import SkyCoord
-from prose.console_utils import info
 import requests
+from ..console_utils import info
 from astropy.io import fits
-from .. import Image, utils
+from .. import FITSImage, utils, Telescope
 import astropy.units as u
-from dateutil import parser as dparser
-from ..core.image import FITSImage
-
-# class PhotographicPlate(Image):
-
-#     ra = None
-#     dec = None
-#     filter = None
-
-#     def __init__(self, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
-
-#     @property
-#     def pixel_scale(self):
-#         return (
-#             self.header["PLTSCALE"]
-#             * (u.arcsec / u.mm)
-#             * (self.header["XPIXELSZ"] * u.um).to(u.mm)
-#         )
-
-#     @property
-#     def skycoord(self):
-#         return SkyCoord(
-#             *self.wcs.pixel_to_world_values([np.array(self.shape) / 2])[0] * u.deg
-#         )
-
-#     @property
-#     def date(self):
-#         date_str = self.header[self.telescope.keyword_observation_date][0:10]
-#         return dparser.parse(date_str)
-
 
 def sdss_image(skycoord, fov, filter="poss1_blue", return_hdu=False):
     """A function to retrieve an SDSS ``Image`` object
@@ -63,6 +31,8 @@ def sdss_image(skycoord, fov, filter="poss1_blue", return_hdu=False):
     Image
         ``Image`` object of the SDSS field
     """
+    
+    skycoord = utils.check_skycoord(skycoord)
 
     if isinstance(fov, (tuple, list)):
         fov = np.array(fov) * u.arcmin
@@ -76,27 +46,16 @@ def sdss_image(skycoord, fov, filter="poss1_blue", return_hdu=False):
 
     if return_hdu:
         return hdu
-
     else:
-        hdu[0].header["DATE-OBS"] = hdu[0].header["DATE-OBS"][0:10]
-        header = hdu[0].header
-        image = FITSImage(hdu[0])
-        image.data = image.data.astype(float)
-        image.metadata["wcs"] = None
-        image.metadata["ra"] = skycoord.ra.to("deg").value
-        image.metadata["dec"] = skycoord.dec.to("deg").value
-        image.metadata["ra_unit"] = "deg"
-        image.metadata["dec_unit"] = "deg"
-        image.metadata["filter"] = filter
-        image.metadata["pixel_scale"] = (
-            header["PLTSCALE"]
+        pixel_scale = (
+            hdu[0].header["PLTSCALE"]
             * (u.arcsec / u.mm)
-            * (header["XPIXELSZ"] * u.um).to(u.mm)
+            * (hdu[0].header["XPIXELSZ"] * u.um).to(u.mm)
         ).value
-        image.metadata["pixel_scale_unit"] = "arcsec"
-        # image.metadata["dec"] = dec
-        # image.metadata["ra"] = ra
-        # image.metadata["ra_unit"] = "deg"
-        # image.metadata["dec_unit"] = "deg"
-
+        telescope = Telescope(pixel_scale=pixel_scale)
+        
+        hdu[0].header["DATE-OBS"] = hdu[0].header["DATE-OBS"][0:10]
+        image = FITSImage(hdu[0], telescope=telescope)
+        image.metadata["ra"] = ra
+        image.metadata["dec"] = dec
         return image

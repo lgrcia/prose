@@ -2,41 +2,10 @@ import numpy as np
 from astropy.table import Table
 import requests
 from io import StringIO
-from .. import Image, blocks, utils
+from .. import FITSImage, blocks, utils, Telescope
 from prose.console_utils import info
 from astropy.io import fits
 import astropy.units as u
-from astropy.time import Time
-
-ps1_pixel_scale = 0.258
-
-class PS1Image(Image):
-
-    ra = None
-    dec = None
-    filter = None
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args,**kwargs)
-        
-    @property
-    def pixel_scale(self):
-        return ps1_pixel_scale * u.arcsec
-    
-    @property
-    def jd_utc(self):
-        return self.header["MJD-OBS"] + 2400000.5
-        
-    @property
-    def date(self):
-        """datetime of the observation
-
-        Returns
-        -------
-        datetime.datetime
-        """
-        return Time(self.jd_utc, format="jd", scale="utc").to_datetime()
- 
 
 def pos1_image(skycoord, fov, filter="z"):
     """
@@ -58,12 +27,13 @@ def pos1_image(skycoord, fov, filter="z"):
     """
 
     skycoord = utils.check_skycoord(skycoord)
+    telescope = Telescope(pixel_scale=0.258, keyword_observation_date="DATE")
 
     if isinstance(fov, (tuple, list)):
         fov = np.array(fov)*u.arcmin
     
-    w = (fov[0]/(ps1_pixel_scale * u.arcsec)).decompose().value
-    h = (fov[1]/(ps1_pixel_scale * u.arcsec)).decompose().value
+    w = (fov[0]/(telescope.pixel_scale * u.arcsec)).decompose().value
+    h = (fov[1]/(telescope.pixel_scale * u.arcsec)).decompose().value
     ra = skycoord.ra.to(u.deg).value
     dec = skycoord.dec.to(u.deg).value
     
@@ -89,9 +59,8 @@ def pos1_image(skycoord, fov, filter="z"):
     url = tab[0]["url"]
     query = requests.get(url)
     hdu = fits.HDUList.fromstring(query.content)
-    image = PS1Image(data=hdu[0].data, header=hdu[0].header, verbose=False)
+    image = FITSImage(hdu[0], telescope=telescope)
     image = blocks.Trim(trim=[int((size-w)/2), int((size-h)/2)])(image)
-    image.ra = skycoord.ra
-    image.dec = skycoord.dec
-    image.filter = filter
+    image.metadata["ra"] = ra
+    image.metadata["dec"] = dec
     return image
