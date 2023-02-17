@@ -334,7 +334,7 @@ class Image:
     def wcs(self, new_wcs):
         if new_wcs is not None:
             if isinstance(new_wcs, WCS):
-                self.metadata["wcs"] = dict(new_wcs.to_header())
+                self.metadata["wcs"] = new_wcs.to_header().tostring()
 
     @property
     def plate_solved(self):

@@ -58,4 +58,5 @@ def sdss_image(skycoord, fov, filter="poss1_blue", return_hdu=False):
         image = FITSImage(hdu[0], telescope=telescope)
         image.metadata["ra"] = ra
         image.metadata["dec"] = dec
+        image.metadata["filter"] = filter
         return image

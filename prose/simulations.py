@@ -25,7 +25,7 @@ def simple_images(fluxes, coords, bkg=0., shape=(100,100), std=0.):
         im = np.random.normal(scale=std, size=shape) + _bkg
         for f, (x0, y0) in zip(_fluxes, _coords):
             im[int(x0), int(y0)] += f
-        Im = Image(im)
+        Im = Image(im, metadata={'jd': None})
         images.append(Im)
     return images
 

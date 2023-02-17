@@ -63,4 +63,5 @@ def pos1_image(skycoord, fov, filter="z"):
     image = blocks.Trim(trim=[int((size-w)/2), int((size-h)/2)])(image)
     image.metadata["ra"] = ra
     image.metadata["dec"] = dec
+    image.metadata["filter"] = filter
     return image
