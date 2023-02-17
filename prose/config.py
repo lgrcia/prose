@@ -111,15 +111,13 @@ class ConfigManager:
         self.telescopes_dict = self.build_telescopes_dict()
 
     def match_telescope_name(self, name):
-        if not isinstance(name, str):
-            return None
         available_telescopes_names = list(self.telescopes_dict.keys())
-        has_telescope = np.where(
-            [t.lower() == name.lower() for t in available_telescopes_names]
-        )[0]
+        has_telescope = np.flatnonzero([t.lower() == name.lower() for t in available_telescopes_names])
         if len(has_telescope) > 0:
             i = np.argmax([len(name) for name in np.array(available_telescopes_names)[has_telescope]])
             return self.telescopes_dict[available_telescopes_names[has_telescope[i]]]
+        else:
+            return None
 
     def check_ballet(self):
         model_path = self.folder_path / "centroid.h5"

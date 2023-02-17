@@ -271,31 +271,6 @@ class Image:
         else:
             self._sources = Sources(np.array(new_sources))
 
-    # def show_cutout(self, star=None, size=200, **kwargs):
-    #     """Show a zoomed cutout around a detected star or coordinates
-
-    #     Parameters
-    #     ----------
-    #     star : [type], optional
-    #         detected star id or (x, y) coordinate, by default None
-    #     size : int, optional
-    #         side size of square cutout in pixel, by default 200
-    #     **kwargs passed to self.show
-    #     """
-
-    #     if star is None:
-    #         x, y = self.stars_coords[self.target]
-    #     elif isinstance(star, int):
-    #         x, y = self.stars_coords[star]
-    #     elif isinstance(star, (tuple, list, np.ndarray)):
-    #         x, y = star
-    #     else:
-    #         raise ValueError("star type not understood")
-
-    #     self.show(stars=False, **kwargs)
-    #     plt.xlim(np.array([-size / 2, size / 2]) + x)
-    #     plt.ylim(np.array([-size / 2, size / 2]) + y)
-
     def cutout(self, coords, shape, wcs=True, sources=True):
         """Return a list of Image cutouts from the image
 
@@ -558,8 +533,8 @@ def FITSImage(filepath_or_hdu, verbose=False, load_units=True, load_data=True, t
         metadata.update(
             {
                 "exposure_unit": "s",
-                "ra_unit": telescope.ra_unit.name,
-                "dec_unit": telescope.dec_unit.name,
+                "ra_unit": telescope.ra_unit,
+                "dec_unit": telescope.dec_unit,
                 "jd_scale": telescope.jd_scale,
                 "pixel_scale_unit": "arcsec",
             }
