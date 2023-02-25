@@ -72,7 +72,6 @@ root_doc = "index"
 html_theme_options = {
     "repository_url": "https://github.com/lgrcia/prose",
     "use_repository_button": True,
-    "show_navbar_depth": 2,
 }
 
 nb_render_image_options = {"align": "center"}

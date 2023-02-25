@@ -1,3 +1,5 @@
+# prose
+
 ```{image} _static/prose3.png
 :width: 420px
 :align: center
@@ -5,8 +7,6 @@
 
 ```{warning} 
 This is prose **3.0.0**, a version still under construction. [Latest doc here](https://prose.readthedocs.io/en/latest/)
-
-✖️ indicates a documentation yet to be written, reach out for support or priority
 ```
 +++
 
@@ -22,11 +22,39 @@ A Python package to build image processing pipelines, built for Astronomy. Beyon
 ```
 
 ```{toctree}
-:maxdepth: 2
-:caption: Table of content
+:maxdepth: 0
+:caption: Get started
 
-md/get_started
-../md/tutorials
-../md/case_studies
-../md/reference
+md/installation
+ipynb/quickstart
+ipynb/core
+```
+
+```{toctree}
+:maxdepth: 0
+:caption: Tutorials
+
+ipynb/fitsmanager
+ipynb/photometry
+ipynb/customblock
+```
+
+
+```{toctree}
+:maxdepth: 0
+:caption: Case studies
+
+ipynb/casestudies/transit.ipynb
+ipynb/casestudies/hiaka.ipynb
+ipynb/casestudies/comet.ipynb
+ipynb/casestudies/satellite.ipynb
+```
+
+```{toctree}
+:maxdepth: 0
+:caption: Reference
+
+ipynb/sources
+md/blocks
+md/api
 ```
