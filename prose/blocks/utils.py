@@ -439,10 +439,10 @@ class GetFluxes(Get):
 
         Parameters
         ----------
-        data : list, optional
-            list of image properties to retain as times-series associated with fluxes (like fwhm, airmass... etc), by default None
         time : str, optional
             The image property corresponding to time, by default 'jd'
+        *args, **kwargs:
+            args and kwargs of :py:class:`prose.blocks.Get`
         """
         self._time_key = time
         get_fluxes= lambda im: im.aperture["fluxes"]
