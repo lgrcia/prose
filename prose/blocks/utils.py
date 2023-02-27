@@ -432,7 +432,7 @@ class LimitSources(Block):
 
 class GetFluxes(Get):
     
-    def __init__(self,  *args, time:str='jd', **kwargs):
+    def __init__(self,  *args, time:str='jd', name:str=None, **kwargs):
         """A conveniant class to get fluxes and background from aperture and annulus blocks
 
         |read| :code:`Image.aperture`, :code:`Image.annulus` and :code:`Image.{time}`
@@ -441,6 +441,8 @@ class GetFluxes(Get):
         ----------
         time : str, optional
             The image property corresponding to time, by default 'jd'
+        name: str, optional
+            Name of the block
         *args, **kwargs:
             args and kwargs of :py:class:`prose.blocks.Get`
         """
@@ -459,20 +461,21 @@ class GetFluxes(Get):
                 return im.jd
             else:
                 return im.i
-            
-        def get_area(im): return np.pi*(im.aperture['radii']**2)
+        
+        def get_aperture(im): return im.aperture['radii']
 
-        super().__init__(*args, _time=get_time, _bkg=get_bkg, _fluxes=get_fluxes, _area=get_area, name="fluxes", **kwargs)
+        super().__init__(*args, _time=get_time, _bkg=get_bkg, _fluxes=get_fluxes, _apertures=get_aperture, name=name, **kwargs)
         self.fluxes=None
         self._parallel_friendly = True
 
     def terminate(self):
         super().terminate()
-        raw_fluxes = (self._fluxes - self._bkg[:, :, None] * self._area[:, None, :]).T
+        area = np.pi*(self._apertures**2)
+        raw_fluxes = (self._fluxes - self._bkg[:, :, None] * area[:, None, :]).T
         time = self._time
         data = {"bkg":np.mean(self._bkg, -1)}
         data.update({key: value for key, value in self.values.items() if key[0] != "_"})
-        self.fluxes = Fluxes(time=time, fluxes=raw_fluxes, data=data)
+        self.fluxes = Fluxes(time=time, fluxes=raw_fluxes, data=data, apertures=self._apertures)
 
 
 
