@@ -178,6 +178,7 @@ class Image:
 
         ax.set_xlim(0, self.shape[1]-1)
         ax.set_ylim(0, self.shape[0]-1)
+        self._wcs = None
 
     def _from_metadata_with_unit(self, name):
         unit_name = f"{name}_unit"
@@ -328,13 +329,16 @@ class Image:
     @property
     def wcs(self):
         """astropy.wcs.WCS object associated with the FITS ``Image.header``"""
-        return WCS(self.metadata.get("wcs", None))
+        if self._wcs is None:
+            self._wcs = WCS(self.metadata.get("wcs", None))
+        return self._wcs
 
     @wcs.setter
     def wcs(self, new_wcs):
         if new_wcs is not None:
             if isinstance(new_wcs, WCS):
                 self.metadata["wcs"] = new_wcs.to_header().tostring()
+                self._wcs = new_wcs
 
     @property
     def plate_solved(self):

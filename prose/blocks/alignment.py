@@ -29,7 +29,6 @@ class Align(Block):
 
     def run(self, image: Image):
         self.compute_transform.run(image)
-        transform = image.transform
 
         #if self.inverse:
         #    transform = transform.inverse

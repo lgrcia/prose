@@ -5,7 +5,7 @@ from scipy.spatial import KDTree
 from twirl import utils as twirl_utils
 from typing import Union
 
-__all__ = ["Trim", "Cutouts"]
+__all__ = ["Trim", "Cutouts", "Drizzle"]
 
 
 class Trim(Block):
@@ -164,19 +164,28 @@ class ComputeTransform(Block):
 class Drizzle(Block):
     
     def __init__(self, reference, pixfrac=1., **kwargs):
+        """Produce a dithered image. Requires :code:`drizzle` package.
+
+        All images (including reference must be plate-solved). After :code:`terminate` is called 
+        (e.g. when a sequence is entirely ran), the dithered image can be found in self.image
+
+        Parameters
+        ----------
+        reference : prose.Image
+            Reference image on which the stacking is based
+        pixfrac : float, optional
+            fraction of pixel used in dithering, by default 1.
+        """
         from drizzle import drizzle
         super().__init__(self, **kwargs)
-        self.reference = reference
         self.pixfrac = pixfrac
+        reference.wcs.pixel_shape = reference.shape
         self.drizzle = drizzle.Drizzle(outwcs=reference.wcs, pixfrac=pixfrac)
-        self.image = None
+        self.image = reference.copy()
 
     def run(self, image):
         WCS = image.wcs
         self.drizzle.add_image(image.data, image.wcs)
 
     def terminate(self):
-        data = self.drizzle.outsci
-        header = self.reference.header.copy()
-        header.update(self.drizzle.outwcs.to_header())
-        self.image = Image(data=data, header=header)
+        self.image.data = self.drizzle.outsci
