@@ -38,7 +38,7 @@ class Trim(Block):
         trim = self.trim if self.trim is not None else image.metadata["overscan"]
         center = image.shape[::-1] / 2
         shape = image.shape - 2 * np.array(trim)
-        cutout = image.cutout(center, shape)
+        cutout = image.cutout(center, shape, wcs=not self.skip_wcs)
         image.data = cutout.data
         image.sources = cutout.sources
         image.wcs = cutout.wcs

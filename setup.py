@@ -48,7 +48,6 @@ setup(
     extras_require={
         "docs": [
             "sphinx",
-            "nbsphinx",
             "docutils",
             "jupyterlab",
             "myst-parser",
@@ -58,8 +57,6 @@ setup(
             "myst_nb",
             "sphinx-copybutton",
             "jupyter",
-            "ipywidgets",
-            "black"
         ]
     },
     zip_safe=True,
