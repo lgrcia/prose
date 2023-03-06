@@ -4,11 +4,7 @@ from ..core import Image, Block
 from skimage.transform import warp
 import numpy as np
 
-__all__ = [
-    "Align",
-    "AlignReferenceSources",
-    "AlignReferenceWCS"
-]
+__all__ = ["Align", "AlignReferenceSources", "AlignReferenceWCS"]
 
 
 # TODO test inverse
@@ -30,7 +26,7 @@ class Align(Block):
     def run(self, image: Image):
         self.compute_transform.run(image)
 
-        #if self.inverse:
+        # if self.inverse:
         #    transform = transform.inverse
         try:
             image.data = warp(
@@ -63,18 +59,23 @@ class AlignReferenceSources(Block):
         super().__init__(name, verbose)
         self.reference_sources = reference.sources
         self.compute_transform = ComputeTransform(reference)
+        self._parallel_friendly = True
 
     def run(self, image: Image):
         self.compute_transform.run(image)
         sources = self.reference_sources.copy()
-        sources.coords = image.transform.inverse(sources.coords.copy())
+        new_sources_coords = image.transform.inverse(sources.coords.copy())
 
         # check if alignment potentially failed
-        if np.abs(np.std(sources.coords) - np.std(self.reference_sources.coords)) > 100:
+        if (
+            np.abs(np.std(new_sources_coords) - np.std(self.reference_sources.coords))
+            > 100
+        ):
             image.discard = True
+        else:
+            sources.coords = new_sources_coords
+            image.sources = sources
 
-        image.sources = sources
-        self._parallel_friendly = True
 
 class AlignReferenceWCS(Block):
     def __init__(self, reference: Image, name=None, verbose=False, n=6):

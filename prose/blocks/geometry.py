@@ -10,7 +10,7 @@ __all__ = ["Trim", "Cutouts", "Drizzle"]
 
 class Trim(Block):
     """Image trimming
-    
+
     If trim is not specified, triming is taken from the "overscan" in image metadata
 
     |write| ``Image.header``
@@ -20,14 +20,19 @@ class Trim(Block):
     Parameters
     ----------
     skip_wcs : bool, optional
-        whether to skip applying trim to WCS, by default False
+        whether to skip applying trim to WCS (If None: wcs is skipped only
+        if image is not plated solved), by default None
     trim : tuple, int or flot, optional
-        (x, y) trim values, by default None which uses the ``trim`` value from the image telescope definition. If an int or a float is provided trim will be be applied to both axes.
-        
+        (x, y) trim values, by default None which uses the ``trim`` value
+        from the image telescope definition. If an int or a float is provided trim will be be applied to both axes.
+
     """
 
-    def __init__(self, trim=None, skip_wcs=True, name=None, verbose=False):
+    def __init__(self, trim=None, skip_wcs=None, name=None, verbose=False):
         super().__init__(name, verbose)
+        assert (skip_wcs is None) or isinstance(
+            skip_wcs, bool
+        ), "skip_wcs must be None or bool"
         self.skip_wcs = skip_wcs
         if isinstance(trim, (int, float)):
             trim = (trim, trim)
@@ -38,14 +43,24 @@ class Trim(Block):
         trim = self.trim if self.trim is not None else image.metadata["overscan"]
         center = image.shape[::-1] / 2
         shape = image.shape - 2 * np.array(trim)
-        cutout = image.cutout(center, shape, wcs=not self.skip_wcs)
+        if self.skip_wcs is None:
+            skip_wcs = not image.plate_solved
+        else:
+            skip_wcs = self.skip_wcs
+        cutout = image.cutout(center, shape, wcs=skip_wcs)
         image.data = cutout.data
         image.sources = cutout.sources
         image.wcs = cutout.wcs
 
 
 class Cutouts(Block):
-    def __init__(self, shape:Union[int, tuple]=50, wcs:bool=False, name:str=None, sources: bool=False):
+    def __init__(
+        self,
+        shape: Union[int, tuple] = 50,
+        wcs: bool = False,
+        name: str = None,
+        sources: bool = False,
+    ):
         """Create cutouts around all sources
 
         |read| :code:`Image.sources`
@@ -162,11 +177,10 @@ class ComputeTransform(Block):
 
 
 class Drizzle(Block):
-    
-    def __init__(self, reference, pixfrac=1., **kwargs):
+    def __init__(self, reference, pixfrac=1.0, **kwargs):
         """Produce a dithered image. Requires :code:`drizzle` package.
 
-        All images (including reference must be plate-solved). After :code:`terminate` is called 
+        All images (including reference must be plate-solved). After :code:`terminate` is called
         (e.g. when a sequence is entirely ran), the dithered image can be found in self.image
 
         Parameters
@@ -177,6 +191,7 @@ class Drizzle(Block):
             fraction of pixel used in dithering, by default 1.
         """
         from drizzle import drizzle
+
         super().__init__(self, **kwargs)
         self.pixfrac = pixfrac
         reference.wcs.pixel_shape = reference.shape

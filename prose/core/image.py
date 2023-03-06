@@ -22,6 +22,7 @@ import pickle
 from astropy.time import Time
 from typing import Union
 
+
 @dataclass
 class Image:
     data: np.ndarray = None
@@ -31,6 +32,7 @@ class Image:
     origin: tuple = (0, 0)
     discard: bool = False
     computed: dict = None
+    _wcs = None
 
     """TODO docstring
 
@@ -46,10 +48,11 @@ class Image:
     TypeError
         _description_
     """
-    
 
     def __post_init__(self):
-        assert isinstance(self.data, np.ndarray) or self.data is None, f"data must be a np.ndarray, not {type(self.data)}" 
+        assert (
+            isinstance(self.data, np.ndarray) or self.data is None
+        ), f"data must be a np.ndarray, not {type(self.data)}"
         if self.metadata is None:
             self.metadata = {}
         if self.catalogs is None:
@@ -60,7 +63,7 @@ class Image:
             self._sources = Sources(**self._sources)
         if self._sources is None:
             self._sources = Sources([])
-            
+
     def __setattr__(self, name, value):
         if hasattr(self, name):
             super().__setattr__(name, value)
@@ -69,7 +72,7 @@ class Image:
                 self.computed[name] = value
             else:
                 super().__setattr__(name, value)
-            
+
     def __getattr__(self, name):
         if "computed" not in self.__dict__:
             super.__getattr__(self, name)
@@ -176,8 +179,8 @@ class Image:
             if self.sources is not None:
                 self.sources.plot()
 
-        ax.set_xlim(0, self.shape[1]-1)
-        ax.set_ylim(0, self.shape[0]-1)
+        ax.set_xlim(0, self.shape[1] - 1)
+        ax.set_ylim(0, self.shape[0] - 1)
         self._wcs = None
 
     def _from_metadata_with_unit(self, name):
@@ -201,11 +204,11 @@ class Image:
     @property
     def dec(self):
         return self._from_metadata_with_unit("dec")
-    
+
     @property
     def exposure(self):
         return self._from_metadata_with_unit("exposure")
-    
+
     @property
     def jd(self):
         return self.metadata["jd"]
@@ -258,7 +261,7 @@ class Image:
     @property
     def sources(self):
         """Image sources
-        
+
         Returns
         -------
         prose.core.source.Sources
@@ -278,7 +281,7 @@ class Image:
         Parameters
         ----------
         coords : np.ndarray
-            (N, 2) array of cutouts center coordinates 
+            (N, 2) array of cutouts center coordinates
         shape : tuple or int
             The shape of the cutouts to extract. If int, shape is (shape, shape)
         wcs : bool, optional
@@ -324,7 +327,6 @@ class Image:
         image.origin = tuple(np.array(new_image.bbox_original).T[0][::-1])
 
         return image
-
 
     @property
     def wcs(self):
@@ -406,23 +408,23 @@ class Image:
         axr.plot(np.mean(data, axis=1), y[0], "--", c="k")
         axr.axis("off")
 
-    def asdict(self, image_dtype='int16', low_data=True):
+    def asdict(self, image_dtype="int16", low_data=True):
         im_dict = asdict(self.copy())
         if low_data:
-            im_dict["data"] = utils.z_scale(im_dict["data"])*(2**7 - 1)
-            image_dtype = 'int8'
+            im_dict["data"] = utils.z_scale(im_dict["data"]) * (2**7 - 1)
+            image_dtype = "int8"
         im_dict["data"] = im_dict["data"].astype(image_dtype)
         return im_dict
 
-    def save(self, filepath, image_dtype='int16', low_data=True):
+    def save(self, filepath, image_dtype="int16", low_data=True):
         with open(filepath, "wb") as f:
             pickle.dump(self.asdict(image_dtype=image_dtype, low_data=low_data), f)
-        
+
     @classmethod
     def load(cls, filepath):
         return cls(**pickle.load(open(filepath, "rb")))
 
-    def symetric_profile(self, source, binn=1.):
+    def symetric_profile(self, source, binn=1.0):
         x, y = source.coords
         Y, X = np.indices(self.shape)
         radii = (np.sqrt((X - x) ** 2 + (Y - y) ** 2)).flatten()
@@ -437,9 +439,9 @@ class Image:
         pixels = self.data.flatten()
         pixels = pixels[idxs]
 
-        return _d, pixels 
+        return _d, pixels
 
-    def major_profile(self, source, binn=1., debug=False):
+    def major_profile(self, source, binn=1.0, debug=False):
         p1 = source.coords[:, None, None]
         p2 = (source.vertexes[0])[:, None, None]
         Y, X = np.indices(self.data.shape)
@@ -447,13 +449,13 @@ class Image:
 
         # projection
         # https://stackoverflow.com/questions/61341712/calculate-projected-point-location-x-y-on-given-line-startx-y-endx-y
-        l2 = np.sum((p1-p2)**2)
-        assert l2 != 0, 'p1 and p2 are the same points'
-        distances = (np.sum((p3 - p1) * (p2 - p1), 0) / np.sqrt(l2))
+        l2 = np.sum((p1 - p2) ** 2)
+        assert l2 != 0, "p1 and p2 are the same points"
+        distances = np.sum((p3 - p1) * (p2 - p1), 0) / np.sqrt(l2)
         flat_distance = distances.flatten()
         idxs = utils.index_binning(flat_distance, binn)
         distance = np.array([flat_distance[i].mean() for i in idxs])
-        values =  np.array([np.nanmax(self.data.flatten()[i]) for i in idxs])
+        values = np.array([np.nanmax(self.data.flatten()[i]) for i in idxs])
 
         if debug:
             D = np.zeros(self.data.flatten().shape)
@@ -472,18 +474,23 @@ class Image:
         -------
         str
         """
-        return "_".join([
-            self.metadata["telescope"],
-            self.night_date.strftime("%Y%m%d"),
-            self.metadata["object"],
-            self.filter
-        ])
+        return "_".join(
+            [
+                self.metadata["telescope"],
+                self.night_date.strftime("%Y%m%d"),
+                self.metadata["object"],
+                self.filter,
+            ]
+        )
+
 
 def str_to_astropy_unit(unit_string):
     return u.__dict__[unit_string]
 
 
-def FITSImage(filepath_or_hdu, verbose=False, load_units=True, load_data=True, telescope=None) -> Image:
+def FITSImage(
+    filepath_or_hdu, verbose=False, load_units=True, load_data=True, telescope=None
+) -> Image:
     """Create an image from a FITS file
 
     Parameters
@@ -530,7 +537,7 @@ def FITSImage(filepath_or_hdu, verbose=False, load_units=True, load_data=True, t
         "overscan": telescope.trimming[::-1],
         "path": path,
         "dimensions": (header.get("NAXIS1", 1), header.get("NAXIS2", 1)),
-        "type": telescope.image_type(header)
+        "type": telescope.image_type(header),
     }
 
     if load_units:
