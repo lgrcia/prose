@@ -40,9 +40,6 @@ setup(
         "celerite2",
         "jinja2",
         "twirl",
-        "jax",
-        "jaxlib",
-        "jaxopt",
         "multiprocess"
     ],
     extras_require={
