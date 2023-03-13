@@ -1,7 +1,7 @@
 # prose
 
 <p align="center">
-    <img src="docs/source/static/prose_illustration.png" width="350">
+    <img src="docs/_static/prose3.png" width="350">
 </p>
 
 <p align="center">
@@ -85,5 +85,5 @@ conda env create -f {prose_repo}/environment.yml -n prose
 We are interested in seeing how you use prose, as well as helping creating blocks you need. Do not hesitate to reach us out! ☎️
 
 <p align="center">
-    <img src="docs/source/static/lookatit.png" width="150">
+    <img src="docs/_static/lookatit.png" width="150">
 </p>
