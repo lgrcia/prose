@@ -153,7 +153,7 @@ code span.pre {
 }
 
 /* prose logo font  */
-#site-navigation h1.site-logo {
+.navbar-brand.logo .logo__title {
     font-style: italic;
     font-weight: bold;
     font-family: Georgia, 'Times New Roman', Times, serif;
