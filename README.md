@@ -1,6 +1,6 @@
 # prose
 
-<p align="center">
+<p align="center" style="margin-bottom:-50px">
     <img src="docs/_static/prose3.png" width="350">
 </p>
 
@@ -9,13 +9,13 @@
   <br>
   <p align="center">
     <a href="https://github.com/lgrcia/prose">
-      <img src="https://img.shields.io/badge/github-lgrcia/prose-blue.svg?style=flat" alt="github"/>
+      <img src="https://img.shields.io/badge/github-lgrcia/prose-03A487.svg?style=flat" alt="github"/>
     </a>
     <a href="">
       <img src="https://img.shields.io/badge/license-MIT-lightgray.svg?style=flat" alt="license"/>
     </a>
     <a href="https://arxiv.org/abs/2111.02814">
-      <img src="https://img.shields.io/badge/paper-yellow.svg?style=flat" alt="paper"/>
+      <img src="https://img.shields.io/badge/paper-B166A9.svg?style=flat" alt="paper"/>
     </a>
     <a href="https://prose.readthedocs.io">
       <img src="https://img.shields.io/badge/documentation-black.svg?style=flat" alt="documentation"/>
@@ -28,10 +28,10 @@
 *powered by*
 <p align="center">
   <a href="https://www.astropy.org/">
-  <img src="https://docs.astropy.org/en/stable/_static/astropy_banner.svg" height=50/>
+  <img src="https://docs.astropy.org/en/stable/_static/astropy_banner.svg" height=40 style="filter: grayscale(1);"/>
   </a>
   <a href="https://photutils.readthedocs.io">
-  <img src="https://photutils.readthedocs.io/en/stable/_static/photutils_banner.svg" height=50/>
+  <img src="https://photutils.readthedocs.io/en/stable/_static/photutils_banner.svg" height=40 style="filter: grayscale(1);"/>
   </a>
   <p align="center">
 
