@@ -18,31 +18,32 @@ from astropy.stats import gaussian_sigma_to_fwhm
 
 earth2sun = (c.R_earth / c.R_sun).value
 
+
 def remove_sip(dict_like):
 
     for kw in [
-        'A_ORDER',
-        'A_0_2',
-        'A_1_1',
-        'A_2_0',
-        'B_ORDER',
-        'B_0_2',
-        'B_1_1',
-        'B_2_0',
-        'AP_ORDER',
-        'AP_0_0',
-        'AP_0_1',
-        'AP_0_2',
-        'AP_1_0',
-        'AP_1_1',
-        'AP_2_0',
-        'BP_ORDER',
-        'BP_0_0',
-        'BP_0_1',
-        'BP_0_2',
-        'BP_1_0',
-        'BP_1_1',
-        'BP_2_0'
+        "A_ORDER",
+        "A_0_2",
+        "A_1_1",
+        "A_2_0",
+        "B_ORDER",
+        "B_0_2",
+        "B_1_1",
+        "B_2_0",
+        "AP_ORDER",
+        "AP_0_0",
+        "AP_0_1",
+        "AP_0_2",
+        "AP_1_0",
+        "AP_1_1",
+        "AP_2_0",
+        "BP_ORDER",
+        "BP_0_0",
+        "BP_0_1",
+        "BP_0_2",
+        "BP_1_0",
+        "BP_1_1",
+        "BP_2_0",
     ]:
         if kw in dict_like:
             del dict_like[kw]
@@ -73,7 +74,9 @@ def format_iso_date(date, night_date=True):
         date = Time(date, format="datetime").datetime
 
     if night_date:
-        return (date - timedelta(hours=15)).date()  # If obs goes up to 15pm it still belongs to day before
+        return (
+            date - timedelta(hours=15)
+        ).date()  # If obs goes up to 15pm it still belongs to day before
     else:
         return date
 
@@ -93,8 +96,8 @@ def index_binning(x, size):
         bins = np.arange(np.min(x), np.max(x), size)
     else:
         x = np.arange(0, len(x))
-        bins = np.arange(0., len(x), size)
-        
+        bins = np.arange(0.0, len(x), size)
+
     d = np.digitize(x, bins)
     n = np.max(d) + 2
     indexes = []
@@ -115,7 +118,7 @@ def z_scale(data, c=0.05):
 
 def rescale(y):
     ry = y - np.mean(y)
-    return ry/np.std(ry)
+    return ry / np.std(ry)
 
 
 def check_class(_class, base, default):
@@ -208,7 +211,9 @@ def jd_to_bjd(jd, ra, dec):
     """
     Convert JD to BJD using http://astroutils.astronomy.ohio-state.edu (Eastman et al. 2010)
     """
-    bjd = urllib.request.urlopen(f"http://astroutils.astronomy.ohio-state.edu/time/convert.php?JDS={','.join(jd.astype(str))}&RA={ra}&DEC={dec}&FUNCTION=utc2bjd").read()
+    bjd = urllib.request.urlopen(
+        f"http://astroutils.astronomy.ohio-state.edu/time/convert.php?JDS={','.join(jd.astype(str))}&RA={ra}&DEC={dec}&FUNCTION=utc2bjd"
+    ).read()
     bjd = bjd.decode("utf-8")
     return np.array(bjd.split("\n"))[0:-1].astype(float)
 
@@ -221,7 +226,7 @@ def remove_arrays(d):
     return copy
 
 
-def sigma_clip(y, sigma=5., return_mask=False, x=None):
+def sigma_clip(y, sigma=5.0, return_mask=False, x=None):
     mask = np.abs(y - np.nanmedian(y)) < sigma * np.nanstd(y)
 
     if return_mask:
@@ -245,12 +250,14 @@ def args_kwargs(f):
             args.append(p.name)
     return args, kwargs
 
+
 # todo: adapt to work with positional parameters like register
 def register_args(f):
     """
     When used within a class, saves args and kwargs passed to a function
     (mostly used to record __init__ inputs)
     """
+
     @wraps(f)
     def inner(*_args, **_kwargs):
         self = _args[0]
@@ -260,10 +267,11 @@ def register_args(f):
         self.args = args
         self.kwargs = kwargs
         return f(self, *args.values(), **kwargs)
-    return inner
-    
 
-def nan_gaussian_filter(data, sigma=1., truncate=4.):
+    return inner
+
+
+def nan_gaussian_filter(data, sigma=1.0, truncate=4.0):
     """https://stackoverflow.com/questions/18697532/gaussian-filtering-a-image-with-nan-in-python
 
     Parameters
@@ -276,18 +284,23 @@ def nan_gaussian_filter(data, sigma=1., truncate=4.):
         _description_, by default 4.
     """
 
-    V=data.copy()
-    V[np.isnan(data)]=0
-    VV=ndimage.gaussian_filter(V,sigma=sigma,truncate=truncate)
+    V = data.copy()
+    V[np.isnan(data)] = 0
+    VV = ndimage.gaussian_filter(V, sigma=sigma, truncate=truncate)
 
-    W=0*data.copy()+1
-    W[np.isnan(data)]=0
-    WW=ndimage.gaussian_filter(W,sigma=sigma,truncate=truncate)
+    W = 0 * data.copy() + 1
+    W[np.isnan(data)] = 0
+    WW = ndimage.gaussian_filter(W, sigma=sigma, truncate=truncate)
 
-    return VV/WW
+    return VV / WW
+
 
 def clean_header(header_dict):
-    return {key: value for key, value in header_dict.items() if not isinstance(value, (list, tuple)) and key.isupper()}
+    return {
+        key: value
+        for key, value in header_dict.items()
+        if not isinstance(value, (list, tuple)) and key.isupper()
+    }
 
 
 def easy_median(images):
@@ -295,17 +308,21 @@ def easy_median(images):
     images = np.array(images)
     shape_divisors = divisors(images.shape[1])
     n = shape_divisors[np.argmin(np.abs(50 - shape_divisors))]
-    return np.concatenate([np.nanmedian(im, axis=0) for im in np.split(images, n, axis=1)])
+    return np.concatenate(
+        [np.nanmedian(im, axis=0) for im in np.split(images, n, axis=1)]
+    )
 
 
 def image_in_xarray(image, xarr, name="stack", stars=False):
     xarr.attrs.update(header_to_cdf4_dict(image.header))
-    xarr.attrs.update(dict(
-        telescope=image.telescope.name,
-        filter=image.header.get(image.telescope.keyword_filter, ""),
-        exptime=image.header.get(image.telescope.keyword_exposure_time, ""),
-        name=image.header.get(image.telescope.keyword_object, ""),
-    ))
+    xarr.attrs.update(
+        dict(
+            telescope=image.telescope.name,
+            filter=image.header.get(image.telescope.keyword_filter, ""),
+            exptime=image.header.get(image.telescope.keyword_exposure_time, ""),
+            name=image.header.get(image.telescope.keyword_object, ""),
+        )
+    )
 
     if image.telescope.keyword_observation_date in image.header:
         date = image.header[image.telescope.keyword_observation_date]
@@ -313,17 +330,17 @@ def image_in_xarray(image, xarr, name="stack", stars=False):
         date = Time(image.header[image.telescope.keyword_jd], format="jd").datetime
 
     xarr.attrs.update(dict(date=format_iso_date(date).isoformat()))
-    xarr.coords[name] = (('w', 'h'), image.data)
+    xarr.coords[name] = (("w", "h"), image.data)
 
     xarr = xarr.assign_coords(time=xarr.jd_utc)
     xarr = xarr.sortby("time")
     xarr.attrs["time_format"] = "jd_utc"
-    
+
     if stars:
         xarr = xarr.assign_coords(stars=(("star", "n"), image.stars_coords))
 
-    
     return xarr
+
 
 def check_skycoord(skycoord):
     """
@@ -360,68 +377,74 @@ def gaia_query(center, fov, *args, limit=10000, circular=True):
     """
     https://gea.esac.esa.int/archive/documentation/GEDR3/Gaia_archive/chap_datamodel/sec_dm_main_tables/ssec_dm_gaia_source.html
     """
-    
+
     from astroquery.gaia import Gaia
-    
+
     if isinstance(center, SkyCoord):
         ra = center.ra.to(u.deg).value
         dec = center.dec.to(u.deg).value
-    
+
     if not isinstance(fov, u.Quantity):
         fov = fov * u.deg
-    
+
     if fov.ndim == 1:
         ra_fov, dec_fov = fov.to(u.deg).value
     else:
         ra_fov = dec_fov = fov.to(u.deg).value
 
-    radius = np.min([ra_fov, dec_fov])/2
+    radius = np.min([ra_fov, dec_fov]) / 2
 
-    fields = ','.join(args) if isinstance(args, (tuple, list)) else args
+    fields = ",".join(args) if isinstance(args, (tuple, list)) else args
 
     if circular:
-        job = Gaia.launch_job(f"select top {limit} {fields} from gaiadr2.gaia_source where "
-                            "1=CONTAINS("
-                            f"POINT('ICRS', {ra}, {dec}), "
-                            f"CIRCLE('ICRS',ra, dec, {radius}))"
-                            "order by phot_g_mean_mag")
+        job = Gaia.launch_job(
+            f"select top {limit} {fields} from gaiadr2.gaia_source where "
+            "1=CONTAINS("
+            f"POINT('ICRS', {ra}, {dec}), "
+            f"CIRCLE('ICRS',ra, dec, {radius}))"
+            "order by phot_g_mean_mag"
+        )
     else:
-        job = Gaia.launch_job(f"select top {limit} {fields} from gaiadr2.gaia_source where "
-                    f"ra BETWEEN {ra-ra_fov/2} AND {ra+ra_fov/2} AND "
-                    f"dec BETWEEN {dec-dec_fov/2} AND {dec+dec_fov/2} "
-                    "order by phot_g_mean_mag") 
+        job = Gaia.launch_job(
+            f"select top {limit} {fields} from gaiadr2.gaia_source where "
+            f"ra BETWEEN {ra-ra_fov/2} AND {ra+ra_fov/2} AND "
+            f"dec BETWEEN {dec-dec_fov/2} AND {dec+dec_fov/2} "
+            "order by phot_g_mean_mag"
+        )
 
     return job.get_results()
+
 
 def sparsify(stars, radius):
 
     _stars = stars.copy()
     deleted_stars = np.zeros([], dtype=int)
     sparse_stars = []
-    
+
     for i, s in enumerate(_stars):
         if not i in deleted_stars:
-            distances = np.linalg.norm(_stars-s, axis=1)
-            idxs = np.flatnonzero(distances<radius)
+            distances = np.linalg.norm(_stars - s, axis=1)
+            idxs = np.flatnonzero(distances < radius)
             sparse_stars.append(s)
             deleted_stars = np.hstack([deleted_stars, idxs])
-    
+
     return np.array(sparse_stars)
+
 
 def full_class_name(o):
     # https://stackoverflow.com/questions/2020014/get-fully-qualified-class-name-of-an-object-in-python
     klass = o.__class__
     module = klass.__module__
-    if module == 'builtins':
-        return klass.__qualname__ # avoid outputs like 'builtins.str'
-    return module + '.' + klass.__qualname__
+    if module == "builtins":
+        return klass.__qualname__  # avoid outputs like 'builtins.str'
+    return module + "." + klass.__qualname__
 
 
 def binn2D(arr, factor):
     new_shape = np.array(arr.shape) // factor
-    shape = (new_shape[0], factor,
-             new_shape[1], factor)
+    shape = (new_shape[0], factor, new_shape[1], factor)
     return np.mean(arr.reshape(shape).mean(-1), 1)
+
 
 import numpy as np
 from scipy.spatial import KDTree
@@ -429,42 +452,26 @@ from twirl import utils as tutils
 from skimage.transform import AffineTransform as skAT
 from functools import partial
 
+
 def distance(p1, p2):
     return np.sqrt(np.power(p1[0] - p2[0], 2) + np.power(p1[1] - p2[1], 2))
 
 
 def distances(coords, coord):
     return [
-        np.sqrt(((coord[0] - x)**2 + (coord[1] - y)**2))
+        np.sqrt(((coord[0] - x) ** 2 + (coord[1] - y) ** 2))
         for x, y in zip(coords[0].flatten(), coords[1].flatten())
     ]
-
-def clean_stars_positions(positions, tolerance=50, output_id=False):
-    keep = []
-
-    distance_to_others = np.array(
-        [[distance(v, w) for w in positions] for v in positions]
-    )
-    for i, _distances in enumerate(distance_to_others):
-        _distances[i] = np.inf
-        close_stars = np.flatnonzero(_distances < tolerance)
-        if len(close_stars) == 0:
-            keep.append(i)
-
-    if output_id:
-        return positions[np.unique(keep)], np.unique(keep)
-    else:
-        return positions[np.unique(keep)]
 
 
 def cross_match(S1, S2, tolerance=10, return_idxs=False, none=True):
     # cleaning
     s1 = S1.copy()
     s2 = S2.copy()
-    
+
     s1[np.any(np.isnan(s1), 1)] = (1e15, 1e15)
     s2[np.any(np.isnan(s2), 1)] = (1e15, 1e15)
-    
+
     # matching
     matches = []
 
@@ -487,13 +494,14 @@ def cross_match(S1, S2, tolerance=10, return_idxs=False, none=True):
         else:
             return np.array([]), np.array([])
 
+
 def moments(data):
     """Returns (height, x, y, width_x, width_y)
     the gaussian parameters of a 2D distribution by calculating its
-    moments """
+    moments"""
     height = data.max()
     background = data.min()
-    data = data-np.min(data)
+    data = data - np.min(data)
     total = data.sum()
     x, y = np.indices(data.shape)
     x = (x * data).sum() / total
@@ -505,11 +513,11 @@ def moments(data):
     width_x /= gaussian_sigma_to_fwhm
     width_y /= gaussian_sigma_to_fwhm
     return {
-        "amplitude": height, 
-        "x": x, 
-        "y": y, 
-        "sigma_x": width_x, 
-        "sigma_y": width_y, 
+        "amplitude": height,
+        "x": x,
+        "y": y,
+        "sigma_x": width_x,
+        "sigma_y": width_y,
         "background": background,
-        "theta": 0.
+        "theta": 0.0,
     }

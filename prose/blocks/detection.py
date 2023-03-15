@@ -1,6 +1,5 @@
 from skimage.measure import label, regionprops
 import numpy as np
-from ..utils import clean_stars_positions
 from .. import Block, Image
 from ..console_utils import info
 from scipy.interpolate import interp1d
