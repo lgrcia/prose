@@ -39,7 +39,7 @@ def test_psf_blocks(block):
 
 
 @pytest.mark.parametrize("d", [10, 50, 80, 100])
-def test_detection_min_separation(d):
+def test_sourcedetection_min_separation(d):
     from prose.blocks.detection import PointSourceDetection
 
     PointSourceDetection(min_separation=d).run(image)

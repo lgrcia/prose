@@ -56,10 +56,8 @@ class _SourceDetection(Block):
             if self.sort:
                 idxs = np.argsort(peaks)[::-1]
                 _sources = sources[idxs]
-            if self.n is not None:
-                _sources = _sources[0 : self.n]
             if self.min_separation:
-                final_sources = sources.copy()
+                final_sources = _sources.copy()
 
                 for s in final_sources:
                     s.keep = True
@@ -74,10 +72,13 @@ class _SourceDetection(Block):
                         for j in idxs[idxs > i]:
                             final_sources[int(j)].keep = False
 
-                _sources = sources[np.array([s.keep for s in final_sources])]
+                _sources = _sources[np.array([s.keep for s in final_sources])]
 
             for i, s in enumerate(_sources):
                 s.i = i
+
+            if self.n is not None:
+                _sources = _sources[0 : self.n]
 
             return _sources
 

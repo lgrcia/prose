@@ -37,6 +37,7 @@ ipynb/core
 ipynb/fitsmanager
 ipynb/photometry
 ipynb/customblock
+ipynb/catalogs
 ```
 
 

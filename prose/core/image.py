@@ -275,7 +275,7 @@ class Image:
         else:
             self._sources = Sources(np.array(new_sources))
 
-    def cutout(self, coords, shape, wcs=True, sources=True):
+    def cutout(self, coords, shape, wcs=True, sources=True, reset_index=True):
         """Return a list of Image cutouts from the image
 
         Parameters
@@ -286,7 +286,8 @@ class Image:
             The shape of the cutouts to extract. If int, shape is (shape, shape)
         wcs : bool, optional
             wether to compute and include cutouts WCS (takes more time), by default True
-
+        reset_index: bool,
+            wether to reset the sources indexes, by default True
         Returns
         -------
         list of Image
@@ -325,6 +326,16 @@ class Image:
         image._sources = Sources(new_sources)
         image.wcs = new_image.wcs
         image.origin = tuple(np.array(new_image.bbox_original).T[0][::-1])
+        image.catalogs = deepcopy(self.catalogs)
+        for name, catalog in image.catalogs.items():
+            image.catalogs[name][["x", "y"]] -= coords - np.array(shape) / 2
+            # xy = catalog[["x", "y"]].values
+            # idxs = np.all((xy - coords / 2) < np.array(shape) / 2, 1)
+            # image.catalogs[name] = catalog[idxs]
+
+        if reset_index:
+            for i, s in enumerate(image.sources):
+                s.i = i
 
         return image
 
@@ -378,7 +389,7 @@ class Image:
         assert (
             name in self.catalogs
         ), f"Catalog '{name}' not present, consider using ..."
-        x, y = self.catalogs[name][["x", "y"]].values[0:n].T
+        x, y = self.catalogs[name][["x", "y"]].values.T
         labels = self.catalogs[name]["id"].values if label else None
         viz.plot_marks(x, y, labels, color=color)
 

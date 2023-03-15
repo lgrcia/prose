@@ -1,7 +1,7 @@
 # prose
 
 <p align="center" style="margin-bottom:-50px">
-    <img src="docs/_static/prose3.png" width="350">
+    <img src="docs/_static/prose3.png" width="450">
 </p>
 
 <p align="center">
