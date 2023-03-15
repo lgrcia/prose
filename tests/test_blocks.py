@@ -38,10 +38,18 @@ def test_psf_blocks(block):
     block().run(image_psf)
 
 
-def test_detection_min_separation():
+@pytest.mark.parametrize("d", [10, 50, 80, 100])
+def test_detection_min_separation(d):
     from prose.blocks.detection import PointSourceDetection
 
-    PointSourceDetection(min_separation=10.0)(image)
+    PointSourceDetection(min_separation=d).run(image)
+
+    distances = np.linalg.norm(
+        image.sources.coords - image.sources.coords[:, None], axis=-1
+    )
+    distances = np.where(np.eye(distances.shape[0]).astype(bool), np.nan, distances)
+    distances = np.nanmin(distances, 0)
+    np.testing.assert_allclose(distances > d, True)
 
 
 def test_Trim():

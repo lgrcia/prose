@@ -49,9 +49,8 @@ class _SourceDetection(Block):
         self.min_area = min_area
         self.minor_length = minor_length
 
-    def clean(self, sources, *args):
+    def clean(self, sources):
         peaks = np.array([s.peak for s in sources])
-        coords = np.array([s.coords for s in sources])
         _sources = sources.copy()
 
         if len(sources) > 0:
@@ -61,10 +60,22 @@ class _SourceDetection(Block):
             if self.n is not None:
                 _sources = _sources[0 : self.n]
             if self.min_separation:
-                idxs = clean_stars_positions(
-                    coords, tolerance=self.min_separation, output_id=True
-                )[1]
-                _sources = _sources[idxs]
+                final_sources = sources.copy()
+
+                for s in final_sources:
+                    s.keep = True
+
+                for i, s in enumerate(final_sources):
+                    if final_sources[i].keep:
+                        distances = np.linalg.norm(
+                            s.coords - final_sources.coords, axis=1
+                        )
+                        distances[i] == np.nan
+                        idxs = np.flatnonzero(distances < self.min_separation)
+                        for j in idxs[idxs > i]:
+                            final_sources[int(j)].keep = False
+
+                _sources = sources[np.array([s.keep for s in final_sources])]
 
             for i, s in enumerate(_sources):
                 s.i = i
@@ -187,7 +198,9 @@ class PointSourceDetection(_SourceDetection):
             idxs = np.flatnonzero([r.euler_number == 1 for r in regions])
             regions = [regions[i] for i in idxs]
 
-        sources = np.array([PointSource.from_region(region) for region in regions])
+        sources = Sources(
+            np.array([PointSource.from_region(region) for region in regions])
+        )
         image.sources = Sources(self.clean(sources), source_type="PointSource")
 
     @property
