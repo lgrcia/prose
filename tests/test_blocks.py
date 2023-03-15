@@ -38,6 +38,12 @@ def test_psf_blocks(block):
     block().run(image_psf)
 
 
+def test_detection_min_separation():
+    from prose.blocks.detection import PointSourceDetection
+
+    PointSourceDetection(min_separation=10.0)(image)
+
+
 def test_Trim():
     blocks.Trim(30).run(image.copy())
 
@@ -74,8 +80,10 @@ def test_Get():
     g(image)
     assert g.values == {"a": [3], "b": [6], "c": [42]}
 
+
 def test_LimitSources():
     from prose.core.source import Sources, PointSource
+
     im = image.copy()
     im.sources = Sources([PointSource(0, 0) for _ in range(2)])
     blocks.LimitSources().run(im)
