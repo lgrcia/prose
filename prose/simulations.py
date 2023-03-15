@@ -17,17 +17,19 @@ from .archive import sdss_image
 import shutil
 from astropy import units as u
 
-def simple_images(fluxes, coords, bkg=0., shape=(100,100), std=0.):
+
+def simple_images(fluxes, coords, bkg=0.0, shape=(100, 100), std=0.0):
     images = []
     if isinstance(bkg, float):
-        bkg = np.ones(coords.shape[0])*bkg
+        bkg = np.ones(coords.shape[0]) * bkg
     for _fluxes, _coords, _bkg in zip(fluxes.T, coords, bkg):
         im = np.random.normal(scale=std, size=shape) + _bkg
         for f, (x0, y0) in zip(_fluxes, _coords):
             im[int(x0), int(y0)] += f
-        Im = Image(im, metadata={'jd': None})
+        Im = Image(im, metadata={"jd": None})
         images.append(Im)
     return images
+
 
 def fits_image(data, header, destination):
 
@@ -42,7 +44,7 @@ def fits_image(data, header, destination):
         RA=header.get("RA", 12.84412),
         DEC=header.get("DEC", -22.85886),
     )
-    header['DATE-OBS'] = header.get("DATE-OBS", Time(datetime.now()).to_value("fits"))
+    header["DATE-OBS"] = header.get("DATE-OBS", Time(datetime.now()).to_value("fits"))
     hdu = fits.PrimaryHDU(data, header=fits.Header(header))
     hdu.writeto(destination, overwrite=True)
 
@@ -53,7 +55,7 @@ def cutouts(image, stars, size):
     return stars
 
 
-def sim_signal(time, amp=1e-3, w=10.):
+def sim_signal(time, amp=1e-3, w=10.0):
     kernel = celerite.terms.SHOTerm(S0=1, Q=1, w0=2 * np.pi / w)
     gp = celerite.GaussianProcess(kernel)
     gp.compute(time)
@@ -90,11 +92,11 @@ def random_fluxes(k, time, peak=65000, max_amp=1e-2, sort=True):
 def protopapas2005(t, t0, duration, depth, c=20, period=1):
     _t = period * np.sin(np.pi * (t - t0) / period) / (np.pi * duration)
     return (1 - depth) + (depth / 2) * (
-            2 - np.tanh(c * (_t + 1 / 2)) + np.tanh(c * (_t - 1 / 2)))
+        2 - np.tanh(c * (_t + 1 / 2)) + np.tanh(c * (_t - 1 / 2))
+    )
 
 
 class ObservationSimulation:
-
     def __init__(self, shape, telescope, n=51):
         if isinstance(shape, (tuple, list)):
             self.shape = shape
@@ -127,10 +129,16 @@ class ObservationSimulation:
         dx = self.x - x
         dy = self.y - y
         sx, sy = self.sigma
-        a = (np.cos(self.theta) ** 2) / (2 * sx ** 2) + (np.sin(self.theta) ** 2) / (2 * sy ** 2)
-        b = -(np.sin(2 * self.theta)) / (4 * sx ** 2) + (np.sin(2 * self.theta)) / (4 * sy ** 2)
-        c = (np.sin(self.theta) ** 2) / (2 * sx ** 2) + (np.cos(self.theta) ** 2) / (2 * sy ** 2)
-        im = a * np.exp(-(a * dx ** 2 + 2 * b * dx * dy + c * dy ** 2))
+        a = (np.cos(self.theta) ** 2) / (2 * sx**2) + (np.sin(self.theta) ** 2) / (
+            2 * sy**2
+        )
+        b = -(np.sin(2 * self.theta)) / (4 * sx**2) + (np.sin(2 * self.theta)) / (
+            4 * sy**2
+        )
+        c = (np.sin(self.theta) ** 2) / (2 * sx**2) + (np.cos(self.theta) ** 2) / (
+            2 * sy**2
+        )
+        im = a * np.exp(-(a * dx**2 + 2 * b * dx * dy + c * dy**2))
         return im
 
     def field(self, i):
@@ -153,11 +161,15 @@ class ObservationSimulation:
     def sigma_to_fwhm(self):
         return 2 * np.sqrt(np.power(2, 1 / self.beta) - 1)
 
-    def add_stars(self, k, time, atmosphere=6e-2, peak=65000, positions=None, fluxes=None):
+    def add_stars(
+        self, k, time, atmosphere=6e-2, peak=65000, positions=None, fluxes=None
+    ):
         # Generating time series
         self.time = time
         if positions is None:
-            positions = np.repeat(random_stars(k, np.min(self.shape))[:, :, np.newaxis], len(time), axis=2)
+            positions = np.repeat(
+                random_stars(k, np.min(self.shape))[:, :, np.newaxis], len(time), axis=2
+            )
         self.positions = positions
         if fluxes is None:
             fluxes = random_fluxes(k, time, peak=peak)
@@ -183,7 +195,9 @@ class ObservationSimulation:
 
     def set_star(self, i, position, diff_flux=None):
         self.target = i
-        self.positions[i, :, :] = np.repeat(np.array(position)[:, np.newaxis], len(self.time), axis=1)
+        self.positions[i, :, :] = np.repeat(
+            np.array(position)[:, np.newaxis], len(self.time), axis=1
+        )
         if diff_flux is not None:
             peak = self.fluxes[i, :].mean()
             self.fluxes[i, :] = peak * diff_flux
@@ -194,13 +208,31 @@ class ObservationSimulation:
 
     def plot(self, n, photon_noise=True, atmosphere=True, **kwargs):
         fluxes = self.fluxes * (self.atmosphere[np.newaxis, :] if atmosphere else 1)
-        viz.multiplot([(self.time, np.random.normal(f, np.sqrt(f) if photon_noise else 0, size=len(self.time))) for f in
-                      fluxes[0:n]], **kwargs)
+        viz.multiplot(
+            [
+                (
+                    self.time,
+                    np.random.normal(
+                        f, np.sqrt(f) if photon_noise else 0, size=len(self.time)
+                    ),
+                )
+                for f in fluxes[0:n]
+            ],
+            **kwargs,
+        )
 
     def clean_around_target(self, radius):
-        close_by = np.setdiff1d(np.argwhere(
-            np.array(utils.distances(self.positions[:, :, 0].T, self.positions[self.target, :, 0])) < radius).flatten(),
-                                self.target)
+        close_by = np.setdiff1d(
+            np.argwhere(
+                np.array(
+                    utils.distances(
+                        self.positions[:, :, 0].T, self.positions[self.target, :, 0]
+                    )
+                )
+                < radius
+            ).flatten(),
+            self.target,
+        )
         self.remove_stars(close_by)
 
     def save_fits(self, destination, calibration=False, verbose=True):
@@ -218,29 +250,64 @@ class ObservationSimulation:
                     warnings.simplefilter("ignore")
                     date = Time(time, format="jd", scale="utc").to_value("fits")
                     im = self.image(i, 300)
-                    fits_image(im,
-                            {'TELESCOP': self.telescope.name, 'JD': time, 'DATE-OBS': date, "FILTER": "a"},
-                            path.join(destination, f"fake-im-{i}.fits"))
+                    fits_image(
+                        im,
+                        {
+                            "TELESCOP": self.telescope.name,
+                            "JD": time,
+                            "DATE-OBS": date,
+                            "FILTER": "a",
+                        },
+                        path.join(destination, f"fake-im-{i}.fits"),
+                    )
 
             if calibration:
-                fits_image(np.zeros_like(im),
-                        {'TELESCOP': self.telescope.name, 'JD': time, 'DATE-OBS': date, "IMAGETYP": "dark"},
-                        path.join(destination, f"fake-dark.fits"))
+                fits_image(
+                    np.zeros_like(im),
+                    {
+                        "TELESCOP": self.telescope.name,
+                        "JD": time,
+                        "DATE-OBS": date,
+                        "IMAGETYP": "dark",
+                    },
+                    path.join(destination, f"fake-dark.fits"),
+                )
 
-                fits_image(np.zeros_like(im),
-                        {'TELESCOP': self.telescope.name, 'JD': time, 'DATE-OBS': date, "IMAGETYP": "bias"},
-                        path.join(destination, f"fake-C001-bias.fits"))
+                fits_image(
+                    np.zeros_like(im),
+                    {
+                        "TELESCOP": self.telescope.name,
+                        "JD": time,
+                        "DATE-OBS": date,
+                        "IMAGETYP": "bias",
+                    },
+                    path.join(destination, f"fake-C001-bias.fits"),
+                )
 
                 for i in range(0, 4):
-                    fits_image(np.ones_like(im),
-                            {'TELESCOP': self.telescope.name, 'JD': time, 'DATE-OBS': date, "IMAGETYP": "flat", "FILTER": "a"},
-                            path.join(destination, f"fake-flat-{i}.fits"))
+                    fits_image(
+                        np.ones_like(im),
+                        {
+                            "TELESCOP": self.telescope.name,
+                            "JD": time,
+                            "DATE-OBS": date,
+                            "IMAGETYP": "flat",
+                            "FILTER": "a",
+                        },
+                        path.join(destination, f"fake-flat-{i}.fits"),
+                    )
 
 
 def xo_lightcurve(time, period=3, r=0.1, t0=0, plot=False):
     import exoplanet as xo
+
     orbit = xo.orbits.KeplerianOrbit(period=0.7, t0=0.1)
-    light_curve = xo.LimbDarkLightCurve([0.1, 0.4]).get_light_curve(orbit=orbit, r=r, t=time).eval() + 1
+    light_curve = (
+        xo.LimbDarkLightCurve([0.1, 0.4])
+        .get_light_curve(orbit=orbit, r=r, t=time)
+        .eval()
+        + 1
+    )
 
     if plot:
         plt.plot(time, light_curve, color="C0", lw=2)
@@ -253,28 +320,28 @@ def xo_lightcurve(time, period=3, r=0.1, t0=0, plot=False):
 def source_example():
 
     shape = (170, 60)
-    data = np.random.normal(loc=300., scale=10, size=shape)
+    data = np.random.normal(loc=300.0, scale=10, size=shape)
 
     X, Y = np.indices(data.shape)
 
     def gaussian_psf(A, x, y, sx, sy, theta=0):
         dx = X - x
         dy = Y - y
-        a = (np.cos(theta) ** 2) / (2 * sx ** 2) + (np.sin(theta) ** 2) / (2 * sy ** 2)
-        b = -(np.sin(2 * theta)) / (4 * sx ** 2) + (np.sin(2 * theta)) / (4 * sy ** 2)
-        c = (np.sin(theta) ** 2) / (2 * sx ** 2) + (np.cos(theta) ** 2) / (2 * sy ** 2)
-        im = A * np.exp(-(a * dx ** 2 + 2 * b * dx * dy + c * dy ** 2))
+        a = (np.cos(theta) ** 2) / (2 * sx**2) + (np.sin(theta) ** 2) / (2 * sy**2)
+        b = -(np.sin(2 * theta)) / (4 * sx**2) + (np.sin(2 * theta)) / (4 * sy**2)
+        c = (np.sin(theta) ** 2) / (2 * sx**2) + (np.cos(theta) ** 2) / (2 * sy**2)
+        im = A * np.exp(-(a * dx**2 + 2 * b * dx * dy + c * dy**2))
         return im
 
     # star
     data += gaussian_psf(400, 25, 30, 3.5, 3.5)
 
     # galaxy
-    data += gaussian_psf(300, 80, 30, 10, 4, np.pi/4)
+    data += gaussian_psf(300, 80, 30, 10, 4, np.pi / 4)
 
     # line
     x0 = 120
-    rr, cc, val = line_aa(x0, 10, x0+30, 50)
+    rr, cc, val = line_aa(x0, 10, x0 + 30, 50)
     data[rr, cc] += val * 200
 
     return Image(data.T)
@@ -288,6 +355,7 @@ def example_image(seed=43, n=300, w=600):
     obs.set_psf((3.5, 3.5), 45, 4)
     obs.add_stars(n, [0, 1])
     return Image(obs.image(0, 300), metadata=dict(TELESCOP="A"))
+
 
 def simulate_observation(time, dflux, destination, dx=3):
     n = len(time)
@@ -304,11 +372,13 @@ def simulate_observation(time, dflux, destination, dx=3):
     obs.clean_around_target(50)
     obs.save_fits(destination, calibration=True)
 
+
 def image_sample(*coords, fov=12):
     # example: "05 38 44.851", "+04 32 47.68",
     skycoord = utils.check_skycoord(coords)
-    fov = [fov, fov]*u.arcmin
+    fov = [fov, fov] * u.arcmin
     return sdss_image(skycoord, fov)
+
 
 def disorganised_folder(destination):
 
@@ -320,44 +390,68 @@ def disorganised_folder(destination):
     # Telescope A with filter a
     for i in range(5):
         data = np.random.random((10, 10))
-        fits_image(data, dict(JD=i, TELESCOP="A", FILTER="a"), path.join(destination, f"A-test{i}.fits"))
+        fits_image(
+            data,
+            dict(JD=i, TELESCOP="A", FILTER="a"),
+            path.join(destination, f"A-test{i}.fits"),
+        )
 
         # Telescope A with filter a
     for i in range(5):
         data = np.random.random((10, 10))
-        fits_image(data, dict(JD=i, TELESCOP="A", FILTER="ab"), path.join(destination, f"A-test{i}-ab.fits"))
+        fits_image(
+            data,
+            dict(JD=i, TELESCOP="A", FILTER="ab"),
+            path.join(destination, f"A-test{i}-ab.fits"),
+        )
 
     # Telescope B
     for i in range(5):
         data = np.random.random((20, 10))
-        fits_image(data, dict(JD=i, TELESCOP="B", FILTER="b"), path.join(destination, f"B-test{i}.fits"))
+        fits_image(
+            data,
+            dict(JD=i, TELESCOP="B", FILTER="b"),
+            path.join(destination, f"B-test{i}.fits"),
+        )
 
     # Telescope A with filter b
     for i in range(5):
         data = np.random.random((10, 10))
-        fits_image(data, dict(JD=i, TELESCOP="A", FILTER="b"), path.join(destination, f"A-bis-test{i}.fits"))
+        fits_image(
+            data,
+            dict(JD=i, TELESCOP="A", FILTER="b"),
+            path.join(destination, f"A-bis-test{i}.fits"),
+        )
     # some calibration files
     for i in range(2):
         data = np.random.random((10, 10))
         fits_image(
             data,
-            dict(JD=i, TELESCOP="A", IMAGETYP="dark"), path.join(destination, f"A-bis-test_d{i}.fits"))
+            dict(JD=i, TELESCOP="A", IMAGETYP="dark"),
+            path.join(destination, f"A-bis-test_d{i}.fits"),
+        )
     for i in range(2):
         data = np.random.random((10, 10))
         fits_image(
             data,
-            dict(JD=i, TELESCOP="A", FILTER="b", IMAGETYP="flat"), path.join(destination, f"A-bis-testf1_{i}.fits"))
+            dict(JD=i, TELESCOP="A", FILTER="b", IMAGETYP="flat"),
+            path.join(destination, f"A-bis-testf1_{i}.fits"),
+        )
     for i in range(2):
         data = np.random.random((10, 10))
         fits_image(
             data,
-            dict(JD=i, TELESCOP="A", FILTER="c", IMAGETYP="flat"), path.join(destination, f"A-bis-testf2_{i}.fits"))
+            dict(JD=i, TELESCOP="A", FILTER="c", IMAGETYP="flat"),
+            path.join(destination, f"A-bis-testf2_{i}.fits"),
+        )
 
     for i in range(2):
         data = np.random.random((10, 10))
         fits_image(
             data,
-            dict(JD=i, TELESCOP="A", FILTER="c", IMAGETYP="dark", EXPTIME=8), path.join(destination, f"A-bis-testf2_{i}_8s_dark.fits"))
+            dict(JD=i, TELESCOP="A", FILTER="c", IMAGETYP="dark", EXPTIME=8),
+            path.join(destination, f"A-bis-testf2_{i}_8s_dark.fits"),
+        )
 
 
 def moving_object(time, destination):
@@ -366,7 +460,9 @@ def moving_object(time, destination):
     obs = ObservationSimulation(600, Telescope.from_name("A"))
     obs.set_psf((3.5, 3.5), 45, 4)
     obs.add_stars(300, time)
-    obs.positions[0] = ((obs.time/obs.time.max())[:, None]*(np.array(obs.shape)-50)).T
+    obs.positions[0] = (
+        (obs.time / obs.time.max())[:, None] * (np.array(obs.shape) - 50)
+    ).T
 
     # constant fluxes
     for i, f in enumerate(obs.fluxes):
