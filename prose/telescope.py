@@ -8,7 +8,8 @@ from .console_utils import info
 from .builtins import default
 import astropy.units as u
 from dateutil import parser as dparser
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
+from datetime import datetime
 
 
 def str_to_astropy_unit(unit_string):
@@ -22,6 +23,8 @@ class Telescope:
 
     Parameters
     ----------
+    save: bool
+        wether to save telescope in ~/.prose, by default False
     keyword_telescope: str
         FITS header keyword for telescope name, default is :code:`"TELESCOP"`
     keyword_object: str
@@ -144,13 +147,18 @@ class Telescope:
     camera_name: str = None
 
     _default: bool = True
+    save: bool = False
     """Object containing telescope information.
 
     Once a new telescope is instantiated its dictionary is permanantly saved by prose and automatically used whenever the telescope name is encountered in a fits header. Saved telescopesare located in ``~/.prose`` as ``.telescope`` files (yaml format).
     """
 
     def __post_init__(self):
-        pass
+        if self.save:
+            telescope_dict = asdict(self)
+            del telescope_dict["_default"]
+            del telescope_dict["save"]
+            CONFIG.save_telescope_file(telescope_dict)
 
     @classmethod
     def load(cls, filename):
@@ -200,17 +208,26 @@ class Telescope:
         return telescope
 
     @staticmethod
-    def from_names(instrument_name, telescope_name, verbose=True):
+    def from_names(instrument_name, telescope_name, verbose=True, strict=True):
         # we first check by instrument name
         telescope = Telescope.from_name(instrument_name, verbose=False, strict=True)
         # if not found we check telescope name
         if telescope is None:
             telescope = Telescope.from_name(telescope_name, verbose=verbose)
 
+        if telescope is None:
+            if not strict:
+                telescope = Telescope()
+                telescope.name = f"default_{telescope_name}"
+
         return telescope
 
     def date(self, header):
-        return dparser.parse(header.get(self.keyword_observation_date, ""))
+        header_date = header.get(self.keyword_observation_date, None)
+        if header_date is not None:
+            return dparser.parse(header_date)
+        else:
+            return datetime(1800, 1, 2)
 
     def image_type(self, header):
         return header.get(self.keyword_image_type, "").lower()

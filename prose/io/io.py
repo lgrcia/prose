@@ -20,12 +20,12 @@ def phot2dict(filename):
 
 
 def get_files(
-        ext,
-        folder,
-        depth=0,
-        return_folders=False,
-        single_list_removal=False,
-        none_for_empty=False,
+    ext,
+    folder,
+    depth=0,
+    return_folders=False,
+    single_list_removal=False,
+    none_for_empty=False,
 ):
     """
 
@@ -81,20 +81,21 @@ def set_hdu(hdu_list, value):
 
 
 def fits_to_df(
-    files, 
-    telescope_kw="TELESCOP", 
-    instrument_kw="INSTRUME", 
-    verbose=True, 
-    hdu=0, 
-    raise_oserror=False, 
-    verbose_os=False
-    ):
-    
+    files,
+    telescope_kw="TELESCOP",
+    instrument_kw="INSTRUME",
+    telescope=None,
+    verbose=True,
+    hdu=0,
+    raise_oserror=False,
+    verbose_os=False,
+):
+
     assert len(files) > 0, "Files not provided"
 
     last_telescope = "_"
     telescopes_seen = []
-    telescope = None
+    _telescope = None
     df_list = []
 
     for i in progress(verbose, desc="Parsing FITS")(files):
@@ -108,62 +109,82 @@ def fits_to_df(
                 raise
             else:
                 continue
-            
-        telescope_name = header.get(telescope_kw, "")
-        instrument_name = header.get(instrument_kw, "")
 
-        telescope_id = f"{telescope_name}_{instrument_name}"
-        if telescope_id not in telescopes_seen:
-            telescopes_seen.append(telescope_id)
-            verbose = True
+        if telescope is None:
+            telescope_name = header.get(telescope_kw, "")
+            instrument_name = header.get(instrument_kw, "")
+
+            telescope_id = f"{telescope_name}_{instrument_name}"
+            if telescope_id not in telescopes_seen:
+                telescopes_seen.append(telescope_id)
+                verbose = True
+            else:
+                verbose = False
+
+            if telescope_id != last_telescope or _telescope is None:
+                _telescope = Telescope.from_names(
+                    header.get(instrument_kw, ""), header.get(telescope_kw, "")
+                )
+                last_telescope = telescope_id
         else:
-            verbose = False
+            _telescope = telescope
 
-        if telescope_id != last_telescope:
-            telescope = Telescope.from_names(header.get(instrument_kw, ""), header.get(telescope_kw, ""))
-            last_telescope = telescope_id
+        df_list.append(
+            dict(
+                path=i,
+                date=_telescope.date(header).isoformat(),
+                telescope=_telescope.name,
+                type=_telescope.image_type(header),
+                target=header.get(_telescope.keyword_object, ""),
+                filter=header.get(_telescope.keyword_filter, ""),
+                dimensions=(header.get("NAXIS1", 1), header.get("NAXIS2", 1)),
+                flip=header.get(_telescope.keyword_flip, ""),
+                jd=header.get(_telescope.keyword_jd, ""),
+                exposure=float(header.get(_telescope.keyword_exposure_time, -1)),
+            )
+        )
 
-        df_list.append(dict(
-            path=i,
-            date=telescope.date(header).isoformat(),
-            telescope=telescope.name,
-            type=telescope.image_type(header),
-            target=header.get(telescope.keyword_object, ""),
-            filter=header.get(telescope.keyword_filter, ""),
-            dimensions=(header.get("NAXIS1", 1), header.get("NAXIS2", 1)),
-            flip=header.get(telescope.keyword_flip, ""),
-            jd=header.get(telescope.keyword_jd, ""),
-            exposure=float(header.get(telescope.keyword_exposure_time, None))
-        ))
+    df = pd.DataFrame(
+        df_list,
+        columns=(
+            "path",
+            "date",
+            "telescope",
+            "type",
+            "target",
+            "filter",
+            "dimensions",
+            "flip",
+            "jd",
+            "exposure",
+        ),
+    )
 
-    df = pd.DataFrame(df_list, columns=(
-        "path",
-        "date",
-        "telescope",
-        "type",
-        "target",
-        "filter",
-        "dimensions",
-        "flip",
-        "jd",
-        "exposure"
-    ))
-
-    if len(df) > 0 and telescope is not None:
-        df.type.loc[df.type.str.lower().str.contains(telescope.keyword_light_images.lower())] = "light"
-        df.type.loc[df.type.str.lower().str.contains(telescope.keyword_dark_images.lower())] = "dark"
-        df.type.loc[df.type.str.lower().str.contains(telescope.keyword_bias_images.lower())] = "bias"
-        df.type.loc[df.type.str.lower().str.contains(telescope.keyword_flat_images.lower())] = "flat"
+    if len(df) > 0 and _telescope is not None:
+        df.type.loc[
+            df.type.str.lower().str.contains(_telescope.keyword_light_images.lower())
+        ] = "light"
+        df.type.loc[
+            df.type.str.lower().str.contains(_telescope.keyword_dark_images.lower())
+        ] = "dark"
+        df.type.loc[
+            df.type.str.lower().str.contains(_telescope.keyword_bias_images.lower())
+        ] = "bias"
+        df.type.loc[
+            df.type.str.lower().str.contains(_telescope.keyword_flat_images.lower())
+        ] = "flat"
         df.telescope.loc[df.telescope.str.lower().str.contains("unknown")] = ""
         df.date = pd.to_datetime(df.date)
         df["filter"] = df["filter"].str.replace("'", "p")
 
         if (df.jd == "").all():  # jd empty then convert from date
-            df.jd = Time(df.date, scale="utc").to_value('jd') + telescope.mjd
+            df.jd = Time(df.date, scale="utc").to_value("jd") + _telescope.mjd
 
         # We want dates that correspond to same observations but night might be over 2 days (before and after midnight)
         # So we remove 15 hours to be sure the date year-month-day are consistent with single observations
-        df.date = (df.date - timedelta(hours=15)).apply(lambda x: x.strftime('%Y-%m-%d'))
+        df.date = (df.date - timedelta(hours=15)).apply(
+            lambda x: x.strftime("%Y-%m-%d")
+        )
 
     return df
 
@@ -171,11 +192,30 @@ def fits_to_df(
 def get_new_fits(current_df, folder, depth=3):
     dirs = np.array(os.listdir(folder))
     new_dirs = dirs[
-        np.argwhere(pd.to_datetime(dirs, errors='coerce') > pd.to_datetime(current_df.date).max()).flatten()]
-    return np.hstack([get_files("*.f*ts", path.join(folder, f), depth=depth) for f in new_dirs])
+        np.argwhere(
+            pd.to_datetime(dirs, errors="coerce")
+            > pd.to_datetime(current_df.date).max()
+        ).flatten()
+    ]
+    return np.hstack(
+        [get_files("*.f*ts", path.join(folder, f), depth=depth) for f in new_dirs]
+    )
+
 
 def convert_old_index(df):
-    new_df = df[["date", "path", "telescope", "type", "target", "filter", "dimensions", "flip", "jd"]]
+    new_df = df[
+        [
+            "date",
+            "path",
+            "telescope",
+            "type",
+            "target",
+            "filter",
+            "dimensions",
+            "flip",
+            "jd",
+        ]
+    ]
     new_df.dimensions = new_df.dimensions.apply(
         lambda x: tuple(np.array(x.split("x")).astype(int) if x != np.nan else x)
     )
