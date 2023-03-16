@@ -5,6 +5,7 @@ from astropy.io import fits
 from .. import FITSImage, utils, Telescope
 import astropy.units as u
 
+
 def sdss_image(skycoord, fov, filter="poss1_blue", return_hdu=False):
     """A function to retrieve an SDSS ``Image`` object
 
@@ -31,7 +32,7 @@ def sdss_image(skycoord, fov, filter="poss1_blue", return_hdu=False):
     Image
         ``Image`` object of the SDSS field
     """
-    
+
     skycoord = utils.check_skycoord(skycoord)
 
     if isinstance(fov, (tuple, list)):
@@ -53,7 +54,7 @@ def sdss_image(skycoord, fov, filter="poss1_blue", return_hdu=False):
             * (hdu[0].header["XPIXELSZ"] * u.um).to(u.mm)
         ).value
         telescope = Telescope(pixel_scale=pixel_scale)
-        
+
         hdu[0].header["DATE-OBS"] = hdu[0].header["DATE-OBS"][0:10]
         image = FITSImage(hdu[0], telescope=telescope)
         image.metadata["ra"] = ra

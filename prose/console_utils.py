@@ -7,16 +7,22 @@ import warnings
 from . import CONFIG
 from datetime import datetime
 from tqdm import TqdmExperimentalWarning
+
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", category=TqdmExperimentalWarning)
     from tqdm.autonotebook import tqdm
 
+
 def color(s, i):
     return f"\u001b[38;5;{i}m{s}\x1b[0m"
 
+
 TQDM_BAR_FORMAT = "%s {l_bar}%s{bar}%s{r_bar}" % (
-    color("RUN", 12), "\u001b[38;5;12m", "\x1b[0m"
+    color("RUN", 12),
+    "\u001b[38;5;12m",
+    "\x1b[0m",
 )
+
 
 def progress(show, **kwargs):
     if show:
@@ -24,12 +30,13 @@ def progress(show, **kwargs):
     else:
         return lambda x: x
 
+
 def get_terminal_size():
-    """ getTerminalSize()
-     - get width and height of console
-     - works on linux,os x,windows,cygwin(windows)
-     originally retrieved from:
-     http://stackoverflow.com/questions/566746/how-to-get-console-window-width-in-python
+    """getTerminalSize()
+    - get width and height of console
+    - works on linux,os x,windows,cygwin(windows)
+    originally retrieved from:
+    http://stackoverflow.com/questions/566746/how-to-get-console-window-width-in-python
     """
     current_os = platform.system()
     tuple_xy = None
@@ -118,25 +125,28 @@ def _get_terminal_size_linux():
     return int(cr[1]), int(cr[0])
 
 
-
 def _log(type, s):
     date = datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
     for file in CONFIG.logs:
         open(file, "a").write(f"{date} {type} {s}\n")
+
 
 def log(s):
     print(s)
     for file in CONFIG.logs:
         open(file, "a").write(f"{s}\n")
 
+
 def info(s):
     print(f"{color('INFO', 12)} {s}")
-    _log('INFO', s)
+    _log("INFO", s)
+
 
 def warning(s):
     print(f"{color('WARNING', 3)} {s}")
-    _log('WARNING', s)
+    _log("WARNING", s)
+
 
 def error(s):
     print(f"{color('ERROR', 1)} {s}")
-    _log('ERROR', s)
+    _log("ERROR", s)

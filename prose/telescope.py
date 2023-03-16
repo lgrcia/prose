@@ -24,7 +24,7 @@ class Telescope:
     Parameters
     ----------
     save: bool
-        wether to save telescope in ~/.prose, by default False
+        whether to save telescope in ~/.prose, by default False
     keyword_telescope: str
         FITS header keyword for telescope name, default is :code:`"TELESCOP"`
     keyword_object: str

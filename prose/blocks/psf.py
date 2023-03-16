@@ -2,11 +2,12 @@ import numpy as np
 from .. import Block, Image
 
 try:
-   from jax.config import config
-   config.update("jax_enable_x64", True)
-   import jax
-   import jax.numpy as jnp
-   from jaxopt import ScipyMinimize
+    from jax.config import config
+
+    config.update("jax_enable_x64", True)
+    import jax
+    import jax.numpy as jnp
+    from jaxopt import ScipyMinimize
 except ModuleNotFoundError:
     pass
 
@@ -60,7 +61,7 @@ class MedianEPSF(Block):
         name : _type_, optional
             _description_, by default None
         normalize : bool, optional
-            wether to normalize cutouts to form a normalized EPSF, by default True
+            whether to normalize cutouts to form a normalized EPSF, by default True
         """
         super().__init__(name=name)
         self.max_sources = max_sources
@@ -83,7 +84,7 @@ class _PSFModelBase(Block):
         """The base block for PSF fitting.
 
         In this class:
-        
+
         - self._opt_model is the model that goes into optimization
         - self.model is a model that is expecting a dict of params as input
         - self.model_function return the model function that goes into optimization
@@ -150,8 +151,8 @@ class JAXGaussian2D(_JAXPSFModel):
 
         |read| :code:`Image.epsf``
 
-        |write| 
-        
+        |write|
+
         - :code:`Image.epsf.params`
         - :code:`Image.epsf.model`
         - :code:`Image.epsf.fwhm`
@@ -194,8 +195,8 @@ class JAXMoffat2D(_JAXPSFModel):
 
         |read| :code:`Image.epsf``
 
-        |write| 
-        
+        |write|
+
         - :code:`Image.epsf.params`
         - :code:`Image.epsf.model`
         - :code:`Image.epsf.fwhm`
@@ -240,8 +241,8 @@ class Gaussian2D(_PSFModelBase):
 
         |read| :code:`Image.epsf``
 
-        |write| 
-        
+        |write|
+
         - :code:`Image.epsf.params`
         - :code:`Image.epsf.model`
         - :code:`Image.epsf.fwhm`
@@ -319,8 +320,8 @@ class Moffat2D(_PSFModelBase):
 
         |read| :code:`Image.epsf``
 
-        |write| 
-        
+        |write|
+
         - :code:`Image.epsf.params`
         - :code:`Image.epsf.model`
         - :code:`Image.epsf.fwhm`
@@ -342,7 +343,16 @@ class Moffat2D(_PSFModelBase):
             ll = np.sum(np.power((self._opt_model(*params) - data), 2))
             return ll
 
-        keys = ["amplitude", "x", "y", "sigma_x", "sigma_y", "theta", "background", "beta"]
+        keys = [
+            "amplitude",
+            "x",
+            "y",
+            "sigma_x",
+            "sigma_y",
+            "theta",
+            "background",
+            "beta",
+        ]
         p0 = [self._last_init[k] for k in keys]
         w = np.max(data.shape)
         bounds = [
@@ -364,10 +374,10 @@ class Moffat2D(_PSFModelBase):
             # https://pixinsight.com/doc/tools/DynamicPSF/DynamicPSF.html
             dx_ = self.x - xo
             dy_ = self.y - yo
-            dx = dx_*np.cos(theta) + dy_*np.sin(theta)
-            dy = -dx_*np.sin(theta) + dy_*np.cos(theta)
-        
-            return m + height / np.power(1 + (dx/sx)**2 + (dy/sy)**2, beta) 
+            dx = dx_ * np.cos(theta) + dy_ * np.sin(theta)
+            dy = -dx_ * np.sin(theta) + dy_ * np.cos(theta)
+
+            return m + height / np.power(1 + (dx / sx) ** 2 + (dy / sy) ** 2, beta)
 
         return model
 
@@ -385,5 +395,3 @@ class Moffat2D(_PSFModelBase):
             return self.model_function()(height, xo, yo, sx, sy, theta, m, beta)
 
         return _model
-
-

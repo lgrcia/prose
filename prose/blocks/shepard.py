@@ -6,9 +6,14 @@ from itertools import product
 import numpy as np
 from scipy.special import hermite
 
+
 def shapelet1d(x, n, b=1):
     _x = x / b
-    s = (1 / np.sqrt((2 ** n) * np.sqrt(np.pi) * np.math.factorial(n))) * hermite(n)(_x) * np.exp(-(_x ** 2) / 2)
+    s = (
+        (1 / np.sqrt((2**n) * np.sqrt(np.pi) * np.math.factorial(n)))
+        * hermite(n)(_x)
+        * np.exp(-(_x**2) / 2)
+    )
     return (1 / np.sqrt(b)) * s
 
 
@@ -18,8 +23,6 @@ def shapelet2d(x, y, n1, n2, b=1):
 
 
 class Shepard(Block):
-
-    
     def __init__(self, order=4, size=31, **kwargs):
         super().__init__(**kwargs)
         self.order = order
@@ -48,14 +51,18 @@ class Shepard(Block):
                 ns = [(0, 0)]
             else:
                 ns = product(range(self.order), repeat=2)
-            return [*[shapelet2d(x - x0, x - y0, n1, n2, fwhm).flatten() for n1, n2 in ns]]
+            return [
+                *[shapelet2d(x - x0, x - y0, n1, n2, fwhm).flatten() for n1, n2 in ns]
+            ]
 
         stars_groups = []
         _xy_dict = dict(zip(np.arange(len(stars)), stars))
 
         for i, _xy in _xy_dict.copy().items():
             if i in _xy_dict:
-                close = np.nonzero(np.linalg.norm(_xy - stars, axis=1) < self.size / 2)[0]
+                close = np.nonzero(np.linalg.norm(_xy - stars, axis=1) < self.size / 2)[
+                    0
+                ]
                 if len(close) >= 1:
                     stars_groups.append(close)
                     for c in close:
@@ -74,7 +81,9 @@ class Shepard(Block):
         for i, c in enumerate(groups_cutouts):
             c = groups_cutouts[i]
             scg = self.stars_coords_groups[i] - (c.bbox.ixmin, c.bbox.iymin)
-            X = np.vstack([np.ones((self.size, self.size)).flatten(), *[basis(*s) for s in scg]])
+            X = np.vstack(
+                [np.ones((self.size, self.size)).flatten(), *[basis(*s) for s in scg]]
+            )
             self.Xs.append(X)
 
     def run(self, image, **kwargs):
@@ -86,8 +95,14 @@ class Shepard(Block):
         for i, c in enumerate(groups_cutouts):
             w = np.linalg.lstsq(self.Xs[i].T, c.data.flatten())[0]
             scg = self.stars_coords_groups[i]
-            for j, _X, _w in zip(self.stars_groups[i], np.split(self.Xs[i][1::], len(scg)), np.split(w[1::], len(scg))):
+            for j, _X, _w in zip(
+                self.stars_groups[i],
+                np.split(self.Xs[i][1::], len(scg)),
+                np.split(w[1::], len(scg)),
+            ):
                 fluxes[j] = (_w @ _X).sum()
 
-        image.fluxes = np.array([np.array([fluxes.get(i, np.nan) for i in range(len(image.stars_coords))])])
+        image.fluxes = np.array(
+            [np.array([fluxes.get(i, np.nan) for i in range(len(image.stars_coords))])]
+        )
         image.fluxes_errors = np.sqrt(image.fluxes)

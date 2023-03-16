@@ -285,9 +285,9 @@ class Image:
         shape : tuple or int
             The shape of the cutouts to extract. If int, shape is (shape, shape)
         wcs : bool, optional
-            wether to compute and include cutouts WCS (takes more time), by default True
+            whether to compute and include cutouts WCS (takes more time), by default True
         reset_index: bool,
-            wether to reset the sources indexes, by default True
+            whether to reset the sources indexes, by default True
         Returns
         -------
         list of Image
@@ -509,11 +509,11 @@ def FITSImage(
     filepath : str
         path of fits file
     verbose : bool, optional
-        wether to be verbose, by default False
+        whether to be verbose, by default False
     load_units : bool, optional
-        wether to load metadata units, by default True
+        whether to load metadata units, by default True
     load_data : bool, optional
-        wether to load image data, by default True
+        whether to load image data, by default True
 
     Returns
     -------

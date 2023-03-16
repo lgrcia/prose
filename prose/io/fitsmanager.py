@@ -302,7 +302,7 @@ class FitsManager:
         Parameters
         ----------
         hide_exposure : bool, optional
-            wether to include exposure in the pandas.DataFrame header, by default True
+            whether to include exposure in the pandas.DataFrame header, by default True
         **kwargs:
             wildcards value for telescope, target, filter, type or id, default is '*'
 

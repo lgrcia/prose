@@ -2,7 +2,7 @@ from pathlib import Path
 from setuptools import find_packages, setup
 
 HERE = Path(__file__).parent
-README = (HERE / "README.md").read_text(encoding='utf-8')
+README = (HERE / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="prose",
@@ -10,7 +10,7 @@ setup(
     author="Lionel J. Garcia",
     description="Reduction and analysis of FITS telescope observations",
     packages=find_packages(exclude=["test"]),
-    include_package_data = True,
+    include_package_data=True,
     license="MIT",
     url="https://github.com/lgrcia/prose",
     # entry_points="""
@@ -40,7 +40,7 @@ setup(
         "celerite2",
         "jinja2",
         "twirl",
-        "multiprocess"
+        "multiprocess",
     ],
     extras_require={
         "docs": [

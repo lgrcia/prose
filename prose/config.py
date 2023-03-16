@@ -11,6 +11,7 @@ import requests
 info = print
 package_name = "prose"
 
+
 class ConfigManager:
     def __init__(self):
 
@@ -53,8 +54,7 @@ class ConfigManager:
         self.save()
 
     def rename_id_files_to_telescopes(self):
-        """For backward compat with 0.9.6 downward
-        """
+        """For backward compat with 0.9.6 downward"""
         id_files = list(self.folder_path.glob("*.id"))
         if len(id_files) > 0:
             info("Renaming some old .id telescope files")
@@ -68,7 +68,9 @@ class ConfigManager:
                 with open(telescope_file_name, mode="r") as f:
                     existing_telescope = yaml.load(f, Loader=yaml.FullLoader)
                     if existing_telescope != telescope:
-                        info(f"{Path(telescope_file_name).name} differs from builtins (use prose.CONFIG.update_builtins() to update)")
+                        info(
+                            f"{Path(telescope_file_name).name} differs from builtins (use prose.CONFIG.update_builtins() to update)"
+                        )
 
     def update_builtins(self):
         self.create_builtins_telescopes_files(force=True)
@@ -103,7 +105,7 @@ class ConfigManager:
             info("Telescope '{}' saved".format(name))
         elif isinstance(file, dict):
             name = file["name"].lower()
-            telescope_file_path =  self.folder_path / f"{name}.telescope"
+            telescope_file_path = self.folder_path / f"{name}.telescope"
             yaml.dump(file, telescope_file_path.open(mode="w"))
             info("Telescope '{}' saved".format(name))
         else:
@@ -112,9 +114,16 @@ class ConfigManager:
 
     def match_telescope_name(self, name):
         available_telescopes_names = list(self.telescopes_dict.keys())
-        has_telescope = np.flatnonzero([t.lower() == name.lower() for t in available_telescopes_names])
+        has_telescope = np.flatnonzero(
+            [t.lower() == name.lower() for t in available_telescopes_names]
+        )
         if len(has_telescope) > 0:
-            i = np.argmax([len(name) for name in np.array(available_telescopes_names)[has_telescope]])
+            i = np.argmax(
+                [
+                    len(name)
+                    for name in np.array(available_telescopes_names)[has_telescope]
+                ]
+            )
             return self.telescopes_dict[available_telescopes_names[has_telescope[i]]]
         else:
             return None
@@ -124,5 +133,7 @@ class ConfigManager:
 
         if not model_path.exists():
             print("downloading ballet model (~30Mb)")
-            model = requests.get("https://github.com/lgrcia/ballet/raw/master/models/centroid.h5").content
+            model = requests.get(
+                "https://github.com/lgrcia/ballet/raw/master/models/centroid.h5"
+            ).content
             model_path.open(mode="wb").write(model)

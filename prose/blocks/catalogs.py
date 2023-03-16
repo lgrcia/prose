@@ -13,10 +13,8 @@ from astroquery.mast import Catalogs
 from . import vizualisation as viz
 from prose.utils import cross_match
 
-__all__ = [
-    "GaiaCatalog",
-    "TESSCatalog"
-]
+__all__ = ["GaiaCatalog", "TESSCatalog"]
+
 
 def image_gaia_query(
     image, limit=3000, correct_pm=True, wcs=True, circular=True, fov=None
@@ -77,7 +75,12 @@ class _CatalogBlock(Block):
                 stars_coords > 0, 1
             )
             mask = mask & ~np.any(np.isnan(stars_coords), 1)
-            image.sources = Sources([PointSource(coords=s, i=i) for i, s in  enumerate(stars_coords[mask][0 : self.limit])])
+            image.sources = Sources(
+                [
+                    PointSource(coords=s, i=i)
+                    for i, s in enumerate(stars_coords[mask][0 : self.limit])
+                ]
+            )
             catalog = catalog.iloc[np.flatnonzero(mask)].reset_index()
 
         elif self.mode == "crossmatch":
@@ -139,7 +142,9 @@ class PlateSolve(Block):
         image.wcs = new_wcs
         coords = np.array(image.wcs.world_to_pixel(SkyCoord(gaias, unit="deg"))).T
         idxs = cross_match(image.sources.coords, coords, return_idxs=True)
-        image.computed["plat_solve_success"] = np.count_nonzero(~np.isnan(idxs[:, 1]))/len(gaias)
+        image.computed["plat_solve_success"] = np.count_nonzero(
+            ~np.isnan(idxs[:, 1])
+        ) / len(gaias)
 
         if self.debug:
             image.show()
@@ -151,7 +156,7 @@ class PlateSolve(Block):
 class GaiaCatalog(_CatalogBlock):
     def __init__(self, correct_pm=True, limit=10000, mode=None):
         """Query gaia catalog
-        
+
         Catalog is written in Image.catalogs as a pandas DataFrame. If mode is ""crossmatch" the index of catalog sources in the DataFrame matches with the index of sources in Image.sources
 
         |read| :code:`Image.sources` if mode is "crossmatch"
@@ -164,7 +169,7 @@ class GaiaCatalog(_CatalogBlock):
         Parameters
         ----------
         correct_pm : bool, optional
-            wether to correct proper motion, by default True
+            whether to correct proper motion, by default True
         limit : int, optional
             limit number of stars queried, by default 10000
         mode: str, optional
@@ -188,9 +193,9 @@ class GaiaCatalog(_CatalogBlock):
 class TESSCatalog(_CatalogBlock):
     def __init__(self, limit=10000, mode=None):
         """Query TESS (TIC) catalog
-        
+
         Catalog is written in Image.catalogs as a pandas DataFrame. If mode is ""crossmatch" the index of catalog sources in the DataFrame matches with the index of sources in Image.sources
-        
+
         |read| :code:`Image.sources` if mode is "crossmatch"
 
         |write|

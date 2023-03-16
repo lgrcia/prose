@@ -8,7 +8,7 @@ from .catalogs import *
 from .photometry import *
 from .utils import *
 
-class DataBlock(Block):
 
+class DataBlock(Block):
     def __init__(self, name=None):
         super().__init__(name)

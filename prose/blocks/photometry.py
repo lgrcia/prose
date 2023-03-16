@@ -7,7 +7,7 @@ __all__ = ["AperturePhotometry", "AnnulusBackground"]
 
 
 class AperturePhotometry(Block):
-    def __init__(self, radii:np.ndarray=None, scale:bool=True, name=None):
+    def __init__(self, radii: np.ndarray = None, scale: bool = True, name=None):
         """Perform aperture photometry of each sources
 
         Parameters
@@ -49,7 +49,14 @@ class _AnnulusPhotometry(Block):
 
 
 class AnnulusBackground(_AnnulusPhotometry):
-    def __init__(self, rin: float=5, rout: float=8, sigma: float=3, scale=True, name: str=None,):
+    def __init__(
+        self,
+        rin: float = 5,
+        rout: float = 8,
+        sigma: float = 3,
+        scale=True,
+        name: str = None,
+    ):
         """Estimate background around each source using an annulus aperture
 
         Parameters
@@ -62,7 +69,7 @@ class AnnulusBackground(_AnnulusPhotometry):
         sigma : float, optional
             sigma clipping applied to pixel within annulus before taking the median value, by default 3.
         scale : bool, optional
-            wether to scale annulus to EPSF fwhm, by default True. If True, each image must contain an effective PSF and its model (e.g. using :py:class:`~prose.blocks.psf.MedianEPSF` and one of :py:class:`~prose.blocks.psf.Gaussian2D`)
+            whether to scale annulus to EPSF fwhm, by default True. If True, each image must contain an effective PSF and its model (e.g. using :py:class:`~prose.blocks.psf.MedianEPSF` and one of :py:class:`~prose.blocks.psf.Gaussian2D`)
         name : str, optional
             name of the block, by default None
         """

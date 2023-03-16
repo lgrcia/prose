@@ -17,7 +17,7 @@ __all__ = [
     "Del",
     "GetFluxes",
     "WriteTo",
-    "SelectiveStack"
+    "SelectiveStack",
 ]
 
 # TODO: document and test
@@ -42,6 +42,7 @@ class SortSources(Block):
         super().__init__(name, verbose)
         if isinstance(key, str):
             if key == "cutout_sum":
+
                 def key(cutout):
                     return np.nansum(cutout.data)
 
@@ -76,21 +77,21 @@ class Apply(Block):
 
 
 class Get(Block):
-    def __init__(self, *attributes, name:str="get", arrays:bool=True, **getters):
+    def __init__(self, *attributes, name: str = "get", arrays: bool = True, **getters):
         """Retrieve and store properties from an :py:class:`~prose.Image`
 
-        If a list of paths is provided to a :py:class:`~prose.Sequence`, each image is 
-        created at the beginning of the sequence, and deleted at the end, so that 
-        computed data stored as :py:class:`prose.Image` properties are deleted at each iteration. 
-        Using the Get blocks provides a way to retain any daa stored in images before 
+        If a list of paths is provided to a :py:class:`~prose.Sequence`, each image is
+        created at the beginning of the sequence, and deleted at the end, so that
+        computed data stored as :py:class:`prose.Image` properties are deleted at each iteration.
+        Using the Get blocks provides a way to retain any daa stored in images before
         they are deleted.
 
         When a sequence is finished, this block has a `values` property, a dictionary
-        where all retained properties are accessible by name, and consist of a list with 
-        a length corresponding to the number of images processed. The parameters of this 
+        where all retained properties are accessible by name, and consist of a list with
+        a length corresponding to the number of images processed. The parameters of this
         dictionary are the args and kwargs provided to the block (see Example).
 
-        If Image is constructed from a FITS image, header values can be retrieved using the 
+        If Image is constructed from a FITS image, header values can be retrieved using the
         syntax "keyword:KEY" (see example todo)
 
         Parameters
@@ -111,8 +112,12 @@ class Get(Block):
         """
         super().__init__(name=name)
         new_getters = {}
-        def get_from_header(image, key=None): return image.fits_header[key]
-        def get(image, key=None): return getattr(image, key)
+
+        def get_from_header(image, key=None):
+            return image.fits_header[key]
+
+        def get(image, key=None):
+            return getattr(image, key)
 
         for attr in attributes:
             if "keyword:" in attr:
@@ -148,16 +153,15 @@ class Get(Block):
 
 
 class Calibration(Block):
-
     def __init__(
         self,
-        darks:list=None,
-        flats:list=None,
-        bias:list=None,
+        darks: list = None,
+        flats: list = None,
+        bias: list = None,
         loader=FITSImage,
-        easy_ram:bool=True,
-        verbose:bool=True,
-        shared:bool=False,
+        easy_ram: bool = True,
+        verbose: bool = True,
+        shared: bool = False,
         **kwargs,
     ):
         """Flat, Bias and Dark calibration
@@ -267,9 +271,10 @@ class Calibration(Block):
             return (image - (dark * exp_time + bias)) / flat
 
     def _calibration(self, image, exp_time):
-        with np.errstate(divide='ignore', invalid='ignore'):
-            return (image - (self.master_dark * exp_time + self.master_bias)) / self.master_flat
-
+        with np.errstate(divide="ignore", invalid="ignore"):
+            return (
+                image - (self.master_dark * exp_time + self.master_bias)
+            ) / self.master_flat
 
     def run(self, image):
         data = image.data
@@ -431,8 +436,7 @@ class LimitSources(Block):
 
 
 class GetFluxes(Get):
-    
-    def __init__(self,  *args, time:str='jd', name:str=None, **kwargs):
+    def __init__(self, *args, time: str = "jd", name: str = None, **kwargs):
         """A conveniant class to get fluxes and background from aperture and annulus blocks
 
         |read| :code:`Image.aperture`, :code:`Image.annulus` and :code:`Image.{time}`
@@ -447,13 +451,14 @@ class GetFluxes(Get):
             args and kwargs of :py:class:`prose.blocks.Get`
         """
         self._time_key = time
-        get_fluxes= lambda im: im.aperture["fluxes"]
+        get_fluxes = lambda im: im.aperture["fluxes"]
+
         def get_bkg(im):
             if "annulus" in im.computed.keys():
                 return im.annulus["median"]
             else:
                 return np.zeros(len(im.sources))
-            
+
         def get_time(im):
             if self._time_key in im.computed.keys():
                 return getattr(im, self._time_key)
@@ -461,27 +466,38 @@ class GetFluxes(Get):
                 return im.jd
             else:
                 return im.i
-        
-        def get_aperture(im): return im.aperture['radii']
 
-        super().__init__(*args, _time=get_time, _bkg=get_bkg, _fluxes=get_fluxes, _apertures=get_aperture, name=name, **kwargs)
-        self.fluxes=None
+        def get_aperture(im):
+            return im.aperture["radii"]
+
+        super().__init__(
+            *args,
+            _time=get_time,
+            _bkg=get_bkg,
+            _fluxes=get_fluxes,
+            _apertures=get_aperture,
+            name=name,
+            **kwargs,
+        )
+        self.fluxes = None
         self._parallel_friendly = True
 
     def terminate(self):
         super().terminate()
-        area = np.pi*(self._apertures**2)
+        area = np.pi * (self._apertures**2)
         raw_fluxes = (self._fluxes - self._bkg[:, :, None] * area[:, None, :]).T
         time = self._time
-        data = {"bkg":np.mean(self._bkg, -1)}
+        data = {"bkg": np.mean(self._bkg, -1)}
         data.update({key: value for key, value in self.values.items() if key[0] != "_"})
-        self.fluxes = Fluxes(time=time, fluxes=raw_fluxes, data=data, apertures=self._apertures)
-
+        self.fluxes = Fluxes(
+            time=time, fluxes=raw_fluxes, data=data, apertures=self._apertures
+        )
 
 
 class WriteTo(Block):
-    
-    def __init__(self, destination, label="processed", imtype=True, overwrite=False, name=None):
+    def __init__(
+        self, destination, label="processed", imtype=True, overwrite=False, name=None
+    ):
         """Write image to FITS file
 
         Parameters
@@ -491,9 +507,9 @@ class WriteTo(Block):
         label : str, optional
             added at the end of filename as {original_path}_{label}.fits, by default "processed"
         imtype : bool, optional
-            If bool, wether to set image imtype as label (`image.header["IMTYPE"] = label`). If a `str`, label to set for imtype (`image.header["IMTYPE"] = imtype`) , by default True
+            If bool, whether to set image imtype as label (`image.header["IMTYPE"] = label`). If a `str`, label to set for imtype (`image.header["IMTYPE"] = imtype`) , by default True
         overwrite : bool, optional
-            wether to overwrite existing file, by default False
+            whether to overwrite existing file, by default False
         name : str, optional
             name of the block, by default None
         """
@@ -509,27 +525,28 @@ class WriteTo(Block):
         else:
             assert isinstance(imtype, str), "imtype must be a bool or a str"
             self.imtype = imtype
-            
+
         self.files = []
-        
+
     def run(self, image):
         self.destination.mkdir(exist_ok=True, parents=True)
-        
+
         new_hdu = fits.PrimaryHDU(image.data)
         new_hdu.header = image.fits_header
-        
+
         if self.imtype is not None:
             image.fits_header[image.telescope.keyword_image_type] = self.imtype
-        
-        fits_new_path = self.destination / (Path(image.metadata["path"]).stem + f"_{self.label}.fits")
+
+        fits_new_path = self.destination / (
+            Path(image.metadata["path"]).stem + f"_{self.label}.fits"
+        )
 
         new_hdu.writeto(fits_new_path, overwrite=self.overwrite)
         self.files.append(fits_new_path)
 
 
 class SelectiveStack(Block):
-    
-    def __init__(self, n=5,  name=None):
+    def __init__(self, n=5, name=None):
         """Build a median stack image from the `n` best-FWHM images
 
         |read| :code:`Image.fwhm`
@@ -545,7 +562,7 @@ class SelectiveStack(Block):
         self.n = n
         self._images = []
         self._sigmas = []
-    
+
     def run(self, image: Image):
         sigma = image.fwhm
         if len(self._images) < self.n:
@@ -556,7 +573,6 @@ class SelectiveStack(Block):
             if self._sigmas[i] > sigma:
                 self._sigmas[i] = sigma
                 self._images[i] = image
-    
+
     def terminate(self):
         self.stack = Image(easy_median([im.data for im in self._images]))
-    

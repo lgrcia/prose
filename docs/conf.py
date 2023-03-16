@@ -17,9 +17,9 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'prose'
-copyright = '2023, Lionel Garcia'
-author = 'Lionel Garcia'
+project = "prose"
+copyright = "2023, Lionel Garcia"
+author = "Lionel Garcia"
 
 
 # -- General configuration ---------------------------------------------------
@@ -32,17 +32,17 @@ extensions = [
     "sphinx_copybutton",
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
-     "sphinx.ext.autosummary"
+    "sphinx.ext.autosummary",
 ]
 
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -55,16 +55,16 @@ html_theme = "sphinx_book_theme"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = ["_static"]
 
 # Mine
 # -------------------
 html_title = "prose"
 
 source_suffix = {
-    '.rst': 'restructuredtext',
-    '.ipynb': 'myst-nb',
-    '.myst': 'myst-nb',
+    ".rst": "restructuredtext",
+    ".ipynb": "myst-nb",
+    ".myst": "myst-nb",
 }
 
 root_doc = "index"
@@ -102,10 +102,10 @@ rst_prolog = """
 
 """
 
-html_css_files = ['style.css']
+html_css_files = ["style.css"]
 
-autodoc_typehints = 'signature'
-autoclass_content = 'both'
+autodoc_typehints = "signature"
+autoclass_content = "both"
 
 # Making all_blocks.rst
 # ---------------------
@@ -121,7 +121,7 @@ for f in files:
     module = f.split("../")[1].replace(".py", "").replace("/", ".")
     if module in sys.modules:
         for cls_name, cls_obj in inspect.getmembers(sys.modules[module]):
-            if  cls_name.split(".")[-1][0] != "_":
+            if cls_name.split(".")[-1][0] != "_":
                 if inspect.isclass(cls_obj):
                     if issubclass(cls_obj, Block):
                         if cls_obj.__module__ == module:

@@ -12,13 +12,10 @@ import sys
 import yaml
 from ..utils import full_class_name
 
+
 def progress(name, x, **kwargs):
-    return tqdm(
-        x,
-        desc=name,
-        unit="images",
-        **kwargs
-    )
+    return tqdm(x, desc=name, unit="images", **kwargs)
+
 
 class Sequence:
     def __init__(self, blocks, name=None):
@@ -56,10 +53,12 @@ class Sequence:
 
     @blocks.setter
     def blocks(self, blocks):
-        self.blocks_dict = OrderedDict({
-            block.name if block.name is not None else "block{}".format(i): block
-            for i, block in enumerate(blocks)
-        })
+        self.blocks_dict = OrderedDict(
+            {
+                block.name if block.name is not None else "block{}".format(i): block
+                for i, block in enumerate(blocks)
+            }
+        )
 
     def _set_blocks_in_sequence(self, in_sequence):
         for b in self.blocks:
@@ -84,7 +83,10 @@ class Sequence:
         assert len(self.images) != 0, "Empty array or no images provided"
 
         if not show_progress:
-            def _p(x, **kwargs): return x
+
+            def _p(x, **kwargs):
+                return x
+
             self.progress = _p
         else:
             self.progress = partial(progress, self.name)
@@ -102,15 +104,17 @@ class Sequence:
 
         if terminate:
             self.terminate()
-        
+
         for block_name, discarded in self.discards.items():
-            warning(f"{block_name} discarded image{'s' if len(discarded)>1 else ''} {', '.join(discarded)}")
+            warning(
+                f"{block_name} discarded image{'s' if len(discarded)>1 else ''} {', '.join(discarded)}"
+            )
 
     def _run(self, loader=FITSImage):
         for i, image in enumerate(self.progress(self.images)):
             if isinstance(image, (str, Path)):
                 image = loader(image)
-            
+
             self.last_image = image
             image.i = i
 
@@ -125,17 +129,21 @@ class Sequence:
             self.n_processed_images += 1
 
     def terminate(self):
-        """Run the :py:class:`Block.terminate` method of all blocks
-        """
+        """Run the :py:class:`Block.terminate` method of all blocks"""
         for block in self.blocks:
             block.terminate()
         self._set_blocks_in_sequence(False)
 
     def __str__(self):
-        rows = [[
-            i, block.name, block.__class__.__name__, f"{block.processing_time:.3f} s ({(block.processing_time/self.processing_time)*100:.0f}%)"] 
-            for i, block in enumerate(self.blocks)
+        rows = [
+            [
+                i,
+                block.name,
+                block.__class__.__name__,
+                f"{block.processing_time:.3f} s ({(block.processing_time/self.processing_time)*100:.0f}%)",
             ]
+            for i, block in enumerate(self.blocks)
+        ]
         headers = ["index", "name", "type", "processing"]
 
         return tabulate(rows, headers, tablefmt="fancy_grid")
@@ -145,8 +153,7 @@ class Sequence:
 
     @property
     def processing_time(self):
-        """Total processing time of the sequence last run
-        """
+        """Total processing time of the sequence last run"""
         return np.sum([block.processing_time for block in self.blocks])
 
     def __getitem__(self, item):
@@ -160,29 +167,25 @@ class Sequence:
             self.discards[discard_block] = []
         self.discards[discard_block].append(str(i))
 
-
     @property
     def args(self):
         blocks = []
-        for block in self.blocks:        
-            blocks.append({
-                'block': full_class_name(block),
-                **block.args
-            })
+        for block in self.blocks:
+            blocks.append({"block": full_class_name(block), **block.args})
 
         return blocks
 
     @classmethod
     def from_args(cls, args):
         import prose
-        
+
         blocks = []
         for block_dict in args:
             block_class = block_dict["block"]
             del block_dict["block"]
             block = eval(block_class).from_args(block_dict)
             blocks.append(block)
-            
+
         return cls(blocks)
 
     @property
@@ -205,12 +208,12 @@ class Sequence:
 
             from prose import Sequence, blocks
 
-            sequence = Sequence([              
+            sequence = Sequence([
                 blocks.psf.Moffat2D(),
                 blocks.detection.LimitStars(min=3),
                 blocks.Set(stars_coords=None),
                 blocks.AffineTransform(data=False, inverse=True),
-                blocks.BalletCentroid(),                           
+                blocks.BalletCentroid(),
                 blocks.PhotutilsAperturePhotometry(scale=1.),
                 blocks.Peaks(),
             ])
@@ -233,7 +236,9 @@ class Sequence:
                     if c in _all_citations:
                         cites[c] = _all_citations[c]
                     else:
-                        raise KeyError(f"{c} not in defautls citations, please provide it as a dict")
+                        raise KeyError(
+                            f"{c} not in defautls citations, please provide it as a dict"
+                        )
 
             elif isinstance(c, dict):
                 cites.update(c)
@@ -244,16 +249,24 @@ class Sequence:
                     add_citation(cc)
             else:
                 add_citation(c)
-                
-        tex_citep = ", ".join([f"{name} \citep{{{name}}}" for name in cites.keys() if name not in ["prose", "astropy"]])
+
+        tex_citep = ", ".join(
+            [
+                f"{name} \citep{{{name}}}"
+                for name in cites.keys()
+                if name not in ["prose", "astropy"]
+            ]
+        )
         tex_citep += " and astropy \citep{astropy}"
-        tex = f"This research made use of \\textsf{{prose}} \citep{{prose}} and its dependencies ({tex_citep})."""
+        tex = (
+            f"This research made use of \\textsf{{prose}} \citep{{prose}} and its dependencies ({tex_citep})."
+            ""
+        )
 
         return tex, "\n\n".join(cites.values())
 
 
 class SequenceParallel(Sequence):
-
     def __init__(self, blocks, data_blocks=None, name=""):
         super().__init__(blocks, name=name)
         if data_blocks is None:
@@ -262,18 +275,19 @@ class SequenceParallel(Sequence):
         else:
             self.data = Sequence(data_blocks)
             self._has_data = True
-    
 
     def check_data_blocks(self):
         bad_blocks = []
-        for b in self.blocks: 
+        for b in self.blocks:
             if b._data_block:
                 bad_blocks.append(f"{b.__class__.__name__}")
         if len(bad_blocks) > 0:
-            bad_blocks = ', '.join(list(np.unique(bad_blocks)))
-            error(f"Data blocks [{bad_blocks}] cannot be used in MPSequence\n\nConsider using the data_blocks kwargs")
+            bad_blocks = ", ".join(list(np.unique(bad_blocks)))
+            error(
+                f"Data blocks [{bad_blocks}] cannot be used in MPSequence\n\nConsider using the data_blocks kwargs"
+            )
             sys.exit()
-    
+
     def _run(self, loader=FITSImage):
         self.check_data_blocks()
 
@@ -283,11 +297,12 @@ class SequenceParallel(Sequence):
         images_i = list(enumerate(self.images))
 
         with mp.Pool() as pool:
-            for image in self.progress(pool.imap(partial(
-                _run_all,
-                blocks=processed_blocks,
-                loader=loader
-            ), images_i), total=n):
+            for image in self.progress(
+                pool.imap(
+                    partial(_run_all, blocks=processed_blocks, loader=loader), images_i
+                ),
+                total=n,
+            ):
                 if not image.discard:
                     if self._has_data:
                         self.data.run(image, terminate=False, show_progress=False)
@@ -298,13 +313,14 @@ class SequenceParallel(Sequence):
         if self._has_data:
             self.data.terminate()
 
+
 def _run_all(image_i, blocks=None, loader=None):
 
     i, image = image_i
 
     if isinstance(image, (str, Path)):
         image = loader(image)
-    
+
     image.i = i
 
     for block in blocks:

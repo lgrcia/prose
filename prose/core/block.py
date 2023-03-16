@@ -6,7 +6,7 @@ from ..core.image import Image
 
 class Block(object):
     """Single unit of processing acting on the :py:class:`~prose.Image` object
-    
+
     Reading, processing and writing :py:class:`~prose.Image` attributes. When placed in a sequence, it goes through two steps:
 
         1. :py:meth:`~prose.Block.run` on each image fed to the :py:class:`~prose.Sequence`
@@ -21,10 +21,10 @@ class Block(object):
     """
 
     def __init__(self, name=None, verbose=False):
-        _name  = self.__class__.__name__
+        _name = self.__class__.__name__
         _issue = f"https://github.com/lgrcia/prose/issues/new?title=Missing+doc+for+{_name}&body=Documentation+is+missing+for+block+{_name}"
 
-        self.__doc__  = f"[**click to ask for documentation**]({_issue})"
+        self.__doc__ = f"[**click to ask for documentation**]({_issue})"
 
         self.name = name
         self.unit_data = None
@@ -56,8 +56,7 @@ class Block(object):
         raise NotImplementedError()
 
     def terminate(self):
-        """Method called after block's :py:class:`~prose.Sequence` is finished (if any)
-        """
+        """Method called after block's :py:class:`~prose.Sequence` is finished (if any)"""
         pass
 
     @property

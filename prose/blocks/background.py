@@ -1,4 +1,4 @@
-from prose import  Block
+from prose import Block
 from prose.blocks.psf import *
 from astropy.stats import SigmaClip
 from photutils.background import Background2D, MedianBackground
@@ -7,23 +7,24 @@ from ..utils import binn2D
 
 # TODO
 
-class PhotutilsBackground2D(Block):
 
+class PhotutilsBackground2D(Block):
     def __init__(self, subtract=True, box_size=(50, 50), filter_size=(3, 3), **kwargs):
         super().__init__(**kwargs)
-        self.sigma_clip = SigmaClip(sigma=3.)
+        self.sigma_clip = SigmaClip(sigma=3.0)
         self.bkg_estimator = MedianBackground()
         self.subtract = subtract
         self.box_size = box_size
         self.filter_size = filter_size
 
     def run(self, image):
-        sigma_clip = SigmaClip(sigma=3.)
+        sigma_clip = SigmaClip(sigma=3.0)
         self.bkg = Background2D(
-            image.data, box_size=self.box_size,
+            image.data,
+            box_size=self.box_size,
             filter_size=self.filter_size,
-            sigma_clip=sigma_clip, 
-            bkg_estimator=self.bkg_estimator
+            sigma_clip=sigma_clip,
+            bkg_estimator=self.bkg_estimator,
         ).background
         if self.subtract:
             image.bkg = self.bkg
@@ -52,38 +53,43 @@ class BackgroundPoly(Block):
         self.iterations = iterations
         self.sigclip = sigclip
         self.binning = binning
-        
+
     def design_matrix(self, shape):
         x, y = np.indices(shape)
         X = np.polynomial.polynomial.polyvander2d(
-                x.flatten(), y.flatten(), (self.order, self.order)
-            )
+            x.flatten(), y.flatten(), (self.order, self.order)
+        )
         X[:, 1:] -= X.mean(0)[1:]
         X[:, 1:] -= X.std(0)[1:]
         return X
-    
+
     def run(self, image):
         # First sigma clipping and binning
         data = image.data.copy()
-        mask = (data - np.mean(data)) < self.sigclip*np.std(data)
+        mask = (data - np.mean(data)) < self.sigclip * np.std(data)
         data[~mask] = np.median(data[mask])
         bin_data = binn2D(data, self.binning)
         mask = np.ones_like(bin_data).astype(bool).flatten()
-        
+
         if self.X is None:
             self.X = self.design_matrix(image.shape)
         elif self.X.shape[0] != np.product(image.shape):
             self.X = self.design_matrix(image.shape)
-            
-        bin_X = np.array([binn2D(np.reshape(x, image.shape), self.binning).flatten() for x in self.X.T]).T
-    
+
+        bin_X = np.array(
+            [
+                binn2D(np.reshape(x, image.shape), self.binning).flatten()
+                for x in self.X.T
+            ]
+        ).T
+
         for _ in range(self.iterations):
             masked_data = bin_data.flatten()[mask]
             w = np.linalg.lstsq(bin_X[mask, :], masked_data, rcond=False)[0]
-            res = bin_data.flatten() - bin_X@w
-            mask *= res < self.sigclip*np.std(res[mask])
-        
-        image.bkg = np.reshape(self.X@w, image.shape)
+            res = bin_data.flatten() - bin_X @ w
+            mask *= res < self.sigclip * np.std(res[mask])
+
+        image.bkg = np.reshape(self.X @ w, image.shape)
 
     @property
     def citations(self):
