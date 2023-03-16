@@ -146,6 +146,9 @@ class Telescope:
     camera_name: str = None
     """name of the telescope camera, default is :code:`None`"""
 
+    keyword_observation_time: str = None
+    # legacy
+
     _default: bool = True
     save: bool = False
 
