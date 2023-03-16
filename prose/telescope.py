@@ -8,8 +8,9 @@ from .console_utils import info
 from .builtins import default
 import astropy.units as u
 from dateutil import parser as dparser
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from datetime import datetime
+import inspect
 
 
 def str_to_astropy_unit(unit_string):
@@ -146,9 +147,6 @@ class Telescope:
     camera_name: str = None
     """name of the telescope camera, default is :code:`None`"""
 
-    keyword_observation_time: str = None
-    # legacy
-
     _default: bool = True
     save: bool = False
 
@@ -161,7 +159,14 @@ class Telescope:
 
     @classmethod
     def load(cls, filename):
-        return cls(**yaml.full_load(open(filename, "r")))
+        return cls.from_dict(**yaml.full_load(open(filename, "r")))
+
+    @classmethod
+    def from_dict(cls, env):
+        """Load from a dict ensuring that only class attributes are used"""
+        return cls(
+            **{k: v for k, v in env.items() if k in inspect.signature(cls).parameters}
+        )
 
     @property
     def earth_location(self):
@@ -195,7 +200,7 @@ class Telescope:
     def from_name(cls, name, verbose=True, strict=False):
         telescope_dict = CONFIG.match_telescope_name(name)
         if telescope_dict is not None:
-            telescope = cls(**telescope_dict, _default=False)
+            telescope = cls.from_dict(telescope_dict)
         else:
             if strict:
                 return None
