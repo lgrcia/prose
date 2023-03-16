@@ -60,6 +60,8 @@ class FitsManager:
         - if int: update database every time ``batch_size`` FITS files are parsed
 
         by default False
+    telescope: :py:class:`~prose.Telescope``
+        telescope to use while parsing files, by default None
     """
 
     def __init__(
