@@ -21,137 +21,133 @@ def str_to_astropy_unit(unit_string):
 class Telescope:
     """Save and store FITS header keywords definition for a given telescope
 
-    Parameters
-    ----------
-    save: bool
-        whether to save telescope in ~/.prose, by default False
-    keyword_telescope: str
-        FITS header keyword for telescope name, default is :code:`"TELESCOP"`
-    keyword_object: str
-        FITS header keyword for observed object name, default is :code:`"OBJECT"`
-    keyword_image_type: str
-        FITS header keyword for image type (e.g. dark, bias, science),
-        default is :code:`"IMAGETYP"`
-    keyword_light_images: str
-        value of `keyword_image_type` associated to science (aka light) images,
-        default is :code:`"light"`
-    keyword_dark_images: str
-        value of `keyword_image_type` associated to dark calibration images,
-        default is :code:`"dark"`
-    keyword_flat_images: str
-        value of `keyword_image_type` associated to flat calibration images,
-        default is :code:`"flat"`
-    keyword_bias_images: str
-        value of `keyword_image_type` associated to flat calibration images,
-        default is :code:`"bias"`
-    keyword_observation_date:
-        FITS header keyword for observation date, default is "DATE:code:`-OBS"`
-    keyword_exposure_time: str
-        FITS header keyword for exposure time, default is :code:`"EXPTIME"`
-    keyword_filter: str
-        FITS header keyword for filter, default is :code:`"FILTER"`
-    keyword_airmass: str
-        FITS header keyword for airmass, default is :code:`"AIRMASS"`
-    keyword_fwhm: str
-        FITS header keyword for image full-width-half-maximum (fwhm),
-        default is :code:`"FWHM"`
-    keyword_seeing: str
-        FITS header keyword for image seeing, default is :code:`"SEEING"`
-    keyword_ra: str
-        FITS header keyword for right ascension, default is :code:`"RA"`
-    keyword_dec: str
-        FITS header keyword for declination, default is :code:`"DEC"`
-    keyword_jd: str
-        FITS header keyword for julian day, default is :code:`"JD"`
-    keyword_bjd: str
-        FITS header keyword for barycentric julian day, default is :code:`"BJD"`
-    keyword_flip: str
-        FITS header keyword for meridian flip configuration,
-        default is :code:`"PIERSIDE"`
-    ra_unit: str
-        unit of the value of `keyword_ra`, default is :code:`"deg"`
-    dec_unit: str
-        unit of the value of `keyword_dec`, default is :code:`"deg"`
-    jd_scale: str
-        unit of the value of `JD`, default is :code:`"utc"`
-    bjd_scale: str
-        unit of the value of `BJD`, default is :code:`"utc"`
-    trimming: tuple
-        horizontal and vertical overscan of an image in pixels,
-        default is :code:`(0, 0)`
-    read_noise: float
-        detector read noise in ADU, default is :code:`9`
-    gain: float
-        detector gain in electrons/ADU, default is :code:`1`
-    altitude: float
-        altitude of the telescope in meters, default is :code:`2000`,
-    diameter: float
-        diameter of the telescope in centimeters, default is :code:`100`
-    pixel_scale: float
-        pixel scale (or plate scale) of the detector in arcsec/pixel,
-        default is :code:`None`
-    latlong: tuple
-        latitude and longitude of the telescope, default is :code:`(None, None)`
-    saturation: float
-        detector's pixels full depth (saturation) in ADU, default is :code:`55000`
-    hdu: int
-        index of the FITS HDU where to find image data, default is :code:`0`
-    camera_name: str
-        name of the telescope camera, default is :code:`None`
+    This is a Python Data Class, so that all attributes described below can be used as
+    keyword-arguments when instantiating a Telescope
     """
 
     name: str = "Unknown"
+    """Name taken by the telescope if saved"""
+
     names: tuple = ()
+    """Alternative names that the telescope may take in the fits header values of 
+    `keyword_telescope`"""
 
     # Keywords
     # --------
     keyword_telescope: str = "TELESCOP"
+    """FITS header keyword for telescope name, default is :code:`"TELESCOP"`"""
+
     keyword_object: str = "OBJECT"
+    """FITS header keyword for observed object name, default is :code:`"OBJECT"`"""
+
     keyword_image_type: str = "IMAGETYP"
+    """ FITS header keyword for image type (e.g. dark, bias, science),
+        default is :code:`"IMAGETYP"`"""
+
     keyword_light_images: str = "light"
+    """value of `keyword_image_type` associated to science (aka light) images,
+        default is :code:`"light"`"""
+
     keyword_dark_images: str = "dark"
+    """value of `keyword_image_type` associated to dark calibration images,
+    Default is :code:`"dark"`"""
+
     keyword_flat_images: str = "flat"
+    """value of `keyword_image_type` associated to flat calibration images,
+        default is :code:`"flat"`"""
+
     keyword_bias_images: str = "bias"
+    """value of `keyword_image_type` associated to flat calibration images,
+        default is :code:`"bias"`"""
+
     keyword_observation_date: str = "DATE-OBS"
+    """FITS header keyword for observation date, default is "DATE:code:`-OBS"`"""
+
     keyword_exposure_time: str = "EXPTIME"
+    """ FITS header keyword for exposure time, default is :code:`"EXPTIME"`"""
+
     keyword_filter: str = "FILTER"
+    """FITS header keyword for filter, default is :code:`"FILTER"`"""
+
     keyword_airmass: str = "AIRMASS"
+    """FITS header keyword for airmass, default is :code:`"AIRMASS"`"""
+
     keyword_fwhm: str = "FWHM"
+    """FITS header keyword for image full-width-half-maximum (fwhm),
+        default is :code:`"FWHM"`"""
+
     keyword_seeing: str = "SEEING"
+    """FITS header keyword for image seeing, default is :code:`"SEEING"`"""
+
     keyword_ra: str = "RA"
+    """FITS header keyword for right ascension, default is :code:`"RA"`"""
+
     keyword_dec: str = "DEC"
+    """FITS header keyword for declination, default is :code:`"DEC"`"""
+
     keyword_jd: str = "JD"
+    """ FITS header keyword for julian day, default is :code:`"JD"`"""
+
     keyword_bjd: str = "BJD"
+    """FITS header keyword for barycentric julian day, default is :code:`"BJD"`"""
+
     keyword_flip: str = "PIERSIDE"
-    keyword_observation_time: str = None
+    """FITS header keyword for meridian flip configuration,
+        default is :code:`"PIERSIDE"`"""
 
     # Units, formats and scales
     # -------------------------
     ra_unit: str = "deg"
+    """unit of the value of `keyword_ra`, default is :code:`"deg"`"""
+
     dec_unit: str = "deg"
+    """unit of the value of `keyword_dec`, default is :code:`"deg"`"""
+
     jd_scale: str = "utc"
+    """unit of the value of `JD`, default is :code:`"utc"`"""
+
     bjd_scale: str = "utc"
+    """ unit of the value of `BJD`, default is :code:`"utc"`"""
+
     mjd: float = 0.0
+    """value to subtract from the value of `keyword_jd`"""
 
     # Specs
     # -----
-    trimming: tuple = (0, 0)  # pixels along y/x
-    read_noise: float = 9  # ADU
-    gain: float = 1  # e-/ADU
-    altitude: float = 2000  # meters
-    diameter: float = 100  # meters
-    pixel_scale: float = None  # arcsec/pixel
+    trimming: tuple = (0, 0)
+    """horizontal and vertical overscan of an image in pixels,
+        default is :code:`(0, 0)`"""
+
+    read_noise: float = 9
+    """detector read noise in ADU, default is :code:`9`"""
+
+    gain: float = 1
+    """detector gain in electrons/ADU, default is :code:`1`"""
+
+    altitude: float = 2000
+    """altitude of the telescope in meters, default is :code:`2000`,"""
+
+    diameter: float = 100
+    """diameter of the telescope in centimeters, default is :code:`100`"""
+
+    pixel_scale: float = None
+    """pixel scale (or plate scale) of the detector in arcsec/pixel,
+        default is :code:`None`"""
+
     latlong: tuple = (None, None)
-    saturation: float = 55000  # ADUs
+    """latitude and longitude of the telescope, default is :code:`(None, None)`"""
+
+    saturation: float = 55000
+    """detector's pixels full depth (saturation) in ADU, default is :code:`55000`"""
+
     hdu: int = 0
+    """index of the FITS HDU where to find image data, default is :code:`0`"""
+
     camera_name: str = None
+    """name of the telescope camera, default is :code:`None`"""
 
     _default: bool = True
     save: bool = False
-    """Object containing telescope information.
-
-    Once a new telescope is instantiated its dictionary is permanantly saved by prose and automatically used whenever the telescope name is encountered in a fits header. Saved telescopesare located in ``~/.prose`` as ``.telescope`` files (yaml format).
-    """
 
     def __post_init__(self):
         if self.save:

@@ -52,13 +52,32 @@ def clean_stars_positions(positions, tolerance=50):
 
 @dataclass
 class Source:
+    """A object containing a source information
+
+    This is a Python Data Class, so that most attributes described below can be used as
+    keyword-arguments when instantiated
+    """
+
     a: float = 1.0
+    """Semi-major axis of the source"""
+
     b: float = 1.0
+    """Semi-minor axis of the source"""
+
     orientation: float = 0.0
+    """Orientation of the source in radians"""
+
     coords: np.ndarray = None
+    """(x,y) pixel coordinates of the source"""
+
     peak: float = 0.0
+    """Peak ADU value of the source"""
+
     i: int = None
+    """Index of the source"""
+
     discarded: bool = False
+    """Whether source is discarded"""
 
     @classmethod
     def from_region(cls, region, keep_region: bool = False, **kwargs):
@@ -111,6 +130,12 @@ class Source:
 
     @lazyproperty
     def eccentricity(self):
+        """Eccentricity of the source
+
+        Returns
+        -------
+        float
+        """
         return self.b / self.a
 
     def copy(self):
@@ -352,6 +377,12 @@ class Source:
 
     @property
     def area(self):
+        """Area of the source as :code:`a*b`
+
+        Returns
+        -------
+        float
+        """
         return self.a * self.b
 
 

@@ -25,29 +25,35 @@ from typing import Union
 
 @dataclass
 class Image:
-    data: np.ndarray = None
-    metadata: dict = None
-    catalogs: dict = None
-    _sources: Union[Sources, dict] = None
-    origin: tuple = (0, 0)
-    discard: bool = False
-    computed: dict = None
-    _wcs = None
-
-    """TODO docstring
-
-    Returns
-    -------
-    _type_
-        _description_
-
-    Raises
-    ------
-    AttributeError
-        _description_
-    TypeError
-        _description_
     """
+    Image object containing image data and metadata
+
+    This is a Python Data Class, so that most attributes described below can be used as
+    keyword-arguments when instantiated
+    """
+
+    data: np.ndarray = None
+    """Image data"""
+
+    metadata: dict = None
+    """Image metadata"""
+
+    catalogs: dict = None
+    """Catalogs associated with the image contained in a dictionary of 
+    pandas dataframes"""
+
+    _sources: Union[Sources, dict] = None
+
+    origin: tuple = (0, 0)
+    """Image origin"""
+
+    discard: bool = False
+    """Whether image as been discarded by a block"""
+
+    computed: dict = None
+    """A dictionary containing any user and block-defined attributes"""
+
+    _wcs = None
 
     def __post_init__(self):
         assert (
@@ -199,14 +205,17 @@ class Image:
 
     @property
     def ra(self):
+        """Right-Ascension as an astropy Quantity"""
         return self._from_metadata_with_unit("ra")
 
     @property
     def dec(self):
+        """Declination as an astropy Quantity"""
         return self._from_metadata_with_unit("dec")
 
     @property
     def exposure(self):
+        """Exposure time as an astropy Quantity"""
         return self._from_metadata_with_unit("exposure")
 
     @property
@@ -215,6 +224,7 @@ class Image:
 
     @property
     def pixel_scale(self):
+        """Pixel scale (or plate scale) as an astropy Quantity"""
         return self._from_metadata_with_unit("pixel_scale")
 
     @property
