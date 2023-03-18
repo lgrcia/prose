@@ -147,6 +147,9 @@ class Telescope:
     camera_name: str = None
     """name of the telescope camera, default is :code:`None`"""
 
+    date_string_format: str = None
+    """date string format, default is :code:`None`"""
+
     _default: bool = True
     save: bool = False
 
@@ -226,12 +229,19 @@ class Telescope:
 
         return telescope
 
-    def date(self, header):
-        header_date = header.get(self.keyword_observation_date, None)
-        if header_date is not None:
-            return dparser.parse(header_date)
+    def date(self, header_date_str):
+        if header_date_str is not None:
+            if self.date_string_format is not None:
+                return datetime.strptime(header_date_str, self.date_string_format)
+            else:
+                return dparser.parse(header_date_str)
         else:
             return datetime(1800, 1, 2)
+    
+    def header_date(self, header):
+        header_date_str = header.get(self.keyword_observation_date, None)
+        return self.date(header_date_str)
+
 
     def image_type(self, header):
         return header.get(self.keyword_image_type, "").lower()
