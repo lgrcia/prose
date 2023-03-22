@@ -229,7 +229,8 @@ class Telescope:
 
         return telescope
 
-    def date(self, header_date_str):
+    def date(self, header):
+        header_date_str = header.get(self.keyword_observation_date, None)
         if header_date_str is not None:
             if self.date_string_format is not None:
                 return datetime.strptime(header_date_str, self.date_string_format)
@@ -237,11 +238,6 @@ class Telescope:
                 return dparser.parse(header_date_str)
         else:
             return datetime(1800, 1, 2)
-    
-    def header_date(self, header):
-        header_date_str = header.get(self.keyword_observation_date, None)
-        return self.date(header_date_str)
-
 
     def image_type(self, header):
         return header.get(self.keyword_image_type, "").lower()

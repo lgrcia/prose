@@ -132,7 +132,7 @@ def fits_to_df(
         df_list.append(
             dict(
                 path=i,
-                date=_telescope.header_date(header).isoformat(),
+                date=_telescope.date(header).isoformat(),
                 telescope=_telescope.name,
                 type=_telescope.image_type(header),
                 target=header.get(_telescope.keyword_object, ""),

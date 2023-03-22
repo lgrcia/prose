@@ -53,9 +53,6 @@ class Image:
     computed: dict = None
     """A dictionary containing any user and block-defined attributes"""
 
-    telescope: Telescope = None
-    """Image telescope information"""
-
     _wcs = None
 
     def __post_init__(self):
@@ -252,7 +249,7 @@ class Image:
         -------
         datetime.datetime
         """
-        return self.telescope.date(self.metadata["date"])
+        return dparser.parse(self.metadata["date"])
 
     @property
     def night_date(self):
@@ -554,7 +551,7 @@ def FITSImage(
         "ra": header.get(telescope.keyword_ra, None),
         "dec": header.get(telescope.keyword_dec, None),
         "filter": header.get(telescope.keyword_filter, None),
-        "date": header.get(telescope.keyword_observation_date, None),
+        "date": telescope.date(header).isoformat(),
         "jd": header.get(telescope.keyword_jd, None),
         "object": header.get(telescope.keyword_object, None),
         "pixel_scale": telescope.pixel_scale,
@@ -577,7 +574,7 @@ def FITSImage(
 
     image = Image(values, metadata, {})
     if image.metadata["jd"] is None:
-        image.metadata["jd"] = Time(telescope.date(image.metadata["date"])).jd
+        image.metadata["jd"] = Time(image.date).jd
     image.fits_header = header
     image.wcs = WCS(header)
     image.telescope = telescope
