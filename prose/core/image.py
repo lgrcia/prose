@@ -551,7 +551,7 @@ def FITSImage(
         "ra": header.get(telescope.keyword_ra, None),
         "dec": header.get(telescope.keyword_dec, None),
         "filter": header.get(telescope.keyword_filter, None),
-        "date": header.get(telescope.keyword_observation_date, None),
+        "date": telescope.date(header).isoformat(),
         "jd": header.get(telescope.keyword_jd, None),
         "object": header.get(telescope.keyword_object, None),
         "pixel_scale": telescope.pixel_scale,
