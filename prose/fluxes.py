@@ -169,6 +169,11 @@ def optimal_flux(diff_fluxes, method="stddiff"):
 @dataclass
 class Fluxes:
     fluxes: np.ndarray
+    """Fluxes either as 1, 2, or 3 dimensional arrays
+        - 1: (time)
+        - 2: (star, time)
+        - 3: (aperture, star, time)
+    """
     time: np.ndarray = None
     errors: np.ndarray = None
     data: dict = None
@@ -177,33 +182,35 @@ class Fluxes:
     target: int = None
     aperture: int = None
 
+    @property
     def _is_target_aperture_set(self):
+        if self.ndim == 1:
+            return True
         if self.ndim == 2:
             return self.target is not None
         else:
             return self.target is not None and self.aperture is not None
 
     def __post_init__(self):
-        assert self.fluxes.ndim in [2, 3], "fluxes must be 2 or 3 dimensional"
+        assert self.fluxes.ndim in [1, 2, 3], "fluxes must be 1, 2 or 3 dimensional"
         if self.data is None:
             self.data = {}
+        if self.ndim == 1:
+            self.target = 0
+            self.aperture = 0
+            self.fluxes = self.fluxes.copy()[None, None, :]
+        elif self.ndim == 2:
+            self.aperture = 0
+            self.fluxes = self.fluxes.copy()[None, :]
 
     def _target_attr(self, name, full=False):
         assert self.__dict__[name] is not None, f"{name} not provided"
         assert self.target is not None, "target must be set"
-        # if self.ndim == 1:
-        #    return self.__dict__[name]
-        if self.ndim == 2:
-            if full:
-                return self.__dict__[name]
-            else:
-                return self.__dict__[name][self.target]
+        if full:
+            return self.__dict__[name][:, self.target]
         else:
-            if full:
-                return self.__dict__[name][:, self.target]
-            else:
-                assert self.aperture is not None, "aperture must be set"
-                return self.__dict__[name][self.aperture, self.target]
+            assert self.aperture is not None, "aperture must be set"
+            return self.__dict__[name][self.aperture, self.target]
 
     @property
     def flux(self):
@@ -226,12 +233,8 @@ class Fluxes:
 
     def diff(self, comps: np.ndarray = None):
         if comps is not None:
-            if self.ndim == 2:
-                weights = np.zeros((self.fluxes[0]))
-                weights[comps] = 1
-            elif self.ndim == 3:
-                weights = np.zeros(self.fluxes[0:2])
-                weights[:, comps] = 1
+            weights = np.zeros(self.fluxes[0:2])
+            weights[:, comps] = 1
         else:
             weights = None
 
@@ -325,3 +328,55 @@ class Fluxes:
             df_dict.update({"flux": self.flux})
 
         return pd.DataFrame(df_dict)
+
+    @property
+    def df(self):
+        return self.dataframe
+
+    def mask(self, array):
+        """Mask time-dependant fluxes attributes (time, fluxes, errors, data)
+
+        Parameters
+        ----------
+        m : np.array of bool
+            mask
+
+        Returns
+        -------
+        Fluxes
+            masked Fluxes
+        """
+        _new = self.copy()
+        _new.data = {key: value[array] for key, value in self.data.items()}
+        if self.fluxes is not None:
+            _new.fluxes = self.fluxes[..., array]
+        if self.errors is not None:
+            _new.errors = self.errors[..., array]
+        if self.time is not None:
+            _new.time = self.time[array]
+
+        return _new
+
+    def sigma_clipping_data(self, iterations: int = 5, **kwargs):
+        """Returns a flux masked using iteratively sigma clipped data
+
+        Parameters
+        ----------
+        it : int, optional
+            iterations, by default 5
+        **kwargs: dict
+            dict where key is the name of the data to sigma clip and value is the sigma
+
+        Returns
+        -------
+        Fluxes
+            sigma clipped Fluxes
+        """
+        mask = np.ones_like(self.time).astype(bool)
+        for _ in range(iterations):
+            for name, sigma in kwargs.items():
+                value = self.data[name].copy()
+                value[~mask] = np.nan
+                m = np.abs(value - np.nanmean(value)) < np.nanstd(value) * sigma
+                mask = mask & m
+        return self.mask(mask)
