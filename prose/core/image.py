@@ -21,6 +21,7 @@ from dataclasses import dataclass, asdict
 import pickle
 from astropy.time import Time
 from typing import Union
+from astropy.nddata import overlap_slices
 
 
 @dataclass
@@ -404,7 +405,6 @@ class Image:
         viz.plot_marks(x, y, labels, color=color)
 
     def plot_model(self, data, figsize=(5, 5), cmap=None, c="C0", contour=False):
-
         plt.figure(figsize=figsize)
         axes = gridspec.GridSpec(2, 2, width_ratios=[9, 2], height_ratios=[2, 9])
         axes.update(wspace=0, hspace=0)
@@ -461,6 +461,19 @@ class Image:
         pixels = pixels[idxs]
 
         return _d, pixels
+
+    def data_cutouts(self, sources, shape):
+        if isinstance(sources, Sources):
+            sources = sources.coords
+
+        cutouts = []
+        for x, y in sources:
+            c = np.zeros(shape)
+            large, small = overlap_slices(self.shape, shape, (y, x))
+            c[small] = self.data[large]
+            cutouts.append(c)
+
+        return np.array(cutouts)
 
     def major_profile(self, source, binn=1.0, debug=False):
         p1 = source.coords[:, None, None]

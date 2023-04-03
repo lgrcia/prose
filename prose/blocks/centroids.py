@@ -135,12 +135,15 @@ class CentroidQuadratic(_PhotutilsCentroid):
 
 
 class _CNNCentroid(Block):
-    def __init__(self, cutout=15, filename=None, **kwargs):
+    def __init__(self, cutout=15, filename=None, limit=None, **kwargs):
         super().__init__(**kwargs)
         self.filename = filename
         self.model = None
         self.cutout = cutout
         self.x, self.y = np.indices((cutout, cutout))
+        if limit is None:
+            limit = cutout / 2
+        self.limit = limit
 
     def import_and_check_model(self):
         model_file = path.join(CONFIG.folder_path, self.filename)
@@ -155,26 +158,35 @@ class _CNNCentroid(Block):
         raise NotImplementedError()
 
     def run(self, image):
-        cutouts = [image.cutout(coords, (15, 15)) for coords in image.sources.coords]
-        cutouts_reshaped = []
-        for cutout in cutouts:
-            # Take normalised and reshaped data of stars that are not None
-            cutouts_reshaped.append(
-                (cutout.data / np.max(cutout.data)).reshape(*cutout.shape, 1)
-            )
+        n = 15
+        in_image = np.all(image.sources.coords < image.shape[::-1] - (1, 1), axis=1)
+        in_image = np.logical_and(
+            in_image, np.all(image.sources.coords > (0, 0), axis=1)
+        )
+        in_image_coords = image.sources.coords[in_image].copy()
+        cutouts = image.data_cutouts(in_image_coords, (n, n))
+        cutouts_reshaped = cutouts / np.mean(cutouts, (1, 2))[:, None, None]
+        cutouts_reshaped = cutouts_reshaped[..., None]
+        cutouts_origins = in_image_coords - n / 2
 
-        cutouts_origins = image.sources.coords - cutout.shape / 2
-        cutouts_reshaped = np.array(cutouts_reshaped)
         # apply model
-        centroids = (
+        centroid_sources_coords = (
             cutouts_origins
             + self.model(cutouts_reshaped, training=False).numpy()[:, ::-1]
         )
         # if coords is nan (any of x, y), keep old coord
-        nan_mask = np.any(np.isnan(centroids), 1)
-        centroids[nan_mask] = image.sources.coords[nan_mask]
-        # change image.stars_coords
-        image.sources.coords = centroids
+        nan_mask = np.any(np.isnan(centroid_sources_coords), 1)
+        centroid_sources_coords[nan_mask] = in_image_coords[nan_mask]
+
+        # apply limit
+        sources_coords = image.sources.coords.copy()
+        sources_coords[in_image] = centroid_sources_coords
+        in_limit = (
+            np.linalg.norm(image.sources.coords - sources_coords, axis=1) < self.limit
+        )
+        final_sources_coords = image.sources.coords.copy()
+        final_sources_coords[in_limit] = sources_coords[in_limit]
+        image.sources.coords = final_sources_coords
 
     @property
     def citations(self):

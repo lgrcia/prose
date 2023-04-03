@@ -33,6 +33,13 @@ def test_centroids_blocks(block):
     block().run(image)
 
 
+def test_centroid_ballet():
+    tf = pytest.importorskip("tensorflow")
+    from prose.blocks.centroids import CentroidBallet
+
+    CentroidBallet().run(image_psf)
+
+
 @pytest.mark.parametrize("block", classes("prose.blocks.psf", _PSFModelBase))
 def test_psf_blocks(block):
     block().run(image_psf)
