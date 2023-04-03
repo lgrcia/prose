@@ -395,3 +395,42 @@ class Moffat2D(_PSFModelBase):
             return self.model_function()(height, xo, yo, sx, sy, theta, m, beta)
 
         return _model
+
+
+class HFD(Block):
+
+    # https://www.focusmax.org/Documents_V4/ITS%20Paper.pdf
+
+    def __init__(self, order=4, **kwargs):
+        super().__init__(**kwargs)
+        self.sorted_idxs = None
+        self.order = order
+        self.X_radii_bkg = None
+
+    def initialize(self, image):
+        n = image.epsf.shape[0]
+        self.x, self.y = np.indices((n, n))
+        x = y = n / 2
+        self.radii = (np.sqrt((self.x - x) ** 2 + (self.y - y) ** 2)).flatten()
+        self.interp_radii = np.linspace(0, np.max(self.radii), 500)
+        self.sorted_idxs = np.argsort(self.radii)
+        self.sorted_radii = self.radii[self.sorted_idxs]
+        self.cum_radii = np.arange(len(self.sorted_radii))
+        self.X_radii_bkg = np.array([np.ones_like(self.sorted_radii), self.cum_radii])
+
+    def run(self, image):
+        if self.X_radii_bkg is None:
+            self.initialize(image)
+        psf = image.epsf.data
+        psf -= np.percentile(psf, 10)
+        pixels = psf.flatten()[self.sorted_idxs]
+        cumsum = np.cumsum(pixels)
+        bkg_idxs = np.flatnonzero(pixels < np.percentile(pixels, 5))
+        # removing background in cumsum
+        bkg_X = np.vstack([np.ones_like(bkg_idxs), bkg_idxs])
+        w = np.linalg.lstsq(bkg_X.T, cumsum[bkg_idxs], rcond=None)[0]
+        cumsum -= w @ self.X_radii_bkg
+        cumsum = cumsum - cumsum[0]
+        # w = np.linalg.lstsq(self.X_radii, self.sorted_radii)[0]
+        fwhm = self.sorted_radii[np.argmin(np.abs(cumsum - np.max(cumsum) / 2))]
+        image.fwhm = fwhm
