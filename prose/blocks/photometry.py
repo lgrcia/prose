@@ -21,7 +21,8 @@ class AperturePhotometry(Block):
         """
         super().__init__(name=name)
         if radii is None:
-            self._radii = np.linspace(0.3, 8, 40)
+            # log-uniform
+            self._radii = np.exp(np.linspace(np.log(0.1), np.log(12), 30))
         else:
             self._radii = radii
         self.scale = scale
@@ -78,7 +79,7 @@ class AnnulusBackground(_AnnulusPhotometry):
 
     def run(self, image: Image):
         if self.scale:
-            fwhm = image.epsf.params["sigma_x"] * gaussian_sigma_to_fwhm
+            fwhm = image.fwhm
             rin = float(fwhm * self.rin)
             rout = float(fwhm * self.rout)
         else:
