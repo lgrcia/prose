@@ -63,18 +63,21 @@ class AlignReferenceSources(Block):
 
     def run(self, image: Image):
         self.compute_transform.run(image)
-        sources = self.reference_sources.copy()
-        new_sources_coords = image.transform.inverse(sources.coords.copy())
+        if not image.discard:
+            sources = self.reference_sources.copy()
+            new_sources_coords = image.transform.inverse(sources.coords.copy())
 
-        # check if alignment potentially failed
-        if (
-            np.abs(np.std(new_sources_coords) - np.std(self.reference_sources.coords))
-            > 100
-        ):
-            image.discard = True
-        else:
-            sources.coords = new_sources_coords
-            image.sources = sources
+            # check if alignment potentially failed
+            if (
+                np.abs(
+                    np.std(new_sources_coords) - np.std(self.reference_sources.coords)
+                )
+                > 100
+            ):
+                image.discard = True
+            else:
+                sources.coords = new_sources_coords
+                image.sources = sources
 
 
 class AlignReferenceWCS(Block):
