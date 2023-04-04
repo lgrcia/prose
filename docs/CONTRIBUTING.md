@@ -2,7 +2,7 @@
 
 prose intends to be a package for image processing and stops whenever your scientific products are ready.
 
-![](docs/_static/core_h.png)
+![](_static/core_h.png)
 
 Knowing that there are few ways to contribute to prose:
 - *field-specific developments*: you want to use prose in a particular field of Astronomy (e.g. develop a new `Block` or new products)
