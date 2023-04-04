@@ -6,7 +6,7 @@ prose intends to be a package for image processing and stops whenever your scien
     <img src="_static/core_h.png" width="700">
 </p>
 
-Knowing that there are few ways to contribute to prose:
+With that in mind, there are few ways to contribute to prose:
 - *field-specific developments*: you want to use prose in a particular field of Astronomy (e.g. develop a new `Block` or new products)
 - *core developments*: you want to make changes to prose documentation or its core objects (e.g. `Image` or `Sequence`)
 
@@ -15,7 +15,7 @@ Knowing that there are few ways to contribute to prose:
 If you want to adapt prose to your own field of Astronomy (e.g. comets, exoplanets, galaxies, space debris... etc) you may want to develop a package using prose rather than making core changes. This is particularly true if you need to develop methods targeting specific products, located after the image processing (see top schematic). Even if being independent in your developments, there are few ways this could contribute to prose, and the community can help.
 
 ### Support
-If you have any question about your application or need support to use prose, open an issue or a discussion. Describe your idea and potential use cases, so that users familiar with your application can help, but also agnostic contributors. Your idea might be worth making core changes.
+If you have any question about your application or need support to use prose, [open an issue](https://github.com/lgrcia/prose/issues/new?labels=idea&title=Your+idea) or [open a discussion](https://github.com/lgrcia/prose/discussions/new?category=ideas&title=My+idea) Describe your idea and potential use cases, so that users familiar with your application can help, but also agnostic contributors. Keep in mind that your idea might be worth making core changes, so users outside of your field can benefit from it.
 
 ### Acknowledgement
 If you develop tools for a specific field, chances are your developments are worth a separate Python package, so that your community can benefit from your work and cite it.
@@ -41,4 +41,4 @@ No matter your level of familiarity with any of these guidelines, we can all hel
 
 ### Acknowledgement
 
-We intend to publish an update paper whenever a major version is released and used by the community (in order to showcase nice applications). Making core contributions (fixing typos in the documentation included) is extremely valuable and will make you part of the next paper release.
+We intend to publish an update paper whenever a major version is released and used by the community (in order to showcase nice applications). Making core contributions (fixing typos in the documentation included) is extremely valuable and will make you part of the next paper release (a get you free stickers!).
