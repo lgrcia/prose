@@ -3,7 +3,7 @@
 prose intends to be a package for image processing and stops whenever your scientific products are ready.
 
 <p align="center" style="margin-bottom:-50px">
-    <img src="_static/core_h.png" width="500">
+    <img src="_static/core_h.png" width="700">
 </p>
 
 Knowing that there are few ways to contribute to prose:
