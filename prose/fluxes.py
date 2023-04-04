@@ -199,9 +199,13 @@ class Fluxes:
             self.target = 0
             self.aperture = 0
             self.fluxes = self.fluxes.copy()[None, None, :]
+            if self.errors is not None:
+                self.errors = self.errors.copy()[None, None, :]
         elif self.ndim == 2:
             self.aperture = 0
             self.fluxes = self.fluxes.copy()[None, :]
+            if self.errors is not None:
+                self.errors = self.errors.copy()[None, :]
 
     def _target_attr(self, name, full=False):
         assert self.__dict__[name] is not None, f"{name} not provided"
@@ -268,12 +272,14 @@ class Fluxes:
     def estimate_error(self):
         pass
 
-    def plot(self, marker=".", color="0.8", ls="", **kwargs):
+    def plot(self, marker=".", color="0.8", ls="", ax=None, **kwargs):
+        if ax is None:
+            ax = plt.gca()
         kwargs.update(dict(marker=marker, color=color, ls=ls))
         if self.time is None:
-            plt.plot(self.flux, **kwargs)
+            ax.plot(self.flux, **kwargs)
         else:
-            plt.plot(self.time, self.flux, **kwargs)
+            ax.plot(self.time, self.flux, **kwargs)
 
     def errorbar(self, color="k", fmt=".", **kwargs):
         kwargs.update(dict(color=color, fmt=fmt))
