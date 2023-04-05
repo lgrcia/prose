@@ -593,3 +593,68 @@ def FITSImage(
     image.telescope = telescope
 
     return image
+
+
+class Buffer:
+    def __init__(self, size: int):
+        """Contains a group of Images loaded in memory
+
+        Parameters
+        ----------
+        size : int
+            number of images to keep, must be odd, so that current image is central one
+        current : int, optional
+            the index of image.current, by default None. If None:
+
+            - if size is odd, current is 0 (first image)
+            - else current is floor(size/2), i.e. central image
+        """
+        assert size % 2 == 1, "size must be odd"
+        self.mid_index = int((size - 1) // 2)
+        self.buffer = [None] * max(size, 1)
+
+    def __len__(self):
+        return len(self.buffer)
+
+    def __getitem__(self, i: int):
+        """Get image by index relative to current
+
+        Parameters
+        ----------
+        i : int
+            index
+
+        Returns
+        -------
+        Image or None
+            images[current + i]
+        """
+        return self.buffer[self.mid_index + i]
+
+    def __setitem__(self, i: int, image: Image):
+        self.buffer[self.mid_index + i] = image
+
+    def append(self, image):
+        self.buffer.pop(0)
+        self.buffer.append(image)
+
+    def init(self, images):
+        assert (
+            len(images) == self.mid_index + 1
+        ), f"{self.__class__.__name__} must be initialized with {self.mid_index} images"
+        self.buffer[self.mid_index : :] = images
+
+    def sub(self, size, offset):
+        pass
+
+    @property
+    def previous(self):
+        return self[-1]
+
+    @property
+    def current(self):
+        return self[0]
+
+    @property
+    def next(self):
+        return self[1]

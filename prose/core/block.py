@@ -16,11 +16,14 @@ class Block(object):
     ----------
     name : str, optional
         name of the block, by default None
+    size: int, optional
+        number of images processed by the block, by default 1
 
     All prose blocks must be child of this parent class
     """
 
-    def __init__(self, name=None, verbose=False):
+    def __init__(self, name=None, verbose=False, size=1):
+        assert size % 2 == 1, "block size must be odd"
         _name = self.__class__.__name__
         _issue = f"https://github.com/lgrcia/prose/issues/new?title=Missing+doc+for+{_name}&body=Documentation+is+missing+for+block+{_name}"
 
@@ -34,18 +37,20 @@ class Block(object):
         self.verbose = verbose
 
         self._data_block = False
+        self.size = size
 
     @property
     def args(self):
         return self._args
 
-    def _run(self, *args, **kwargs):
+    def _run(self, buffer):
         t0 = time()
-        self.run(*args, **kwargs)
+        image = buffer[0] if self.size == 1 else buffer
+        self.run(image)
         self.processing_time += time() - t0
         self.runs += 1
 
-    def run(self, image: Image, **kwargs):
+    def run(self, image: Image):
         """Running on a image (must be overwritten when subclassed)
 
         Parameters

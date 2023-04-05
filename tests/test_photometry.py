@@ -13,11 +13,11 @@ shape = (100, 100)
 coords = np.array([_coords * shape for _ in range(len(t))])
 coords[:, 0, :] = np.array(shape) / 2
 
-images = simulations.simple_images(fluxes, coords, 1.0, shape=shape)
+buffer = simulations.simple_images(fluxes, coords, 1.0, shape=shape)
 
 
 def test_photometry():
-    ref = images[0]
+    ref = buffer[0]
     ref = blocks.PointSourceDetection(False, 0, 0)(ref)
 
     def set_sources(im):
@@ -32,7 +32,7 @@ def test_photometry():
         ]
     )
 
-    calibration.run(images)
+    calibration.run(buffer)
     fluxes = calibration[-1].fluxes
     fluxes.aperture = 0
     fluxes.target = 14

@@ -4,7 +4,7 @@ from collections import OrderedDict
 from tabulate import tabulate
 import numpy as np
 from time import time
-from .image import FITSImage, Image
+from .image import FITSImage, Image, Buffer
 from pathlib import Path
 from functools import partial
 import multiprocess as mp
@@ -36,6 +36,11 @@ class Sequence:
         self.data = {}
         self.n_processed_images = None
         self.last_image = None
+
+        # initially the buffer must have a size of max(front_size) + max(back_size) in
+        # order to hold all images necessary to all blocks
+        buffer_size = np.max([block.size for block in self.blocks])
+        self.buffer = Buffer(buffer_size)
 
     def __getattr__(self, item):
         return self.blocks_dict[item]
@@ -111,22 +116,39 @@ class Sequence:
             )
 
     def _run(self, loader=FITSImage):
-        for i, image in enumerate(self.progress(self.images)):
+        initial_images = []
+        for i, image in enumerate(self.images[0 : self.buffer.mid_index + 1]):
+            _image = loader(image) if isinstance(image, (str, Path)) else image
+            _image.i = i
+            initial_images.append(_image)
+        self.buffer.init(initial_images)
+
+        for i, image in enumerate(
+            self.progress(
+                [
+                    *self.images[self.buffer.mid_index + 1 : :],
+                    *([None] * (self.buffer.mid_index + 1)),
+                ]
+            )
+        ):
             if isinstance(image, (str, Path)):
                 image = loader(image)
+            if image is not None:
+                image.i = i + self.buffer.mid_index + 1
 
-            self.last_image = image
-            image.i = i
+            current_image = self.buffer[0]
+            self.last_image = current_image
 
             for block in self.blocks:
-                block._run(image)
+                block._run(self.buffer)
                 # This allows to discard image in any Block
-                if image.discard:
-                    self._add_discard(type(block).__name__, i)
-                    break
+                if current_image is not None:
+                    if current_image.discard:
+                        self._add_discard(type(block).__name__, current_image.i)
+                        break
 
-            del image
             self.n_processed_images += 1
+            self.buffer.append(image)
 
     def terminate(self):
         """Run the :py:class:`Block.terminate` method of all blocks"""
@@ -315,7 +337,6 @@ class SequenceParallel(Sequence):
 
 
 def _run_all(image_i, blocks=None, loader=None):
-
     i, image = image_i
 
     if isinstance(image, (str, Path)):
