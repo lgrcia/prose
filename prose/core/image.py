@@ -649,7 +649,7 @@ class Buffer:
     def __iter__(self):
         for i, image in enumerate(self.other_images):
             self.append(self.loader(image, i + self.mid_index))
-            yield self.current
+            yield self
 
     def sub(self, size, offset):
         pass

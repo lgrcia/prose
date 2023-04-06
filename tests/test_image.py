@@ -16,6 +16,6 @@ def test_buffer_iter():
     buffer = Buffer(5)
     datas = np.random.randint(0, 20, 20)
     buffer.init(datas)
-    for i, current in enumerate(buffer):
-        print(buffer.buffer)
-        assert current == datas[i]
+    for i, buf in enumerate(buffer):
+        print(buf.buffer)
+        assert buf.current == datas[i]

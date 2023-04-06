@@ -115,25 +115,25 @@ class Sequence:
                 f"{block_name} discarded image{'s' if len(discarded)>1 else ''} {', '.join(discarded)}"
             )
 
+    def _loader(self, image, index, loader=FITSImage):
+        _image = loader(image) if isinstance(image, (str, Path)) else image
+        if _image is not None and isinstance(_image, Image):
+            _image.i = index
+        return _image
+        
     def _run(self, loader=FITSImage):
 
-        def _loader(image, index):
-            _image = loader(image) if isinstance(image, (str, Path)) else image
-            if _image is not None and isinstance(_image, Image):
-                _image.i = index
-            return _image
+        self.buffer.init(self.images, partial(self._loader, loader=loader))
 
-        self.buffer.init(self.images, _loader)
-
-        for current_image in self.progress(self.buffer, total=len(self.images)):
-            self.last_image = current_image
+        for buffer in self.progress(self.buffer, total=len(self.images)):
+            self.last_image = buffer.current
 
             for block in self.blocks:
-                block._run(self.buffer)
+                block._run(buffer)
                 # This allows to discard image in any Block
-                if current_image is not None:
-                    if current_image.discard:
-                        self._add_discard(type(block).__name__, current_image.i)
+                if buffer.current is not None:
+                    if buffer.current.discard:
+                        self._add_discard(type(block).__name__, buffer.current.i)
                         break
 
             self.n_processed_images += 1
