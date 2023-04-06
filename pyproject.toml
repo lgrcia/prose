@@ -32,6 +32,10 @@ imageio = { version = "*", extras = ["ffmpeg"] }
 pytest = "*"
 black = "*"
 
+[tool.poetry.group.jax.dependencies]
+jax = "*"
+jaxopt = "*"
+
 [tool.poetry.group.docs.dependencies]
 sphinx = "*"
 docutils = "*"
@@ -64,3 +68,4 @@ docs = [
     "sphinx-copybutton",
 ]
 dev = ["pytest", "black"]
+jax = ["jax", "jaxopt", "jaxlib"]
