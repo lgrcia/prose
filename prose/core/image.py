@@ -596,30 +596,43 @@ def FITSImage(
 
 
 class Buffer:
-    def __init__(self, size: int):
-        """Contains a group of Images loaded in memory
+    def __init__(self, size: int, loader: callable = None):
+        """Object to load and access adjacent items in a list
 
         Parameters
         ----------
         size : int
-            number of images to keep, must be odd, so that current image is central one
-        current : int, optional
-            the index of image.current, by default None. If None:
+            number of items accessible
+        loader : callable, optional
+            a function that load an item in the buffer, by default None corresponding
+            to lambda x: x
 
-            - if size is odd, current is 0 (first image)
-            - else current is floor(size/2), i.e. central image
+        Example
+        -------
+        ```python
+        from prose.core.image import Buffer
+        import numpy as np
+
+        buffer = Buffer(3)
+        init = np.arange(0, 10)
+        buffer.init(init)
+        for buffer in buffer:
+            print(buffer.previous, buffer.current, buffer.next)
+        ```
         """
         assert size % 2 == 1, "size must be odd"
         self.mid_index = int((size - 1) // 2)
-        self.buffer = [None] * max(size, 1)
-        self.loader = None
-        self.other_images = None
+        self.items = [None] * max(size, 1)
+        if loader is None:
+            loader = lambda item: item
+        self.loader = loader
+        self.queue = None  # items to be loaded
 
     def __len__(self):
-        return len(self.buffer)
+        return len(self.items)
 
     def __getitem__(self, i: int):
-        """Get image by index relative to current
+        """Get item by index relative to current
 
         Parameters
         ----------
@@ -631,24 +644,40 @@ class Buffer:
         Image or None
             images[current + i]
         """
-        return self.buffer[self.mid_index + i]
+        return self.items[self.mid_index + i]
 
-    def __setitem__(self, i: int, image: Image):
-        self.buffer[self.mid_index + i] = image
+    def __setitem__(self, i: int, item: Image):
+        self.items[self.mid_index + i] = item
 
-    def append(self, image):
-        self.buffer.pop(0)
-        self.buffer.append(image)
+    def append(self, item):
+        """Add an item to the buffer (and delete last)
 
-    def init(self, images, loader=lambda im, idx: im):
-        self.loader = loader
-        for i, image in enumerate(images[:self.mid_index]):
-            self.append(self.loader(image, i))
-        self.other_images = [*images[self.mid_index:], *[None] * self.mid_index]
+        Parameters
+        ----------
+        item : any
+            item to be loaded
+        """
+        last_item = self.items.pop(0)
+        del last_item
+        self.items.append(item)
+
+    def init(self, items):
+        """Prepare items to be loaded in the buffer.
+
+        The first items are loaded with the :code:`Buffer.loader` function
+
+        Parameters
+        ----------
+        items : list
+            items to be loaded in the buffer
+        """
+        for item in items[: self.mid_index]:
+            self.append(self.loader(item))
+        self.queue = [*items[self.mid_index :], *[None] * self.mid_index]
 
     def __iter__(self):
-        for i, image in enumerate(self.other_images):
-            self.append(self.loader(image, i + self.mid_index))
+        for item in self.queue:
+            self.append(self.loader(item))
             yield self
 
     def sub(self, size, offset):

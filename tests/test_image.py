@@ -4,18 +4,18 @@ import numpy as np
 
 def test_init_append(n=5):
     buffer = Buffer(n)
-    init = np.random.randint(0, 20, size=buffer.mid_index + 1)
+    init = np.random.randint(0, 20, size=20)
     buffer.init(init)
-    current = next(iter(buffer))
-    np.testing.assert_equal(current, init[0])
-    np.testing.assert_allclose(buffer.buffer[buffer.mid_index : :], init)
+    np.testing.assert_equal(
+        buffer.items[buffer.mid_index + 1 :], init[: buffer.mid_index]
+    )
     buffer.append(4)
-    assert buffer.buffer[-1] == 4
+    assert buffer.items[-1] == 4
+
 
 def test_buffer_iter():
     buffer = Buffer(5)
-    datas = np.random.randint(0, 20, 20)
-    buffer.init(datas)
+    data = np.random.randint(0, 20, 20)
+    buffer.init(data)
     for i, buf in enumerate(buffer):
-        print(buf.buffer)
-        assert buf.current == datas[i]
+        assert buf.current == data[i]

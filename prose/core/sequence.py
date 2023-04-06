@@ -115,17 +115,16 @@ class Sequence:
                 f"{block_name} discarded image{'s' if len(discarded)>1 else ''} {', '.join(discarded)}"
             )
 
-    def _loader(self, image, index, loader=FITSImage):
+    def _load(self, image, loader=FITSImage):
         _image = loader(image) if isinstance(image, (str, Path)) else image
-        if _image is not None and isinstance(_image, Image):
-            _image.i = index
         return _image
-        
+
     def _run(self, loader=FITSImage):
+        self.buffer.loader = partial(self._load, loader=loader)
+        self.buffer.init(self.images)
 
-        self.buffer.init(self.images, partial(self._loader, loader=loader))
-
-        for buffer in self.progress(self.buffer, total=len(self.images)):
+        for i, buffer in enumerate(self.progress(self.buffer, total=len(self.images))):
+            buffer.current.i = i
             self.last_image = buffer.current
 
             for block in self.blocks:
