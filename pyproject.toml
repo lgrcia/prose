@@ -1,0 +1,66 @@
+[tool.poetry]
+name = "prose"
+version = "3.0.0"
+description = "Modular image processing pipelines for Astronomy"
+authors = ["Lionel Garcia <lionel_garcia@live.fr>"]
+license = "MIT"
+readme = "README.md"
+include = ["prose/io/*.sql"]
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.12"
+numpy = "^1.23.5"
+astropy = "^5.1.1"
+astroquery = "^0.4.6"
+requests = "^2.28.1"
+ipython = "*"
+scipy = "*"
+matplotlib = "*"
+scikit-image = "*"
+pandas = ">1.1"
+tqdm = "*"
+photutils = "*"
+pyyaml = "*"
+tabulate = "*"
+sep = "*"
+celerite2 = "*"
+twirl = "*"
+multiprocess = "*"
+imageio = { version = "*", extras = ["ffmpeg"] }
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+black = "*"
+
+[tool.poetry.group.docs.dependencies]
+sphinx = "*"
+docutils = "*"
+jupyterlab = "*"
+myst-parser = "*"
+twine = "*"
+sphinx-book-theme = "^1.0.0"
+myst-nb = "*"
+sphinx-copybutton = "*"
+photutils = "^1.6.0"
+scipy = "*"
+matplotlib = "*"
+scikit-image = "^0.20.0"
+pandas = "^1.5.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.extras]
+docs = [
+    "sphinx",
+    "docutils",
+    "jupyterlab",
+    "myst-parser",
+    "twine",
+    "sphinx-book-theme",
+    "black",
+    "myst-nb",
+    "sphinx-copybutton",
+]
+dev = ["pytest", "black"]

@@ -42,6 +42,8 @@ def test_centroid_ballet():
 
 @pytest.mark.parametrize("block", classes("prose.blocks.psf", _PSFModelBase))
 def test_psf_blocks(block):
+    if "JAX" in block.__name__:
+        pytest.importorskip("jax")
     block().run(image_psf)
 
 
