@@ -612,6 +612,8 @@ class Buffer:
         assert size % 2 == 1, "size must be odd"
         self.mid_index = int((size - 1) // 2)
         self.buffer = [None] * max(size, 1)
+        self.loader = None
+        self.other_images = None
 
     def __len__(self):
         return len(self.buffer)
@@ -638,11 +640,16 @@ class Buffer:
         self.buffer.pop(0)
         self.buffer.append(image)
 
-    def init(self, images):
-        assert (
-            len(images) == self.mid_index + 1
-        ), f"{self.__class__.__name__} must be initialized with {self.mid_index} images"
-        self.buffer[self.mid_index : :] = images
+    def init(self, images, loader=lambda im, idx: im):
+        self.loader = loader
+        for i, image in enumerate(images[:self.mid_index]):
+            self.append(self.loader(image, i))
+        self.other_images = [*images[self.mid_index:], *[None] * self.mid_index]
+
+    def __iter__(self):
+        for i, image in enumerate(self.other_images):
+            self.append(self.loader(image, i + self.mid_index))
+            yield self.current
 
     def sub(self, size, offset):
         pass

@@ -116,27 +116,16 @@ class Sequence:
             )
 
     def _run(self, loader=FITSImage):
-        initial_images = []
-        for i, image in enumerate(self.images[0 : self.buffer.mid_index + 1]):
+
+        def _loader(image, index):
             _image = loader(image) if isinstance(image, (str, Path)) else image
-            _image.i = i
-            initial_images.append(_image)
-        self.buffer.init(initial_images)
+            if _image is not None and isinstance(_image, Image):
+                _image.i = index
+            return _image
 
-        for i, image in enumerate(
-            self.progress(
-                [
-                    *self.images[self.buffer.mid_index + 1 : :],
-                    *([None] * (self.buffer.mid_index + 1)),
-                ]
-            )
-        ):
-            if isinstance(image, (str, Path)):
-                image = loader(image)
-            if image is not None:
-                image.i = i + self.buffer.mid_index + 1
+        self.buffer.init(self.images, _loader)
 
-            current_image = self.buffer[0]
+        for current_image in self.progress(self.buffer, total=len(self.images)):
             self.last_image = current_image
 
             for block in self.blocks:
@@ -148,7 +137,6 @@ class Sequence:
                         break
 
             self.n_processed_images += 1
-            self.buffer.append(image)
 
     def terminate(self):
         """Run the :py:class:`Block.terminate` method of all blocks"""
