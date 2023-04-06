@@ -609,16 +609,34 @@ class Buffer:
 
         Example
         -------
-        ```python
-        from prose.core.image import Buffer
-        import numpy as np
+        .. code-block:: python
 
-        buffer = Buffer(3)
-        init = np.arange(0, 10)
-        buffer.init(init)
-        for buffer in buffer:
-            print(buffer.previous, buffer.current, buffer.next)
-        ```
+            from prose.core.image import Buffer
+            import numpy as np
+
+            # items to be loaded in the buffer
+            init = np.arange(0, 10)
+
+            # create and initialize
+            buffer = Buffer(size=3)
+            buffer.init(init)
+
+            for buffer in buffer:
+                print(buffer.previous, buffer.current, buffer.next)
+
+        .. code-block:: text
+
+            None 0 1
+            0 1 2
+            1 2 3
+            2 3 4
+            3 4 5
+            4 5 6
+            5 6 7
+            6 7 8
+            7 8 9
+            8 9 None
+
         """
         assert size % 2 == 1, "size must be odd"
         self.mid_index = int((size - 1) // 2)

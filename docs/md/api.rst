@@ -55,3 +55,4 @@ Other
    :template: class.rst
 
    Fluxes
+   ~core.image.Buffer
