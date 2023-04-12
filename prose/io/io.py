@@ -90,7 +90,6 @@ def fits_to_df(
     raise_oserror=False,
     verbose_os=False,
 ):
-
     assert len(files) > 0, "Files not provided"
 
     last_telescope = "_"

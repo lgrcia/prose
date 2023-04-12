@@ -398,7 +398,6 @@ class Moffat2D(_PSFModelBase):
 
 
 class HFD(Block):
-
     # https://www.focusmax.org/Documents_V4/ITS%20Paper.pdf
 
     def __init__(self, order=4, **kwargs):

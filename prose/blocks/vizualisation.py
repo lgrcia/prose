@@ -32,7 +32,6 @@ class _Video(Block):
     """Base block to build a video"""
 
     def __init__(self, destination, fps=10, **kwargs):
-
         super().__init__(**kwargs)
         self.destination = destination
         self.images = []

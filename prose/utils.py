@@ -20,7 +20,6 @@ earth2sun = (c.R_earth / c.R_sun).value
 
 
 def remove_sip(dict_like):
-
     for kw in [
         "A_ORDER",
         "A_0_2",
@@ -145,7 +144,6 @@ def fold(t, t0, p):
 
 
 def header_to_cdf4_dict(header):
-
     header_dict = {}
 
     for key, value in header.items():
@@ -416,7 +414,6 @@ def gaia_query(center, fov, *args, limit=10000, circular=True):
 
 
 def sparsify(stars, radius):
-
     _stars = stars.copy()
     deleted_stars = np.zeros([], dtype=int)
     sparse_stars = []
