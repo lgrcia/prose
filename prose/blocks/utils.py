@@ -20,6 +20,7 @@ __all__ = [
     "SelectiveStack",
 ]
 
+
 # TODO: document and test
 class SortSources(Block):
     def __init__(self, verbose=False, key="cutout_sum", name=None):

@@ -14,7 +14,6 @@ package_name = "prose"
 
 class ConfigManager:
     def __init__(self):
-
         self.config = None
 
         self.folder_path = Path.home() / f".{package_name}"
@@ -30,7 +29,6 @@ class ConfigManager:
         self.logs = []
 
     def check_config_file(self, load=False):
-
         if self.config_file.exists():
             with self.config_file.open(mode="r") as file:
                 if load:

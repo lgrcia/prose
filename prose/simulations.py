@@ -32,7 +32,6 @@ def simple_images(fluxes, coords, bkg=0.0, shape=(100, 100), std=0.0):
 
 
 def fits_image(data, header, destination):
-
     header = dict(
         TELESCOP=header.get("TELESCOP", "fake"),
         EXPTIME=header.get("EXPTIME", 1),
@@ -236,7 +235,6 @@ class ObservationSimulation:
         self.remove_stars(close_by)
 
     def save_fits(self, destination, calibration=False, verbose=True):
-
         progress = lambda x: tqdm(x) if verbose else x
 
         with warnings.catch_warnings():
@@ -318,7 +316,6 @@ def xo_lightcurve(time, period=3, r=0.1, t0=0, plot=False):
 
 
 def source_example():
-
     shape = (170, 60)
     data = np.random.normal(loc=300.0, scale=10, size=shape)
 
@@ -381,7 +378,6 @@ def image_sample(*coords, fov=12):
 
 
 def disorganised_folder(destination):
-
     if path.exists(destination):
         shutil.rmtree(destination)
 
@@ -455,7 +451,6 @@ def disorganised_folder(destination):
 
 
 def moving_object(time, destination):
-
     # Creating the observation
     obs = ObservationSimulation(600, Telescope.from_name("A"))
     obs.set_psf((3.5, 3.5), 45, 4)

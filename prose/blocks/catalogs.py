@@ -19,7 +19,6 @@ __all__ = ["GaiaCatalog", "TESSCatalog"]
 def image_gaia_query(
     image, limit=3000, correct_pm=True, wcs=True, circular=True, fov=None
 ):
-
     if wcs:
         center = image.wcs.pixel_to_world(*(np.array(image.shape) / 2)[::-1])
     else:

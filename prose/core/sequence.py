@@ -315,7 +315,6 @@ class SequenceParallel(Sequence):
 
 
 def _run_all(image_i, blocks=None, loader=None):
-
     i, image = image_i
 
     if isinstance(image, (str, Path)):

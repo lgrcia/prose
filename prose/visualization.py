@@ -114,7 +114,6 @@ class AnchoredHScaleBar(matplotlib.offsetbox.AnchoredOffsetbox):
         linekw={},
         **kwargs,
     ):
-
         if not ax:
             ax = plt.gca()
 
@@ -250,7 +249,6 @@ def multiplot(
 
 
 def bokeh_style(xminor=True, yminor=True, axes=None):
-
     if axes is None:
         axes = plt.gcf().axes
     elif not isinstance(axes, list):
@@ -312,7 +310,6 @@ def show_stars(
     color=None,
     contrast=0.05,
 ):
-
     if color is None:
         color = np.array([131, 220, 255]) / 255
 
@@ -343,7 +340,6 @@ def show_stars(
 
     if stars is not None:
         if highlight is not None:
-
             plt.plot(
                 stars[highlight, 0],
                 stars[highlight, 1],
@@ -474,7 +470,6 @@ def fancy_show_stars(
     zoom=True,
     options={},
 ):
-
     _options = {"aperture_color": "seagreen", "aperture_ls": "--"}
     _options.update(options)
 
@@ -502,7 +497,6 @@ def fancy_show_stars(
     label_yoffset = min(size_factor, 1) * 30
 
     if view == "all":
-
         for i, coord in enumerate(stars):
             circle = mpatches.Circle(
                 coord,
@@ -726,7 +720,6 @@ def gif_image_array(image, factor=0.25):
 
 
 def fancy_gif_image_array(image, median_psf, factor=0.25):
-
     fig = plt.figure(frameon=False)
     canvas = FigureCanvas(fig)
     ax = fig.add_axes([0, 0, 1, 1])
