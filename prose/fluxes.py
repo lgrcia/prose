@@ -168,19 +168,32 @@ def optimal_flux(diff_fluxes, method="stddiff"):
 
 @dataclass
 class Fluxes:
+    """Photometric fluxes, from single to multiple stars and apertures.
+
+    Also hold contemporary time-series, errors and apertures properties.
+    """
+
     fluxes: np.ndarray
-    """Fluxes either as 1, 2, or 3 dimensional arrays
+    """Fluxes either as 1, 2, or 3 dimensional arrays, with following dimensions
         - 1: (time)
         - 2: (star, time)
         - 3: (aperture, star, time)
     """
     time: np.ndarray = None
+    """Array of observed time"""
     errors: np.ndarray = None
+    """Errors with same shape as :code:`fluxes`"""
     data: dict = None
+    """A dict of data time-series, each with the same shape as :code:`time`"""
     apertures: np.ndarray = None
+    """Apertures radii"""
     weights: np.ndarray = None
+    """Fluxes weights (from differential photometry)"""
     target: int = None
+    """Index of selected target"""
     aperture: int = None
+    """Index of selected aperture"""
+    metadata: dict = None
 
     @property
     def _is_target_aperture_set(self):
@@ -236,6 +249,17 @@ class Fluxes:
         pass
 
     def diff(self, comps: np.ndarray = None):
+        """Differential photometry
+
+        Parameters
+        ----------
+        comps : np.ndarray, optional
+            index of comparison stars, by default None
+
+        Returns
+        -------
+        differential :code:`Fluxes`
+        """
         if comps is not None:
             weights = np.zeros(self.fluxes[0:2])
             weights[:, comps] = 1
@@ -249,6 +273,12 @@ class Fluxes:
         return _new
 
     def autodiff(self):
+        """Automatic differential photometry with Broeg et al. 2005
+
+        Returns
+        -------
+        differential :code:`Fluxes`
+        """
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
             diff_fluxes, weights = auto_diff(self.fluxes, self.target)
