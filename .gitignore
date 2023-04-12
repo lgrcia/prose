@@ -54,7 +54,6 @@ test_results
 !test/test.py
 dev
 **/*.egg-info
-**.vscode
 **.fits
 **.array
 
