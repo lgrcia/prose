@@ -4,9 +4,9 @@ from photutils.detection import DAOStarFinder
 from scipy.interpolate import interp1d
 from skimage.measure import label, regionprops
 
-from .. import Block, Image
-from ..console_utils import info
-from ..core.source import *
+from prose import Block, Image
+from prose.console_utils import info
+from prose.core.source import *
 
 __all__ = ["DAOFindStars", "SEDetection", "AutoSourceDetection", "PointSourceDetection"]
 

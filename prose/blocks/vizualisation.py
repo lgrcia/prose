@@ -9,9 +9,8 @@ import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from skimage.transform import resize
 
+from prose import Block, viz
 from prose.visualization import corner_text
-
-from .. import Block, viz
 
 
 def im_to_255(image, factor=0.25):

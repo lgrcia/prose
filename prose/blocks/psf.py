@@ -1,6 +1,6 @@
 import numpy as np
 
-from .. import Block, Image
+from prose import Block, Image
 
 try:
     from jax.config import config

@@ -8,7 +8,7 @@ import requests
 import yaml
 from yaml import Loader
 
-from .builtins import built_in_telescopes
+from prose.builtins import built_in_telescopes
 
 info = print
 package_name = "prose"

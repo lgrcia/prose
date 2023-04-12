@@ -8,7 +8,7 @@ from datetime import datetime
 
 from tqdm import TqdmExperimentalWarning
 
-from . import CONFIG
+from prose import CONFIG
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", category=TqdmExperimentalWarning)

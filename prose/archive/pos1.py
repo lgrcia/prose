@@ -6,10 +6,9 @@ import requests
 from astropy.io import fits
 from astropy.table import Table
 
+from prose import FITSImage, blocks, utils
 from prose.console_utils import info
-
-from .. import FITSImage, blocks, utils
-from ..telescope import Telescope
+from prose.telescope import Telescope
 
 
 def pos1_image(skycoord, fov, filter="z"):

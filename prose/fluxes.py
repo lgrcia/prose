@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from . import utils
+from prose import utils
 
 
 def binned_white_function(x, bins: int = 12):

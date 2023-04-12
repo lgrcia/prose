@@ -4,8 +4,7 @@ from photutils.background import Background2D, MedianBackground
 
 from prose import Block
 from prose.blocks.psf import *
-
-from ..utils import binn2D
+from prose.utils import binn2D
 
 # TODO
 

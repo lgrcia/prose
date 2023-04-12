@@ -2,7 +2,7 @@ import numpy as np
 from astropy.stats import gaussian_sigma_to_fwhm, sigma_clipped_stats
 from photutils.aperture import aperture_photometry
 
-from .. import Block, Image
+from prose import Block, Image
 
 __all__ = ["AperturePhotometry", "AnnulusBackground"]
 
