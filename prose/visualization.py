@@ -13,7 +13,7 @@ from mpl_toolkits import axes_grid1
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes, zoomed_inset_axes
 from skimage.transform import resize
 
-from . import utils
+from prose import utils
 
 
 def plot(

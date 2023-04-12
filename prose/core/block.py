@@ -1,8 +1,8 @@
 import inspect
 from time import time
 
-from ..console_utils import warning
-from ..core.image import Image
+from prose.console_utils import warning
+from prose.core.image import Image
 
 
 class Block(object):

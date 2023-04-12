@@ -5,7 +5,7 @@ from scipy.spatial import KDTree
 from skimage.transform import AffineTransform
 from twirl import utils as twirl_utils
 
-from ..core import Block, Image
+from prose.core import Block, Image
 
 __all__ = ["Trim", "Cutouts", "Drizzle"]
 

@@ -4,10 +4,10 @@ from pathlib import Path
 import numpy as np
 from astropy.io import fits
 
-from ..console_utils import info
-from ..core import Block, FITSImage, Image, Sources
-from ..fluxes import Fluxes
-from ..utils import easy_median
+from prose.console_utils import info
+from prose.core import Block, FITSImage, Image, Sources
+from prose.fluxes import Fluxes
+from prose.utils import easy_median
 
 __all__ = [
     "LimitSources",

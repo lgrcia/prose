@@ -10,9 +10,8 @@ from photutils.centroids import (
     centroid_sources,
 )
 
-from prose import CONFIG
+from prose import CONFIG, Block
 
-from .. import Block
 from .geometry import Cutouts
 
 __all__ = [

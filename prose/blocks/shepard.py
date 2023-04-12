@@ -4,9 +4,9 @@ import numpy as np
 from astropy.stats import gaussian_sigma_to_fwhm
 from scipy.special import hermite
 
+from prose import Block
 from prose.blocks.psf import Gaussian2D
 
-from .. import Block
 from .psf import cutouts, good_cutouts
 
 

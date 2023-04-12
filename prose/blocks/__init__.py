@@ -1,4 +1,5 @@
-from ..core.block import Block
+from prose.core.block import Block
+
 from .alignment import *
 from .catalogs import *
 from .centroids import *

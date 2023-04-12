@@ -8,12 +8,10 @@ from astropy.coordinates import SkyCoord
 from astropy.time import Time
 from astroquery.mast import Catalogs
 
-from prose.utils import cross_match
-
-from .. import Block
-from ..core.source import PointSource, Sources
-from ..utils import cross_match, gaia_query, sparsify
-from . import vizualisation as viz
+from prose import Block
+from prose import visualization as viz
+from prose.core.source import PointSource, Sources
+from prose.utils import cross_match, gaia_query, sparsify
 
 __all__ = ["GaiaCatalog", "TESSCatalog"]
 

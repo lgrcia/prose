@@ -9,8 +9,8 @@ import pandas as pd
 from astropy.io import fits
 from astropy.time import Time
 
-from ..console_utils import progress, warning
-from ..telescope import Telescope
+from prose.console_utils import progress, warning
+from prose.telescope import Telescope
 
 
 def phot2dict(filename):

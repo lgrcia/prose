@@ -6,7 +6,8 @@ import numpy as np
 import pandas as pd
 from IPython.display import display
 
-from ..console_utils import info, progress
+from prose.console_utils import info, progress
+
 from .io import fits_to_df, get_files
 
 # Convenience

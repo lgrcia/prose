@@ -10,8 +10,9 @@ import yaml
 from tabulate import tabulate
 from tqdm.autonotebook import tqdm
 
-from ..console_utils import TQDM_BAR_FORMAT, error, warning
-from ..utils import full_class_name
+from prose.console_utils import TQDM_BAR_FORMAT, error, warning
+from prose.utils import full_class_name
+
 from .image import FITSImage, Image
 
 

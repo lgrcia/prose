@@ -7,8 +7,8 @@ import numpy as np
 import yaml
 from dateutil import parser as dparser
 
-from . import CONFIG
-from .console_utils import info
+from prose import CONFIG
+from prose.console_utils import info
 
 
 def str_to_astropy_unit(unit_string):
