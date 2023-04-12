@@ -16,8 +16,10 @@ from photutils.psf import extract_stars
 from skimage.draw import line_aa
 from tqdm import tqdm
 
-from . import Image, Telescope, utils, viz
+from . import utils, viz
 from .archive import sdss_image
+from .core.image import Image
+from .telescope import Telescope
 
 
 def simple_images(fluxes, coords, bkg=0.0, shape=(100, 100), std=0.0):

@@ -1,6 +1,6 @@
 import numpy as np
 from astropy.stats import sigma_clipped_stats
-from photutils import DAOStarFinder
+from photutils.detection import DAOStarFinder
 from scipy.interpolate import interp1d
 from skimage.measure import label, regionprops
 

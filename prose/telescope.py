@@ -1,8 +1,6 @@
 import inspect
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from os import path
-from warnings import warn
 
 import astropy.units as u
 import numpy as np
@@ -10,7 +8,6 @@ import yaml
 from dateutil import parser as dparser
 
 from . import CONFIG
-from .builtins import default
 from .console_utils import info
 
 
