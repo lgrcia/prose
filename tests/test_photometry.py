@@ -1,6 +1,6 @@
 import numpy as np
-from prose import blocks, Sequence
-from prose import simulations
+
+from prose import Sequence, blocks, simulations
 
 t = np.linspace(0, 1, 20)
 true_y = np.sin(2 * np.pi * t / 0.5) + 1.0

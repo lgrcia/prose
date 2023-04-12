@@ -1,9 +1,11 @@
-from ..core import Block, Image
-import numpy as np
-from skimage.transform import AffineTransform
-from scipy.spatial import KDTree
-from twirl import utils as twirl_utils
 from typing import Union
+
+import numpy as np
+from scipy.spatial import KDTree
+from skimage.transform import AffineTransform
+from twirl import utils as twirl_utils
+
+from ..core import Block, Image
 
 __all__ = ["Trim", "Cutouts", "Drizzle"]
 

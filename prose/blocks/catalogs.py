@@ -1,17 +1,19 @@
-import twirl
-from .. import Block
-from ..core.source import Sources, PointSource
-from astropy.coordinates import SkyCoord
-import astropy.units as u
-import pandas as pd
-import numpy as np
-from astropy.time import Time
 import warnings
-from ..utils import gaia_query, sparsify
-from ..utils import cross_match
+
+import astropy.units as u
+import numpy as np
+import pandas as pd
+import twirl
+from astropy.coordinates import SkyCoord
+from astropy.time import Time
 from astroquery.mast import Catalogs
-from . import vizualisation as viz
+
 from prose.utils import cross_match
+
+from .. import Block
+from ..core.source import PointSource, Sources
+from ..utils import cross_match, gaia_query, sparsify
+from . import vizualisation as viz
 
 __all__ = ["GaiaCatalog", "TESSCatalog"]
 

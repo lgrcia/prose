@@ -1,8 +1,9 @@
-from .geometry import SetAffineTransform, ComputeTransform
-from astropy.wcs.utils import fit_wcs_from_points
-from ..core import Image, Block
-from skimage.transform import warp
 import numpy as np
+from astropy.wcs.utils import fit_wcs_from_points
+from skimage.transform import warp
+
+from ..core import Block, Image
+from .geometry import ComputeTransform, SetAffineTransform
 
 __all__ = ["Align", "AlignReferenceSources", "AlignReferenceWCS"]
 

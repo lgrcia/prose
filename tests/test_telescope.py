@@ -1,7 +1,8 @@
-from prose import Telescope, Image, FITSImage
-from prose import CONFIG
 from datetime import datetime
+
 from astropy.io.fits import Header
+
+from prose import CONFIG, FITSImage, Image, Telescope
 
 
 def test_creation(name="test_telescope"):

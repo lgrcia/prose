@@ -1,6 +1,6 @@
-from prose import Telescope
-from prose import Image, Telescope, FitsManager
 from astropy.io.fits import Header
+
+from prose import FitsManager, Image, Telescope
 
 
 def test_empty_header(tmp_path):

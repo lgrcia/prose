@@ -1,27 +1,27 @@
-import matplotlib.pyplot as plt
-import numpy as np
-from astropy.coordinates import SkyCoord
-import astropy.units as u
-from astropy.coordinates import Angle
-from dateutil import parser as dparser
-from astropy.wcs import WCS
-from .. import viz, utils, Telescope
-from astropy.io import fits
+import pickle
+from copy import deepcopy
+from dataclasses import asdict, dataclass
 from datetime import timedelta
 from pathlib import Path
-from ..core.source import Sources
-from matplotlib import gridspec
-from pathlib import Path
-from astropy.nddata import Cutout2D as astopy_Cutout2D
-from astropy.wcs.wcs import WCS
-from astropy.io.fits.hdu.base import _BaseHDU
-from PIL import Image
-from copy import deepcopy
-from dataclasses import dataclass, asdict
-import pickle
-from astropy.time import Time
 from typing import Union
+
+import astropy.units as u
+import matplotlib.pyplot as plt
+import numpy as np
+from astropy.coordinates import Angle, SkyCoord
+from astropy.io import fits
+from astropy.io.fits.hdu.base import _BaseHDU
+from astropy.nddata import Cutout2D as astopy_Cutout2D
 from astropy.nddata import overlap_slices
+from astropy.time import Time
+from astropy.wcs import WCS
+from astropy.wcs.wcs import WCS
+from dateutil import parser as dparser
+from matplotlib import gridspec
+from PIL import Image
+
+from .. import Telescope, utils, viz
+from ..core.source import Sources
 
 
 @dataclass

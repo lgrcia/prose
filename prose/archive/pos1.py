@@ -1,11 +1,14 @@
-import numpy as np
-from astropy.table import Table
-import requests
 from io import StringIO
-from .. import FITSImage, blocks, utils, Telescope
-from prose.console_utils import info
-from astropy.io import fits
+
 import astropy.units as u
+import numpy as np
+import requests
+from astropy.io import fits
+from astropy.table import Table
+
+from prose.console_utils import info
+
+from .. import FITSImage, Telescope, blocks, utils
 
 
 def pos1_image(skycoord, fov, filter="z"):

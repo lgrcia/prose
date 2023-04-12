@@ -1,11 +1,12 @@
-from skimage.measure import label, regionprops
 import numpy as np
-from .. import Block, Image
-from ..console_utils import info
-from scipy.interpolate import interp1d
-from ..core.source import *
 from astropy.stats import sigma_clipped_stats
 from photutils import DAOStarFinder
+from scipy.interpolate import interp1d
+from skimage.measure import label, regionprops
+
+from .. import Block, Image
+from ..console_utils import info
+from ..core.source import *
 
 __all__ = ["DAOFindStars", "SEDetection", "AutoSourceDetection", "PointSourceDetection"]
 

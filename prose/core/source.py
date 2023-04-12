@@ -1,13 +1,14 @@
-from matplotlib.patches import Ellipse, Circle
-from photutils.aperture import *
-from photutils.isophote import EllipseGeometry
-from photutils.isophote import Ellipse as IsoEllipse
-from astropy.utils import lazyproperty
-import numpy as np
-import matplotlib.pyplot as plt
+import copy
 from dataclasses import dataclass
 from typing import Literal, Union
-import copy
+
+import matplotlib.pyplot as plt
+import numpy as np
+from astropy.utils import lazyproperty
+from matplotlib.patches import Circle, Ellipse
+from photutils.aperture import *
+from photutils.isophote import Ellipse as IsoEllipse
+from photutils.isophote import EllipseGeometry
 
 color = [0.51, 0.86, 1.0]
 
