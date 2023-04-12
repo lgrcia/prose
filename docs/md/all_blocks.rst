@@ -30,6 +30,7 @@
 	~prose.blocks.psf.Gaussian2D
 	~prose.blocks.utils.Get
 	~prose.blocks.utils.GetFluxes
+	~prose.blocks.psf.HFD
 	~prose.blocks.psf.JAXGaussian2D
 	~prose.blocks.psf.JAXMoffat2D
 	~prose.blocks.utils.LimitSources
