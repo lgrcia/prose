@@ -1,5 +1,6 @@
-from time import time
 import inspect
+from time import time
+
 from ..console_utils import warning
 from ..core.image import Image
 

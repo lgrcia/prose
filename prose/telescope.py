@@ -1,16 +1,17 @@
-from os import path
-import yaml
-import numpy as np
-from . import CONFIG
-import astropy.units as u
-from warnings import warn
-from .console_utils import info
-from .builtins import default
-import astropy.units as u
-from dateutil import parser as dparser
-from dataclasses import dataclass, asdict, field
-from datetime import datetime
 import inspect
+from dataclasses import asdict, dataclass, field
+from datetime import datetime
+from os import path
+from warnings import warn
+
+import astropy.units as u
+import numpy as np
+import yaml
+from dateutil import parser as dparser
+
+from . import CONFIG
+from .builtins import default
+from .console_utils import info
 
 
 def str_to_astropy_unit(unit_string):

@@ -1,5 +1,6 @@
 import numpy as np
-from prose import example_image, Sequence, blocks
+
+from prose import Sequence, blocks, example_image
 
 image = example_image()
 Sequence([blocks.PointSourceDetection(), blocks.Cutouts()]).run(image)

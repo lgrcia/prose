@@ -1,10 +1,13 @@
-from .. import Block
-from .psf import good_cutouts, cutouts
-from astropy.stats import gaussian_sigma_to_fwhm
-from prose.blocks.psf import Gaussian2D
 from itertools import product
+
 import numpy as np
+from astropy.stats import gaussian_sigma_to_fwhm
 from scipy.special import hermite
+
+from prose.blocks.psf import Gaussian2D
+
+from .. import Block
+from .psf import cutouts, good_cutouts
 
 
 def shapelet1d(x, n, b=1):

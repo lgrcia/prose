@@ -1,14 +1,17 @@
-import numpy as np
-from .. import Block, viz
-import matplotlib.pyplot as plt
-import imageio
-from prose.visualization import corner_text
-from skimage.transform import resize
-from matplotlib.backends.backend_agg import FigureCanvasAgg
-import time
 import io
 import shutil
 import tempfile
+import time
+
+import imageio
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+from skimage.transform import resize
+
+from prose.visualization import corner_text
+
+from .. import Block, viz
 
 
 def im_to_255(image, factor=0.25):

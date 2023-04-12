@@ -1,12 +1,14 @@
+import glob
+import shutil
 from os import path
 from pathlib import Path
+
+import numpy as np
+import requests
 import yaml
 from yaml import Loader
-import numpy as np
-import shutil
+
 from .builtins import built_in_telescopes
-import glob
-import requests
 
 info = print
 package_name = "prose"

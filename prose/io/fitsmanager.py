@@ -1,11 +1,13 @@
 import sqlite3
+from functools import partial
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
-from functools import partial
-from .io import get_files, fits_to_df
 from IPython.display import display
-from ..console_utils import progress, info
+
+from ..console_utils import info, progress
+from .io import fits_to_df, get_files
 
 # Convenience
 # -----------

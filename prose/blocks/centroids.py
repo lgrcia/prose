@@ -1,17 +1,19 @@
-from photutils.centroids import (
-    centroid_sources,
-    centroid_2dg,
-    centroid_quadratic,
-    centroid_com,
-)
-from .. import Block
-import numpy as np
-from os import path
-from prose import CONFIG
-from .geometry import Cutouts
 import warnings
-from astropy.utils.exceptions import AstropyUserWarning
+from os import path
 
+import numpy as np
+from astropy.utils.exceptions import AstropyUserWarning
+from photutils.centroids import (
+    centroid_2dg,
+    centroid_com,
+    centroid_quadratic,
+    centroid_sources,
+)
+
+from prose import CONFIG
+
+from .. import Block
+from .geometry import Cutouts
 
 __all__ = [
     "CentroidCOM",
@@ -208,8 +210,8 @@ class CentroidBallet(_CNNCentroid):
             import os
 
             os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+            from tensorflow.keras.layers import Conv2D, Dense, Flatten, MaxPooling2D
             from tensorflow.keras.models import Sequential
-            from tensorflow.keras.layers import Dense, Conv2D, MaxPooling2D, Flatten
         except ModuleNotFoundError:
             TF_LOADED = True
 
@@ -242,8 +244,8 @@ class _OldNNCentroid(_CNNCentroid):
             import os
 
             os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+            from tensorflow.keras.layers import Conv2D, Dense, Flatten, MaxPooling2D
             from tensorflow.keras.models import Sequential
-            from tensorflow.keras.layers import Dense, Conv2D, MaxPooling2D, Flatten
         except ModuleNotFoundError:
             TF_LOADED = True
 

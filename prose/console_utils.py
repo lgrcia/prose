@@ -1,12 +1,14 @@
 import os
+import platform
 import shlex
 import struct
-import platform
 import subprocess
 import warnings
-from . import CONFIG
 from datetime import datetime
+
 from tqdm import TqdmExperimentalWarning
+
+from . import CONFIG
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", category=TqdmExperimentalWarning)
@@ -57,7 +59,7 @@ def get_terminal_size():
 
 def _get_terminal_size_windows():
     try:
-        from ctypes import windll, create_string_buffer
+        from ctypes import create_string_buffer, windll
 
         # stdin handle is -10
         # stdout handle is -11

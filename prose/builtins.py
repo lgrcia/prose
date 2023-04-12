@@ -1,6 +1,5 @@
 from numpy import trim_zeros
 
-
 default = dict(
     # Name(s)
     # -------

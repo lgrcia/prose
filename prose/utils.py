@@ -1,20 +1,19 @@
-from datetime import timedelta
-import numpy as np
-from astropy.visualization import ZScaleInterval
-from astropy.io import fits
-import astropy.constants as c
-import urllib
-from astropy.time import Time
-from astropy.table import Table
-from astropy.coordinates import SkyCoord
-import astropy.units as u
-from datetime import datetime
 import inspect
-from scipy import ndimage
-from functools import wraps
+import urllib
 from collections import OrderedDict
+from datetime import datetime, timedelta
+from functools import wraps
+
+import astropy.constants as c
+import astropy.units as u
 import numpy as np
+from astropy.coordinates import SkyCoord
+from astropy.io import fits
 from astropy.stats import gaussian_sigma_to_fwhm
+from astropy.table import Table
+from astropy.time import Time
+from astropy.visualization import ZScaleInterval
+from scipy import ndimage
 
 earth2sun = (c.R_earth / c.R_sun).value
 
@@ -443,11 +442,12 @@ def binn2D(arr, factor):
     return np.mean(arr.reshape(shape).mean(-1), 1)
 
 
+from functools import partial
+
 import numpy as np
 from scipy.spatial import KDTree
-from twirl import utils as tutils
 from skimage.transform import AffineTransform as skAT
-from functools import partial
+from twirl import utils as tutils
 
 
 def distance(p1, p2):

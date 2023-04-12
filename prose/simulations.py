@@ -1,21 +1,23 @@
-import numpy as np
-from . import viz, utils, Image, Telescope
-from photutils.psf import extract_stars
-from astropy.table import Table
-from astropy.nddata import NDData
-import celerite2 as celerite
-from os import path
-from astropy.time import Time
 import os
-from tqdm import tqdm
-from astropy.io import fits
-from datetime import datetime
-import matplotlib.pyplot as plt
-import warnings
-from skimage.draw import line_aa
-from .archive import sdss_image
 import shutil
+import warnings
+from datetime import datetime
+from os import path
+
+import celerite2 as celerite
+import matplotlib.pyplot as plt
+import numpy as np
 from astropy import units as u
+from astropy.io import fits
+from astropy.nddata import NDData
+from astropy.table import Table
+from astropy.time import Time
+from photutils.psf import extract_stars
+from skimage.draw import line_aa
+from tqdm import tqdm
+
+from . import Image, Telescope, utils, viz
+from .archive import sdss_image
 
 
 def simple_images(fluxes, coords, bkg=0.0, shape=(100, 100), std=0.0):

@@ -1,12 +1,13 @@
 import inspect
 import sys
-from prose import example_image, Sequence, blocks
+
 import numpy as np
 import pytest
-from prose.blocks.detection import _SourceDetection
-from prose.blocks.centroids import _PhotutilsCentroid
-from prose.blocks.psf import _PSFModelBase
 
+from prose import Sequence, blocks, example_image
+from prose.blocks.centroids import _PhotutilsCentroid
+from prose.blocks.detection import _SourceDetection
+from prose.blocks.psf import _PSFModelBase
 
 image = blocks.PointSourceDetection()(example_image())
 image_psf = image.copy()
@@ -99,7 +100,7 @@ def test_Get():
 
 
 def test_LimitSources():
-    from prose.core.source import Sources, PointSource
+    from prose.core.source import PointSource, Sources
 
     im = image.copy()
     im.sources = Sources([PointSource(0, 0) for _ in range(2)])
