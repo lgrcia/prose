@@ -3,8 +3,9 @@ import numpy as np
 import requests
 from astropy.io import fits
 
-from .. import FITSImage, Telescope, utils
+from .. import FITSImage, utils
 from ..console_utils import info
+from ..telescope import Telescope
 
 
 def sdss_image(skycoord, fov, filter="poss1_blue", return_hdu=False):

@@ -20,8 +20,9 @@ from dateutil import parser as dparser
 from matplotlib import gridspec
 from PIL import Image
 
-from .. import Telescope, utils, viz
+from .. import utils, viz
 from ..core.source import Sources
+from ..telescope import Telescope
 
 
 @dataclass
