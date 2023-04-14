@@ -6,12 +6,8 @@
 ```
 
 ```{warning} 
-Version *3.0.0* is not on pypi yet, install with:
-
-```bash
-    pip install 'prose @ git+https://github.com/lgrcia/prose'
-```
-
+Version **3.0.0** is not on pypi yet, install with:
+`pip install 'prose @ git+https://github.com/lgrcia/prose'`
 ```
 
 +++
