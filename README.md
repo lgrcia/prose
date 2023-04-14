@@ -71,10 +71,10 @@ While being run on a single image, a Sequence is designed to be run on list of i
 pip install prose
 ```
 
-To install it through conda (recommended, within a fresh environment):
+For the latest version 
 
 ```shell
-conda env create -f {prose_repo}/environment.yml -n prose
+pip install 'prose @ git+https://github.com/lgrcia/prose'
 ```
 
 ## Contributions
