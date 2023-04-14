@@ -2,7 +2,7 @@
 name = "prose"
 version = "3.0.0"
 description = "Modular image processing pipelines for Astronomy"
-authors = ["Lionel Garcia <lionel_garcia@live.fr>"]
+authors = ["Lionel Garcia"]
 license = "MIT"
 readme = "README.md"
 include = ["prose/io/*.sql"]
