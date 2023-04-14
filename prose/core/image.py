@@ -231,6 +231,7 @@ class Image:
 
     @property
     def filter(self):
+        """Filter name"""
         return self.metadata["filter"]
 
     @property
@@ -264,7 +265,16 @@ class Image:
         # TODO: do according to last astronomical twilight?
         return (self.date - timedelta(hours=15)).date()
 
-    def set(self, name, value):
+    def set(self, name: str, value):
+        """Set a computed value
+
+        Parameters
+        ----------
+        name : str
+            name of the computed value
+        value : any
+            value to set
+        """
         self.computed[name] = value
 
     def get(self, name):
@@ -370,8 +380,14 @@ class Image:
         """Return whether the image is plate solved"""
         return self.wcs.has_celestial
 
-    def writeto(self, destination):
-        """TODO"""
+    def writeto(self, destination: Union[str, Path]):
+        """Write image to FITS file
+
+        Parameters
+        ----------
+        destination : Union[str, Path]
+            destination path
+        """
         hdu = fits.PrimaryHDU(
             data=self.data, header=fits.Header(utils.clean_header(self.header))
         )
@@ -524,14 +540,18 @@ def str_to_astropy_unit(unit_string):
 
 
 def FITSImage(
-    filepath_or_hdu, verbose=False, load_units=True, load_data=True, telescope=None
+    filepath_or_hdu: Union[str, Path, _BaseHDU],
+    verbose: bool = False,
+    load_units: bool = True,
+    load_data: bool = True,
+    telescope: Telescope = None,
 ) -> Image:
     """Create an image from a FITS file
 
     Parameters
     ----------
-    filepath : str
-        path of fits file
+    filepath_or_hdu : str
+        path of fits file of HDU object
     verbose : bool, optional
         whether to be verbose, by default False
     load_units : bool, optional
