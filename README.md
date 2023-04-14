@@ -33,30 +33,29 @@ Here is a quick example pipeline to characterize the point-spread-function (PSF)
 
 
 ```python
-    import matplotlib.pyplot as plt
-    from prose import Sequence, blocks
-    from prose.simulations import example_image
+import matplotlib.pyplot as plt
+from prose import Sequence, blocks
+from prose.simulations import example_image
 
-    # getting the example image
-    image = example_image()
+# getting the example image
+image = example_image()
 
-    sequence = Sequence(
-        [
-            blocks.PointSourceDetection(),  # stars detection
-            blocks.Cutouts(shape=21),  # cutouts extraction
-            blocks.MedianEPSF(),  # PSF building
-            blocks.Moffat2D(),  # PSF modeling
-        ]
-    )
+sequence = Sequence(
+    [
+        blocks.PointSourceDetection(),  # stars detection
+        blocks.Cutouts(shape=21),  # cutouts extraction
+        blocks.MedianEPSF(),  # PSF building
+        blocks.Moffat2D(),  # PSF modeling
+    ]
+)
 
-    sequence.run(image)
+sequence.run(image)
 
-    # plotting
-    image.show()  # detected stars
+# plotting
+image.show()  # detected stars
 
-    # effective PSF parameters
-    image.epsf.params
-
+# effective PSF parameters
+image.epsf.params
 ```
 
 While being run on a single image, a Sequence is designed to be run on list of images (paths) and provides the architecture to build powerful pipelines. For more details check [Quickstart](https://prose.readthedocs.io/en/latest/notebooks/quickstart.html) and [What is a pipeline?](https://prose.readthedocs.io/en/latest/rst/core.html)
