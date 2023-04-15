@@ -1,6 +1,5 @@
 import inspect
 import urllib
-from collections import OrderedDict
 from datetime import datetime, timedelta
 from functools import wraps
 
@@ -8,9 +7,7 @@ import astropy.constants as c
 import astropy.units as u
 import numpy as np
 from astropy.coordinates import SkyCoord
-from astropy.io import fits
 from astropy.stats import gaussian_sigma_to_fwhm
-from astropy.table import Table
 from astropy.time import Time
 from astropy.visualization import ZScaleInterval
 from scipy import ndimage
@@ -518,3 +515,23 @@ def moments(data):
         "background": background,
         "theta": 0.0,
     }
+
+
+def get_all_blocks():
+    """Returns a list of all block names from prose (exposed in blocks.__init__.py)
+
+    Returns
+    -------
+    list
+        List of all block names
+    """
+    from prose import blocks
+
+    blocks = [
+        getattr(blocks, b)
+        for b in dir(blocks)
+        if isinstance(getattr(blocks, b), type)
+        and issubclass(getattr(blocks, b), blocks.Block)
+    ]
+
+    return blocks

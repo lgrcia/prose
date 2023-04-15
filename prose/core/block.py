@@ -1,5 +1,8 @@
 import inspect
 from time import time
+from typing import Union
+
+import pytest
 
 from prose.console_utils import warning
 from prose.core.image import Image
@@ -79,3 +82,32 @@ class Block(object):
         if image_copy.discard:
             warning(f"{self.__class__.__name__} discarded Image")
         return image_copy
+
+
+# rewrite the tested function to accept Block instances as well as strings
+def is_tested(block_class: Union[Block, str]) -> bool:
+    """Check if a block is tested
+
+    Parameters
+    ----------
+    block_class : Block or str
+        block to be tested
+
+    Returns
+    -------
+    bool
+        True if the block is tested, False otherwise
+
+    Raises
+    ------
+    TypeError
+        if block is not a Block subclass or a string
+    """
+    if isinstance(block_class, str):
+        block_name = block_class
+    elif issubclass(block_class, Block):
+        block_name = block_class.__name__
+    else:
+        raise TypeError(f"block must be a Block subclass or a string")
+    result = pytest.main(["-q", "-k", block_name])
+    return result == 0
