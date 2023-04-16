@@ -218,7 +218,10 @@ class Image:
     @property
     def exposure(self):
         """Exposure time as an astropy Quantity"""
-        return self._from_metadata_with_unit("exposure")
+        if "exposure" in self.metadata:
+            return self._from_metadata_with_unit("exposure")
+        else:
+            return None
 
     @property
     def jd(self):
