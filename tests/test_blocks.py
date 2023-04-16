@@ -106,3 +106,84 @@ def test_LimitSources():
     im.sources = Sources([PointSource(0, 0) for _ in range(2)])
     blocks.LimitSources().run(im)
     assert im.discard == True
+
+
+def test_Del():
+    im = image.copy()
+    im.a = 3
+
+    blocks.Del("a", "data").run(im)
+    assert not "a" in im.computed
+    assert im.data is None
+
+
+def test_Apply():
+    im = image.copy()
+    im.a = 3
+
+    def f(im):
+        im.a += 1
+
+    blocks.Apply(f).run(im)
+    assert im.a == 4
+
+
+def test_Calibration():
+    from prose.blocks import Calibration
+
+    im = image.copy()
+
+    bias = np.ones_like(im.data) * 1
+    dark = np.ones_like(im.data)
+    flat = np.ones_like(im.data) * 0.5
+    flat /= np.mean(flat)
+
+    observed_flat = flat + bias + dark
+    observed_dark = dark + bias
+
+    # None
+    expected = im.data
+    Calibration().run(im)
+    np.testing.assert_allclose(im.data, expected)
+
+    # bias only
+    im = image.copy()
+    im.data = im.data + bias
+    expected = im.data - bias
+    Calibration(bias=bias).run(im)
+    np.testing.assert_allclose(im.data, expected)
+
+    # dark and bias only
+    im = image.copy()
+    im.data = im.data + bias + dark
+    expected = im.data - bias - dark
+    Calibration(darks=observed_dark, bias=bias).run(im)
+    np.testing.assert_allclose(im.data, expected)
+
+    # flat only
+    im = image.copy()
+    im.data = im.data * flat
+    expected = im.data / flat
+    Calibration(flats=flat).run(im)
+    np.testing.assert_allclose(im.data, expected)
+
+    # flat and bias only
+    im = image.copy()
+    im.data = (im.data * flat) + bias
+    expected = (im.data - bias) / flat
+    Calibration(bias=bias, flats=observed_flat).run(im)
+    np.testing.assert_allclose(im.data, expected)
+
+    # flat, dark and bias
+    im = image.copy()
+    im.data = (im.data * flat) + bias + dark
+    expected = (im.data - bias - dark) / flat
+    Calibration(bias=bias, flats=observed_flat, darks=observed_dark).run(im)
+    np.testing.assert_allclose(im.data, expected)
+
+
+def test_SortSources():
+    im = image_psf.copy()
+    blocks.SortSources().run(im)
+    peaks = [s.peak for s in im.sources]
+    assert np.all(peaks[:-1] >= peaks[1:])

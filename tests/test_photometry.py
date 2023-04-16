@@ -16,7 +16,7 @@ coords[:, 0, :] = np.array(shape) / 2
 images = simulations.simple_images(fluxes, coords, 1.0, shape=shape)
 
 
-def test_photometry():
+def test_AperturePhotometryAnnulusBackground():
     ref = images[0]
     ref = blocks.PointSourceDetection(False, 0, 0)(ref)
 
