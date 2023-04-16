@@ -67,11 +67,11 @@ class Apply(Block):
 
     Parameters
     ----------
-    kwargs : function
-        function to apply of the form f(image) -> None
+    function : callable
+        function to apply of the form callable(image) -> None
     """
 
-    def __init__(self, function, name=None):
+    def __init__(self, function: callable, name: str = None):
         super().__init__(name=name)
         self.function = function
 
@@ -207,9 +207,9 @@ class Calibration(Block):
 
     def _produce_master(self, images, image_type):
         if images is not None:
-            assert isinstance(
-                images, (list, np.ndarray, str)
-            ), "images must be list or array or path"
+            if not isinstance(images, (list)):
+                images = [images]
+
             if len(images) == 0:
                 images = None
 
@@ -219,14 +219,33 @@ class Calibration(Block):
             else:
                 return np.median(im, 0)
 
+        def _get_data_exposure(image):
+            if isinstance(image, str):
+                image = self.loader(image)
+
+            if isinstance(image, Image):
+                image_data = image.data
+                image_exposure = (
+                    image.exposure.value if image.exposure is not None else 1.0
+                )
+            elif isinstance(image, np.ndarray):
+                image_data = image
+                image_exposure = 1.0
+            else:
+                raise ValueError(
+                    f"Unsupported image type, must be str, Image or np.ndarray (provided {type(image)}"
+                )
+
+            return image_data, image_exposure
+
         _master = []
 
         if images is None:
             if self.verbose:
                 info(f"No {image_type} images set")
-            if image_type == "dark":
+            if image_type == "bias":
                 master = np.array([0.0])
-            elif image_type == "bias":
+            elif image_type == "dark":
                 master = np.array([0.0])
             elif image_type == "flat":
                 master = np.array([1.0])
@@ -234,22 +253,22 @@ class Calibration(Block):
             if self.verbose:
                 info(f"Building master {image_type}")
 
-            for image_path in images:
-                image = self.loader(image_path)
-                if image_type == "dark":
-                    _dark = (image.data - self.master_bias) / image.exposure.value
+            for image in images:
+                image_data, image_exposure = _get_data_exposure(image)
+                if image_type == "bias":
+                    _master.append(image_data)
+                elif image_type == "dark":
+                    _dark = (image_data - self.master_bias) / image_exposure
                     _master.append(_dark)
-                elif image_type == "bias":
-                    _master.append(image.data)
                 elif image_type == "flat":
                     _flat = (
-                        image.data
+                        image_data
                         - self.master_bias
-                        - self.master_dark * image.exposure.value
+                        - self.master_dark * image_exposure
                     )
                     _flat /= np.mean(_flat)
                     _master.append(_flat)
-                    del image
+                    del image_data
 
             if len(_master) > 0:
                 master = _median(_master)
@@ -281,7 +300,8 @@ class Calibration(Block):
 
     def run(self, image):
         data = image.data
-        calibrated_image = self.calibration(data, image.exposure.value)
+        exposure = image.exposure.value if image.exposure is not None else 1.0
+        calibrated_image = self.calibration(data, exposure)
         calibrated_image[calibrated_image < 0] = np.nan
         calibrated_image[~np.isfinite(calibrated_image)] = -1
         image.data = calibrated_image
@@ -398,6 +418,8 @@ class Del(Block):
     def __init__(self, *names, name="del"):
         """Remove a property from an Image
 
+        If the property is in `self.computed`, remove it from there.
+
         In general this is use in multi-processing sequences to avoid large image properties to be copied in-between processes
 
         Parameters
@@ -412,7 +434,10 @@ class Del(Block):
 
     def run(self, image):
         for name in self.names:
-            setattr(image, name, None)
+            if name in image.computed:
+                del image.computed[name]
+            else:
+                setattr(image, name, None)
 
 
 class LimitSources(Block):
