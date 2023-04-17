@@ -617,3 +617,122 @@ def FITSImage(
     image.telescope = telescope
 
     return image
+
+
+class Buffer:
+    def __init__(self, size: int, loader: callable = None):
+        """Object to load and access adjacent items in a list
+
+        Parameters
+        ----------
+        size : int
+            number of items accessible
+        loader : callable, optional
+            a function that load an item in the buffer, by default None corresponding
+            to lambda x: x
+
+        Example
+        -------
+        .. code-block:: python
+
+            from prose.core.image import Buffer
+            import numpy as np
+
+            # items to be loaded in the buffer
+            init = np.arange(0, 10)
+
+            # create and initialize
+            buffer = Buffer(size=3)
+            buffer.init(init)
+
+            for buffer in buffer:
+                print(buffer.previous, buffer.current, buffer.next)
+
+        .. code-block:: text
+
+            None 0 1
+            0 1 2
+            1 2 3
+            2 3 4
+            3 4 5
+            4 5 6
+            5 6 7
+            6 7 8
+            7 8 9
+            8 9 None
+
+        """
+        assert size % 2 == 1, "size must be odd"
+        self.mid_index = int((size - 1) // 2)
+        self.items = [None] * max(size, 1)
+        if loader is None:
+            loader = lambda item: item
+        self.loader = loader
+        self.queue = None  # items to be loaded
+
+    def __len__(self):
+        return len(self.items)
+
+    def __getitem__(self, i: int):
+        """Get item by index relative to current
+
+        Parameters
+        ----------
+        i : int
+            index
+
+        Returns
+        -------
+        Image or None
+            images[current + i]
+        """
+        return self.items[self.mid_index + i]
+
+    def __setitem__(self, i: int, item: Image):
+        self.items[self.mid_index + i] = item
+
+    def append(self, item):
+        """Add an item to the buffer (and delete last)
+
+        Parameters
+        ----------
+        item : any
+            item to be loaded
+        """
+        last_item = self.items.pop(0)
+        del last_item
+        self.items.append(item)
+
+    def init(self, items):
+        """Prepare items to be loaded in the buffer.
+
+        The first items are loaded with the :code:`Buffer.loader` function
+
+        Parameters
+        ----------
+        items : list
+            items to be loaded in the buffer
+        """
+        for item in items[: self.mid_index]:
+            self.append(self.loader(item))
+        self.queue = [*items[self.mid_index :], *[None] * self.mid_index]
+
+    def __iter__(self):
+        for item in self.queue:
+            self.append(self.loader(item))
+            yield self
+
+    def sub(self, size, offset):
+        pass
+
+    @property
+    def previous(self):
+        return self[-1]
+
+    @property
+    def current(self):
+        return self[0]
+
+    @property
+    def next(self):
+        return self[1]

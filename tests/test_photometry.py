@@ -23,7 +23,7 @@ def test_AperturePhotometryAnnulusBackground():
     def set_sources(im):
         im.sources = ref.sources.copy()
 
-    calibration = Sequence(
+    photometry = Sequence(
         [
             blocks.Apply(set_sources),
             blocks.AperturePhotometry(radii=[2.0], scale=False),
@@ -32,8 +32,8 @@ def test_AperturePhotometryAnnulusBackground():
         ]
     )
 
-    calibration.run(images)
-    fluxes = calibration[-1].fluxes
+    photometry.run(images)
+    fluxes = photometry[-1].fluxes
     fluxes.aperture = 0
     fluxes.target = 14
     assert np.allclose(true_y, fluxes.flux)

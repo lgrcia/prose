@@ -79,10 +79,6 @@ pip install 'prose @ git+https://github.com/lgrcia/prose'
 ## Contributions
 See our [contributions guidelines](docs/CONTRIBUTING.md)
 
-## Helping us
-
-We are interested in seeing how you use prose, as well as helping creating blocks you need. Do not hesitate to reach us out! ☎️
-
 <p align="center">
     <img src="docs/_static/lookatit.png" width="150">
 </p>

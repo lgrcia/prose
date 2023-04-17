@@ -13,7 +13,8 @@ from tqdm.autonotebook import tqdm
 from prose.console_utils import TQDM_BAR_FORMAT, error, warning
 from prose.utils import full_class_name
 
-from .image import FITSImage, Image
+from ..console_utils import TQDM_BAR_FORMAT, error, warning
+from .image import Buffer, FITSImage, Image
 
 
 def progress(name, x, **kwargs):
@@ -39,6 +40,11 @@ class Sequence:
         self.data = {}
         self.n_processed_images = None
         self.last_image = None
+
+        # initially the buffer must have a size of max(front_size) + max(back_size) in
+        # order to hold all images necessary to all blocks
+        buffer_size = np.max([block.size for block in self.blocks])
+        self.buffer = Buffer(buffer_size)
 
     def __getattr__(self, item):
         return self.blocks_dict[item]
@@ -113,22 +119,26 @@ class Sequence:
                 f"{block_name} discarded image{'s' if len(discarded)>1 else ''} {', '.join(discarded)}"
             )
 
-    def _run(self, loader=FITSImage):
-        for i, image in enumerate(self.progress(self.images)):
-            if isinstance(image, (str, Path)):
-                image = loader(image)
+    def _load(self, image, loader=FITSImage):
+        _image = loader(image) if isinstance(image, (str, Path)) else image
+        return _image
 
-            self.last_image = image
-            image.i = i
+    def _run(self, loader=FITSImage):
+        self.buffer.loader = partial(self._load, loader=loader)
+        self.buffer.init(self.images)
+
+        for i, buffer in enumerate(self.progress(self.buffer, total=len(self.images))):
+            buffer.current.i = i
+            self.last_image = buffer.current
 
             for block in self.blocks:
-                block._run(image)
+                block._run(buffer)
                 # This allows to discard image in any Block
-                if image.discard:
-                    self._add_discard(type(block).__name__, i)
-                    break
+                if buffer.current is not None:
+                    if buffer.current.discard:
+                        self._add_discard(type(block).__name__, buffer.current.i)
+                        break
 
-            del image
             self.n_processed_images += 1
 
     def terminate(self):
