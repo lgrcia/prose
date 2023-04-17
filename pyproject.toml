@@ -19,7 +19,7 @@ matplotlib = "*"
 scikit-image = "*"
 pandas = ">1.1"
 tqdm = "*"
-photutils = "*"
+photutils = "^1.6.0"
 pyyaml = "*"
 tabulate = "*"
 sep = "*"
@@ -41,32 +41,11 @@ sphinx = "*"
 docutils = "*"
 jupyterlab = "*"
 myst-parser = "*"
-twine = "*"
 sphinx-book-theme = "^1.0.0"
 myst-nb = "*"
 sphinx-copybutton = "*"
-photutils = "^1.6.0"
-scipy = "*"
-matplotlib = "*"
-scikit-image = "^0.20.0"
-pandas = "^1.5.3"
 sphinx-design = "*"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
-
-[tool.poetry.extras]
-docs = [
-    "sphinx",
-    "docutils",
-    "jupyterlab",
-    "myst-parser",
-    "twine",
-    "sphinx-book-theme",
-    "black",
-    "myst-nb",
-    "sphinx-copybutton",
-]
-dev = ["pytest", "black"]
-jax = ["jax", "jaxopt", "jaxlib"]
