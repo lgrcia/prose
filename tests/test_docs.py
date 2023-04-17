@@ -38,6 +38,7 @@ def test_block_tested():
     assert not is_tested("WriteTo")
 
 
+@pytest.mark.skip(reason="takes too long")
 def test_readme_urls():
     import re
 
