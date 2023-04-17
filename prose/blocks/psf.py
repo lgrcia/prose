@@ -150,7 +150,7 @@ class JAXGaussian2D(_JAXPSFModel):
     def __init__(self, reference_image: Image = None, name=None, verbose=False):
         """Model :code:`Image.epsf` as a 2D Gaussian profile (powered by `JAX`_)
 
-        |read| :code:`Image.epsf``
+        |read| :code:`Image.epsf`
 
         |write|
 
@@ -194,7 +194,7 @@ class JAXMoffat2D(_JAXPSFModel):
     def __init__(self, reference_image: Image = None, name=None, verbose=False):
         """Model :code:`Image.epsf` as a 2D Moffat profile (powered by `JAX`_)
 
-        |read| :code:`Image.epsf``
+        |read| :code:`Image.epsf`
 
         |write|
 
@@ -240,7 +240,7 @@ class Gaussian2D(_PSFModelBase):
     ):
         """Model :code:`Image.epsf` as a 2D Gaussian profile
 
-        |read| :code:`Image.epsf``
+        |read| :code:`Image.epsf`
 
         |write|
 
@@ -319,7 +319,7 @@ class Moffat2D(_PSFModelBase):
     def __init__(self, reference_image: Image = None, name=None, verbose=False):
         """Model :code:`Image.epsf` as a 2D Moffat profile
 
-        |read| :code:`Image.epsf``
+        |read| :code:`Image.epsf`
 
         |write|
 
