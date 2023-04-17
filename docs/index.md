@@ -1,3 +1,7 @@
+---
+sd_hide_title: true
+---
+
 # prose
 
 ```{image} _static/prose3.png
@@ -6,11 +10,13 @@
 ```
 
 ```{warning} 
-This is prose **3.0.0**, a version still under construction. [Latest doc here](https://prose.readthedocs.io/en/latest/)
+Version **3.0.0** is not on pypi yet, install with:
+`pip install 'prose @ git+https://github.com/lgrcia/prose'`
 ```
+
 +++
 
-A Python package to build image processing pipelines, built for Astronomy. Beyond featuring the blocks to build pipelines from scratch, it provides pre-implemented ones to perform common tasks such as automated calibration, reduction and photometry.
+A Python package to build image processing pipelines for Astronomy. Beyond featuring the blocks to build pipelines from scratch, it provides pre-implemented ones to perform common tasks such as automated calibration, reduction and photometry.
 
 ```{admonition} Where to start?
 :class: tip 
@@ -58,4 +64,5 @@ ipynb/casestudies/satellite.ipynb
 ipynb/sources
 md/blocks
 md/api
+tested_blocks.md
 ```

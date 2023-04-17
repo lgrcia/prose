@@ -1,26 +1,21 @@
-from datetime import timedelta
-import numpy as np
-from astropy.visualization import ZScaleInterval
-from astropy.io import fits
-import astropy.constants as c
-import urllib
-from astropy.time import Time
-from astropy.table import Table
-from astropy.coordinates import SkyCoord
-import astropy.units as u
-from datetime import datetime
 import inspect
-from scipy import ndimage
+import urllib
+from datetime import datetime, timedelta
 from functools import wraps
-from collections import OrderedDict
+
+import astropy.constants as c
+import astropy.units as u
 import numpy as np
+from astropy.coordinates import SkyCoord
 from astropy.stats import gaussian_sigma_to_fwhm
+from astropy.time import Time
+from astropy.visualization import ZScaleInterval
+from scipy import ndimage
 
 earth2sun = (c.R_earth / c.R_sun).value
 
 
 def remove_sip(dict_like):
-
     for kw in [
         "A_ORDER",
         "A_0_2",
@@ -145,7 +140,6 @@ def fold(t, t0, p):
 
 
 def header_to_cdf4_dict(header):
-
     header_dict = {}
 
     for key, value in header.items():
@@ -416,7 +410,6 @@ def gaia_query(center, fov, *args, limit=10000, circular=True):
 
 
 def sparsify(stars, radius):
-
     _stars = stars.copy()
     deleted_stars = np.zeros([], dtype=int)
     sparse_stars = []
@@ -446,11 +439,12 @@ def binn2D(arr, factor):
     return np.mean(arr.reshape(shape).mean(-1), 1)
 
 
+from functools import partial
+
 import numpy as np
 from scipy.spatial import KDTree
-from twirl import utils as tutils
 from skimage.transform import AffineTransform as skAT
-from functools import partial
+from twirl import utils as tutils
 
 
 def distance(p1, p2):
@@ -521,3 +515,23 @@ def moments(data):
         "background": background,
         "theta": 0.0,
     }
+
+
+def get_all_blocks():
+    """Returns a list of all block names from prose (exposed in blocks.__init__.py)
+
+    Returns
+    -------
+    list
+        List of all block names
+    """
+    from prose import blocks
+
+    blocks = [
+        getattr(blocks, b)
+        for b in dir(blocks)
+        if isinstance(getattr(blocks, b), type)
+        and issubclass(getattr(blocks, b), blocks.Block)
+    ]
+
+    return blocks

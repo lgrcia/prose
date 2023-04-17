@@ -5,13 +5,13 @@
 </p>
 
 <p align="center">
-  A python package to build image processing pipelines. Built for Astronomy
+  Modular image processing pipelines for Astronomy
   <br>
   <p align="center">
     <a href="https://github.com/lgrcia/prose">
       <img src="https://img.shields.io/badge/github-lgrcia/prose-03A487.svg?style=flat" alt="github"/>
     </a>
-    <a href="">
+    <a href="LICENCE">
       <img src="https://img.shields.io/badge/license-MIT-lightgray.svg?style=flat" alt="license"/>
     </a>
     <a href="https://arxiv.org/abs/2111.02814">
@@ -23,7 +23,7 @@
   </p>
 </p>
 
- *prose* is a Python package to build image processing pipelines, built for Astronomy. Beyond featuring the blocks to build pipelines from scratch, it provides pre-implemented ones to perform common tasks such as automated calibration, reduction and photometry.
+ *prose* is a Python package to build image processing pipelines for Astronomy. Beyond featuring the blocks to build pipelines from scratch, it provides pre-implemented ones to perform common tasks such as automated calibration, reduction and photometry.
 
 *powered by [astropy](https://www.astropy.org/) and [photutils](https://photutils.readthedocs.io)*!
 
@@ -33,28 +33,32 @@ Here is a quick example pipeline to characterize the point-spread-function (PSF)
 
 
 ```python
-from prose import Sequence, blocks
-from prose.tutorials import example_image
 import matplotlib.pyplot as plt
+from prose import Sequence, blocks
+from prose.simulations import example_image
 
 # getting the example image
 image = example_image()
 
-sequence = Sequence([
-    blocks.SegmentedPeaks(),  # stars detection
-    blocks.Cutouts(size=21),  # cutouts extraction
-    blocks.MedianEPSF(),       # PSF building
-    blocks.Moffat2D(),    # PSF modeling
-])
+sequence = Sequence(
+    [
+        blocks.PointSourceDetection(),  # stars detection
+        blocks.Cutouts(shape=21),  # cutouts extraction
+        blocks.MedianEPSF(),  # PSF building
+        blocks.Moffat2D(),  # PSF modeling
+    ]
+)
 
 sequence.run(image)
 
 # plotting
-image.show()           # detected stars
-image.plot_psf_model() # PSF model
+image.show()  # detected stars
+
+# effective PSF parameters
+image.epsf.params
 ```
 
-While being run on a single image, a Sequence is designed to be run on list of images (paths) and provides the architecture to build powerful pipelines. For more details check [Quickstart](https://prose.readthedocs.io/en/latest/notebooks/quickstart.html) and [What is a pipeline?](https://prose.readthedocs.io/en/latest/rst/core.html)
+While being run on a single image, a Sequence is designed to be run on list of images (paths) and provides the architecture to build powerful pipelines. For more details check [Quickstart](https://prose.readthedocs.io/en/latest/ipynb/quickstart.html) and [What is a pipeline?](https://prose.readthedocs.io/en/latest/ipynb/core.html)
 
 ## Installation
 
@@ -66,10 +70,10 @@ While being run on a single image, a Sequence is designed to be run on list of i
 pip install prose
 ```
 
-To install it through conda (recommended, within a fresh environment):
+For the latest version 
 
 ```shell
-conda env create -f {prose_repo}/environment.yml -n prose
+pip install 'prose @ git+https://github.com/lgrcia/prose'
 ```
 
 ## Contributions

@@ -1,17 +1,17 @@
-import twirl
-from .. import Block
-from ..core.source import Sources, PointSource
-from astropy.coordinates import SkyCoord
-import astropy.units as u
-import pandas as pd
-import numpy as np
-from astropy.time import Time
 import warnings
-from ..utils import gaia_query, sparsify
-from ..utils import cross_match
+
+import astropy.units as u
+import numpy as np
+import pandas as pd
+import twirl
+from astropy.coordinates import SkyCoord
+from astropy.time import Time
 from astroquery.mast import Catalogs
-from . import vizualisation as viz
-from prose.utils import cross_match
+
+from prose import Block
+from prose import visualization as viz
+from prose.core.source import PointSource, Sources
+from prose.utils import cross_match, gaia_query, sparsify
 
 __all__ = ["GaiaCatalog", "TESSCatalog"]
 
@@ -19,7 +19,6 @@ __all__ = ["GaiaCatalog", "TESSCatalog"]
 def image_gaia_query(
     image, limit=3000, correct_pm=True, wcs=True, circular=True, fov=None
 ):
-
     if wcs:
         center = image.wcs.pixel_to_world(*(np.array(image.shape) / 2)[::-1])
     else:

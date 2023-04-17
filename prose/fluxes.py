@@ -1,11 +1,15 @@
-import numpy as np
-from . import utils
-from dataclasses import dataclass, asdict
-from copy import deepcopy
-import matplotlib.pyplot as plt
-import pandas as pd
-import warnings
 import pickle
+import warnings
+from copy import deepcopy
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Union
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+from prose import utils
 
 
 def binned_white_function(x, bins: int = 12):
@@ -168,22 +172,42 @@ def optimal_flux(diff_fluxes, method="stddiff"):
 
 @dataclass
 class Fluxes:
+    """Photometric fluxes, from single to multiple stars and apertures.
+
+    Also hold contemporary time-series, errors and apertures properties.
+    """
+
     fluxes: np.ndarray
-    """Fluxes either as 1, 2, or 3 dimensional arrays
+    """Fluxes either as 1, 2, or 3 dimensional arrays, with following dimensions
         - 1: (time)
         - 2: (star, time)
         - 3: (aperture, star, time)
     """
     time: np.ndarray = None
+    """Array of observed time"""
     errors: np.ndarray = None
+    """Errors with same shape as :code:`fluxes`"""
     data: dict = None
+    """A dict of data time-series, each with the same shape as :code:`time`"""
     apertures: np.ndarray = None
+    """Apertures radii"""
     weights: np.ndarray = None
+    """Fluxes weights (from differential photometry)"""
     target: int = None
+    """Index of selected target"""
     aperture: int = None
+    """Index of selected aperture"""
+    metadata: dict = None
 
     @property
     def _is_target_aperture_set(self):
+        """Check if target and aperture are set depending on `fluxes` dimensions.
+
+        Returns
+        -------
+        bool
+            whether target and aperture are set
+        """
         if self.ndim == 1:
             return True
         if self.ndim == 2:
@@ -217,11 +241,18 @@ class Fluxes:
             return self.__dict__[name][self.aperture, self.target]
 
     @property
-    def flux(self):
+    def flux(self) -> np.array:
+        """Main flux
+
+        Returns
+        -------
+        np.array
+            Main flux
+        """
         return self._target_attr("fluxes")
 
     @property
-    def error(self):
+    def error(self) -> np.array:
         return self._target_attr("errors")
 
     @property
@@ -236,6 +267,17 @@ class Fluxes:
         pass
 
     def diff(self, comps: np.ndarray = None):
+        """Differential photometry
+
+        Parameters
+        ----------
+        comps : np.ndarray, optional
+            index of comparison stars, by default None
+
+        Returns
+        -------
+        differential :code:`Fluxes`
+        """
         if comps is not None:
             weights = np.zeros(self.fluxes[0:2])
             weights[:, comps] = 1
@@ -249,6 +291,12 @@ class Fluxes:
         return _new
 
     def autodiff(self):
+        """Automatic differential photometry with Broeg et al. 2005
+
+        Returns
+        -------
+        differential :code:`Fluxes`
+        """
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
             diff_fluxes, weights = auto_diff(self.fluxes, self.target)
@@ -261,10 +309,31 @@ class Fluxes:
         return _new
 
     def best_aperture_index(self, method="stddiff"):
+        """Find index of best aperture
+
+        Parameters
+        ----------
+        method : str, optional
+            Method to find best aperture, by default "stddiff"
+
+        Returns
+        -------
+        int
+            index of best aperture
+        """
         i = optimal_flux(self._target_attr("fluxes", full=True), method)
         return i
 
-    def estimate_best_aperture(self, target=None, method="stddiff"):
+    def estimate_best_aperture(self, target: int = None, method: str = "stddiff"):
+        """Inplace setting of best aperture
+
+        Parameters
+        ----------
+        target : int, optional
+            Index of target, by default None
+        method : str, optional
+            Method to find best aperture, by default "stddiff"
+        """
         if target is None:
             target = self.target
         self.aperture = self.best_aperture_index(method=method)
@@ -273,6 +342,19 @@ class Fluxes:
         pass
 
     def plot(self, marker=".", color="0.8", ls="", ax=None, **kwargs):
+        """Plot light curve
+
+        Parameters
+        ----------
+        marker : str, optional
+            Marker style, by default "."
+        color : str, optional
+            Marker color, by default "0.8"
+        ls : str, optional
+            Line style, by default ""
+        ax : _type_, optional
+            Matplotlib axis, by default None which takes :code:`plt.gca()`
+        """
         if ax is None:
             ax = plt.gca()
         kwargs.update(dict(marker=marker, color=color, ls=ls))
@@ -282,10 +364,34 @@ class Fluxes:
             ax.plot(self.time, self.flux, **kwargs)
 
     def errorbar(self, color="k", fmt=".", **kwargs):
+        """Error bar plot of the light curve
+
+        Parameters
+        ----------
+        color : str, optional
+            Marker color, by default "k"
+        fmt : str, optional
+            Error bar plot style, by default "."
+        """
         kwargs.update(dict(color=color, fmt=fmt))
         plt.errorbar(self.time, self.flux, self.error, **kwargs)
 
-    def bin(self, size, estimate_error=False):
+    def bin(self, size: float, estimate_error: bool = False) -> "Fluxes":
+        """Returns a :code:`Fluxes` instance with binned time series
+
+        Parameters
+        ----------
+        size : float
+            bin size in same unit as :code:`self.time`
+        estimate_error : bool, optional
+            whether to estimate error as the standard deviation of flux in each bin,
+            by default False
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         if isinstance(size, float):
             assert (
                 self.time is not None
@@ -315,11 +421,18 @@ class Fluxes:
 
         return _new
 
-    def save(self, path):
+    def save(self, path: Union[str, Path]):
+        """Save fluxes to file
+
+        Parameters
+        ----------
+        path : Union[str, Path]
+            path of the file
+        """
         with open(path, "wb") as f:
             pickle.dump(asdict(self), f)
 
-    def load(path):
+    def load(path: Union[str, Path]):
         with open(path, "rb") as f:
             return Fluxes(**pickle.load(f))
 

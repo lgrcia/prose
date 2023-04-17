@@ -33,6 +33,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
+    "sphinx_design",
 ]
 
 
@@ -112,6 +113,7 @@ autoclass_content = "both"
 import inspect
 import sys
 from glob import glob
+
 import prose
 from prose import Block
 
@@ -143,3 +145,25 @@ all_blocks = f"""
 """
 
 open("md/all_blocks.rst", "w").write(all_blocks)
+
+import os
+
+from prose.core.block import is_tested
+from prose.utils import get_all_blocks
+
+os.chdir("..")
+tested = []
+tested.append("# Tested blocks\n")
+tested.append("| Block | Tested |")
+tested.append("| ----- | ------ |")
+blocks = get_all_blocks()
+blocks = sorted(blocks, key=lambda block: block.__name__.lower())
+
+for block in blocks:
+    _is = is_tested(block.__name__)
+    tested.append(
+        f" | [`{block.__name__}`]({block.__module__}.{block.__name__}) | {'✅' if _is else '❌'} |"
+    )
+os.chdir("docs")
+
+open("./tested_blocks.md", "w").write("\n".join(tested))

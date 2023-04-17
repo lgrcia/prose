@@ -1,18 +1,19 @@
 import matplotlib
-import numpy as np
-from . import utils
 import matplotlib.offsetbox
-from matplotlib.lines import Line2D
-from matplotlib import patches
-from astropy.io import fits
-from mpl_toolkits import axes_grid1
-from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes, inset_axes
-import matplotlib.pyplot as plt
-from skimage.transform import resize
-from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-from matplotlib.ticker import AutoMinorLocator
-from matplotlib.legend_handler import HandlerPatch
 import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
+import numpy as np
+from astropy.io import fits
+from matplotlib import patches
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from matplotlib.legend_handler import HandlerPatch
+from matplotlib.lines import Line2D
+from matplotlib.ticker import AutoMinorLocator
+from mpl_toolkits import axes_grid1
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes, zoomed_inset_axes
+from skimage.transform import resize
+
+from prose import utils
 
 
 def plot(
@@ -114,7 +115,6 @@ class AnchoredHScaleBar(matplotlib.offsetbox.AnchoredOffsetbox):
         linekw={},
         **kwargs,
     ):
-
         if not ax:
             ax = plt.gca()
 
@@ -250,7 +250,6 @@ def multiplot(
 
 
 def bokeh_style(xminor=True, yminor=True, axes=None):
-
     if axes is None:
         axes = plt.gcf().axes
     elif not isinstance(axes, list):
@@ -312,7 +311,6 @@ def show_stars(
     color=None,
     contrast=0.05,
 ):
-
     if color is None:
         color = np.array([131, 220, 255]) / 255
 
@@ -343,7 +341,6 @@ def show_stars(
 
     if stars is not None:
         if highlight is not None:
-
             plt.plot(
                 stars[highlight, 0],
                 stars[highlight, 1],
@@ -474,7 +471,6 @@ def fancy_show_stars(
     zoom=True,
     options={},
 ):
-
     _options = {"aperture_color": "seagreen", "aperture_ls": "--"}
     _options.update(options)
 
@@ -502,7 +498,6 @@ def fancy_show_stars(
     label_yoffset = min(size_factor, 1) * 30
 
     if view == "all":
-
         for i, coord in enumerate(stars):
             circle = mpatches.Circle(
                 coord,
@@ -726,7 +721,6 @@ def gif_image_array(image, factor=0.25):
 
 
 def fancy_gif_image_array(image, median_psf, factor=0.25):
-
     fig = plt.figure(frameon=False)
     canvas = FigureCanvas(fig)
     ax = fig.add_axes([0, 0, 1, 1])
@@ -764,7 +758,7 @@ def array_to_tex(a, fmt="{: 0.3f}", dim=True):
     ValueError
         [description]
     """
-    from IPython.display import display, Math
+    from IPython.display import Math, display
 
     if isinstance(a, tuple):
         a = np.array(a)
@@ -792,7 +786,7 @@ def array_to_tex(a, fmt="{: 0.3f}", dim=True):
 
 
 def print_tex(tex):
-    from IPython.display import display, Math
+    from IPython.display import Math, display
 
     display(Math(r"{}".format(tex)))
 
@@ -821,7 +815,7 @@ def rename_tab(name):
     name : str
         name to be used
     """
-    from IPython.display import display, Javascript
+    from IPython.display import Javascript, display
 
     return Javascript('document.title="{}"'.format(name))
 
@@ -848,12 +842,14 @@ def plot_section(y, s, t0, duration, c="C0", y0=1, offset=0.002):
 
 # Debugging helpers
 
-from astroquery.mast import Catalogs
 import astropy.units as u
 import numpy as np
-from astropy.wcs import WCS, utils as wcsutils
-from prose.telescope import Telescope
 from astropy.coordinates import SkyCoord
+from astropy.wcs import WCS
+from astropy.wcs import utils as wcsutils
+from astroquery.mast import Catalogs
+
+from prose.telescope import Telescope
 
 
 def _show_tics(data, header=None, telescope_kw="TELESCOP", r=12 * u.arcminute):

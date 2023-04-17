@@ -1,21 +1,25 @@
-import numpy as np
-from . import viz, utils, Image, Telescope
-from photutils.psf import extract_stars
-from astropy.table import Table
-from astropy.nddata import NDData
-import celerite2 as celerite
-from os import path
-from astropy.time import Time
 import os
-from tqdm import tqdm
-from astropy.io import fits
-from datetime import datetime
-import matplotlib.pyplot as plt
-import warnings
-from skimage.draw import line_aa
-from .archive import sdss_image
 import shutil
+import warnings
+from datetime import datetime
+from os import path
+
+import celerite2 as celerite
+import matplotlib.pyplot as plt
+import numpy as np
 from astropy import units as u
+from astropy.io import fits
+from astropy.nddata import NDData
+from astropy.table import Table
+from astropy.time import Time
+from photutils.psf import extract_stars
+from skimage.draw import line_aa
+from tqdm import tqdm
+
+from prose import utils, viz
+from prose.archive import sdss_image
+from prose.core.image import Image
+from prose.telescope import Telescope
 
 
 def simple_images(fluxes, coords, bkg=0.0, shape=(100, 100), std=0.0):
@@ -32,7 +36,6 @@ def simple_images(fluxes, coords, bkg=0.0, shape=(100, 100), std=0.0):
 
 
 def fits_image(data, header, destination):
-
     header = dict(
         TELESCOP=header.get("TELESCOP", "fake"),
         EXPTIME=header.get("EXPTIME", 1),
@@ -236,7 +239,6 @@ class ObservationSimulation:
         self.remove_stars(close_by)
 
     def save_fits(self, destination, calibration=False, verbose=True):
-
         progress = lambda x: tqdm(x) if verbose else x
 
         with warnings.catch_warnings():
@@ -318,7 +320,6 @@ def xo_lightcurve(time, period=3, r=0.1, t0=0, plot=False):
 
 
 def source_example():
-
     shape = (170, 60)
     data = np.random.normal(loc=300.0, scale=10, size=shape)
 
@@ -381,7 +382,6 @@ def image_sample(*coords, fov=12):
 
 
 def disorganised_folder(destination):
-
     if path.exists(destination):
         shutil.rmtree(destination)
 
@@ -455,7 +455,6 @@ def disorganised_folder(destination):
 
 
 def moving_object(time, destination):
-
     # Creating the observation
     obs = ObservationSimulation(600, Telescope.from_name("A"))
     obs.set_psf((3.5, 3.5), 45, 4)

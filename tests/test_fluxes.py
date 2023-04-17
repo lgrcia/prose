@@ -1,6 +1,7 @@
-from prose import Fluxes
 import numpy as np
 import pytest
+
+from prose import Fluxes
 
 
 def test_1d():

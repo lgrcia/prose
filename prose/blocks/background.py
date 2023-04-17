@@ -1,9 +1,10 @@
-from prose import Block
-from prose.blocks.psf import *
+import numpy as np
 from astropy.stats import SigmaClip
 from photutils.background import Background2D, MedianBackground
-import numpy as np
-from ..utils import binn2D
+
+from prose import Block
+from prose.blocks.psf import *
+from prose.utils import binn2D
 
 # TODO
 

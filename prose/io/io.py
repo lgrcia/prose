@@ -1,14 +1,16 @@
 import glob
-from os import path
-import pandas as pd
-import numpy as np
-from ..telescope import Telescope
-from datetime import timedelta
-from astropy.io import fits
-from ..console_utils import progress, warning
-from astropy.time import Time
 import os
 import zipfile
+from datetime import timedelta
+from os import path
+
+import numpy as np
+import pandas as pd
+from astropy.io import fits
+from astropy.time import Time
+
+from prose.console_utils import progress, warning
+from prose.telescope import Telescope
 
 
 def phot2dict(filename):
@@ -90,7 +92,6 @@ def fits_to_df(
     raise_oserror=False,
     verbose_os=False,
 ):
-
     assert len(files) > 0, "Files not provided"
 
     last_telescope = "_"

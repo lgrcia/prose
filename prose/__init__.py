@@ -1,22 +1,22 @@
 import warnings
+
 from astropy.wcs import FITSFixedWarning
 
 warnings.simplefilter("ignore", FITSFixedWarning)
 
-from . import config
+from prose import config
 
 CONFIG = config.ConfigManager()
 CONFIG.check_builtins_changes()
 
-from . import visualization as viz
-
-from .io.fitsmanager import FitsManager
-from .telescope import Telescope
-from .core import Block, Sequence, Image, FITSImage, source
-from .fluxes import Fluxes
-from .simulations import example_image
-
 from pkg_resources import get_distribution
+
+from prose import visualization as viz
+from prose.core import Block, FITSImage, Image, Sequence, source
+from prose.fluxes import Fluxes
+from prose.io.fitsmanager import FitsManager
+from prose.simulations import example_image
+from prose.telescope import Telescope
 
 __version__ = get_distribution("prose").version
 

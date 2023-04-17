@@ -1,12 +1,13 @@
+import shutil
 from os import path
 from pathlib import Path
+
+import numpy as np
+import requests
 import yaml
 from yaml import Loader
-import numpy as np
-import shutil
-from .builtins import built_in_telescopes
-import glob
-import requests
+
+from prose.builtins import built_in_telescopes
 
 info = print
 package_name = "prose"
@@ -14,7 +15,6 @@ package_name = "prose"
 
 class ConfigManager:
     def __init__(self):
-
         self.config = None
 
         self.folder_path = Path.home() / f".{package_name}"
@@ -30,7 +30,6 @@ class ConfigManager:
         self.logs = []
 
     def check_config_file(self, load=False):
-
         if self.config_file.exists():
             with self.config_file.open(mode="r") as file:
                 if load:

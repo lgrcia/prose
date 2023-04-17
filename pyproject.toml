@@ -1,0 +1,51 @@
+[tool.poetry]
+name = "prose"
+version = "3.0.0"
+description = "Modular image processing pipelines for Astronomy"
+authors = ["Lionel Garcia"]
+license = "MIT"
+readme = "README.md"
+include = ["prose/io/*.sql"]
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.12"
+numpy = "^1.23.5"
+astropy = "^5.1.1"
+astroquery = "^0.4.6"
+requests = "^2.28.1"
+ipython = "*"
+scipy = "*"
+matplotlib = "*"
+scikit-image = "*"
+pandas = ">1.1"
+tqdm = "*"
+photutils = "^1.6.0"
+pyyaml = "*"
+tabulate = "*"
+sep = "*"
+celerite2 = "*"
+twirl = "*"
+multiprocess = "*"
+imageio = { version = "*", extras = ["ffmpeg"] }
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+black = "*"
+
+[tool.poetry.group.jax.dependencies]
+jax = "*"
+jaxopt = "*"
+
+[tool.poetry.group.docs.dependencies]
+sphinx = "*"
+docutils = "*"
+jupyterlab = "*"
+myst-parser = "*"
+sphinx-book-theme = "^1.0.0"
+myst-nb = "*"
+sphinx-copybutton = "*"
+sphinx-design = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

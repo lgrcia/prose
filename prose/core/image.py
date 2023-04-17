@@ -1,27 +1,28 @@
-import matplotlib.pyplot as plt
-import numpy as np
-from astropy.coordinates import SkyCoord
-import astropy.units as u
-from astropy.coordinates import Angle
-from dateutil import parser as dparser
-from astropy.wcs import WCS
-from .. import viz, utils, Telescope
-from astropy.io import fits
+import pickle
+from copy import deepcopy
+from dataclasses import asdict, dataclass
 from datetime import timedelta
 from pathlib import Path
-from ..core.source import Sources
-from matplotlib import gridspec
-from pathlib import Path
-from astropy.nddata import Cutout2D as astopy_Cutout2D
-from astropy.wcs.wcs import WCS
-from astropy.io.fits.hdu.base import _BaseHDU
-from PIL import Image
-from copy import deepcopy
-from dataclasses import dataclass, asdict
-import pickle
-from astropy.time import Time
 from typing import Union
+
+import astropy.units as u
+import matplotlib.pyplot as plt
+import numpy as np
+from astropy.coordinates import Angle, SkyCoord
+from astropy.io import fits
+from astropy.io.fits.hdu.base import _BaseHDU
+from astropy.nddata import Cutout2D as astopy_Cutout2D
 from astropy.nddata import overlap_slices
+from astropy.time import Time
+from astropy.wcs import WCS
+from astropy.wcs.wcs import WCS
+from dateutil import parser as dparser
+from matplotlib import gridspec
+from PIL import Image
+
+from prose import utils, viz
+from prose.core.source import Sources
+from prose.telescope import Telescope
 
 
 @dataclass
@@ -217,7 +218,10 @@ class Image:
     @property
     def exposure(self):
         """Exposure time as an astropy Quantity"""
-        return self._from_metadata_with_unit("exposure")
+        if "exposure" in self.metadata:
+            return self._from_metadata_with_unit("exposure")
+        else:
+            return None
 
     @property
     def jd(self):
@@ -230,6 +234,7 @@ class Image:
 
     @property
     def filter(self):
+        """Filter name"""
         return self.metadata["filter"]
 
     @property
@@ -263,7 +268,16 @@ class Image:
         # TODO: do according to last astronomical twilight?
         return (self.date - timedelta(hours=15)).date()
 
-    def set(self, name, value):
+    def set(self, name: str, value):
+        """Set a computed value
+
+        Parameters
+        ----------
+        name : str
+            name of the computed value
+        value : any
+            value to set
+        """
         self.computed[name] = value
 
     def get(self, name):
@@ -369,8 +383,14 @@ class Image:
         """Return whether the image is plate solved"""
         return self.wcs.has_celestial
 
-    def writeto(self, destination):
-        """TODO"""
+    def writeto(self, destination: Union[str, Path]):
+        """Write image to FITS file
+
+        Parameters
+        ----------
+        destination : Union[str, Path]
+            destination path
+        """
         hdu = fits.PrimaryHDU(
             data=self.data, header=fits.Header(utils.clean_header(self.header))
         )
@@ -523,14 +543,18 @@ def str_to_astropy_unit(unit_string):
 
 
 def FITSImage(
-    filepath_or_hdu, verbose=False, load_units=True, load_data=True, telescope=None
+    filepath_or_hdu: Union[str, Path, _BaseHDU],
+    verbose: bool = False,
+    load_units: bool = True,
+    load_data: bool = True,
+    telescope: Telescope = None,
 ) -> Image:
     """Create an image from a FITS file
 
     Parameters
     ----------
-    filepath : str
-        path of fits file
+    filepath_or_hdu : str
+        path of fits file of HDU object
     verbose : bool, optional
         whether to be verbose, by default False
     load_units : bool, optional

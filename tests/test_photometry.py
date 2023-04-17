@@ -1,6 +1,6 @@
 import numpy as np
-from prose import blocks, Sequence
-from prose import simulations
+
+from prose import Sequence, blocks, simulations
 
 t = np.linspace(0, 1, 20)
 true_y = np.sin(2 * np.pi * t / 0.5) + 1.0
@@ -16,7 +16,7 @@ coords[:, 0, :] = np.array(shape) / 2
 images = simulations.simple_images(fluxes, coords, 1.0, shape=shape)
 
 
-def test_photometry():
+def test_AperturePhotometryAnnulusBackground():
     ref = images[0]
     ref = blocks.PointSourceDetection(False, 0, 0)(ref)
 

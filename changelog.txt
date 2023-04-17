@@ -1,4 +1,0 @@
-2.0.1
-- better pip packaging
-- few fixes in FitsManger
-# - restore TESS capabilities

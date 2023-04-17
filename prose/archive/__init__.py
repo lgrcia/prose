@@ -1,2 +1,2 @@
-from .pos1 import pos1_image
-from .sdss import sdss_image
+from prose.archive.pos1 import pos1_image
+from prose.archive.sdss import sdss_image
