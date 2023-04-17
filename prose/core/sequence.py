@@ -11,10 +11,8 @@ from tabulate import tabulate
 from tqdm.autonotebook import tqdm
 
 from prose.console_utils import TQDM_BAR_FORMAT, error, warning
+from prose.core.image import Buffer, FITSImage, Image
 from prose.utils import full_class_name
-
-from ..console_utils import TQDM_BAR_FORMAT, error, warning
-from .image import Buffer, FITSImage, Image
 
 
 def progress(name, x, **kwargs):
