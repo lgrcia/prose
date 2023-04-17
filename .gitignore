@@ -62,3 +62,5 @@ docs/_build
 docs/md/generated
 _docs
 **/.ipynb_checkpoints
+docs/tested_blocks.md
+docs/md/all_blocks.rst
