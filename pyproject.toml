@@ -50,6 +50,7 @@ scipy = "*"
 matplotlib = "*"
 scikit-image = "^0.20.0"
 pandas = "^1.5.3"
+sphinx-design = "*"
 
 [build-system]
 requires = ["poetry-core"]

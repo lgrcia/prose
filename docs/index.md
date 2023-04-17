@@ -1,3 +1,7 @@
+---
+sd_hide_title: true
+---
+
 # prose
 
 ```{image} _static/prose3.png
@@ -7,7 +11,6 @@
 
 ```{warning} 
 Version **3.0.0** is not on pypi yet, install with:
-
 `pip install 'prose @ git+https://github.com/lgrcia/prose'`
 ```
 
