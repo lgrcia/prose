@@ -4,6 +4,15 @@ import pytest
 from prose import Fluxes
 
 
+def test_copy():
+    x = np.random.rand(10)
+    f = Fluxes(x, data={"test": 0})
+    f2 = f.copy()
+    assert f.flux is not f2.flux
+    assert f.data is not f2.data
+    assert f.data == f2.data
+
+
 def test_1d():
     x = np.random.rand(10)
     f = Fluxes(x)
