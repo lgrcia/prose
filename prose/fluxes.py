@@ -155,14 +155,23 @@ def auto_diff(fluxes: np.array, i: int = None):
         return auto_diff_1d(fluxes, i)
 
 
-def optimal_flux(diff_fluxes, method="stddiff"):
+def optimal_flux(diff_fluxes, method="stddiff", sigma=4):
+    fluxes = diff_fluxes.copy()
+    fluxes = fluxes[
+        ...,
+        np.all(
+            (fluxes - np.median(fluxes, 1)[..., None])
+            < sigma * np.std(fluxes, 1)[..., None],
+            0,
+        ),
+    ]
     if method == "binned":
-        white_noise = binned_white_function(diff_fluxes)
-        criterion = white_noise(diff_fluxes)
+        white_noise = binned_white_function(fluxes)
+        criterion = white_noise(fluxes)
     elif method == "stddiff":
-        criterion = utils.std_diff_metric(diff_fluxes)
+        criterion = utils.std_diff_metric(fluxes)
     elif method == "stability":
-        criterion = utils.stability_aperture(diff_fluxes)
+        criterion = utils.stability_aperture(fluxes)
     else:
         raise ValueError("{} is not a valid method".format(method))
 
@@ -230,6 +239,8 @@ class Fluxes:
             self.fluxes = self.fluxes.copy()[None, :]
             if self.errors is not None:
                 self.errors = self.errors.copy()[None, :]
+        if self.metadata is None:
+            self.metadata = {}
 
     def _target_attr(self, name, full=False):
         assert self.__dict__[name] is not None, f"{name} not provided"
@@ -308,7 +319,7 @@ class Fluxes:
 
         return _new
 
-    def best_aperture_index(self, method="stddiff"):
+    def best_aperture_index(self, method="stddiff", sigma=4):
         """Find index of best aperture
 
         Parameters
@@ -321,11 +332,13 @@ class Fluxes:
         int
             index of best aperture
         """
-        i = optimal_flux(self._target_attr("fluxes", full=True), method)
+        i = optimal_flux(self._target_attr("fluxes", full=True), method, sigma=sigma)
         return i
 
-    def estimate_best_aperture(self, target: int = None, method: str = "stddiff"):
-        """Inplace setting of best aperture
+    def estimate_best_aperture(
+        self, target: int = None, method: str = "stddiff", sigma=4
+    ):
+        """Inplace setting of best aperture.
 
         Parameters
         ----------
@@ -336,7 +349,7 @@ class Fluxes:
         """
         if target is None:
             target = self.target
-        self.aperture = self.best_aperture_index(method=method)
+        self.aperture = self.best_aperture_index(method=method, sigma=sigma)
 
     def estimate_error(self):
         pass
@@ -477,14 +490,15 @@ class Fluxes:
         return _new
 
     def sigma_clipping_data(self, iterations: int = 5, **kwargs):
-        """Returns a flux masked using iteratively sigma clipped data
+        """Return a Fluxes instance masked using iteratively sigma clipped data.
 
         Parameters
         ----------
         it : int, optional
             iterations, by default 5
         **kwargs: dict
-            dict where key is the name of the data to sigma clip and value is the sigma
+            dict where keys are the names of the data to sigma clip and value are the
+            sigma
 
         Returns
         -------
@@ -499,3 +513,56 @@ class Fluxes:
                 m = np.abs(value - np.nanmean(value)) < np.nanstd(value) * sigma
                 mask = mask & m
         return self.mask(mask)
+
+    def sigma_clip_flux(self, iterations: int = 5, sigma: float = 4.0):
+        """Return a Fluxes instance masked using iteratively sigma clipping.
+
+        Parameters
+        ----------
+        it : int, optional
+            iterations, by default 5
+        sigma: float
+            sigma, by default 4.0
+
+        Returns
+        -------
+        Fluxes
+            sigma clipped Fluxes
+        """
+        flux = self.flux.copy()
+        mask = np.ones_like(self.time).astype(bool)
+        for _ in range(iterations):
+            mask &= np.abs(flux - np.nanmean(flux)) < np.nanstd(flux[mask]) * sigma
+        return self.mask(mask)
+
+    def mask_stars(self, mask: np.array, keep_indexing: bool = True):
+        """Mask stars fluxes.
+
+        In order to keep indexing, the fluxes are set to -1.
+
+        Parameters
+        ----------
+        mask : np.array
+            A boolean array of the same length as the number of stars, indicating which fluxes should be masked
+        remove : bool, optional
+            whether to keep indexing (recommended) and only set pixels to 1, by default False
+
+        Returns
+        -------
+        Fluxes
+            A new Fluxes instance with masked stars
+        """
+        copy = self.copy()
+        if not keep_indexing:
+            copy.fluxes = self.fluxes[..., mask, :]
+            if copy.errors is not None:
+                copy.errors = self.errors[..., mask, :]
+            if copy.weights is not None:
+                copy.weights = self.weights[..., mask, :]
+        else:
+            copy.fluxes[:, ~mask] = -1
+            if copy.errors is not None:
+                copy.errors[:, ~mask] = -1
+            if copy.weights is not None:
+                copy.errors[:, ~mask] = 0
+        return copy
