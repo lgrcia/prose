@@ -12,6 +12,8 @@ from skimage.transform import resize
 from prose import Block, viz
 from prose.visualization import corner_text
 
+__all__ = ["VideoPlot"]
+
 
 def im_to_255(image, factor=0.25):
     if factor != 1:

@@ -8,3 +8,4 @@ from .geometry import *
 from .photometry import *
 from .psf import *
 from .utils import *
+from .visualization import *
