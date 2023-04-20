@@ -83,12 +83,38 @@ class _CatalogBlock(Block):
             catalog = catalog.iloc[np.flatnonzero(mask)].reset_index()
 
         elif self.mode == "crossmatch":
-            xys = catalog[["x", "y"]].values
-            matches = cross_match(image.sources.coords, xys, return_idxs=True)
-            catalog.loc[len(xys)] = [np.nan for _ in catalog.keys()]
-            matches[np.isnan(matches)] = -1
-            matches = matches.astype(int)
-            catalog = catalog.iloc[matches.T[1]].reset_index()
+            coords_1 = image.sources.coords
+            coords_2 = catalog[["x", "y"]].values
+
+            _coords_2 = dict(zip(range(len(coords_2)), coords_2))
+            tolerance = 10
+            matches = {}
+
+            for i, coords in enumerate(coords_1):
+                idxs, available_coords = list(zip(*_coords_2.items()))
+                distances = np.linalg.norm(available_coords - coords, axis=1)
+                if np.all(np.isnan(available_coords)):
+                    break
+                closest = np.nanargmin(distances)
+                if distances[closest] < tolerance:
+                    matches[i] = idxs[closest]
+                    del _coords_2[idxs[closest]]
+                else:
+                    matches[i] = None
+
+            new_df_dict = []
+            nans = {name: "nan" for name in image.catalogs[self.catalog_name].keys()}
+
+            for i in range(len(coords_1)):
+                if matches[i] is not None:
+                    new_df_dict.append(
+                        dict(image.catalogs[self.catalog_name].iloc[int(matches[i])])
+                    )
+                    pass
+                else:
+                    new_df_dict.append(nans)
+
+            catalog = pd.DataFrame(new_df_dict)
 
         image.catalogs[self.catalog_name] = catalog.iloc[0 : self.limit]
 
