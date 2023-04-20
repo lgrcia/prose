@@ -128,7 +128,7 @@ def test_Apply():
     assert im.a == 4
 
 
-def test_Calibration():
+def test_Calibration_with_arrays():
     from prose.blocks import Calibration
 
     im = image.copy()
@@ -180,6 +180,25 @@ def test_Calibration():
     expected = (im.data - bias - dark) / flat
     Calibration(bias=bias, flats=observed_flat, darks=observed_dark).run(im)
     np.testing.assert_allclose(im.data, expected)
+
+    # empty lists and ndarray
+    # this reproduce an observed bug
+    im = image.copy()
+    im.data = im.data + dark
+    expected = im.data - dark
+    Calibration(bias=np.array([], dtype=object), flats=[], darks=observed_dark).run(im)
+
+
+def test_Calibration_with_files(tmp_path):
+    from prose.blocks import Calibration
+
+    im = image.copy()
+    calib = image.copy()
+    calib_path = tmp_path / "calib.fits"
+    calib.writeto(calib_path)
+    Calibration(bias=calib_path).run(im)
+    Calibration(bias=[calib_path]).run(im)
+    Calibration(bias=np.array([calib_path])).run(im)
 
 
 def test_SortSources():

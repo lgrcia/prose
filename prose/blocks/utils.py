@@ -1,5 +1,6 @@
 from functools import partial
 from pathlib import Path
+from typing import Union
 
 import numpy as np
 from astropy.io import fits
@@ -63,7 +64,7 @@ class SortSources(Block):
 
 
 class Apply(Block):
-    """Apply a function to an image
+    """Apply a function to an image.
 
     Parameters
     ----------
@@ -81,7 +82,7 @@ class Apply(Block):
 
 class Get(Block):
     def __init__(self, *attributes, name: str = "get", arrays: bool = True, **getters):
-        """Retrieve and store properties from an :py:class:`~prose.Image`
+        """Retrieve and store properties from an :py:class:`~prose.Image`.
 
         If a list of paths is provided to a :py:class:`~prose.Sequence`, each image is
         created at the beginning of the sequence, and deleted at the end, so that
@@ -158,25 +159,35 @@ class Get(Block):
 class Calibration(Block):
     def __init__(
         self,
-        darks: list = None,
-        flats: list = None,
-        bias: list = None,
+        darks: Union[list, np.ndarray] = None,
+        flats: Union[list, np.ndarray] = None,
+        bias: Union[list, np.ndarray] = None,
         loader=FITSImage,
         easy_ram: bool = True,
         verbose: bool = True,
         shared: bool = False,
         **kwargs,
     ):
-        """Flat, Bias and Dark calibration
+        """Flat, Bias and Dark calibration.
+
+        The provided calibration images can be either:
+
+        - a list of paths to FITS files
+        - a list of :py:class:`~prose.Image` objects
+        - an array of np.ndarray images
+        - a single :py:class:`~prose.Image` object
+        - a single np.ndarray image
+        - an empty list, in which case the calibration is skipped
+        - None, in which case the calibration is skipped
 
         Parameters
         ----------
-        darks : list, optional
-            list of dark files paths, by default None
-        flats : list, optional
-            list of flat files paths, by default None
-        bias : list, optional
-            list of bias files paths, by default None
+        darks : list or np.ndarray, optional
+            list of darks, by default None
+        flats : list or np.ndarray, optional
+            list of flats, by default None
+        bias : list or np.ndarray, optional
+            list of bias, by default None
         loader : object, optional
             loader used to load str path to :py:class:`~prose.Image`, by default :py:class:`~prose.FITSImage`
         easy_ram : bool, optional
@@ -194,9 +205,25 @@ class Calibration(Block):
 
         self.shapes = {}
 
-        self.master_bias = self._produce_master(bias, "bias")
-        self.master_dark = self._produce_master(darks, "dark")
-        self.master_flat = self._produce_master(flats, "flat")
+        def check_input(value):
+            if value is None:
+                value = []
+            elif isinstance(value, np.ndarray):
+                if len(value) == 0:
+                    value = []
+                elif value.ndim == 2:
+                    value = [value]
+                # ndim 1 or 3
+                else:
+                    value = value.tolist()
+            if not isinstance(value, (list, np.ndarray)):
+                value = [value]
+
+            return value
+
+        self.master_bias = self._produce_master(check_input(bias), "bias")
+        self.master_dark = self._produce_master(check_input(darks), "dark")
+        self.master_flat = self._produce_master(check_input(flats), "flat")
 
         if shared:
             self._share()
@@ -207,7 +234,7 @@ class Calibration(Block):
 
     def _produce_master(self, images, image_type):
         if images is not None:
-            if not isinstance(images, (list)):
+            if not isinstance(images, list):
                 images = [images]
 
             if len(images) == 0:
@@ -220,7 +247,7 @@ class Calibration(Block):
                 return np.median(im, 0)
 
         def _get_data_exposure(image):
-            if isinstance(image, str):
+            if isinstance(image, (str, Path)):
                 image = self.loader(image)
 
             if isinstance(image, Image):
@@ -233,7 +260,7 @@ class Calibration(Block):
                 image_exposure = 1.0
             else:
                 raise ValueError(
-                    f"Unsupported image type, must be str, Image or np.ndarray (provided {type(image)}"
+                    f"Unsupported image type, must be a path, Image or np.ndarray (provided {type(image)}"
                 )
 
             return image_data, image_exposure
