@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from astropy import units as u
 from astropy.io import fits
+from astropy.io.fits import Header
 from astropy.nddata import NDData
 from astropy.table import Table
 from astropy.time import Time
@@ -355,7 +356,8 @@ def example_image(seed=43, n=300, w=600):
     obs = ObservationSimulation(w, Telescope.from_name("A"))
     obs.set_psf((3.5, 3.5), 45, 4)
     obs.add_stars(n, [0, 1])
-    return Image(obs.image(0, 300), metadata=dict(TELESCOP="A"))
+    im = Image(obs.image(0, 300), metadata=dict(TELESCOP="A"))
+    return im
 
 
 def simulate_observation(time, dflux, destination, dx=3):

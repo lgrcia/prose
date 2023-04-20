@@ -11,6 +11,7 @@ import numpy as np
 from astropy.coordinates import Angle, SkyCoord
 from astropy.io import fits
 from astropy.io.fits.hdu.base import _BaseHDU
+from astropy.io.fits.header import Header
 from astropy.nddata import Cutout2D as astopy_Cutout2D
 from astropy.nddata import overlap_slices
 from astropy.time import Time
@@ -55,6 +56,9 @@ class Image:
     computed: dict = None
     """A dictionary containing any user and block-defined attributes"""
 
+    header: Header = None
+    """FITS header associated with the image (optional)"""
+
     _wcs = None
 
     def __post_init__(self):
@@ -67,6 +71,8 @@ class Image:
             self.catalogs = {}
         if self.computed is None:
             self.computed = {}
+        if self.header is None:
+            self.header = Header()
         if isinstance(self._sources, dict):
             self._sources = Sources(**self._sources)
         if self._sources is None:
@@ -197,9 +203,10 @@ class Image:
         unit = str_to_astropy_unit(self.metadata[unit_name])
         if name in ["ra", "dec"]:
             return Angle(value, unit).to(u.deg)
-        else:
+        if value is not None:
             return value * unit
-            ""
+        else:
+            return None
 
     @property
     def shape(self):
@@ -285,7 +292,7 @@ class Image:
 
     @property
     def sources(self):
-        """Image sources
+        """Image sources.
 
         Returns
         -------
@@ -300,23 +307,32 @@ class Image:
         else:
             self._sources = Sources(np.array(new_sources))
 
-    def cutout(self, coords, shape, wcs=True, sources=True, reset_index=True):
-        """Return a list of Image cutouts from the image
+    def cutout(
+        self,
+        coords: Union[list, tuple, np.ndarray],
+        shape: Union[int, tuple],
+        wcs: bool = True,
+        sources: bool = True,
+        reset_index: bool = True,
+    ) -> Image:
+        """Return a cutout Image instance.
 
         Parameters
         ----------
-        coords : np.ndarray
-            (N, 2) array of cutouts center coordinates
+        coords : list, tuple, np.ndarray
+            cutout center coordinates
         shape : tuple or int
             The shape of the cutouts to extract. If int, shape is (shape, shape)
         wcs : bool, optional
             whether to compute and include cutouts WCS (takes more time), by default True
+        sources : bool, optional
+            whether to compute and include cutouts sources, by default True
         reset_index: bool,
             whether to reset the sources indexes, by default True
         Returns
         -------
-        list of Image
-            image cutouts
+        Image
+            Image instance with data and catalogs containing cutout data and sources
         """
         if isinstance(shape, (int, float)):
             shape = (shape, shape)
@@ -366,7 +382,7 @@ class Image:
 
     @property
     def wcs(self):
-        """astropy.wcs.WCS object associated with the FITS ``Image.header``"""
+        """astropy.wcs.WCS object associated with the FITS ``Image.header``."""
         if self._wcs is None:
             self._wcs = WCS(self.metadata.get("wcs", None))
         return self._wcs
@@ -380,7 +396,7 @@ class Image:
 
     @property
     def plate_solved(self):
-        """Return whether the image is plate solved"""
+        """Return whether the image is plate solved."""
         return self.wcs.has_celestial
 
     def writeto(self, destination: Union[str, Path]):
@@ -398,7 +414,7 @@ class Image:
 
     @property
     def skycoord(self):
-        """astropy SkyCoord object based on header RAn, DEC"""
+        """Astropy SkyCoord object based on header RAn, DEC."""
         return SkyCoord(self.ra, self.dec, frame="icrs")
 
     def plot_catalog(self, name, color="y", label=False, n=100000):
@@ -482,9 +498,28 @@ class Image:
 
         return _d, pixels
 
-    def data_cutouts(self, sources, shape):
+    def data_cutouts(
+        self, sources: Union[np.ndarray, Sources], shape: Union[int, tuple]
+    ) -> np.ndarray:
+        """Extract cutouts from image.
+
+        Parameters
+        ----------
+        sources : Union[np.ndarray, Sources]
+            Coordinates (or Sources) of the cutouts centers
+        shape : Union[int, tuple]
+            Shape of the cutouts
+
+        Returns
+        -------
+        np.ndarray
+            cutouts
+        """
         if isinstance(sources, Sources):
             sources = sources.coords
+
+        if isinstance(shape, int):
+            shape = (shape, shape)
 
         cutouts = []
         for x, y in sources:

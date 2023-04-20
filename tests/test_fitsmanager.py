@@ -5,7 +5,6 @@ from prose import FitsManager, Image, Telescope
 
 def test_empty_header(tmp_path):
     im = Image()
-    im.header = Header()
     im.writeto(tmp_path / "test.fits")
 
     FitsManager(tmp_path)
@@ -13,7 +12,6 @@ def test_empty_header(tmp_path):
 
 def test_custom_fm(tmp_path):
     im = Image()
-    im.header = Header()
 
     keyword = "FILT"
     value = "test_filter"
