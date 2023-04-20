@@ -5,7 +5,7 @@ from typing import Union
 import pytest
 
 from prose.console_utils import warning
-from prose.core.image import Image
+from prose.core.image import Image, Buffer
 
 
 class Block(object):
@@ -49,7 +49,12 @@ class Block(object):
 
     def _run(self, buffer):
         t0 = time()
-        image = buffer[0] if self.size == 1 else buffer
+        if isinstance(buffer, Buffer):
+            image = buffer[0] if self.size == 1 else buffer
+        elif isinstance(buffer, Image):
+            image = buffer
+        else:
+            raise ValueError("block must be run on a Buffer or an Image")
         self.run(image)
         self.processing_time += time() - t0
         self.runs += 1
