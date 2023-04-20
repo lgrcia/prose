@@ -1,5 +1,8 @@
-from prose.core.image import Image, Buffer
 import numpy as np
+import pytest
+
+from prose.core.image import Buffer, Image
+from prose.core.source import PointSource, Sources
 
 
 def test_init_append(n=5):
@@ -19,3 +22,25 @@ def test_buffer_iter():
     buffer.init(data)
     for i, buf in enumerate(buffer):
         assert buf.current == data[i]
+
+
+def test_cutout(coords=(0, 0)):
+    image = Image(data=np.random.rand(100, 100))
+    im = image.cutout(coords, 5, wcs=False)
+    assert im.data.shape == (5, 5)
+
+
+def test_data_cutouts():
+    image = Image(data=np.random.rand(100, 100))
+    coords = np.random.rand(10, 2)
+    cutouts = image.data_cutouts(coords, 5)
+
+
+def test_plot_sources():
+    image = Image(data=np.random.rand(100, 100))
+    image.sources = Sources([PointSource(coords=(0, 0), i=i) for i in range(5)])
+    image.show()
+    image.sources[[0, 1, 3]].plot()
+    image.sources[0].plot()
+    # seen in a bug
+    image.sources[np.int64(0)].plot()

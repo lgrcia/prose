@@ -505,7 +505,8 @@ class Sources:
         self.sources = np.array(self.sources)
 
     def __getitem__(self, i):
-        if isinstance(i, int):
+        if np.isscalar(i):
+            i = int(i)
             return self.sources[i]
         else:
             return self.__class__(self.sources[i])
