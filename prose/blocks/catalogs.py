@@ -103,7 +103,7 @@ class _CatalogBlock(Block):
                     matches[i] = None
 
             new_df_dict = []
-            nans = {name: "nan" for name in image.catalogs[self.catalog_name].keys()}
+            nans = {name: np.nan for name in image.catalogs[self.catalog_name].keys()}
 
             for i in range(len(coords_1)):
                 if matches[i] is not None:
