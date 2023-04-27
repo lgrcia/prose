@@ -10,6 +10,13 @@ With that in mind, there are few ways to contribute to prose:
 - *field-specific developments*: you want to use prose in a particular field of Astronomy (e.g. develop a new `Block` or new products)
 - *core developments*: you want to make changes to prose documentation or its core objects (e.g. `Image` or `Sequence`)
 
+## Get started
+
+1. [fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) the github repository
+2. install prose from your local fork, with `pip install -e {your_local_fork}`
+3. Modify the source code, commit and push
+4. Make a [pull request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests)
+
 ## Field-specific developments
 
 If you want to adapt prose to your own field of Astronomy (e.g. comets, exoplanets, galaxies, space debris... etc) you may want to develop a package using prose rather than making core changes. This is particularly true if you need to develop methods targeting specific products, located after the image processing (see top schematic). Even if being independent in your developments, there are few ways this could contribute to prose, and the community can help.
