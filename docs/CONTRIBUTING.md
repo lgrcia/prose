@@ -38,6 +38,7 @@ If at the idea stage, feel free to [open an issue](https://github.com/lgrcia/pro
 
 ### Coding style
 For core developments, here are some style guidelines we try to stick to:
+- commit messages using [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/)
 - [black](https://black.readthedocs.io/en/stable/) formatting with a 88 characters line limit
 - explicit variable name is preferred over comments
 - extensive comments
