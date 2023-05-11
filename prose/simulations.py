@@ -47,7 +47,7 @@ def fits_image(data, header, destination, **kwargs):
         JD=header.get("JD", 0),
         RA=header.get("RA", 12.84412),
         DEC=header.get("DEC", -22.85886),
-        **kwargs
+        **kwargs,
     )
     header["DATE-OBS"] = header.get("DATE-OBS", Time(datetime.now()).to_value("fits"))
     hdu = fits.PrimaryHDU(data, header=fits.Header(header))
@@ -276,6 +276,7 @@ class ObservationSimulation:
                         "IMAGETYP": "dark",
                     },
                     path.join(destination, f"fake-dark.fits"),
+                    **kwargs,
                 )
 
                 fits_image(
@@ -287,6 +288,7 @@ class ObservationSimulation:
                         "IMAGETYP": "bias",
                     },
                     path.join(destination, f"fake-C001-bias.fits"),
+                    **kwargs,
                 )
 
                 for i in range(0, 4):
@@ -300,6 +302,7 @@ class ObservationSimulation:
                             "FILTER": "a",
                         },
                         path.join(destination, f"fake-flat-{i}.fits"),
+                        **kwargs,
                     )
 
 
