@@ -1,0 +1,50 @@
+name: prose/publish
+
+on:
+  release:
+    types: [published]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  ci:
+    name: Build & Publish w/Poetry
+
+    strategy:
+      matrix:
+        python-version: ["3.10"]
+        os: [ ubuntu-latest ]
+
+    runs-on: ${{ matrix.os }}
+
+    env:
+      PROJECT_NAME: "Prose"
+      PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+
+    steps:
+      - name: Checkout 🛎
+        uses: actions/checkout@v3
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+
+      - name: Setup Poetry Configuration 🛠️
+        run: poetry config pypi-token.pypi $PYPI_API_TOKEN
+
+      - name: Install Dependencies
+        run: poetry install --no-root --no-dev
+
+      - name: Build Package 🐍
+        run: poetry build
+      
+      - name: Dry-run Publish to PyPI 😬
+        run: poetry publish --dry-run
+
+      - name: Publish to PyPI 🚀
+        run: poetry publish --skip-existing
