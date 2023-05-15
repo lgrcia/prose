@@ -1,0 +1,40 @@
+name: prose/ci
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - '__pycache__'
+      - '.pytest_cache'
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: CI/CD Build & Test w/pytest
+    strategy:
+      matrix:
+        os: [ ubuntu-latest ]
+
+    runs-on: ${{ matrix.os }}
+
+    env:
+      PROJECT_NAME: "Prose"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Environment File
+        run: |
+          touch .env
+          echo PROJECT_NAME=${PROJECT_NAME} >> .env
+          cat .env
+
+      - name: Docker Compose Build
+        run: docker compose -f docker-compose.yml build --build-arg INSTALL_DEV="true"
+
+      - name: Run Pytest Suite
+        run: docker compose -f docker-compose.yml run app pytest
