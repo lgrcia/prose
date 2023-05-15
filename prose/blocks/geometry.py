@@ -1,13 +1,31 @@
-from typing import Union
+from typing import Optional, Union
 
 import numpy as np
 from scipy.spatial import KDTree
 from skimage.transform import AffineTransform
-from twirl import utils as twirl_utils
+from twirl import quads, triangles
+from twirl.geometry import get_transform_matrix, pad
+from twirl.match import count_cross_match
 
 from prose.core import Block, Image
 
 __all__ = ["Trim", "Cutouts", "Drizzle"]
+
+
+def hashes(asterisms):
+    # check type
+    if not isinstance(asterisms, int):
+        raise TypeError("asterisms must be an int")
+    # check value
+    if not asterisms in [3, 4]:
+        raise ValueError("asterisms must be 3 or 4")
+    else:
+        if asterisms == 3:
+            return triangles.hashes
+        elif asterisms == 4:
+            return quads.hashes
+        else:
+            raise ValueError("asterisms must be 3 or 4")
 
 
 class Trim(Block):
@@ -60,7 +78,7 @@ class Cutouts(Block):
         self,
         shape: Union[int, tuple] = 50,
         wcs: bool = False,
-        name: str = None,
+        name: Optional[str] = None,
         sources: bool = False,
     ):
         """Create cutouts around all sources
@@ -112,7 +130,7 @@ class SetAffineTransform(Block):
 
 class ComputeTransform(Block):
     """
-    Compute transformation fromm a reference image
+    Compute transformation from a reference image
 
     |read| ``Image.sources`` on both reference and input image
 
@@ -126,19 +144,28 @@ class ComputeTransform(Block):
         number of stars to consider to compute transformation, by default 10
     """
 
-    def __init__(self, reference_image: Image, n=10, discard=True, **kwargs):
-        super().__init__(**kwargs)
-        ref_coords = reference_image.sources.coords
-        self.ref = ref_coords[0:n].copy()
+    def __init__(
+        self,
+        reference_image: Image,
+        n: int = 20,
+        discard: bool = True,
+        asterisms: int = 3,
+        name: Optional[str] = None,
+        min_match: int = 10,
+    ):
+        super().__init__(name=name)
+        self._coords_ref = reference_image.sources.coords[0:n]
         self.n = n
-        self.quads_ref, self.stars_ref = twirl_utils.quads_stars(ref_coords, n=n)
-        self.KDTree = KDTree(self.quads_ref)
+        self._asterisms = asterisms
+        self._hashes = hashes(asterisms)
+        self._hashes_ref, self._asterism_coords_ref = self._hashes(self._coords_ref)
         self.discard = discard
         self._parallel_friendly = True
+        self._min_match = min_match
 
     def run(self, image):
-        if len(image.sources.coords) >= 5:
-            result = self.solve(image.sources.coords)
+        if len(image.sources.coords) >= self._asterisms + 2:
+            result = self.solve(image.sources.coords.copy())
             if result is not None:
                 image.transform = AffineTransform(result)
             else:
@@ -147,35 +174,27 @@ class ComputeTransform(Block):
             image.discard = True
 
     def solve(self, coords, tolerance=2):
-        s = coords.copy()
-        quads, stars = twirl_utils.quads_stars(s, n=self.n)
-        _, indices = self.KDTree.query(quads)
+        hashes, asterism_coords = self._hashes(coords)
+        distances = np.linalg.norm(
+            hashes[:, None, :] - self._hashes_ref[None, :, :], axis=2
+        )
+        shortest_hash = np.argmin(distances, 1)
+        ns = []
 
-        # We pick the two asterismrefs leading to the highest stars matching
-        closeness = []
-        for i, m in enumerate(indices):
-            M = twirl_utils._find_transform(self.stars_ref[m], stars[i])
-            new_ref = twirl_utils.affine_transform(M)(self.ref)
-            closeness.append(
-                twirl_utils._count_cross_match(s, new_ref, tolerance=tolerance)
+        for i, j in enumerate(shortest_hash):
+            M = get_transform_matrix(asterism_coords[j], self._asterism_coords_ref[i])
+            test = (M @ pad(coords).T)[0:2].T
+            n = count_cross_match(self._coords_ref, test, tolerance)
+            ns.append(n)
+            if self._min_match is not None:
+                if n >= self._min_match:
+                    break
+
+            i = np.argmax(ns)
+            M = get_transform_matrix(
+                coords[np.argmin(distances, 1)[i]],
+                self._asterism_coords_ref[i],
             )
-
-        i = np.argmax(closeness)
-        m = indices[i]
-        S1 = self.stars_ref[m]
-        S2 = stars[i]
-        M = twirl_utils._find_transform(S1, S2)
-        new_ref = twirl_utils.affine_transform(M)(self.ref)
-
-        matches = twirl_utils.cross_match(
-            new_ref, s, tolerance=tolerance, return_ixds=True
-        ).T
-        if len(matches) == 0:
-            return None
-        else:
-            i, j = matches
-
-        return twirl_utils._find_transform(s[j], self.ref[i])
 
 
 class Drizzle(Block):

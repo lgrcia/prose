@@ -55,11 +55,11 @@ class _CatalogBlock(Block):
         self.catalog_name = name
         self.limit = limit
 
-    def get_catalog(self, image):
+    def _get_catalog(self, image):
         raise NotImplementedError()
 
     def run(self, image):
-        catalog = self.get_catalog(image)
+        catalog = self._get_catalog(image)
         radecs = np.array(
             [catalog["ra"].quantity.to(u.deg), catalog["dec"].quantity.to(u.deg)]
         )
@@ -122,29 +122,42 @@ class _CatalogBlock(Block):
 # TODO
 class PlateSolve(Block):
     def __init__(
-        self, reference=None, n=30, tolerance=10, radius=1.2, debug=False, **kwargs
+        self,
+        reference=None,
+        n=15,
+        tolerance=10,
+        radius=1.2,
+        debug=False,
+        name=None,
+        asterism=4,
     ):
-        """Plate solve an image using twirl
+        """Plate solve an image using twirl.
+
+        This block uses the twirl package to plate solve an image. It matches the positions
+        of stars in the image to positions of stars in a reference catalog
+        (either Gaia or a user-provided catalog) and computes a new WCS for the image.
 
         Parameters
         ----------
         reference : Image, optional
-            _description_, by default None
+            The reference image to use for matching stars. If None, the block will use Gaia
+            DR2 as the reference catalog.
         n : int, optional
-            _description_, by default 30
+            The number of stars to use for matching. Default is 30.
         tolerance : int, optional
-            _description_, by default 10
+            The tolerance (in pixels) for matching stars. Default is 10.
         radius : float, optional
-            _description_, by default 1.2
+            The radius (in arcminutes) around each star to search for matches. Default is 1.2.
         debug : bool, optional
-            _description_, by default False
+            Whether to print debug information. Default is False.
         """
-        super().__init__(**kwargs)
+        super().__init__(name=name)
         self.radius = radius * u.arcmin.to("deg")
         self.n = n
         self.reference = reference
         self.tolerance = tolerance
         self.debug = debug
+        self.asterism = asterism
 
     def run(self, image):
         stars = image.sources.coords * image.pixel_scale.to("deg").value
@@ -161,8 +174,11 @@ class PlateSolve(Block):
 
         gaias = sparsify(gaias, self.radius)
 
-        new_wcs = twirl._compute_wcs(
-            stars[0 : self.n], gaias[0 : self.n], n=self.n, tolerance=self.tolerance
+        new_wcs = twirl.compute_wcs(
+            stars[0 : self.n],
+            gaias[0 : self.n],
+            tolerance=self.tolerance,
+            asterism=self.asterism,
         )
         image.wcs = new_wcs
         coords = np.array(image.wcs.world_to_pixel(SkyCoord(gaias, unit="deg"))).T
@@ -173,14 +189,20 @@ class PlateSolve(Block):
 
         if self.debug:
             image.show()
-            coords = np.array(image.wcs.world_to_pixel(SkyCoord(gaias, unit="deg"))).T
+            coords = np.array(
+                image.wcs.world_to_pixel(SkyCoord(gaias[0 : self.n], unit="deg"))
+            ).T
             _gaias = Sources([PointSource(coords=c) for c in coords])
             _gaias.plot(c="y")
+
+    @property
+    def citations(self) -> list:
+        return super().citations + ["twirl"]
 
 
 class GaiaCatalog(_CatalogBlock):
     def __init__(self, correct_pm=True, limit=10000, mode=None):
-        """Query gaia catalog
+        """Query gaia catalog.
 
         Catalog is written in Image.catalogs as a pandas DataFrame. If mode is ""crossmatch" the index of catalog sources in the DataFrame matches with the index of sources in Image.sources
 
@@ -203,7 +225,7 @@ class GaiaCatalog(_CatalogBlock):
         _CatalogBlock.__init__(self, "gaia", limit=limit, mode=mode)
         self.correct_pm = correct_pm
 
-    def get_catalog(self, image):
+    def _get_catalog(self, image):
         max_fov = image.fov.max() * np.sqrt(2)
         table = image_gaia_query(
             image, correct_pm=self.correct_pm, limit=500000, circular=True, fov=max_fov
@@ -213,6 +235,10 @@ class GaiaCatalog(_CatalogBlock):
 
     def run(self, image):
         _CatalogBlock.run(self, image)
+
+    @property
+    def citations(self) -> list:
+        return super().citations + ["astroquery"]
 
 
 class TESSCatalog(_CatalogBlock):
@@ -238,7 +264,7 @@ class TESSCatalog(_CatalogBlock):
         """
         _CatalogBlock.__init__(self, "tess", limit=limit, mode=mode)
 
-    def get_catalog(self, image):
+    def _get_catalog(self, image):
         max_fov = image.fov.max() * np.sqrt(2) / 2
         table = Catalogs.query_region(
             image.skycoord, radius=max_fov, catalog="TIC", verbose=False
@@ -250,3 +276,7 @@ class TESSCatalog(_CatalogBlock):
 
     def run(self, image):
         _CatalogBlock.run(self, image)
+
+    @property
+    def citations(self) -> list:
+        return super().citations + ["astroquery"]
