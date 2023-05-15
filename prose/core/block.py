@@ -5,7 +5,7 @@ from typing import Union
 import pytest
 
 from prose.console_utils import warning
-from prose.core.image import Image, Buffer
+from prose.core.image import Buffer, Image
 
 
 class Block(object):
@@ -74,8 +74,16 @@ class Block(object):
         pass
 
     @property
-    def citations(self):
-        return None
+    def citations(self) -> list:
+        """
+        Returns a string listing the packages used by the block.
+
+        Returns
+        -------
+        str
+            A string listing the packages used by the block.
+        """
+        return ["astropy", "prose", "numpy", "scipy"]
 
     @staticmethod
     def _doc():

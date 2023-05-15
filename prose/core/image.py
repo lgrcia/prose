@@ -291,7 +291,7 @@ class Image:
         return self.computed[name]
 
     @property
-    def sources(self):
+    def sources(self) -> Sources:
         """Image sources.
 
         Returns

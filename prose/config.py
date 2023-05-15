@@ -14,6 +14,32 @@ package_name = "prose"
 
 
 class ConfigManager:
+    """
+    A class for managing configuration settings for the package.
+
+    Attributes
+    ----------
+    config : dict
+        A dictionary containing the current configuration settings.
+    folder_path : Path
+        A Path object representing the folder where the configuration files are stored.
+    config_file : Path
+        A Path object representing the configuration file.
+    telescopes_dict : dict
+        A dictionary containing the available telescopes.
+    logs : list
+        A list of log files.
+
+    Methods
+    -------
+    check_config_file(load=False)
+        Checks if the configuration file exists and loads it if it does.
+    save()
+        Saves the current configuration settings to the configuration file.
+    get(key)
+        Returns the value of the specified configuration setting.
+    """
+
     def __init__(self):
         self.config = None
 
