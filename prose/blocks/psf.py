@@ -130,6 +130,10 @@ class _PSFModelBase(Block):
     def model(self):
         return self.model_function()
 
+    @property
+    def citations(self) -> list:
+        return super().citations + ["astropy", "scipy"]
+
 
 class _JAXPSFModel(_PSFModelBase):
     def __init__(self, reference_image=None, name=None, verbose=False):
@@ -144,6 +148,10 @@ class _JAXPSFModel(_PSFModelBase):
         opt = ScipyMinimize(fun=nll)
         params = opt.run(self._last_init).params
         return params
+
+    @property
+    def citations(self) -> list:
+        return self.citations + ["jax"]
 
 
 class JAXGaussian2D(_JAXPSFModel):

@@ -74,8 +74,8 @@ class _PhotutilsCentroid(Block):
         image.sources.coords = final_sources_coords
 
     @property
-    def citations(self):
-        return "photutils"
+    def citations(self) -> list:
+        return super().citations + ["photutils"]
 
 
 class CentroidCOM(_PhotutilsCentroid):
@@ -191,7 +191,7 @@ class _CNNCentroid(Block):
 
     @property
     def citations(self):
-        return "tensorflow"
+        return super().citations + ["tensorflow", "keras"]
 
 
 class CentroidBallet(_CNNCentroid):
