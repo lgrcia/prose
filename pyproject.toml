@@ -24,8 +24,9 @@ pyyaml = "*"
 tabulate = "*"
 sep = "*"
 celerite2 = "*"
-twirl = "*"
+twirl = "0.3.0"
 multiprocess = "*"
+pytest = "*"
 imageio = { version = "*", extras = ["ffmpeg"] }
 
 [tool.poetry.group.dev.dependencies]
