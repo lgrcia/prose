@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Optional, Union
 
 import numpy as np
 from scipy.spatial import KDTree
@@ -60,7 +60,7 @@ class Cutouts(Block):
         self,
         shape: Union[int, tuple] = 50,
         wcs: bool = False,
-        name: str = None,
+        name: Optional[str] = None,
         sources: bool = False,
     ):
         """Create cutouts around all sources
