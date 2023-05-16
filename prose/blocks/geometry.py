@@ -196,6 +196,8 @@ class ComputeTransform(Block):
                 self._asterism_coords_ref[i],
             )
 
+        return M
+
 
 class Drizzle(Block):
     def __init__(self, reference, pixfrac=1.0, **kwargs):
