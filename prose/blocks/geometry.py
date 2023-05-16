@@ -109,6 +109,10 @@ class SetAffineTransform(Block):
             rotation=rotation, translation=translation, scale=scale
         )
 
+    @property
+    def citations(self):
+        return super().citations + ["scikit-image"]
+
 
 class ComputeTransform(Block):
     """

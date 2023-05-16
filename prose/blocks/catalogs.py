@@ -180,6 +180,10 @@ class PlateSolve(Block):
             _gaias = Sources([PointSource(coords=c) for c in coords])
             _gaias.plot(c="y")
 
+    @property
+    def citations(self):
+        return super().citations + ["twirl"]
+
 
 class GaiaCatalog(_CatalogBlock):
     def __init__(self, correct_pm=True, limit=10000, mode=None):
@@ -217,6 +221,10 @@ class GaiaCatalog(_CatalogBlock):
     def run(self, image):
         _CatalogBlock.run(self, image)
 
+    @property
+    def citations(self):
+        return super().citations + ["astroquery"]
+
 
 class TESSCatalog(_CatalogBlock):
     def __init__(self, limit=10000, mode=None):
@@ -253,3 +261,7 @@ class TESSCatalog(_CatalogBlock):
 
     def run(self, image):
         _CatalogBlock.run(self, image)
+
+    @property
+    def citations(self):
+        return super().citations + ["astroquery"]
