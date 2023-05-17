@@ -57,8 +57,6 @@ class Image:
 
     header: Optional[Header] = None
     """FITS header associated with the image (optional)"""
-    
-    mask: np.ndarray = None ####EDIT
 
     _wcs = None
 
