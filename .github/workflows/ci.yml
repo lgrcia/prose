@@ -13,28 +13,17 @@ on:
 
 jobs:
   build:
-    name: CI/CD Build & Test w/pytest
-    strategy:
-      matrix:
-        os: [ ubuntu-latest ]
-
-    runs-on: ${{ matrix.os }}
-
-    env:
-      PROJECT_NAME: "Prose"
-
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Setup Environment File
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.8
+      - name: Install dependencies
         run: |
-          touch .env
-          echo PROJECT_NAME=${PROJECT_NAME} >> .env
-          cat .env
-
-      - name: Docker Compose Build
-        run: docker compose -f docker-compose.yml build --build-arg INSTALL_DEV="true"
-
-      - name: Run Pytest Suite
-        run: docker compose -f docker-compose.yml run app pytest
+          python -m pip install -U pip poetry
+          python -m poetry install --with dev
+      - name: Test with pytest
+        run: |
+          python -m poetry run python -m pytest
