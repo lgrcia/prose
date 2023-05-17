@@ -26,6 +26,7 @@ sep = "*"
 celerite2 = "*"
 twirl = "0.1.3"
 multiprocess = "*"
+pytest = "*"
 imageio = { version = "*", extras = ["ffmpeg"] }
 
 [tool.poetry.group.dev.dependencies]
