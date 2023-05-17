@@ -15,7 +15,7 @@ A Python package to build image processing pipelines for Astronomy. Beyond featu
 
 ```{admonition} Where to start?
 :class: tip 
-🌌 [Install](md/installation.md) prose and read about its [core objects](ipynb/core.ipynb).
+🌌 [Install](md/installation.md) prose and read about its [core objects](ipynb/core.ipynb)
 
 📦 Explore the library of pre-implemented [blocks](md/blocks.rst)
 
