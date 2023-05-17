@@ -375,38 +375,3 @@ class ComputeTransformXYShift(Block):
         dys = np.array([delta_y[np.where(tests[i])] for i in max_nums_ids])
 
         return np.nan_to_num(np.array([np.mean(dxs), np.mean(dys)]))
-    
-    def solve(self, coords, tolerance=2):
-        s = coords.copy()
-        
-        ##INPUT xyshift function here##
-        
-        
-        """ quads, stars = twirl_utils.quads_stars(s, n=self.n)
-        _, indices = self.KDTree.query(quads)
-
-        # We pick the two asterismrefs leading to the highest stars matching
-        closeness = []
-        for i, m in enumerate(indices):
-            M = twirl_utils._find_transform(self.stars_ref[m], stars[i])
-            new_ref = twirl_utils.affine_transform(M)(self.ref)
-            closeness.append(
-                twirl_utils._count_cross_match(s, new_ref, tolerance=tolerance)
-            )
-
-        i = np.argmax(closeness)
-        m = indices[i]
-        S1 = self.stars_ref[m]
-        S2 = stars[i]
-        M = twirl_utils._find_transform(S1, S2)
-        new_ref = twirl_utils.affine_transform(M)(self.ref)
-
-        matches = twirl_utils.cross_match(
-            new_ref, s, tolerance=tolerance, return_ixds=True
-        ).T
-        if len(matches) == 0:
-            return None
-        else:
-            i, j = matches
-
-        return twirl_utils._find_transform(s[j], self.ref[i]) """

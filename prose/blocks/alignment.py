@@ -62,7 +62,6 @@ class AlignReferenceSources(Block):
         super().__init__(name, verbose)
         self.reference_sources = reference.sources
         self.compute_transform = ComputeTransformXYShift(reference) if XYShift else ComputeTransformTwirl(reference)
-        #self.compute_transform = ComputeTransform(reference)
         self._parallel_friendly = True
 
     def run(self, image: Image):
@@ -112,6 +111,3 @@ class AlignReferenceWCS(Block):
         image.wcs = fit_wcs_from_points(
             image.sources.coords[0 : self.n].T, ref_skycoords
         )
-        
-        
-####EDIT####
