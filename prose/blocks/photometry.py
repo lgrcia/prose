@@ -41,6 +41,10 @@ class AperturePhotometry(Block):
 
         image.aperture = {"fluxes": aperture_fluxes, "radii": radii}
 
+    @property
+    def citations(self) -> list:
+        return super().citations + ["photutils"]
+
 
 class _AnnulusPhotometry(Block):
     def __init__(self, name=None, rin=5, rout=8, scale=True):
@@ -48,6 +52,10 @@ class _AnnulusPhotometry(Block):
         self.rin = rin
         self.rout = rout
         self.scale = scale
+
+    @property
+    def citations(self) -> list:
+        return super().citations + ["photutils"]
 
 
 class AnnulusBackground(_AnnulusPhotometry):

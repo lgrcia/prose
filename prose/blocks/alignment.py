@@ -40,6 +40,10 @@ class Align(Block):
         except np.linalg.LinAlgError:
             image.discard = True
 
+    @property
+    def citations(self) -> list:
+        return super().citations + ["scikit-image"]
+
 
 class AlignReferenceSources(Block):
     def __init__(self, reference: Image, name=None, verbose=False):
@@ -81,6 +85,10 @@ class AlignReferenceSources(Block):
                 sources.coords = new_sources_coords
                 image.sources = sources
 
+    @property
+    def citations(self) -> list:
+        return super().citations + ["scikit-image"]
+
 
 class AlignReferenceWCS(Block):
     def __init__(self, reference: Image, name=None, verbose=False, n=6):
@@ -110,3 +118,7 @@ class AlignReferenceWCS(Block):
         image.wcs = fit_wcs_from_points(
             image.sources.coords[0 : self.n].T, ref_skycoords
         )
+
+    @property
+    def citations(self) -> list:
+        return super().citations + ["astropy"]

@@ -348,7 +348,7 @@ class FitsManager:
         return df.set_index(["id"])
 
     def calibrations(self, **kwargs):
-        """return a pandas DataFrame of calibrations observations given some metadata constraints in the form of wildcards
+        """return a pandas DataFrame of calibrations observations given some metadata constraints in the form of wildcards.
 
         Parameters
         ----------
@@ -362,7 +362,7 @@ class FitsManager:
         return pd.concat([darks, flats, bias], axis=0)
 
     def files(self, id=None, path=False, exposure=0, tolerance=1000, **kwargs):
-        """Return a pandas DataFrame of files given some metadata constraints in the form of wildcards
+        """Return a pandas DataFrame of files given some metadata constraints in the form of wildcards.
 
         Parameters
         ----------

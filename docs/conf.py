@@ -58,9 +58,16 @@ html_theme = "sphinx_book_theme"
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
 
+# get version number from pyproject.toml
+# --------------------------------------
+import toml
+
+pyproject = toml.load("../pyproject.toml")
+version = pyproject["tool"]["poetry"]["version"]
+
 # Mine
 # -------------------
-html_title = "prose"
+html_title = f"prose <div class='version-nb'>{version}</div>"
 
 source_suffix = {
     ".rst": "restructuredtext",
@@ -133,10 +140,12 @@ classes = sorted(list(set(list(classes))), key=lambda x: x.split(".")[-1].lower(
 _all_blocks = "\n".join([f"\t~{cl}" for cl in classes])
 all_blocks = f"""
 
+All block
+---------
+
 .. currentmodule:: prose
 
 .. autosummary::
-   :toctree: generated
    :template: blocksum.rst
    :nosignatures:
 
@@ -146,24 +155,26 @@ all_blocks = f"""
 
 open("md/all_blocks.rst", "w").write(all_blocks)
 
-import os
+# check if blocks are tested
+# --------------------------
+# import os
 
-from prose.core.block import is_tested
-from prose.utils import get_all_blocks
+# from prose.core.block import is_tested
+# from prose.utils import get_all_blocks
 
-os.chdir("..")
-tested = []
-tested.append("# Tested blocks\n")
-tested.append("| Block | Tested |")
-tested.append("| ----- | ------ |")
-blocks = get_all_blocks()
-blocks = sorted(blocks, key=lambda block: block.__name__.lower())
+# os.chdir("..")
+# tested = []
+# tested.append("# Tested blocks\n")
+# tested.append("| Block | Tested |")
+# tested.append("| ----- | ------ |")
+# blocks = get_all_blocks()
+# blocks = sorted(blocks, key=lambda block: block.__name__.lower())
 
-for block in blocks:
-    _is = is_tested(block.__name__)
-    tested.append(
-        f" | [`{block.__name__}`]({block.__module__}.{block.__name__}) | {'✅' if _is else '❌'} |"
-    )
-os.chdir("docs")
+# for block in blocks:
+#     _is = is_tested(block.__name__)
+#     tested.append(
+#         f" | [`{block.__name__}`]({block.__module__}.{block.__name__}) | {'✅' if _is else '❌'} |"
+#     )
+# os.chdir("docs")
 
-open("./tested_blocks.md", "w").write("\n".join(tested))
+# open("./tested_blocks.md", "w").write("\n".join(tested))

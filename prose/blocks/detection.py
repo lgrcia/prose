@@ -204,10 +204,6 @@ class PointSourceDetection(_SourceDetection):
         )
         image.sources = Sources(self.clean(sources), source_type="PointSource")
 
-    @property
-    def citations(self):
-        return "scikit-image", "scipy"
-
 
 class TraceDetection(_SourceDetection):
     def __init__(self, minor_length=5, **kwargs):
@@ -236,10 +232,6 @@ class TraceDetection(_SourceDetection):
         regions = self.regions(image)
         sources = np.array([TraceSource.from_region(region) for region in regions])
         image.sources = Sources(sources)
-
-    @property
-    def citations(self):
-        return "scikit-image", "scipy"
 
 
 # backward compatibility
@@ -274,10 +266,6 @@ class Peaks(Block):
             if cut is not None:
                 peaks[i] = np.max(cut.data)
         image.peaks = peaks
-
-    @property
-    def citations(self):
-        return "photutils"
 
 
 class _SimplePointSourceDetection(_SourceDetection):
@@ -343,10 +331,6 @@ class DAOFindStars(_SimplePointSourceDetection):
 
         return coordinates, peaks
 
-    @property
-    def citations(self):
-        return "photutils"
-
 
 try:
     from sep import extract
@@ -390,7 +374,7 @@ class SEDetection(_SimplePointSourceDetection):
 
     @property
     def citations(self):
-        return "source extractor", "sep"
+        return super().citations + ["sep"]
 
 
 class AlignSources(Block):

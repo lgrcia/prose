@@ -2,10 +2,8 @@ import inspect
 from time import time
 from typing import Union
 
-import pytest
-
 from prose.console_utils import warning
-from prose.core.image import Image, Buffer
+from prose.core.image import Buffer, Image
 
 
 class Block(object):
@@ -74,8 +72,16 @@ class Block(object):
         pass
 
     @property
-    def citations(self):
-        return None
+    def citations(self) -> list:
+        """
+        Returns a string listing the packages used by the block.
+
+        Returns
+        -------
+        str
+            A string listing the packages used by the block.
+        """
+        return ["astropy", "prose", "numpy", "scipy"]
 
     @staticmethod
     def _doc():
@@ -90,6 +96,7 @@ class Block(object):
 
 
 # rewrite the tested function to accept Block instances as well as strings
+# requires pytest and is not used in the docs for now
 def is_tested(block_class: Union[Block, str]) -> bool:
     """Check if a block is tested
 
@@ -108,6 +115,8 @@ def is_tested(block_class: Union[Block, str]) -> bool:
     TypeError
         if block is not a Block subclass or a string
     """
+    import pytest
+
     if isinstance(block_class, str):
         block_name = block_class
     elif issubclass(block_class, Block):
