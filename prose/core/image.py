@@ -58,6 +58,8 @@ class Image:
 
     header: Header = None
     """FITS header associated with the image (optional)"""
+    
+    mask: np.ndarray = None ####EDIT
 
     _wcs = None
 
@@ -648,6 +650,7 @@ def FITSImage(
     if image.metadata["jd"] is None:
         image.metadata["jd"] = Time(image.date).jd
     image.fits_header = header
+    image.header = header ### EDIT
     image.wcs = WCS(header)
     image.telescope = telescope
 

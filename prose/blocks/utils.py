@@ -620,6 +620,8 @@ class SelectiveStack(Block):
 
     def run(self, image: Image):
         sigma = image.fwhm
+        self.metadata = image.metadata #### EDIT
+        self.header = image.header #### EDIT
         if len(self._images) < self.n:
             self._images.append(image)
             self._sigmas.append(sigma)
@@ -631,3 +633,29 @@ class SelectiveStack(Block):
 
     def terminate(self):
         self.stack = Image(easy_median([im.data for im in self._images]))
+        self.stack.metadata = self.metadata #### EDIT
+        self.stack.header = self.header #### EDIT
+        
+        
+    #### EDIT ####
+    
+class CleanSources(Block):
+    def __init__(self, saturation_threshold=10000, name=None):
+        """Clean sources from an image
+
+        |read| :code:`Image.sources`
+
+        |write| :code:`Image.sources`
+
+        Parameters
+        ----------
+        name : str, optional
+            name of the block, by default None
+        """
+        super().__init__(name=name)
+        self.threshold = saturation_threshold
+
+    def run(self, image: Image):
+        sources = image.sources
+        cleaned_sources = [ps for ps in sources if ps.peak <= 10000]
+        image.sources = cleaned_sources
