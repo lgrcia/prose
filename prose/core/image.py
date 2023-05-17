@@ -19,7 +19,6 @@ from astropy.wcs import WCS
 from astropy.wcs.wcs import WCS
 from dateutil import parser as dparser
 from matplotlib import gridspec
-from PIL import Image
 
 from prose import utils, viz
 from prose.core.source import Sources
@@ -29,10 +28,10 @@ from prose.telescope import Telescope
 @dataclass
 class Image:
     """
-    Image object containing image data and metadata
+    Image object containing image data and metadata.
 
     This is a Python Data Class, so that most attributes described below can be used as
-    keyword-arguments when instantiated
+    keyword-arguments when instantiated.
     """
 
     data: np.ndarray = None
@@ -210,6 +209,7 @@ class Image:
 
     @property
     def shape(self):
+        """Image.data shape"""
         return np.array(self.data.shape)
 
     @property
@@ -232,6 +232,7 @@ class Image:
 
     @property
     def jd(self):
+        """Julian Date of the observation"""
         return self.metadata["jd"]
 
     @property
@@ -288,6 +289,18 @@ class Image:
         self.computed[name] = value
 
     def get(self, name):
+        """Get computed value
+
+        Parameters
+        ----------
+        name : str
+            name of the computed value
+
+        Returns
+        -------
+        any
+            computed value
+        """
         return self.computed[name]
 
     @property
@@ -314,7 +327,7 @@ class Image:
         wcs: bool = True,
         sources: bool = True,
         reset_index: bool = True,
-    ) -> Image:
+    ):
         """Return a cutout Image instance.
 
         Parameters
@@ -441,6 +454,27 @@ class Image:
         viz.plot_marks(x, y, labels, color=color)
 
     def plot_model(self, data, figsize=(5, 5), cmap=None, c="C0", contour=False):
+        """
+        Plot the data and a model side by side.
+
+        Parameters
+        ----------
+        data : numpy.ndarray
+            The model data to plot.
+        figsize : tuple, optional
+            The size of the figure, by default (5, 5).
+        cmap : str or matplotlib.colors.Colormap, optional
+            The colormap to use for the data, by default None.
+        c : str, optional
+            The color to use for the data, by default "C0".
+        contour : bool, optional
+            Whether to plot the contours of the model, by default False.
+
+        Returns
+        -------
+        None
+        """
+
         plt.figure(figsize=figsize)
         axes = gridspec.GridSpec(2, 2, width_ratios=[9, 2], height_ratios=[2, 9])
         axes.update(wspace=0, hspace=0)
@@ -473,24 +507,57 @@ class Image:
         im_dict["data"] = im_dict["data"].astype(image_dtype)
         return im_dict
 
-    def save(self, filepath, image_dtype="int16", low_data=True):
+    def save(self, filepath, image_dtype="float64", low_data=True):
+        """
+        Save the image to a file using pickle.
+
+        Note that the pickle will hold the Image dataclass dict attributes.
+
+        Parameters
+        ----------
+        filepath : str
+            The path to the file to save.
+        image_dtype : str, optional
+            The data type to use for the image data, by default "int16".
+        low_data : bool, optional
+            Whether to scale the data to a lower range, by default True.
+
+        Returns
+        -------
+        None
+        """
+
         with open(filepath, "wb") as f:
             pickle.dump(self.asdict(image_dtype=image_dtype, low_data=low_data), f)
 
     @classmethod
     def load(cls, filepath):
+        """
+        Load an image from a file.
+
+        Parameters
+        ----------
+        filepath : str
+            The path to the file to load.
+
+        Returns
+        -------
+        Image
+            The loaded image.
+        """
+
         return cls(**pickle.load(open(filepath, "rb")))
 
-    def symetric_profile(self, source, binn=1.0):
+    def _symetric_profile(self, source, binn=1.0):
         x, y = source.coords
         Y, X = np.indices(self.shape)
         radii = (np.sqrt((X - x) ** 2 + (Y - y) ** 2)).flatten()
-        d, values = self.profile(radii)
+        d, values = self._profile(radii)
         idxs = utils.index_binning(d, binn)
         mean = lambda x: np.array([np.mean(x[i]) for i in idxs])
         return mean(d), mean(values)
 
-    def profile(self, d):
+    def _profile(self, d):
         idxs = np.argsort(d)
         _d = d[idxs]
         pixels = self.data.flatten()
@@ -530,7 +597,7 @@ class Image:
 
         return np.array(cutouts)
 
-    def major_profile(self, source, binn=1.0, debug=False):
+    def _major_profile(self, source, binn=1.0, debug=False):
         p1 = source.coords[:, None, None]
         p2 = (source.vertexes[0])[:, None, None]
         Y, X = np.indices(self.data.shape)
