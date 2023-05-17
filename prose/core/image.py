@@ -3,7 +3,7 @@ from copy import deepcopy
 from dataclasses import asdict, dataclass
 from datetime import timedelta
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import astropy.units as u
 import matplotlib.pyplot as plt
@@ -19,7 +19,6 @@ from astropy.wcs import WCS
 from astropy.wcs.wcs import WCS
 from dateutil import parser as dparser
 from matplotlib import gridspec
-from PIL import Image
 
 from prose import utils, viz
 from prose.core.source import Sources
@@ -35,17 +34,17 @@ class Image:
     keyword-arguments when instantiated
     """
 
-    data: np.ndarray = None
+    data: Optional[np.ndarray] = None
     """Image data"""
 
-    metadata: dict = None
+    metadata: Optional[dict] = None
     """Image metadata"""
 
-    catalogs: dict = None
+    catalogs: Optional[dict] = None
     """Catalogs associated with the image contained in a dictionary of 
     pandas dataframes"""
 
-    _sources: Union[Sources, dict] = None
+    _sources: Optional[Union[Sources, dict]] = None
 
     origin: tuple = (0, 0)
     """Image origin"""
@@ -53,10 +52,10 @@ class Image:
     discard: bool = False
     """Whether image as been discarded by a block"""
 
-    computed: dict = None
+    computed: Optional[dict] = None
     """A dictionary containing any user and block-defined attributes"""
 
-    header: Header = None
+    header: Optional[Header] = None
     """FITS header associated with the image (optional)"""
     
     mask: np.ndarray = None ####EDIT
@@ -316,7 +315,7 @@ class Image:
         wcs: bool = True,
         sources: bool = True,
         reset_index: bool = True,
-    ) -> Image:
+    ):
         """Return a cutout Image instance.
 
         Parameters
@@ -585,7 +584,7 @@ def FITSImage(
     load_units: bool = True,
     load_data: bool = True,
     telescope: Telescope = None,
-) -> Image:
+):
     """Create an image from a FITS file
 
     Parameters
@@ -649,8 +648,7 @@ def FITSImage(
     image = Image(values, metadata, {})
     if image.metadata["jd"] is None:
         image.metadata["jd"] = Time(image.date).jd
-    image.fits_header = header
-    image.header = header ### EDIT
+    image.header = header
     image.wcs = WCS(header)
     image.telescope = telescope
 
