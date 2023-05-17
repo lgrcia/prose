@@ -146,6 +146,7 @@ All block
 .. currentmodule:: prose
 
 .. autosummary::
+   :toctree: generated
    :template: blocksum.rst
    :nosignatures:
 
