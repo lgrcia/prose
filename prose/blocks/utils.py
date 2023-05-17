@@ -631,3 +631,4 @@ class SelectiveStack(Block):
 
     def terminate(self):
         self.stack = Image(easy_median([im.data for im in self._images]))
+        
