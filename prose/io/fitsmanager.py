@@ -182,7 +182,7 @@ class FitsManager:
         )
 
     def get_files(self, folders, extension, scan=None, depth=0):
-        """Return path of files with specific extension in the specified folder(s)
+        """Return paths of files with specific extension in the specified folder(s)
 
         Parameters
         ----------
@@ -420,6 +420,32 @@ class FitsManager:
         lights="images",
         show=True,
     ):
+        """
+        Return a dictionary of files for a given observation ID, along with calibration files.
+
+        Parameters
+        ----------
+        i : int
+            id of the observation for which files are retrieved.
+        past : float, optional
+            Number of days in the past to consider when retrieving calibrartion files, by default 1e3.
+        future : float, optional
+            Number of days in the future to consider when retrieving calibrartion files, by default 0.
+        tolerance : float, optional
+            Tolerance on the exposure constraint, by default 1e15. For example: if exposure is set to 10 and tolerance to 2, all
+            files with exposure = 10 +- 2 will be retrieved.
+        same_telescope : bool, optional
+            Whether to retrieve files from the same telescope as the observation, by default True.
+        lights : str, optional
+            key of images files in the return dict, by default "images".
+        show : bool, optional
+            Whether to print the pandas dataframe of returned files, by default True.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the files for the given observation id, along with the associated calibration files.
+        """
         files = {}
 
         obs_dict = self.observations(id=i, hide_exposure=False).to_dict("records")[0]
@@ -506,6 +532,24 @@ class FitsManager:
         return self.files(type="light", path=True).path.values
 
     def images(self, i, show=False, **kwargs):
+        """
+        Return the paths of the observation science images for a given observation id.
+
+        Parameters
+        ----------
+        i : int
+            The observation id.
+        show : bool, optional
+            Whether to show the pandas dataframe of the returned files, by default False.
+        **kwargs : dict, optional
+            Additional arguments to pass to the `observation_files` method.
+
+        Returns
+        -------
+        list of str
+            The fits paths of the observation science images.
+        """
+
         return self.observation_files(i, show=show, **kwargs)["images"]
 
     @property
@@ -519,6 +563,23 @@ class FitsManager:
         return self.files(type="dark", path=True).path.values
 
     def bias(self, i, show=False, **kwargs):
+        """
+        Return the paths of the bias images associated to a given observation.
+
+        Parameters
+        ----------
+        i : int
+            The index of the observation.
+        show : bool, optional
+            Whether to display the pandas dataframe of the files being returned, by default False.
+        **kwargs : dict
+            Additional keyword arguments to pass to the `observation_files` method.
+
+        Returns
+        -------
+        list of str
+            The fits paths of the bias images.
+        """
         return self.observation_files(i, show=show, **kwargs)["bias"]
 
     @property
@@ -532,6 +593,23 @@ class FitsManager:
         return self.files(type="bias", path=True).path.values
 
     def darks(self, i, show=False, **kwargs):
+        """
+        Return the paths of the dark images associated to a given observation.
+
+        Parameters
+        ----------
+        i : int
+            The index of the observation.
+        show : bool, optional
+            Whether to display the pandas dataframe of the files being returned, by default False.
+        **kwargs : dict
+            Additional keyword arguments to pass to the `observation_files` method.
+
+        Returns
+        -------
+        list of str
+            The fits paths of the observation dark images.
+        """
         return self.observation_files(i, show=show, **kwargs)["darks"]
 
     @property
@@ -545,6 +623,24 @@ class FitsManager:
         return self.files(type="flat", path=True).path.values
 
     def flats(self, i, show=False, **kwargs):
+        """
+        Return the paths of the flat images associated to a given observation.
+
+        Parameters
+        ----------
+        i : int
+            The index of the observation.
+        show : bool, optional
+            Whether to display the pandas dataframe of the files being returned, by default False.
+        **kwargs : dict
+            Additional keyword arguments to pass to the `observation_files` method.
+
+        Returns
+        -------
+        list of str
+            The fits paths of the observation flat images.
+        """
+
         return self.observation_files(i, show=show, **kwargs)["flats"]
 
     @property
@@ -568,6 +664,19 @@ class FitsManager:
         return self.files(imtype="reduced")
 
     def label(self, i):
+        """
+        Return a string label for the observation with the given index.
+
+        Parameters
+        ----------
+        i : int
+            The index of the observation.
+
+        Returns
+        -------
+        str
+            A string label in the format "{telescope}_{date}_{target}_{filter}".
+        """
         date, telescope, filter, _, target, *_ = self.observations(id=i).values[0]
         return f"{telescope}_{date.replace('-', '')}_{target}_{filter}"
 
@@ -588,6 +697,19 @@ class FitsManager:
         return self.observations()._repr_html_()
 
     def to_pandas(self, query):
+        """
+        Execute a SQL query and return the result as a pandas DataFrame.
+
+        Parameters
+        ----------
+        query : str
+            The SQL query to execute.
+
+        Returns
+        -------
+        pandas.DataFrame
+            The result of the query as a pandas DataFrame.
+        """
         return pd.read_sql_query(query, self.con)
 
     def _update_observations(self, verbose=False):
