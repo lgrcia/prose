@@ -19,7 +19,6 @@ from astropy.wcs import WCS
 from astropy.wcs.wcs import WCS
 from dateutil import parser as dparser
 from matplotlib import gridspec
-from PIL import Image
 
 from prose import utils, viz
 from prose.core.source import Sources
@@ -210,6 +209,7 @@ class Image:
 
     @property
     def shape(self):
+        """Image.data shape"""
         return np.array(self.data.shape)
 
     @property
@@ -232,6 +232,7 @@ class Image:
 
     @property
     def jd(self):
+        """Julian Date of the observation"""
         return self.metadata["jd"]
 
     @property
@@ -314,7 +315,7 @@ class Image:
         wcs: bool = True,
         sources: bool = True,
         reset_index: bool = True,
-    ) -> Image:
+    ):
         """Return a cutout Image instance.
 
         Parameters
