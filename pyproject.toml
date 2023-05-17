@@ -46,6 +46,7 @@ sphinx-book-theme = "^1.0.0"
 myst-nb = "*"
 sphinx-copybutton = "*"
 sphinx-design = "*"
+toml = "*"
 
 [build-system]
 requires = ["poetry-core"]
