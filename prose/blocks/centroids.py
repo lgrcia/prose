@@ -198,6 +198,7 @@ class CentroidBallet(_CNNCentroid):
     """Centroiding with  `ballet <https://github.com/lgrcia/ballet>`_.
 
     |write| ``Image.stars_coords``
+
     """
 
     def __init__(self, **kwargs):

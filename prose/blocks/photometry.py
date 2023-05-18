@@ -9,7 +9,11 @@ __all__ = ["AperturePhotometry", "AnnulusBackground"]
 
 class AperturePhotometry(Block):
     def __init__(self, radii: np.ndarray = None, scale: bool = True, name=None):
-        """Perform aperture photometry of each sources
+        """Perform aperture photometry of each sources.
+
+        |read| :code:`Image.data`, :code:`Image.sources`
+
+        |write| :code:`Image.aperture`
 
         Parameters
         ----------
@@ -67,11 +71,14 @@ class AnnulusBackground(_AnnulusPhotometry):
         scale=True,
         name: str = None,
     ):
-        """Estimate background around each source using an annulus aperture
+        """Estimate background around each source using an annulus aperture.
+
+        |read| :code:`Image.data`, :code:`Image.sources`
+
+        |write| :code:`Image.annulus`
 
         Parameters
         ----------
-
         rin : float, optional
             inner radius of the annulus, by default 5
         rout : float, optional

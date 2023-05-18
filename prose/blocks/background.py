@@ -6,13 +6,15 @@ from prose import Block
 from prose.blocks.psf import *
 from prose.utils import binn2D
 
-# TODO
-
 
 class PhotutilsBackground2D(Block):
     def __init__(self, subtract=True, box_size=(50, 50), filter_size=(3, 3), name=None):
         """
         Initializes the PhotutilsBackground2D block.
+
+        |read| :code:`Image.data`
+
+        |write| :code:`Image.data`, :code:`Image.bkg`
 
         Parameters
         ----------

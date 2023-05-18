@@ -160,7 +160,7 @@ class JAXGaussian2D(_JAXPSFModel):
 
         |read| :code:`Image.epsf`
 
-        |write|
+        |write| :code:`Image.epsf.params`
 
         - :code:`Image.epsf.params`
         - :code:`Image.epsf.model`
@@ -204,7 +204,7 @@ class JAXMoffat2D(_JAXPSFModel):
 
         |read| :code:`Image.epsf`
 
-        |write|
+        |write| :code:`Image.epsf.params`
 
         - :code:`Image.epsf.params`
         - :code:`Image.epsf.model`
@@ -250,7 +250,7 @@ class Gaussian2D(_PSFModelBase):
 
         |read| :code:`Image.epsf`
 
-        |write|
+        |write| :code:`Image.epsf.params`
 
         - :code:`Image.epsf.params`
         - :code:`Image.epsf.model`
@@ -322,14 +322,13 @@ class Gaussian2D(_PSFModelBase):
         return _model
 
 
-# TODO
 class Moffat2D(_PSFModelBase):
     def __init__(self, reference_image: Image = None, name=None, verbose=False):
         """Model :code:`Image.epsf` as a 2D Moffat profile
 
         |read| :code:`Image.epsf`
 
-        |write|
+        |write| :code:`Image.epsf.params`
 
         - :code:`Image.epsf.params`
         - :code:`Image.epsf.model`
@@ -406,6 +405,7 @@ class Moffat2D(_PSFModelBase):
         return _model
 
 
+# TODO: document
 class HFD(Block):
     # https://www.focusmax.org/Documents_V4/ITS%20Paper.pdf
 

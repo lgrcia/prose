@@ -278,6 +278,22 @@ class Sequence:
 
 
 class SequenceParallel(Sequence):
+    """
+    A class for running a sequence of blocks in parallel using multiprocessing.
+
+    The data_blocks allow blocks carying large amount of data to be run sequentially
+    so that they are not copied from one process to another.
+
+    Parameters
+    ----------
+    blocks : list
+        A list of blocks to be executed in parallel.
+    data_blocks : list, optional
+        A list of data blocks to be executed in parallel.
+    name : str, optional
+        A name for the sequence.
+    """
+
     def __init__(self, blocks, data_blocks=None, name=""):
         super().__init__(blocks, name=name)
         if data_blocks is None:

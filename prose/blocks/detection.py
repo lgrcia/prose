@@ -129,7 +129,11 @@ class AutoSourceDetection(_SourceDetection):
         min_area=0,
         minor_length=0,
     ):
-        """Detect all sources
+        """Detect all sources.
+
+        |read| :code:`Image.data`
+
+        |write| :code:`Image.sources`
 
         Parameters
         ----------
@@ -166,7 +170,11 @@ class AutoSourceDetection(_SourceDetection):
 
 class PointSourceDetection(_SourceDetection):
     def __init__(self, unit_euler=False, min_area=3, minor_length=2, **kwargs):
-        """Detect point sources (as :py:class:`~prose.core.source.PointSource`)
+        """Detect point sources (as :py:class:`~prose.core.source.PointSource`).
+
+        |read| :code:`Image.data`
+
+        |write| :code:`Image.sources`
 
         Parameters
         ----------
@@ -252,7 +260,7 @@ class SegmentedPeaks(PointSourceDetection):
         self.minor_length = minor_length
 
 
-# TODO
+# TODO: document
 class Peaks(Block):
     def __init__(self, cutout=11, **kwargs):
         super().__init__(**kwargs)

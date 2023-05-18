@@ -119,12 +119,15 @@ class _CatalogBlock(Block):
         image.catalogs[self.catalog_name] = catalog.iloc[0 : self.limit]
 
 
-# TODO
 class PlateSolve(Block):
     def __init__(
         self, reference=None, n=30, tolerance=10, radius=1.2, debug=False, **kwargs
     ):
         """Plate solve an image using twirl
+
+        |read| :code:`Image.sources`
+
+        |write| :code:`Image.wcs`, :code:`Image.plate_solved_success`
 
         Parameters
         ----------
@@ -186,7 +189,7 @@ class GaiaCatalog(_CatalogBlock):
 
         |read| :code:`Image.sources` if mode is "crossmatch"
 
-        |write|
+        |write| :code:`Image.catalogs`
 
         - :code:`Image.sources` if mode is "crossmatch"
         - :code:`Image.catalogs`
@@ -223,7 +226,7 @@ class TESSCatalog(_CatalogBlock):
 
         |read| :code:`Image.sources` if mode is "crossmatch"
 
-        |write|
+        |write| :code:`Image.catalogs`
 
         - :code:`Image.sources` if mode is "crossmatch"
         - :code:`Image.catalogs`

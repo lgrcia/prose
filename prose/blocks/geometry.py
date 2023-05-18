@@ -114,9 +114,9 @@ class ComputeTransform(Block):
     """
     Compute transformation fromm a reference image
 
-    |read| ``Image.sources`` on both reference and input image
+    |read| :code:`Image.sources` on both reference and input image
 
-    |write| ``Image.transform``
+    |write| :code:`Image.transform`
 
     Parameters
     ----------
