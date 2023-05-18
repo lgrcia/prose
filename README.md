@@ -102,5 +102,5 @@ archivePrefix = {arXiv},
 }
 ```
 
-and read about how to cite the dependencies of your sequences [here](docs/ipynb/acknowledgement.ipynb).
+and read about how to cite the dependencies of your sequences [here](https://prose.readthedocs.io/en/latest/ipynb/acknowledgement.html).
 
