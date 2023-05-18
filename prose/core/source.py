@@ -274,6 +274,8 @@ class Source:
             a, b = 2 * r * self.a, 2 * r * self.b
         else:
             a, b = 2 * r, 2 * r * self.eccentricity
+        a = np.max([0.01, a])
+        b = np.max([0.01, b])
         return RectangularAperture(
             self.coords, float(np.abs(a)), float(np.abs(b)), self.orientation
         )
