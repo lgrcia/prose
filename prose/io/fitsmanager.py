@@ -42,29 +42,43 @@ def exposure_constraint(exposure=0, tolerance=1000000):
 
 
 class FitsManager:
-    """Object to parse and retrieve FITS files from folder and sub-folders
-
-    This object scans files in a folder and stores the data in a mysql database for conveniance (but all products can be accessed without knowledge of the SQL language)
+    """
+    A class for managing FITS files.
 
     Parameters
     ----------
-    folder : str
-        path of the folder to parse (or list of folders as of prose 2.0.1)
+    folders : str or list of str, optional
+        The folder(s) to search for FITS files. If not provided, `files` must be provided.
+    files : str or list of str, optional
+        The file(s) to read. If not provided, `folders` must be provided.
     depth : int, optional
-        maxiumum depth of the sub-folders to explore, by default 0
+        The subfolder depth to search for files in the folder(s). Default is 0 (search only in the provided folder(s)).
     hdu : int, optional
-        by default 0
+        The HDU to read from the FITS file. Default is 0 (the primary HDU).
     extension : str, optional
-        by default ".f*ts*"
-    file : _type_, optional
-        _description_, by default None
-    batch_size : bool or int, optional
-        - if False: update database after all FITS files are parsed
-        - if int: update database every time ``batch_size`` FITS files are parsed
+        The extension of the FITS file(s) to search for. Default is ".f*t*" (search for all FITS file extensions).
+    file : str, optional
+        The name of the SQLite database file to use. Default is ":memory:" (create an in-memory database).
+    batch_size : int or bool, optional
+        The number of files to store in the databse at once. If `False`, read all files at once. Default is `False`.
+        This is to allow a scanning of a large number of files that are still saved in the database if an error occurs.
+    scan : callable, optional
+        The function used to retrieve files from a folder. Signature is scan(folder) -> list of file paths. Default is `None`.
+    verbose : bool, optional
+        Whether to display progress information. Default is `True`.
+    to_df : function, optional
+        A function to use for converting FITS files to pandas DataFrames. Default is `None`.
+    telescope : str, optional
+        The name of the telescope used to take the FITS files. Default is `None`.
 
-        by default False
-    telescope: :py:class:`~prose.Telescope``
-        telescope to use while parsing files, by default None
+    Attributes
+    ----------
+    con : sqlite3.Connection
+        The SQLite database connection.
+    cur : sqlite3.Cursor
+        The SQLite database cursor.
+    fits_to_df : function
+        The function used for converting FITS files to pandas DataFrames.
     """
 
     def __init__(
