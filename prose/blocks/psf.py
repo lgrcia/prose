@@ -48,19 +48,17 @@ def moments(data):
 
 
 class MedianEPSF(Block):
-    def __init__(self, max_sources=1, name=None, normalize=True):
+    def __init__(self, max_sources=1, normalize=True, name=None):
         """Stack cutouts into :code:`Image.epsf`: a median effective PSF
 
-        |read| Image.source
+        |read| Image.cutouts
 
-        [write] Image.epsf
+        |write| Image.epsf
 
         Parameters
         ----------
         max_sources : int, optional
-            max number of sources cutout to be stacked should have, by default 1, meaning only cutouts with a single source are used
-        name : _type_, optional
-            _description_, by default None
+            maximum number of sources in a cutout for the cutout to be used, by default 1
         normalize : bool, optional
             whether to normalize cutouts to form a normalized EPSF, by default True
         """
@@ -160,7 +158,7 @@ class JAXGaussian2D(_JAXPSFModel):
 
         |read| :code:`Image.epsf`
 
-        |write| :code:`Image.epsf.params`
+        |write|
 
         - :code:`Image.epsf.params`
         - :code:`Image.epsf.model`
@@ -204,7 +202,7 @@ class JAXMoffat2D(_JAXPSFModel):
 
         |read| :code:`Image.epsf`
 
-        |write| :code:`Image.epsf.params`
+        |write|
 
         - :code:`Image.epsf.params`
         - :code:`Image.epsf.model`
@@ -250,7 +248,7 @@ class Gaussian2D(_PSFModelBase):
 
         |read| :code:`Image.epsf`
 
-        |write| :code:`Image.epsf.params`
+        |write|
 
         - :code:`Image.epsf.params`
         - :code:`Image.epsf.model`
@@ -328,7 +326,7 @@ class Moffat2D(_PSFModelBase):
 
         |read| :code:`Image.epsf`
 
-        |write| :code:`Image.epsf.params`
+        |write|
 
         - :code:`Image.epsf.params`
         - :code:`Image.epsf.model`
