@@ -81,7 +81,7 @@ See our [contributions guidelines](docs/CONTRIBUTING.md)
 
 ## Attribution
 
-If you find `prose` useful for your research cite [Garcia et. al 2022](https://ui.adsabs.harvard.edu/abs/2022MNRAS.509.4817G). The BibTeX entry for the paper is:
+If you find `prose` useful for your research, cite [Garcia et. al 2022](https://ui.adsabs.harvard.edu/abs/2022MNRAS.509.4817G). The BibTeX entry for the paper is:
 ```
 @ARTICLE{prose,
        author = {{Garcia}, Lionel J. and {Timmermans}, Mathilde and {Pozuelos}, Francisco J. and {Ducrot}, Elsa and {Gillon}, Micha{\"e}l and {Delrez}, Laetitia and {Wells}, Robert D. and {Jehin}, Emmanu{\"e}l},
@@ -102,5 +102,5 @@ archivePrefix = {arXiv},
 }
 ```
 
-and read about how to cite the dependencies of your sequences [here](docs/dependencies.ipynb).
+and read about how to cite the dependencies of your sequences [here](docs/ipynb/acknowledgement.ipynb).
 
