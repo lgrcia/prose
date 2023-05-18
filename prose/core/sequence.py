@@ -240,7 +240,7 @@ class Sequence:
 
 class SequenceParallel(Sequence):
     """
-    A class for running a sequence of blocks in parallel using multiprocessing.
+    A multi-process :py:class:`Sequence` of blocks to be executed in parallel.
 
     The data_blocks allow blocks carying large amount of data to be run sequentially
     so that they are not copied from one process to another.

@@ -24,6 +24,7 @@ Core objects to deal with astronomical image representation and processing. See 
    FITSImage
    Block
    Sequence
+   ~prose.core.sequence.SequenceParallel
 
 Sources
 -------

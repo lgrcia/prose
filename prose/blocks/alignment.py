@@ -96,7 +96,10 @@ class AlignReferenceSources(Block):
 
 class AlignReferenceWCS(Block):
     def __init__(self, reference: Image, name=None, verbose=False, n=6):
-        """Create WCS based on reference WCS. To use this block, Image sources must match the sources from the reference (e.g. using AlignReferenceSources), i.e. same sources should be found at a given index in both images.
+        """Create WCS based on a reference containing a valid WCS.
+
+        To use this block, Image sources must match the sources from the reference (e.g. using AlignReferenceSources),
+        i.e. same sources should be found at a given index in both images.
 
         |read| :code:`Image.sources`
 

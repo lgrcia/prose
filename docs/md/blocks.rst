@@ -16,13 +16,13 @@ Blocks categories
 -----------------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    detection_blocks.rst
-   psf_blocks.rst
-   geometry_blocks.rst
-   centoiding_blocks.rst
-   photometry_blocks.rst
+   psf_blocks
+   geometry_blocks
+   centroiding_blocks
+   photometry_blocks
    utils_blocks.rst
 
 All Blocks

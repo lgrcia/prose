@@ -183,7 +183,7 @@ def optimal_flux(diff_fluxes, method="stddiff", sigma=4):
 class Fluxes:
     """Photometric fluxes, from single to multiple stars and apertures.
 
-    Also hold contemporary time-series, errors and apertures properties.
+    Can hold other measurements time-series, errors and apertures properties.
     """
 
     fluxes: np.ndarray
@@ -207,6 +207,7 @@ class Fluxes:
     aperture: int = None
     """Index of selected aperture"""
     metadata: dict = None
+    """Metadata"""
 
     @property
     def _is_target_aperture_set(self):
@@ -264,14 +265,17 @@ class Fluxes:
 
     @property
     def error(self) -> np.array:
+        """Error of the target flux"""
         return self._target_attr("errors")
 
     @property
     def shape(self):
+        """shape of fluxes"""
         return self.fluxes.shape
 
     @property
     def ndim(self):
+        """Number of dimensions of fluxes"""
         return self.fluxes.ndim
 
     def vander(consant=True, **kwargs):
@@ -351,7 +355,7 @@ class Fluxes:
             target = self.target
         self.aperture = self.best_aperture_index(method=method, sigma=sigma)
 
-    def estimate_error(self):
+    def _estimate_error(self):
         pass
 
     def plot(self, marker=".", color="0.8", ls="", ax=None, **kwargs):
@@ -446,14 +450,17 @@ class Fluxes:
             pickle.dump(asdict(self), f)
 
     def load(path: Union[str, Path]):
+        """Load fluxes from file"""
         with open(path, "rb") as f:
             return Fluxes(**pickle.load(f))
 
     def copy(self):
+        """Deep copy of the object"""
         return deepcopy(self)
 
     @property
     def dataframe(self):
+        """Pandas dataframe of the fluxes and associated measurements"""
         df_dict = self.data.copy()
         df_dict.update({"time": self.time})
         if self._is_target_aperture_set:
@@ -463,6 +470,7 @@ class Fluxes:
 
     @property
     def df(self):
+        """Pandas dataframe of the fluxes and associated measurements"""
         return self.dataframe
 
     def mask(self, array):
