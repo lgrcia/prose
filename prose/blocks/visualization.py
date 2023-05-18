@@ -52,7 +52,7 @@ class _Video(Block):
 
     @property
     def citations(self):
-        return "imageio"
+        return super().citations + ["imageio"]
 
 
 class RawVideo(_Video):

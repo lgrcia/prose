@@ -117,6 +117,10 @@ class _SourceDetection(Block):
 
         return regions
 
+    @property
+    def citations(self):
+        return super().citations + ["scikit-image"]
+
 
 class AutoSourceDetection(_SourceDetection):
     def __init__(

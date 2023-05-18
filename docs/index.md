@@ -29,6 +29,7 @@ A Python package to build image processing pipelines for Astronomy. Beyond featu
 md/installation
 ipynb/quickstart
 ipynb/core
+ipynb/acknowledgement
 ```
 
 ```{toctree}
