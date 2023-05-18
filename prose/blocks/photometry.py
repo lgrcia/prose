@@ -18,7 +18,7 @@ class AperturePhotometry(Block):
         Parameters
         ----------
         radii : np.ndarray, optional
-            apertures radii (definition vary depending of sources), by default None
+            apertures radii (definition varies depending on sources), by default None
         scale : bool, optional
             whether to scale radii with :code:`Image.fwhm` usually present in :code:`Image.epsf`, by default True
         name : str, optional
