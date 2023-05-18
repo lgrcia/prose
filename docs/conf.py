@@ -140,9 +140,6 @@ classes = sorted(list(set(list(classes))), key=lambda x: x.split(".")[-1].lower(
 _all_blocks = "\n".join([f"\t~{cl}" for cl in classes])
 all_blocks = f"""
 
-All block
----------
-
 .. currentmodule:: prose
 
 .. autosummary::

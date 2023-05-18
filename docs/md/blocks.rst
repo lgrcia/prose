@@ -12,11 +12,11 @@ A ``Block`` is a single unit of processing acting on the ``Image`` object, readi
 - |write|: the ``Image`` attributes written by the ``Block``
 - |modify|: indicates that the ``Image.data`` is modified by the ``Block``
 
-blocks categories
+Blocks categories
 -----------------
 
 .. toctree::
-   :maxdepth: 0
+   :maxdepth: 2
 
    detection_blocks.rst
    psf_blocks.rst
@@ -24,4 +24,8 @@ blocks categories
    centoiding_blocks.rst
    photometry_blocks.rst
    utils_blocks.rst
-   all_blocks.rst
+
+All Blocks
+----------
+
+.. include:: all_blocks.rst
