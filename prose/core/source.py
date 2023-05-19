@@ -305,6 +305,11 @@ class Source:
         else:
             a0 = r0
             a1, b1 = r1, r1 * self.eccentricity
+
+        a0 = np.max([0.01, a0])
+        a1 = np.max([a0 + 0.001, a1])
+        b1 = np.max([0.01, b1])
+
         return RectangularAnnulus(self.coords, a0, a1, b1, theta=self.orientation)
 
     def fit_isophotes(self, debug=False):
