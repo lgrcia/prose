@@ -4,8 +4,12 @@ from skimage.transform import warp
 
 from prose.core import Block, Image
 
-from .geometry import (ComputeTransform, ComputeTransformTwirl,
-                       ComputeTransformXYShift, SetAffineTransform)
+from .geometry import (
+    ComputeTransform,
+    ComputeTransformTwirl,
+    ComputeTransformXYShift,
+    SetAffineTransform,
+)
 
 __all__ = ["Align", "AlignReferenceSources", "AlignReferenceWCS"]
 
@@ -61,7 +65,11 @@ class AlignReferenceSources(Block):
         """
         super().__init__(name, verbose)
         self.reference_sources = reference.sources
-        self.compute_transform = ComputeTransformXYShift(reference) if XYShift else ComputeTransformTwirl(reference)
+        self.compute_transform = (
+            ComputeTransformXYShift(reference)
+            if XYShift
+            else ComputeTransformTwirl(reference)
+        )
         self._parallel_friendly = True
 
     def run(self, image: Image):

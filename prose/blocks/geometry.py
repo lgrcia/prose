@@ -208,8 +208,8 @@ class Drizzle(Block):
         self.image.data = self.drizzle.outsci
 
 
-
 ### EDIT ###
+
 
 class ComputeTransformTwirl(Block):
     """
@@ -277,8 +277,8 @@ class ComputeTransformTwirl(Block):
             i, j = matches
 
         return twirl_utils._find_transform(s[j], self.ref[i])
-    
-    
+
+
 class ComputeTransformXYShift(Block):
     """
     Compute translational transformation (dx, dy) of a target image from a reference image
@@ -291,31 +291,32 @@ class ComputeTransformXYShift(Block):
     ----------
     ref : Image
         image containing detected sources
+    n : int, optional
+        number of stars to consider to compute transformation, by default 10
     """
 
-    def __init__(self, reference_image: Image, discard=True, **kwargs):
-        
+    def __init__(self, reference_image: Image, n=10, discard=True, **kwargs):
         super().__init__(**kwargs)
         ref_coords = reference_image.sources.coords
+        self.n = n
         self.ref_coords = ref_coords[0:n].copy()
         self.discard = discard
         self._parallel_friendly = True
 
     def run(self, image):
-        
         if len(image.sources.coords) >= 5:
             if len(image.sources.coords) <= 2:
                 shift = self.ref_coords[0] - image.sources.coords[0]
             else:
-                shift = self.xyshift(image.sources.coords, self.ref_coords) # TODO implement tolerance parameter for more modularity?
+                shift = self.xyshift(
+                    image.sources.coords, self.ref_coords
+                )
             if shift is not None:
                 image.transform = AffineTransform(translation=shift)
             else:
                 image.discard = True
         else:
             image.discard = True
-            
-
 
     def xyshift(self, im_stars_pos, ref_stars_pos, tolerance=1.5):
         """
@@ -337,8 +338,10 @@ class ComputeTransformXYShift(Block):
         ndarray
             (dx, dy) shift
         """
-        assert len(im_stars_pos) > 2, f"{len(im_stars_pos)} star coordinates provided (should be > 2)"
-        
+        assert (
+            len(im_stars_pos) > 2
+        ), f"{len(im_stars_pos)} star coordinates provided (should be > 2)"
+
         clean_ref = ref_stars_pos
         clean_im = im_stars_pos
 
