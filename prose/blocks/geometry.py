@@ -281,7 +281,7 @@ class ComputeTransformTwirl(Block):
     
 class ComputeTransformXYShift(Block):
     """
-    Compute transformation fromm a reference image
+    Compute translational transformation (dx, dy) of a target image from a reference image
 
     |read| ``Image.sources`` on both reference and input image
 
@@ -291,18 +291,13 @@ class ComputeTransformXYShift(Block):
     ----------
     ref : Image
         image containing detected sources
-    n : int, optional
-        number of stars to consider to compute transformation, by default 10
     """
 
-    def __init__(self, reference_image: Image, n=10, discard=True, **kwargs):
+    def __init__(self, reference_image: Image, discard=True, **kwargs):
         
         super().__init__(**kwargs)
         ref_coords = reference_image.sources.coords
         self.ref_coords = ref_coords[0:n].copy()
-        self.n = n
-        self.quads_ref, self.stars_ref = twirl_utils.quads_stars(ref_coords, n=n)
-        self.KDTree = KDTree(self.quads_ref)
         self.discard = discard
         self._parallel_friendly = True
 
@@ -312,8 +307,7 @@ class ComputeTransformXYShift(Block):
             if len(image.sources.coords) <= 2:
                 shift = self.ref_coords[0] - image.sources.coords[0]
             else:
-                shift = self.xyshift(image.sources.coords, self.ref_coords) # TODO implement tolerance parameter for more modularity
-            #result = self.solve(image.sources.coords) #dx, dy from XYshift
+                shift = self.xyshift(image.sources.coords, self.ref_coords) # TODO implement tolerance parameter for more modularity?
             if shift is not None:
                 image.transform = AffineTransform(translation=shift)
             else:
