@@ -47,6 +47,7 @@ myst-nb = "*"
 sphinx-copybutton = "*"
 sphinx-design = "*"
 toml = "*"
+ipywidgets = "*"
 
 [build-system]
 requires = ["poetry-core"]
