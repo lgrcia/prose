@@ -714,7 +714,7 @@ def FITSImage(
     image = Image(values, metadata, {})
     if image.metadata["jd"] is None:
         image.metadata["jd"] = Time(image.date).jd
-    image.fits_header = header
+    image.header = header
     image.wcs = WCS(header)
     image.telescope = telescope
 
