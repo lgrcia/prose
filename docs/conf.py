@@ -58,16 +58,16 @@ html_theme = "sphinx_book_theme"
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
 
+# Title
 # get version number from pyproject.toml
 # --------------------------------------
 import toml
 
 pyproject = toml.load("../pyproject.toml")
 version = pyproject["tool"]["poetry"]["version"]
-
-# Mine
-# -------------------
-html_title = f"prose <div class='version-nb'>{version}</div>"
+html_short_title = "prose"
+html_title = f"{html_short_title}"
+# -----
 
 source_suffix = {
     ".rst": "restructuredtext",
