@@ -80,6 +80,9 @@ class Source:
     discarded: bool = False
     """Whether source is discarded"""
 
+    area: float = 0.0
+    """Area of the source in pixels"""
+
     @classmethod
     def from_region(cls, region, parser=None, keep_region=False, **kwargs):
         """Source from region
@@ -102,6 +105,7 @@ class Source:
             orientation=np.pi / 2 - region.orientation,
             coords=np.array(region.centroid_weighted[::-1]),
             peak=region.intensity_max,
+            area=region.area,
             **kwargs,
         )
 
@@ -161,6 +165,7 @@ class Source:
         copy.peak = self.peak
         copy.orientation = self.orientation
         copy.i = self.i
+        copy.area = self.area
         copy.coords = self.coords.copy()
         return copy
 
@@ -390,16 +395,6 @@ class Source:
         )
         dy, dx, _, _ = self._region.bbox
         return np.array([x0 + dx, y0 + dy])
-
-    @property
-    def area(self):
-        """Area of the source as :code:`a*b`
-
-        Returns
-        -------
-        float
-        """
-        return self.a * self.b
 
 
 def auto_source(region, parser=None, i=None, trace=0.3, extended=0.9, discard=False):
