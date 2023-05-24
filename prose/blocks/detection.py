@@ -21,6 +21,7 @@ class _SourceDetection(Block):
         min_area: float = 0,
         minor_length: float = 0,
         name: str = None,
+        parser=None,
     ):
         """Base class for sources detection.
 
@@ -48,6 +49,7 @@ class _SourceDetection(Block):
         self.threshold = threshold
         self.min_area = min_area
         self.minor_length = minor_length
+        self.parser = parser
 
     def clean(self, sources):
         peaks = np.array([s.peak for s in sources])
@@ -168,7 +170,7 @@ class AutoSourceDetection(_SourceDetection):
 
     def run(self, image):
         regions = self.regions(image)
-        sources = np.array([auto_source(region) for region in regions])
+        sources = np.array([auto_source(region, self.parser) for region in regions])
         image.sources = Sources(self.clean(sources))
 
 
@@ -212,7 +214,9 @@ class PointSourceDetection(_SourceDetection):
             regions = [regions[i] for i in idxs]
 
         sources = Sources(
-            np.array([PointSource.from_region(region) for region in regions])
+            np.array(
+                [PointSource.from_region(region, self.parser) for region in regions]
+            )
         )
         image.sources = Sources(self.clean(sources), source_type="PointSource")
 
@@ -242,7 +246,9 @@ class TraceDetection(_SourceDetection):
 
     def run(self, image):
         regions = self.regions(image)
-        sources = np.array([TraceSource.from_region(region) for region in regions])
+        sources = np.array(
+            [TraceSource.from_region(region, self.parser) for region in regions]
+        )
         image.sources = Sources(sources)
 
 

@@ -81,19 +81,22 @@ class Source:
     """Whether source is discarded"""
 
     @classmethod
-    def from_region(cls, region, keep_region: bool = False, **kwargs):
+    def from_region(cls, region, parser=None, keep_region=False, **kwargs):
         """Source from region
 
         Parameters
         ----------
         region : skimage.measure.RegionProperties
             An skimage RegionProperties containing the source
+        parser: callable, optional
+            custom parser to use instead of the default one
         keep_region: bool, optional
             whether to keep region object in source
         **kwargs:
             other sources attributes to set
         """
         source = cls(
+            # default parser
             a=region.axis_major_length / 2,
             b=region.axis_minor_length / 2,
             orientation=np.pi / 2 - region.orientation,
@@ -101,6 +104,11 @@ class Source:
             peak=region.intensity_max,
             **kwargs,
         )
+
+        # custom parser
+        if parser is not None:
+            parser(source, region)
+
         return source
 
     @property
@@ -394,24 +402,24 @@ class Source:
         return self.a * self.b
 
 
-def auto_source(region, i=None, trace=0.3, extended=0.9, discard=False):
+def auto_source(region, parser=None, i=None, trace=0.3, extended=0.9, discard=False):
     if region is None:
-        return DiscardedSource.from_region(region, i=i)
+        return DiscardedSource.from_region(region, parser, i=i)
     a = region.axis_major_length
     b = region.axis_minor_length
     if a == 0.0:
         if discard:
-            return DiscardedSource.from_region(region, i=i)
+            return DiscardedSource.from_region(region, parser, i=i)
         else:
-            return PointSource.from_region(region, i=i)
+            return PointSource.from_region(region, parser, i=i)
     eccentricity = b / a
     if eccentricity <= extended:
         if eccentricity <= trace:
-            return TraceSource.from_region(region, i=i)
+            return TraceSource.from_region(region, parser, i=i)
         else:
-            return ExtendedSource.from_region(region, i=i)
+            return ExtendedSource.from_region(region, parser, i=i)
     else:
-        return PointSource.from_region(region, i=i)
+        return PointSource.from_region(region, parser, i=i)
 
 
 class DiscardedSource(Source):
