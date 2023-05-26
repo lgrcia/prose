@@ -78,7 +78,8 @@ class _CatalogBlock(Block):
                 [
                     PointSource(coords=s, i=i)
                     for i, s in enumerate(stars_coords[mask][0 : self.limit])
-                ]
+                ],
+                source_type="PointSource",
             )
             catalog = catalog.iloc[np.flatnonzero(mask)].reset_index()
 
