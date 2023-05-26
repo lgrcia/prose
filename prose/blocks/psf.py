@@ -79,7 +79,9 @@ class MedianEPSF(Block):
 
 
 class _PSFModelBase(Block):
-    def __init__(self, reference_image=None, name=None, verbose=False):
+    def __init__(
+        self, reference_image=None, name=None, verbose=False, save_model: bool = True
+    ):
         """The base block for PSF fitting.
 
         In this class:
@@ -87,7 +89,6 @@ class _PSFModelBase(Block):
         - self._opt_model is the model that goes into optimization
         - self.model is a model that is expecting a dict of params as input
         - self.model_function return the model function that goes into optimization
-
 
         Parameters
         ----------
@@ -97,6 +98,9 @@ class _PSFModelBase(Block):
             _description_, by default None
         verbose : bool, optional
             _description_, by default False
+        save_model : bool, optional
+            whether to save EPSF model function in Image, by default True. An image
+            containing a model function cannot be saved (because callable are not pickable)
         """
         super().__init__(name, verbose)
         self._init = reference_image.epsf.params if reference_image else None
@@ -104,6 +108,7 @@ class _PSFModelBase(Block):
         self.x, self.y = None, None
         self._last_init = None
         self._parallel_friendly = True
+        self.save_model = save_model
 
     def run(self, image: Image):
         if np.all(image.epsf.shape != self.shape):
@@ -117,7 +122,8 @@ class _PSFModelBase(Block):
 
         params = self.optimize(image.epsf.data)
         image.epsf.params = params
-        image.epsf.model = self.model
+        if self.save_model:
+            image.epsf.model = self.model
         image.epsf.fwhm = gaussian_sigma_to_fwhm * np.mean(
             [params["sigma_x"], params["sigma_y"]]
         )
@@ -134,8 +140,8 @@ class _PSFModelBase(Block):
 
 
 class _JAXPSFModel(_PSFModelBase):
-    def __init__(self, reference_image=None, name=None, verbose=False):
-        super().__init__(reference_image, name, verbose)
+    def __init__(self, reference_image=None, name=None, verbose=False, save_model=True):
+        super().__init__(reference_image, name, verbose, save_model=save_model)
 
     def optimize(self, data):
         @jax.jit
@@ -153,7 +159,9 @@ class _JAXPSFModel(_PSFModelBase):
 
 
 class JAXGaussian2D(_JAXPSFModel):
-    def __init__(self, reference_image: Image = None, name=None, verbose=False):
+    def __init__(
+        self, reference_image: Image = None, name=None, verbose=False, save_model=True
+    ):
         """Model :code:`Image.epsf` as a 2D Gaussian profile (powered by `JAX`_)
 
         |read| :code:`Image.epsf`
@@ -173,8 +181,11 @@ class JAXGaussian2D(_JAXPSFModel):
             name of the block, by default None
         verbose : bool, optional
             whether to log fitting info, by default False
+        save_model : bool, optional
+            whether to save EPSF model function in Image, by default True. An image
+            containing a model function cannot be saved (because callable are not pickable)
         """
-        super().__init__(reference_image, name, verbose)
+        super().__init__(reference_image, name, verbose, save_model=save_model)
 
     def model_function(self):
         @jax.jit
@@ -197,7 +208,9 @@ class JAXGaussian2D(_JAXPSFModel):
 
 
 class JAXMoffat2D(_JAXPSFModel):
-    def __init__(self, reference_image: Image = None, name=None, verbose=False):
+    def __init__(
+        self, reference_image: Image = None, name=None, verbose=False, save_model=True
+    ):
         """Model :code:`Image.epsf` as a 2D Moffat profile (powered by `JAX`_)
 
         |read| :code:`Image.epsf`
@@ -218,8 +231,11 @@ class JAXMoffat2D(_JAXPSFModel):
             name of the block, by default None
         verbose : bool, optional
             whether to log fitting info, by default False
+        save_model : bool, optional
+            whether to save EPSF model function in Image, by default True. An image
+            containing a model function cannot be saved (because callable are not pickable)
         """
-        super().__init__(reference_image, name, verbose)
+        super().__init__(reference_image, name, verbose, save_model=save_model)
 
     def model_function(self):
         @jax.jit
@@ -242,7 +258,11 @@ class JAXMoffat2D(_JAXPSFModel):
 
 class Gaussian2D(_PSFModelBase):
     def __init__(
-        self, reference_image: Image = None, name: str = None, verbose: bool = False
+        self,
+        reference_image: Image = None,
+        name: str = None,
+        verbose: bool = False,
+        save_model: bool = True,
     ):
         """Model :code:`Image.epsf` as a 2D Gaussian profile
 
@@ -263,8 +283,11 @@ class Gaussian2D(_PSFModelBase):
             name of the block, by default None
         verbose : bool, optional
             whether to log fitting info, by default False
+        save_model : bool, optional
+            whether to save EPSF model function in Image, by default True. An image
+            containing a model function cannot be saved (because callable are not pickable)
         """
-        super().__init__(reference_image, name, verbose)
+        super().__init__(reference_image, name, verbose, save_model=save_model)
 
     def optimize(self, data):
         def nll(params):
@@ -321,7 +344,13 @@ class Gaussian2D(_PSFModelBase):
 
 
 class Moffat2D(_PSFModelBase):
-    def __init__(self, reference_image: Image = None, name=None, verbose=False):
+    def __init__(
+        self,
+        reference_image: Image = None,
+        name=None,
+        verbose=False,
+        save_model: bool = True,
+    ):
         """Model :code:`Image.epsf` as a 2D Moffat profile
 
         |read| :code:`Image.epsf`
@@ -341,8 +370,11 @@ class Moffat2D(_PSFModelBase):
             name of the block, by default None
         verbose : bool, optional
             whether to log fitting info, by default False
+        save_model : bool, optional
+            whether to save EPSF model function in Image, by default True. An image
+            containing a model function cannot be saved (because callable are not pickable)
         """
-        super().__init__(reference_image, name, verbose)
+        super().__init__(reference_image, name, verbose, save_model=save_model)
 
     def optimize(self, data):
         def nll(params):
