@@ -116,7 +116,7 @@ class SetAffineTransform(Block):
 
 class ComputeTransform(Block):
     """
-    Compute transformation fromm a reference image
+    Compute transformation of an image to a reference image
 
     |read| :code:`Image.sources` on both reference and input image
 
