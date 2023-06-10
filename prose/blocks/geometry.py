@@ -210,3 +210,169 @@ class Drizzle(Block):
 
     def terminate(self):
         self.image.data = self.drizzle.outsci
+
+
+### EDIT ###
+
+
+class ComputeTransformTwirl(Block):
+    """
+    Compute transformation fromm a reference image
+
+    |read| ``Image.sources`` on both reference and input image
+
+    |write| ``Image.transform``
+
+    Parameters
+    ----------
+    ref : Image
+        image containing detected sources
+    n : int, optional
+        number of stars to consider to compute transformation, by default 10
+    """
+
+    def __init__(self, reference_image: Image, n=10, discard=True, **kwargs):
+        super().__init__(**kwargs)
+        ref_coords = reference_image.sources.coords
+        self.ref = ref_coords[0:n].copy()
+        self.n = n
+        self.quads_ref, self.stars_ref = twirl_utils.quads_stars(ref_coords, n=n)
+        self.KDTree = KDTree(self.quads_ref)
+        self.discard = discard
+        self._parallel_friendly = True
+
+    def run(self, image):
+        if len(image.sources.coords) >= 5:
+            result = self.solve(image.sources.coords)
+            if result is not None:
+                image.transform = AffineTransform(result)
+            else:
+                image.discard = True
+        else:
+            image.discard = True
+
+    def solve(self, coords, tolerance=2):
+        s = coords.copy()
+        quads, stars = twirl_utils.quads_stars(s, n=self.n)
+        _, indices = self.KDTree.query(quads)
+
+        # We pick the two asterismrefs leading to the highest stars matching
+        closeness = []
+        for i, m in enumerate(indices):
+            M = twirl_utils._find_transform(self.stars_ref[m], stars[i])
+            new_ref = twirl_utils.affine_transform(M)(self.ref)
+            closeness.append(
+                twirl_utils._count_cross_match(s, new_ref, tolerance=tolerance)
+            )
+
+        i = np.argmax(closeness)
+        m = indices[i]
+        S1 = self.stars_ref[m]
+        S2 = stars[i]
+        M = twirl_utils._find_transform(S1, S2)
+        new_ref = twirl_utils.affine_transform(M)(self.ref)
+
+        matches = twirl_utils.cross_match(
+            new_ref, s, tolerance=tolerance, return_ixds=True
+        ).T
+        if len(matches) == 0:
+            return None
+        else:
+            i, j = matches
+
+        return twirl_utils._find_transform(s[j], self.ref[i])
+
+
+class ComputeTransformXYShift(Block):
+    """
+    Compute translational transformation (dx, dy) of a target image from a reference image
+
+    |read| ``Image.sources`` on both reference and input image
+
+    |write| ``Image.transform``
+
+    Parameters
+    ----------
+    ref : Image
+        image containing detected sources
+    n : int, optional
+        number of stars to consider to compute transformation, by default 10
+    """
+
+    def __init__(self, reference_image: Image, n=10, discard=True, **kwargs):
+        super().__init__(**kwargs)
+        ref_coords = reference_image.sources.coords
+        self.n = n
+        self.ref_coords = ref_coords[0:n].copy()
+        self.discard = discard
+        self._parallel_friendly = True
+
+    def run(self, image):
+        if len(image.sources.coords) >= 5:
+            if len(image.sources.coords) <= 2:
+                shift = self.ref_coords[0] - image.sources.coords[0]
+            else:
+                shift = self.xyshift(
+                    image.sources.coords, self.ref_coords
+                )
+            if shift is not None:
+                image.transform = AffineTransform(translation=shift)
+            else:
+                image.discard = True
+        else:
+            image.discard = True
+
+    def xyshift(self, im_stars_pos, ref_stars_pos, tolerance=1.5):
+        """
+        Compute shift between two set of coordinates (e.g. stars)
+
+        Parameters
+        ----------
+        im_stars_pos : list or ndarray
+            (x,y) coordinates of n points (shape should be (2, n))
+        ref_stars_pos : list or ndarray
+            [(x,y) coordinates of n points (shape should be (2, n)). Reference set
+        tolerance : float, optional
+            by default 1.5
+        clean : bool, optional
+            Merge coordinates if too close, by default False
+
+        Returns
+        -------
+        ndarray
+            (dx, dy) shift
+        """
+        assert (
+            len(im_stars_pos) > 2
+        ), f"{len(im_stars_pos)} star coordinates provided (should be > 2)"
+
+        clean_ref = ref_stars_pos
+        clean_im = im_stars_pos
+
+        delta_x = np.array([clean_ref[:, 0] - v for v in clean_im[:, 0]]).flatten()
+        delta_y = np.array([clean_ref[:, 1] - v for v in clean_im[:, 1]]).flatten()
+
+        delta_x_compare = []
+        for i, dxi in enumerate(delta_x):
+            dcxi = dxi - delta_x
+            dcxi[i] = np.inf
+            delta_x_compare.append(dcxi)
+
+        delta_y_compare = []
+        for i, dyi in enumerate(delta_y):
+            dcyi = dyi - delta_y
+            dcyi[i] = np.inf
+            delta_y_compare.append(dcyi)
+
+        tests = [
+            np.logical_and(np.abs(dxc) < tolerance, np.abs(dyc) < tolerance)
+            for dxc, dyc in zip(delta_x_compare, delta_y_compare)
+        ]
+        num = np.array([np.count_nonzero(test) for test in tests])
+
+        max_count_num_i = int(np.argmax(num))
+        max_nums_ids = np.argwhere(num == num[max_count_num_i]).flatten()
+        dxs = np.array([delta_x[np.where(tests[i])] for i in max_nums_ids])
+        dys = np.array([delta_y[np.where(tests[i])] for i in max_nums_ids])
+
+        return np.nan_to_num(np.array([np.mean(dxs), np.mean(dys)]))
