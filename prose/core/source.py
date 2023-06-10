@@ -492,18 +492,25 @@ class TraceSource(Source):
 
 @dataclass
 class Sources:
-    sources: Union[list, np.ndarray] = None
-    source_type: Literal["PointSource", None] = None
+    sources: list = None
+    """List of sources"""
+    type: Literal["PointSource", None] = None
+    """Source type"""
 
     def __post_init__(self):
         if self.sources is None:
             self.sources = []
 
-        if self.source_type is not None:
+        if isinstance(self.sources, np.ndarray):
+            if self.sources.dtype != object:
+                self.sources = [PointSource(coords=s) for s in self.sources]
+                self.type = "PointSource"
+
+        if self.type is not None:
             for s in self.sources:
                 assert (
-                    s.__class__.__name__ == self.source_type
-                ), f"list can only contain {self.source_type}"
+                    s.__class__.__name__ == self.type
+                ), f"list can only contain {self.type}"
         self.sources = np.array(self.sources)
 
     def __getitem__(self, i):
@@ -538,13 +545,13 @@ class Sources:
             source.coords = new_coord
 
     def apertures(self, r, scale=False):
-        if self.source_type == "PointSource":
+        if self.type == "PointSource":
             return CircularAperture(self.coords, r)
         else:
             return [source.aperture(r, scale=scale) for source in self.sources]
 
     def annulus(self, rin, rout, scale=False):
-        if self.source_type == "PointSource":
+        if self.type == "PointSource":
             return CircularAnnulus(self.coords, rin, rout)
         else:
             return [source.annulus(rin, rout, scale=scale) for source in self.sources]
