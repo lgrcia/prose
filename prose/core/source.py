@@ -503,7 +503,7 @@ class Sources:
 
         if isinstance(self.sources, np.ndarray):
             if self.sources.dtype != object:
-                self.sources = [PointSource(coords=s) for s in self.sources]
+                self.sources = [PointSource(coords=s, i=i) for i, s in enumerate(self.sources)]
                 self.type = "PointSource"
 
         if self.type is not None:
