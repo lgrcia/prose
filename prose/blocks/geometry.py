@@ -7,7 +7,13 @@ from twirl import utils as twirl_utils
 
 from prose.core import Block, Image
 
-__all__ = ["Trim", "Cutouts", "Drizzle"]
+__all__ = [
+    "Trim",
+    "Cutouts",
+    "Drizzle",
+    "ComputeTransformXYShift",
+    "ComputeTransformTwirl",
+]
 
 
 class Trim(Block):
@@ -96,7 +102,8 @@ class Cutouts(Block):
         f = 0
 
 
-class SetAffineTransform(Block):
+# TODO: delete?
+class _SetAffineTransform(Block):
     def __init__(self, name=None, verbose=False):
         super().__init__(name, verbose)
         self._parallel_friendly = True
@@ -112,74 +119,6 @@ class SetAffineTransform(Block):
     @property
     def citations(self):
         return super().citations + ["scikit-image"]
-
-
-class ComputeTransform(Block):
-    """
-    Compute transformation of an image to a reference image
-
-    |read| :code:`Image.sources` on both reference and input image
-
-    |write| :code:`Image.transform`
-
-    Parameters
-    ----------
-    ref : Image
-        image containing detected sources
-    n : int, optional
-        number of stars to consider to compute transformation, by default 10
-    """
-
-    def __init__(self, reference_image: Image, n=10, discard=True, **kwargs):
-        super().__init__(**kwargs)
-        ref_coords = reference_image.sources.coords
-        self.ref = ref_coords[0:n].copy()
-        self.n = n
-        self.quads_ref, self.stars_ref = twirl_utils.quads_stars(ref_coords, n=n)
-        self.KDTree = KDTree(self.quads_ref)
-        self.discard = discard
-        self._parallel_friendly = True
-
-    def run(self, image):
-        if len(image.sources.coords) >= 5:
-            result = self.solve(image.sources.coords)
-            if result is not None:
-                image.transform = AffineTransform(result)
-            else:
-                image.discard = True
-        else:
-            image.discard = True
-
-    def solve(self, coords, tolerance=2):
-        s = coords.copy()
-        quads, stars = twirl_utils.quads_stars(s, n=self.n)
-        _, indices = self.KDTree.query(quads)
-
-        # We pick the two asterismrefs leading to the highest stars matching
-        closeness = []
-        for i, m in enumerate(indices):
-            M = twirl_utils._find_transform(self.stars_ref[m], stars[i])
-            new_ref = twirl_utils.affine_transform(M)(self.ref)
-            closeness.append(
-                twirl_utils._count_cross_match(s, new_ref, tolerance=tolerance)
-            )
-
-        i = np.argmax(closeness)
-        m = indices[i]
-        S1 = self.stars_ref[m]
-        S2 = stars[i]
-        M = twirl_utils._find_transform(S1, S2)
-        new_ref = twirl_utils.affine_transform(M)(self.ref)
-
-        matches = twirl_utils.cross_match(
-            new_ref, s, tolerance=tolerance, return_ixds=True
-        ).T
-        if len(matches) == 0:
-            return None
-        else:
-            i, j = matches
-
-        return twirl_utils._find_transform(s[j], self.ref[i])
 
 
 class Drizzle(Block):
@@ -212,16 +151,13 @@ class Drizzle(Block):
         self.image.data = self.drizzle.outsci
 
 
-### EDIT ###
-
-
 class ComputeTransformTwirl(Block):
     """
-    Compute transformation fromm a reference image
+    Compute transformation of an image to a reference image
 
-    |read| ``Image.sources`` on both reference and input image
+    |read| :code:`Image.sources` on both reference and input image
 
-    |write| ``Image.transform``
+    |write| :code:`Image.transform`
 
     Parameters
     ----------
@@ -231,14 +167,13 @@ class ComputeTransformTwirl(Block):
         number of stars to consider to compute transformation, by default 10
     """
 
-    def __init__(self, reference_image: Image, n=10, discard=True, **kwargs):
+    def __init__(self, reference_image: Image, n=10, **kwargs):
         super().__init__(**kwargs)
         ref_coords = reference_image.sources.coords
         self.ref = ref_coords[0:n].copy()
         self.n = n
         self.quads_ref, self.stars_ref = twirl_utils.quads_stars(ref_coords, n=n)
         self.KDTree = KDTree(self.quads_ref)
-        self.discard = discard
         self._parallel_friendly = True
 
     def run(self, image):
@@ -283,9 +218,13 @@ class ComputeTransformTwirl(Block):
         return twirl_utils._find_transform(s[j], self.ref[i])
 
 
+# backward compatibility
+ComputeTransform = ComputeTransformTwirl
+
+
 class ComputeTransformXYShift(Block):
     """
-    Compute translational transformation (dx, dy) of a target image from a reference image
+    Compute translational transform of a target image to a reference image
 
     |read| ``Image.sources`` on both reference and input image
 
@@ -312,9 +251,7 @@ class ComputeTransformXYShift(Block):
             if len(image.sources.coords) <= 2:
                 shift = self.ref_coords[0] - image.sources.coords[0]
             else:
-                shift = self.xyshift(
-                    image.sources.coords, self.ref_coords
-                )
+                shift = self.xyshift(image.sources.coords, self.ref_coords)
             if shift is not None:
                 image.transform = AffineTransform(translation=shift)
             else:

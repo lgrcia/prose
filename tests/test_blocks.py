@@ -85,7 +85,9 @@ def test_MedianPSF():
 
 
 def test_AlignReferenceSources():
-    blocks.AlignReferenceSources(image.copy())(image.copy())
+    im = image.copy()
+    blocks.ComputeTransformTwirl(image.copy()).run(im)
+    blocks.AlignReferenceSources(image.copy())(im)
 
 
 def test_Get():
