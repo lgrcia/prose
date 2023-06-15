@@ -1858,6 +1858,22 @@ files = [
 ]
 
 [[package]]
+name = "lazy-loader"
+version = "0.2"
+description = "lazy_loader"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "lazy_loader-0.2-py3-none-any.whl", hash = "sha256:c35875f815c340f823ce3271ed645045397213f961b40ad0c0d395c3f5218eeb"},
+    {file = "lazy_loader-0.2.tar.gz", hash = "sha256:0edc7a5175c400acb108f283749951fefdadedeb00adcec6e88b974a9254f18a"},
+]
+
+[package.extras]
+lint = ["pre-commit (>=3.1)"]
+test = ["pytest (>=7.2)", "pytest-cov (>=4.0)"]
+
+[[package]]
 name = "markdown-it-py"
 version = "2.2.0"
 description = "Python port of markdown-it. Markdown parsing, done right!"
@@ -2094,8 +2110,8 @@ files = [
 [package.dependencies]
 numpy = [
     {version = ">1.20", markers = "python_version <= \"3.9\""},
-    {version = ">=1.21.2", markers = "python_version > \"3.9\""},
     {version = ">=1.23.3", markers = "python_version > \"3.10\""},
+    {version = ">=1.21.2", markers = "python_version > \"3.9\""},
 ]
 
 [package.extras]
@@ -4166,4 +4182,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.12"
-content-hash = "6b770002a84c000840ce49091a797d4a1ae98827d37c058e45e8aaaee9a43387"
+content-hash = "bf1033dfc52e2711a8e902bfd38ba82de8791ef34811af5307d31ef1d67910f1"
