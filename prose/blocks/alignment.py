@@ -49,7 +49,8 @@ class AlignReferenceSources(Block):
         reference: Image,
         name=None,
         verbose=False,
-        discard_tolerance=0.3,
+        discard_tolerance=0.8,
+        match_tolerance=5,
     ):
         """Set Image sources to reference sources (from a reference Image)
         aligned to the Image
@@ -68,11 +69,14 @@ class AlignReferenceSources(Block):
             _description_, by default False
         discard_tolerance: float, optional
             fraction of sources that needs to be matched before discarding image
+        match_tolerance: float, optional
+            maximum distance between matched sources in pixels, default 5
         """
         super().__init__(name, verbose)
         self.reference_sources = reference.sources
         self._parallel_friendly = True
         self.discard_tolerance = discard_tolerance
+        self.match_tolerance = match_tolerance
 
     def run(self, image: Image):
         if not image.discard:
@@ -82,13 +86,13 @@ class AlignReferenceSources(Block):
             # check if alignment potentially failed
             if self.discard_tolerance is not None:
                 matches = count_cross_match(
-                    image.transform(image.sources.coords),
-                    self.reference_sources.coords,
+                    new_sources_coords,
+                    image.sources.coords,
+                    tol=self.match_tolerance,
                 )
                 if matches < np.min(
                     [
-                        self.discard_tolerance,
-                        len(image.sources),
+                        self.discard_tolerance * len(image.sources),
                         len(self.reference_sources),
                     ]
                 ):
