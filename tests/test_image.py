@@ -1,8 +1,10 @@
 import numpy as np
 import pytest
 
+from prose import FITSImage
 from prose.core.image import Buffer, Image
 from prose.core.source import PointSource, Sources
+from prose.simulations import fits_image
 
 
 def test_init_append(n=5):
@@ -44,3 +46,11 @@ def test_plot_sources():
     image.sources[0].plot()
     # seen in a bug
     image.sources[np.int64(0)].plot()
+
+
+def test_fitsimage(tmp_path):
+    filename = tmp_path / "test.fits"
+    fits_image(np.random.rand(100, 100), {}, filename)
+
+    loaded_image = FITSImage(filename)
+    assert "IMAGETYP" in dict(loaded_image.header)
