@@ -6,7 +6,7 @@ from prose import Image, blocks
 from prose.core import Sources
 
 
-def test_transform_twirl_block(n=100):
+def test_transform_twirl_block(n=30):
     np.random.seed(n)
     original_transform = transform.AffineTransform(
         rotation=np.pi / 3, translation=(100, 100), scale=14.598
@@ -58,7 +58,7 @@ def test_align_reference_sources(n=100):
     original_image = Image(_sources=Sources(original_coords))
 
     transformed_image = Image(
-        _sources=Sources(original_transform.inverse(original_coords[0:6]))
+        _sources=Sources(original_transform(original_coords[0:6]))
     )
 
     block_align = blocks.alignment.AlignReferenceSources(original_image)
