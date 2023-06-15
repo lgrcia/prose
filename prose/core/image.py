@@ -93,7 +93,7 @@ class Image:
             if name in self.computed:
                 return self.computed[name]
             else:
-                raise AttributeError(f"{name} cannot be interpreted as Image attribute")
+                raise AttributeError(f"Image has no '{name}'")
 
     def copy(self, data=True):
         """Copy of image object
@@ -311,11 +311,13 @@ class Image:
         -------
         prose.core.source.Sources
         """
-        return self._sources
+        return self._sources if self._sources is not None else Sources()
 
     @sources.setter
     def sources(self, new_sources):
-        if isinstance(new_sources, Sources):
+        if new_sources is None:
+            self._sources = None
+        elif isinstance(new_sources, Sources):
             self._sources = new_sources
         else:
             self._sources = Sources(np.array(new_sources))
