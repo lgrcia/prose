@@ -3,6 +3,7 @@ from astropy.wcs.utils import fit_wcs_from_points
 from skimage.transform import warp
 from twirl.match import count_cross_match
 
+from prose.blocks.geometry import ComputeTransformTwirl
 from prose.core import Block, Image
 
 __all__ = ["TransformData", "AlignReferenceSources", "AlignReferenceWCS"]
@@ -77,10 +78,16 @@ class AlignReferenceSources(Block):
         self._parallel_friendly = True
         self.discard_tolerance = discard_tolerance
         self.match_tolerance = match_tolerance
+        self._transform_block = ComputeTransformTwirl(reference)
 
     def run(self, image: Image):
         if not image.discard:
             sources = self.reference_sources.copy()
+
+            # backwards compatibility
+            if "transform" not in image.computed:
+                self._transform_block.run(image)
+
             new_sources_coords = image.transform.inverse(sources.coords.copy())
 
             # check if alignment potentially failed

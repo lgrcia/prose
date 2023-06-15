@@ -48,7 +48,7 @@ def test_transform_xyhift_block(n=100):
     )
 
 
-def test_align_reference_sources(n=100):
+def test_align_reference_sources(n=30):
     np.random.seed(n)
     original_transform = transform.AffineTransform(
         rotation=np.pi / 3, translation=(100, 100), scale=14.598
@@ -64,6 +64,31 @@ def test_align_reference_sources(n=100):
     block_align = blocks.alignment.AlignReferenceSources(original_image)
     blocks.ComputeTransformTwirl(original_image).run(transformed_image)
     block_align.run(transformed_image)
+    computed_sources_coords = transformed_image.sources.coords
+
+    np.testing.assert_allclose(
+        transformed_image.transform(computed_sources_coords), original_coords
+    )
+
+
+def test_align_reference_sources_backward_compat(n=30):
+    np.random.seed(n)
+    original_transform = transform.AffineTransform(
+        rotation=np.pi / 3, translation=(100, 100), scale=14.598
+    )
+
+    original_coords = np.random.rand(n, 2) * 1000
+    original_image = Image(_sources=Sources(original_coords))
+
+    transformed_image = Image(
+        _sources=Sources(original_transform(original_coords[0:6]))
+    )
+    # backward compatibility
+    transformed_image = Image(
+        _sources=Sources(original_transform(original_coords[0:6]))
+    )
+
+    blocks.alignment.AlignReferenceSources(original_image).run(transformed_image)
     computed_sources_coords = transformed_image.sources.coords
 
     np.testing.assert_allclose(
