@@ -42,29 +42,43 @@ def exposure_constraint(exposure=0, tolerance=1000000):
 
 
 class FitsManager:
-    """Object to parse and retrieve FITS files from folder and sub-folders
-
-    This object scans files in a folder and stores the data in a mysql database for conveniance (but all products can be accessed without knowledge of the SQL language)
+    """
+    A class for managing FITS files.
 
     Parameters
     ----------
-    folder : str
-        path of the folder to parse (or list of folders as of prose 2.0.1)
+    folders : str or list of str, optional
+        The folder(s) to search for FITS files. If not provided, `files` must be provided.
+    files : str or list of str, optional
+        The file(s) to read. If not provided, `folders` must be provided.
     depth : int, optional
-        maxiumum depth of the sub-folders to explore, by default 0
+        The subfolder depth to search for files in the folder(s). Default is 0 (search only in the provided folder(s)).
     hdu : int, optional
-        by default 0
+        The HDU to read from the FITS file. Default is 0 (the primary HDU).
     extension : str, optional
-        by default ".f*ts*"
-    file : _type_, optional
-        _description_, by default None
-    batch_size : bool or int, optional
-        - if False: update database after all FITS files are parsed
-        - if int: update database every time ``batch_size`` FITS files are parsed
+        The extension of the FITS file(s) to search for. Default is ".f*t*" (search for all FITS file extensions).
+    file : str, optional
+        The name of the SQLite database file to use. Default is ":memory:" (create an in-memory database).
+    batch_size : int or bool, optional
+        The number of files to store in the databse at once. If `False`, read all files at once. Default is `False`.
+        This is to allow a scanning of a large number of files that are still saved in the database if an error occurs.
+    scan : callable, optional
+        The function used to retrieve files from a folder. Signature is scan(folder) -> list of file paths. Default is `None`.
+    verbose : bool, optional
+        Whether to display progress information. Default is `True`.
+    to_df : function, optional
+        A function to use for converting FITS files to pandas DataFrames. Default is `None`.
+    telescope : str, optional
+        The name of the telescope used to take the FITS files. Default is `None`.
 
-        by default False
-    telescope: :py:class:`~prose.Telescope``
-        telescope to use while parsing files, by default None
+    Attributes
+    ----------
+    con : sqlite3.Connection
+        The SQLite database connection.
+    cur : sqlite3.Cursor
+        The SQLite database cursor.
+    fits_to_df : function
+        The function used for converting FITS files to pandas DataFrames.
     """
 
     def __init__(
@@ -182,7 +196,7 @@ class FitsManager:
         )
 
     def get_files(self, folders, extension, scan=None, depth=0):
-        """Return path of files with specific extension in the specified folder(s)
+        """Return paths of files with specific extension in the specified folder(s)
 
         Parameters
         ----------
@@ -348,7 +362,7 @@ class FitsManager:
         return df.set_index(["id"])
 
     def calibrations(self, **kwargs):
-        """return a pandas DataFrame of calibrations observations given some metadata constraints in the form of wildcards
+        """return a pandas DataFrame of calibrations observations given some metadata constraints in the form of wildcards.
 
         Parameters
         ----------
@@ -362,7 +376,7 @@ class FitsManager:
         return pd.concat([darks, flats, bias], axis=0)
 
     def files(self, id=None, path=False, exposure=0, tolerance=1000, **kwargs):
-        """Return a pandas DataFrame of files given some metadata constraints in the form of wildcards
+        """Return a pandas DataFrame of files given some metadata constraints in the form of wildcards.
 
         Parameters
         ----------
@@ -420,6 +434,32 @@ class FitsManager:
         lights="images",
         show=True,
     ):
+        """
+        Return a dictionary of files for a given observation ID, along with calibration files.
+
+        Parameters
+        ----------
+        i : int
+            id of the observation for which files are retrieved.
+        past : float, optional
+            Number of days in the past to consider when retrieving calibrartion files, by default 1e3.
+        future : float, optional
+            Number of days in the future to consider when retrieving calibrartion files, by default 0.
+        tolerance : float, optional
+            Tolerance on the exposure constraint, by default 1e15. For example: if exposure is set to 10 and tolerance to 2, all
+            files with exposure = 10 +- 2 will be retrieved.
+        same_telescope : bool, optional
+            Whether to retrieve files from the same telescope as the observation, by default True.
+        lights : str, optional
+            key of images files in the return dict, by default "images".
+        show : bool, optional
+            Whether to print the pandas dataframe of returned files, by default True.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the files for the given observation id, along with the associated calibration files.
+        """
         files = {}
 
         obs_dict = self.observations(id=i, hide_exposure=False).to_dict("records")[0]
@@ -506,6 +546,24 @@ class FitsManager:
         return self.files(type="light", path=True).path.values
 
     def images(self, i, show=False, **kwargs):
+        """
+        Return the paths of the observation science images for a given observation id.
+
+        Parameters
+        ----------
+        i : int
+            The observation id.
+        show : bool, optional
+            Whether to show the pandas dataframe of the returned files, by default False.
+        **kwargs : dict, optional
+            Additional arguments to pass to the `observation_files` method.
+
+        Returns
+        -------
+        list of str
+            The fits paths of the observation science images.
+        """
+
         return self.observation_files(i, show=show, **kwargs)["images"]
 
     @property
@@ -519,6 +577,23 @@ class FitsManager:
         return self.files(type="dark", path=True).path.values
 
     def bias(self, i, show=False, **kwargs):
+        """
+        Return the paths of the bias images associated to a given observation.
+
+        Parameters
+        ----------
+        i : int
+            The index of the observation.
+        show : bool, optional
+            Whether to display the pandas dataframe of the files being returned, by default False.
+        **kwargs : dict
+            Additional keyword arguments to pass to the `observation_files` method.
+
+        Returns
+        -------
+        list of str
+            The fits paths of the bias images.
+        """
         return self.observation_files(i, show=show, **kwargs)["bias"]
 
     @property
@@ -532,6 +607,23 @@ class FitsManager:
         return self.files(type="bias", path=True).path.values
 
     def darks(self, i, show=False, **kwargs):
+        """
+        Return the paths of the dark images associated to a given observation.
+
+        Parameters
+        ----------
+        i : int
+            The index of the observation.
+        show : bool, optional
+            Whether to display the pandas dataframe of the files being returned, by default False.
+        **kwargs : dict
+            Additional keyword arguments to pass to the `observation_files` method.
+
+        Returns
+        -------
+        list of str
+            The fits paths of the observation dark images.
+        """
         return self.observation_files(i, show=show, **kwargs)["darks"]
 
     @property
@@ -545,6 +637,24 @@ class FitsManager:
         return self.files(type="flat", path=True).path.values
 
     def flats(self, i, show=False, **kwargs):
+        """
+        Return the paths of the flat images associated to a given observation.
+
+        Parameters
+        ----------
+        i : int
+            The index of the observation.
+        show : bool, optional
+            Whether to display the pandas dataframe of the files being returned, by default False.
+        **kwargs : dict
+            Additional keyword arguments to pass to the `observation_files` method.
+
+        Returns
+        -------
+        list of str
+            The fits paths of the observation flat images.
+        """
+
         return self.observation_files(i, show=show, **kwargs)["flats"]
 
     @property
@@ -568,6 +678,19 @@ class FitsManager:
         return self.files(imtype="reduced")
 
     def label(self, i):
+        """
+        Return a string label for the observation with the given index.
+
+        Parameters
+        ----------
+        i : int
+            The index of the observation.
+
+        Returns
+        -------
+        str
+            A string label in the format "{telescope}_{date}_{target}_{filter}".
+        """
         date, telescope, filter, _, target, *_ = self.observations(id=i).values[0]
         return f"{telescope}_{date.replace('-', '')}_{target}_{filter}"
 
@@ -588,6 +711,19 @@ class FitsManager:
         return self.observations()._repr_html_()
 
     def to_pandas(self, query):
+        """
+        Execute a SQL query and return the result as a pandas DataFrame.
+
+        Parameters
+        ----------
+        query : str
+            The SQL query to execute.
+
+        Returns
+        -------
+        pandas.DataFrame
+            The result of the query as a pandas DataFrame.
+        """
         return pd.read_sql_query(query, self.con)
 
     def _update_observations(self, verbose=False):

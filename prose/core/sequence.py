@@ -10,6 +10,7 @@ import yaml
 from tabulate import tabulate
 from tqdm.autonotebook import tqdm
 
+from prose.citations import citations as default_citations
 from prose.console_utils import TQDM_BAR_FORMAT, error, warning
 from prose.core.image import Buffer, FITSImage, Image
 from prose.utils import full_class_name
@@ -204,67 +205,27 @@ class Sequence:
         return yaml.safe_dump(self.args, sort_keys=False)
 
     def citations(self):
-        """Citations aggregated from all blocks
+        """Return the citations of the sequence"""
 
-        Returns
-        -------
-        str
-            LaTex string to cite sequence block dependencies
-        str
-            LaTex bibtex items
+        # concatenate all blocks citations
+        citations = []
+        for block in self.blocks:
+            citations += block.citations
 
-        Example
-        -------
-        .. jupyter-execute::
+        # remove duplicates
+        citations = list(set(citations))
+        citation_dict = {}
 
-            from prose import Sequence, blocks
-
-            sequence = Sequence([
-                blocks.psf.Moffat2D(),
-                blocks.detection.LimitStars(min=3),
-                blocks.Set(stars_coords=None),
-                blocks.AffineTransform(data=False, inverse=True),
-                blocks.BalletCentroid(),
-                blocks.PhotutilsAperturePhotometry(scale=1.),
-                blocks.Peaks(),
-            ])
-
-            tex, bib = sequence.citations()
-
-            print(tex)
-            print(bib[0:500], "...")
-        """
-        citations = [block.citations for block in self.blocks]
-        citations = [*citations, "astropy", "prose"]
-        cites = {}
-
-        def add_citation(c):
-            if isinstance(c, str):
-                if c.strip("\n").strip(" ")[0] == "@":
-                    name = c.split("{")[1].split(",")[0]
-                    cites[name] = c
-                else:
-                    if c in _all_citations:
-                        cites[c] = _all_citations[c]
-                    else:
-                        raise KeyError(
-                            f"{c} not in defautls citations, please provide it as a dict"
-                        )
-
-            elif isinstance(c, dict):
-                cites.update(c)
-
-        for c in citations:
-            if isinstance(c, (list, tuple)):
-                for cc in c:
-                    add_citation(cc)
+        for name in citations:
+            if name[0] == "@":
+                citation_dict[name] = name
             else:
-                add_citation(c)
+                citation_dict[name] = default_citations[name]
 
         tex_citep = ", ".join(
             [
                 f"{name} \citep{{{name}}}"
-                for name in cites.keys()
+                for name in citation_dict.keys()
                 if name not in ["prose", "astropy"]
             ]
         )
@@ -274,10 +235,26 @@ class Sequence:
             ""
         )
 
-        return tex, "\n\n".join(cites.values())
+        return tex, "\n\n".join(citation_dict.values())
 
 
 class SequenceParallel(Sequence):
+    """
+    A multi-process :py:class:`Sequence` of blocks to be executed in parallel.
+
+    The data_blocks allow blocks carying large amount of data to be run sequentially
+    so that they are not copied from one process to another.
+
+    Parameters
+    ----------
+    blocks : list
+        A list of blocks to be executed in parallel.
+    data_blocks : list, optional
+        A list of data blocks to be executed in parallel.
+    name : str, optional
+        A name for the sequence.
+    """
+
     def __init__(self, blocks, data_blocks=None, name=""):
         super().__init__(blocks, name=name)
         if data_blocks is None:

@@ -12,113 +12,20 @@ A ``Block`` is a single unit of processing acting on the ``Image`` object, readi
 - |write|: the ``Image`` attributes written by the ``Block``
 - |modify|: indicates that the ``Image.data`` is modified by the ``Block``
 
-Detection
----------
+Blocks categories
+-----------------
 
-.. currentmodule:: prose.blocks.detection
+.. toctree::
+   :maxdepth: 1
 
-.. image:: ../_static/detection.png
-   :align: center
-   :height: 230px
+   detection_blocks.rst
+   psf_blocks
+   geometry_blocks
+   centroiding_blocks
+   photometry_blocks
+   utils_blocks.rst
 
-.. autosummary::
-   :template: blocksum.rst
-   :nosignatures:
-
-   AutoSourceDetection
-   PointSourceDetection   
-   DAOFindStars
-   SEDetection
-   TraceDetection
-
-PSF
----
-
-.. currentmodule:: prose.blocks.psf
-
-.. autosummary::
-   :template: blocksum.rst
-   :nosignatures:
-
-   MedianEPSF
-
-Once an effective PSF is constructed (an :py:class:`~prose.Image` in :code:`Image.epsf`) it can be modeled with the following blocks:
-
-.. autosummary::
-   :template: blocksum.rst
-   :nosignatures:
-
-   Gaussian2D
-   Moffat2D
-   JAXGaussian2D
-   JAXMoffat2D
-
-Alignment & Geometry
---------------------
-
-.. image:: ../_static/matching.png
-   :align: center
-   :height: 220px
-
-.. autosummary::
-   :template: blocksum.rst
-   :nosignatures:
-
-   ~prose.blocks.geometry.Trim
-   ~prose.blocks.geometry.Cutouts
-   ~prose.blocks.alignment.Align
-   ~prose.blocks.alignment.AlignReferenceSources
-   ~prose.blocks.alignment.AlignReferenceWCS
-
-Centroiding
------------
-
-.. currentmodule:: prose.blocks.centroids
-
-.. autosummary::
-   :template: blocksum.rst
-   :nosignatures:
-
-   CentroidCOM
-   CentroidQuadratic
-   CentroidGaussian2D
-   CentroidBallet
-
-Photometry
+All Blocks
 ----------
-
-.. currentmodule:: prose.blocks.photometry
-
-.. image:: ../_static/photometry.png
-   :align: center
-   :width: 220px
-
-.. autosummary::
-   :template: blocksum.rst
-   :nosignatures:
-
-   AperturePhotometry
-   AnnulusBackground
-   
-Utils
------
-
-.. currentmodule:: prose.blocks.utils
-
-.. image:: ../_static/utils.png
-   :align: center
-   :height: 190px
-   
-.. autosummary::
-   :template: blocksum.rst
-   :nosignatures:
-
-   Get
-   Calibration
-   SortSources
-   CleanBadPixels
-
-All
----
 
 .. include:: all_blocks.rst

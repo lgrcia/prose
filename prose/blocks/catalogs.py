@@ -78,7 +78,8 @@ class _CatalogBlock(Block):
                 [
                     PointSource(coords=s, i=i)
                     for i, s in enumerate(stars_coords[mask][0 : self.limit])
-                ]
+                ],
+                source_type="PointSource",
             )
             catalog = catalog.iloc[np.flatnonzero(mask)].reset_index()
 
@@ -119,12 +120,15 @@ class _CatalogBlock(Block):
         image.catalogs[self.catalog_name] = catalog.iloc[0 : self.limit]
 
 
-# TODO
 class PlateSolve(Block):
     def __init__(
         self, reference=None, n=30, tolerance=10, radius=1.2, debug=False, **kwargs
     ):
         """Plate solve an image using twirl
+
+        |read| :code:`Image.sources`
+
+        |write| :code:`Image.wcs`, :code:`Image.plate_solved_success`
 
         Parameters
         ----------
@@ -177,6 +181,10 @@ class PlateSolve(Block):
             _gaias = Sources([PointSource(coords=c) for c in coords])
             _gaias.plot(c="y")
 
+    @property
+    def citations(self):
+        return super().citations + ["twirl"]
+
 
 class GaiaCatalog(_CatalogBlock):
     def __init__(self, correct_pm=True, limit=10000, mode=None):
@@ -186,7 +194,7 @@ class GaiaCatalog(_CatalogBlock):
 
         |read| :code:`Image.sources` if mode is "crossmatch"
 
-        |write|
+        |write| :code:`Image.catalogs`
 
         - :code:`Image.sources` if mode is "crossmatch"
         - :code:`Image.catalogs`
@@ -214,6 +222,10 @@ class GaiaCatalog(_CatalogBlock):
     def run(self, image):
         _CatalogBlock.run(self, image)
 
+    @property
+    def citations(self):
+        return super().citations + ["astroquery"]
+
 
 class TESSCatalog(_CatalogBlock):
     def __init__(self, limit=10000, mode=None):
@@ -223,7 +235,7 @@ class TESSCatalog(_CatalogBlock):
 
         |read| :code:`Image.sources` if mode is "crossmatch"
 
-        |write|
+        |write| :code:`Image.catalogs`
 
         - :code:`Image.sources` if mode is "crossmatch"
         - :code:`Image.catalogs`
@@ -250,3 +262,7 @@ class TESSCatalog(_CatalogBlock):
 
     def run(self, image):
         _CatalogBlock.run(self, image)
+
+    @property
+    def citations(self):
+        return super().citations + ["astroquery"]

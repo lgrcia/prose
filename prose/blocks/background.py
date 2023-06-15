@@ -6,12 +6,26 @@ from prose import Block
 from prose.blocks.psf import *
 from prose.utils import binn2D
 
-# TODO
-
 
 class PhotutilsBackground2D(Block):
-    def __init__(self, subtract=True, box_size=(50, 50), filter_size=(3, 3), **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, subtract=True, box_size=(50, 50), filter_size=(3, 3), name=None):
+        """
+        Initializes the PhotutilsBackground2D block.
+
+        |read| :code:`Image.data`
+
+        |write| :code:`Image.data`, :code:`Image.bkg`
+
+        Parameters
+        ----------
+        subtract : bool, optional
+            Whether to subtract the estimated background from the image. Default is True.
+        box_size : tuple of int, optional
+            The size of the box used to compute the background. Default is (50, 50).
+        filter_size : tuple of int, optional
+            The size of the filter used to smooth the background. Default is (3, 3).
+        """
+        super().__init__(name=name)
         self.sigma_clip = SigmaClip(sigma=3.0)
         self.bkg_estimator = MedianBackground()
         self.subtract = subtract
@@ -32,8 +46,8 @@ class PhotutilsBackground2D(Block):
             image.data = image.data - self.bkg
 
     @property
-    def citations(self):
-        return "photutils"
+    def citations(self) -> list:
+        return super().citations + ["photutils"]
 
 
 class BackgroundPoly(Block):
@@ -93,5 +107,5 @@ class BackgroundPoly(Block):
         image.bkg = np.reshape(self.X @ w, image.shape)
 
     @property
-    def citations(self):
-        return "numpy"
+    def citations(self) -> list:
+        return super().citations + ["numpy", "astropy"]

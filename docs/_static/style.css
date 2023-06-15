@@ -160,3 +160,11 @@ code span.pre {
     color: #404040;
     font-size: 2rem;
 }
+
+.version-nb {
+    margin-top: -12px;
+    font-style: italic;
+    font-weight: bold;
+    color: var(--pst-color-primary);
+    font-size: 15px;
+}

@@ -48,19 +48,17 @@ def moments(data):
 
 
 class MedianEPSF(Block):
-    def __init__(self, max_sources=1, name=None, normalize=True):
+    def __init__(self, max_sources=1, normalize=True, name=None):
         """Stack cutouts into :code:`Image.epsf`: a median effective PSF
 
-        |read| Image.source
+        |read| Image.cutouts
 
-        [write] Image.epsf
+        |write| Image.epsf
 
         Parameters
         ----------
         max_sources : int, optional
-            max number of sources cutout to be stacked should have, by default 1, meaning only cutouts with a single source are used
-        name : _type_, optional
-            _description_, by default None
+            maximum number of sources in a cutout for the cutout to be used, by default 1
         normalize : bool, optional
             whether to normalize cutouts to form a normalized EPSF, by default True
         """
@@ -130,6 +128,10 @@ class _PSFModelBase(Block):
     def model(self):
         return self.model_function()
 
+    @property
+    def citations(self) -> list:
+        return super().citations + ["astropy", "scipy"]
+
 
 class _JAXPSFModel(_PSFModelBase):
     def __init__(self, reference_image=None, name=None, verbose=False):
@@ -144,6 +146,10 @@ class _JAXPSFModel(_PSFModelBase):
         opt = ScipyMinimize(fun=nll)
         params = opt.run(self._last_init).params
         return params
+
+    @property
+    def citations(self) -> list:
+        return self.citations + ["jax"]
 
 
 class JAXGaussian2D(_JAXPSFModel):
@@ -314,7 +320,6 @@ class Gaussian2D(_PSFModelBase):
         return _model
 
 
-# TODO
 class Moffat2D(_PSFModelBase):
     def __init__(self, reference_image: Image = None, name=None, verbose=False):
         """Model :code:`Image.epsf` as a 2D Moffat profile
@@ -398,6 +403,7 @@ class Moffat2D(_PSFModelBase):
         return _model
 
 
+# TODO: document
 class HFD(Block):
     # https://www.focusmax.org/Documents_V4/ITS%20Paper.pdf
 

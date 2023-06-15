@@ -79,6 +79,28 @@ pip install 'prose @ git+https://github.com/lgrcia/prose'
 ## Contributions
 See our [contributions guidelines](docs/CONTRIBUTING.md)
 
-<p align="center">
-    <img src="docs/_static/lookatit.png" width="150">
-</p>
+## Attribution
+
+If you find `prose` useful for your research, cite [Garcia et. al 2022](https://ui.adsabs.harvard.edu/abs/2022MNRAS.509.4817G). The BibTeX entry for the paper is:
+```
+@ARTICLE{prose,
+       author = {{Garcia}, Lionel J. and {Timmermans}, Mathilde and {Pozuelos}, Francisco J. and {Ducrot}, Elsa and {Gillon}, Micha{\"e}l and {Delrez}, Laetitia and {Wells}, Robert D. and {Jehin}, Emmanu{\"e}l},
+        title = "{PROSE: a PYTHON framework for modular astronomical images processing}",
+      journal = {\mnras},
+     keywords = {instrumentation: detectors, methods: data analysis, planetary systems, Astrophysics - Instrumentation and Methods for Astrophysics, Astrophysics - Earth and Planetary Astrophysics},
+         year = 2022,
+        month = feb,
+       volume = {509},
+       number = {4},
+        pages = {4817-4828},
+          doi = {10.1093/mnras/stab3113},
+archivePrefix = {arXiv},
+       eprint = {2111.02814},
+ primaryClass = {astro-ph.IM},
+       adsurl = {https://ui.adsabs.harvard.edu/abs/2022MNRAS.509.4817G},
+      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
+```
+
+and read about how to cite the dependencies of your sequences [here](https://prose.readthedocs.io/en/latest/ipynb/acknowledgement.html).
+

@@ -117,6 +117,10 @@ class _SourceDetection(Block):
 
         return regions
 
+    @property
+    def citations(self):
+        return super().citations + ["scikit-image"]
+
 
 class AutoSourceDetection(_SourceDetection):
     def __init__(
@@ -129,7 +133,11 @@ class AutoSourceDetection(_SourceDetection):
         min_area=0,
         minor_length=0,
     ):
-        """Detect all sources
+        """Detect all sources.
+
+        |read| :code:`Image.data`
+
+        |write| :code:`Image.sources`
 
         Parameters
         ----------
@@ -166,7 +174,11 @@ class AutoSourceDetection(_SourceDetection):
 
 class PointSourceDetection(_SourceDetection):
     def __init__(self, unit_euler=False, min_area=3, minor_length=2, **kwargs):
-        """Detect point sources (as :py:class:`~prose.core.source.PointSource`)
+        """Detect point sources (as :py:class:`~prose.core.source.PointSource`).
+
+        |read| :code:`Image.data`
+
+        |write| :code:`Image.sources`
 
         Parameters
         ----------
@@ -204,10 +216,6 @@ class PointSourceDetection(_SourceDetection):
         )
         image.sources = Sources(self.clean(sources), source_type="PointSource")
 
-    @property
-    def citations(self):
-        return "scikit-image", "scipy"
-
 
 class TraceDetection(_SourceDetection):
     def __init__(self, minor_length=5, **kwargs):
@@ -237,10 +245,6 @@ class TraceDetection(_SourceDetection):
         sources = np.array([TraceSource.from_region(region) for region in regions])
         image.sources = Sources(sources)
 
-    @property
-    def citations(self):
-        return "scikit-image", "scipy"
-
 
 # backward compatibility
 class SegmentedPeaks(PointSourceDetection):
@@ -260,7 +264,7 @@ class SegmentedPeaks(PointSourceDetection):
         self.minor_length = minor_length
 
 
-# TODO
+# TODO: document
 class Peaks(Block):
     def __init__(self, cutout=11, **kwargs):
         super().__init__(**kwargs)
@@ -274,10 +278,6 @@ class Peaks(Block):
             if cut is not None:
                 peaks[i] = np.max(cut.data)
         image.peaks = peaks
-
-    @property
-    def citations(self):
-        return "photutils"
 
 
 class _SimplePointSourceDetection(_SourceDetection):
@@ -343,10 +343,6 @@ class DAOFindStars(_SimplePointSourceDetection):
 
         return coordinates, peaks
 
-    @property
-    def citations(self):
-        return "photutils"
-
 
 try:
     from sep import extract
@@ -390,7 +386,7 @@ class SEDetection(_SimplePointSourceDetection):
 
     @property
     def citations(self):
-        return "source extractor", "sep"
+        return super().citations + ["sep"]
 
 
 class AlignSources(Block):
