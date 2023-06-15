@@ -507,7 +507,7 @@ class Image:
         im_dict["data"] = im_dict["data"].astype(image_dtype)
         return im_dict
 
-    def save(self, filepath, image_dtype="float64", low_data=True):
+    def save(self, filepath, image_dtype="float64", low_data=False):
         """
         Save the image to a file using pickle.
 
@@ -650,7 +650,8 @@ def FITSImage(
     load_units: bool = True,
     load_data: bool = True,
     telescope: Telescope = None,
-):
+    skip_wcs: bool = False,
+) -> Image:
     """Create an image from a FITS file
 
     Parameters
@@ -663,6 +664,8 @@ def FITSImage(
         whether to load metadata units, by default True
     load_data : bool, optional
         whether to load image data, by default True
+    skip_wcs : bool, optional
+        whether to skip WCS loading, by default False
 
     Returns
     -------
@@ -714,8 +717,9 @@ def FITSImage(
     image = Image(values, metadata, {})
     if image.metadata["jd"] is None:
         image.metadata["jd"] = Time(image.date).jd
-    image.header = header
-    image.wcs = WCS(header)
+    image.fits_header = header
+    if not skip_wcs:
+        image.wcs = WCS(header)
     image.telescope = telescope
 
     return image

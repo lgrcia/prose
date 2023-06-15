@@ -26,7 +26,7 @@ citations = {
 }
 """,
     "astropy": """
-    @ARTICLE{astropy:2022,
+    @ARTICLE{astropy,
        author = {{Astropy Collaboration} and {Price-Whelan}, Adrian M. and {Lim}, Pey
        Lian and {Earl}, Nicholas and {Starkman}, Nathaniel and {Bradley}, Larry and
        {Shupe}, David L. and {Patil}, Aarya A. and {Corrales}, Lia and {Brasseur}, C.~E.
