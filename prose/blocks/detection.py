@@ -214,7 +214,7 @@ class PointSourceDetection(_SourceDetection):
         sources = Sources(
             np.array([PointSource.from_region(region) for region in regions])
         )
-        image.sources = Sources(self.clean(sources), source_type="PointSource")
+        image.sources = Sources(self.clean(sources), type="PointSource")
 
 
 class TraceDetection(_SourceDetection):
@@ -289,7 +289,7 @@ class _SimplePointSourceDetection(_SourceDetection):
         sources = np.array(
             [PointSource(coords=c, peak=p) for c, p in zip(coordinates, peaks)]
         )
-        image.sources = Sources(self.clean(sources), source_type="PointSource")
+        image.sources = Sources(self.clean(sources), type="PointSource")
 
 
 class DAOFindStars(_SimplePointSourceDetection):

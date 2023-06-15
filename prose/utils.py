@@ -409,21 +409,6 @@ def gaia_query(center, fov, *args, limit=10000, circular=True):
     return job.get_results()
 
 
-def sparsify(stars, radius):
-    _stars = stars.copy()
-    deleted_stars = np.zeros([], dtype=int)
-    sparse_stars = []
-
-    for i, s in enumerate(_stars):
-        if not i in deleted_stars:
-            distances = np.linalg.norm(_stars - s, axis=1)
-            idxs = np.flatnonzero(distances < radius)
-            sparse_stars.append(s)
-            deleted_stars = np.hstack([deleted_stars, idxs])
-
-    return np.array(sparse_stars)
-
-
 def full_class_name(o):
     # https://stackoverflow.com/questions/2020014/get-fully-qualified-class-name-of-an-object-in-python
     klass = o.__class__

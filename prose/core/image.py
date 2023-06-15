@@ -3,7 +3,7 @@ from copy import deepcopy
 from dataclasses import asdict, dataclass
 from datetime import timedelta
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import astropy.units as u
 import matplotlib.pyplot as plt
@@ -34,17 +34,17 @@ class Image:
     keyword-arguments when instantiated.
     """
 
-    data: np.ndarray = None
+    data: Optional[np.ndarray] = None
     """Image data"""
 
-    metadata: dict = None
+    metadata: Optional[dict] = None
     """Image metadata"""
 
-    catalogs: dict = None
+    catalogs: Optional[dict] = None
     """Catalogs associated with the image contained in a dictionary of 
     pandas dataframes"""
 
-    _sources: Union[Sources, dict] = None
+    _sources: Optional[Union[Sources, dict]] = None
 
     origin: tuple = (0, 0)
     """Image origin"""
@@ -52,10 +52,10 @@ class Image:
     discard: bool = False
     """Whether image as been discarded by a block"""
 
-    computed: dict = None
+    computed: Optional[dict] = None
     """A dictionary containing any user and block-defined attributes"""
 
-    header: Header = None
+    header: Optional[Header] = None
     """FITS header associated with the image (optional)"""
 
     _wcs = None
@@ -717,7 +717,7 @@ def FITSImage(
     image = Image(values, metadata, {})
     if image.metadata["jd"] is None:
         image.metadata["jd"] = Time(image.date).jd
-    image.fits_header = header
+    image.header = header
     if not skip_wcs:
         image.wcs = WCS(header)
     image.telescope = telescope

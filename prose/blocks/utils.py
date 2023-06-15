@@ -118,7 +118,7 @@ class Get(Block):
         new_getters = {}
 
         def get_from_header(image, key=None):
-            return image.fits_header[key]
+            return image.header[key]
 
         def get(image, key=None):
             return getattr(image, key)
@@ -587,10 +587,10 @@ class WriteTo(Block):
         self.destination.mkdir(exist_ok=True, parents=True)
 
         new_hdu = fits.PrimaryHDU(image.data)
-        new_hdu.header = image.fits_header
+        new_hdu.header = image.header
 
         if self.imtype is not None:
-            image.fits_header[image.telescope.keyword_image_type] = self.imtype
+            image.header[image.telescope.keyword_image_type] = self.imtype
 
         fits_new_path = self.destination / (
             Path(image.metadata["path"]).stem + f"_{self.label}.fits"

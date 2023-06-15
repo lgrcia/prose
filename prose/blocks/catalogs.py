@@ -7,11 +7,12 @@ import twirl
 from astropy.coordinates import SkyCoord
 from astropy.time import Time
 from astroquery.mast import Catalogs
+from twirl.geometry import sparsify
 
 from prose import Block
 from prose import visualization as viz
 from prose.core.source import PointSource, Sources
-from prose.utils import cross_match, gaia_query, sparsify
+from prose.utils import cross_match, gaia_query
 
 __all__ = ["GaiaCatalog", "TESSCatalog"]
 
@@ -74,13 +75,7 @@ class _CatalogBlock(Block):
                 stars_coords > 0, 1
             )
             mask = mask & ~np.any(np.isnan(stars_coords), 1)
-            image.sources = Sources(
-                [
-                    PointSource(coords=s, i=i)
-                    for i, s in enumerate(stars_coords[mask][0 : self.limit])
-                ],
-                source_type="PointSource",
-            )
+            image.sources = Sources(stars_coords[mask][0 : self.limit])
             catalog = catalog.iloc[np.flatnonzero(mask)].reset_index()
 
         elif self.mode == "crossmatch":
@@ -121,52 +116,92 @@ class _CatalogBlock(Block):
 
 
 class PlateSolve(Block):
+    """
+    A block that performs plate solving on an astronomical image using a Gaia catalog.
+
+    Parameters
+    ----------
+    reference : `None` or `~prose.Image`
+        A reference image containing a Gaia catalog to use for plate solving.
+        If `None`, a new catalog will be queried using `image_gaia_query`.
+        Default is `None`.
+    n : int
+        The number of stars from catalog to use for plate solving.
+        Default is 30.
+    tolerance : float, optional
+        The minimum distance between two coordinates to be considered cross-matched
+        (in `pixels` units). This serves to compute the number of coordinates being
+        matched between `radecs` and `pixels` for a given transform.
+        By default 12.
+    radius : `None` or `~astropy.units.Quantity`
+        The search radius (in degrees) for the Gaia catalog.
+        If `None`, the radius will be set to 1/12th of the maximum field of view of the image.
+        Default is `None`.
+    debug : bool
+        If `True`, the image and the matched stars will be plotted for debugging purposes.
+        Default is `False`.
+    quads_tolerance : float, optional
+        The minimum euclidean distance between two quads to be matched and tested.
+        By default 0.1.
+    field : float
+        The field of view to use for the Gaia catalog query, in fraction of the image field of view.
+        Default is 1.2.
+    min_match : float, optional
+        The fraction of `pixels` coordinates that must be matched to stop the search.
+        I.e., if the number of matched points is `>= min_match * len(pixels)`, the
+        search stops and return the found transform. By default 0.7.
+    name : str
+        The name of the block.
+        Default is `None`.
+    """
+
     def __init__(
-        self, reference=None, n=30, tolerance=10, radius=1.2, debug=False, **kwargs
+        self,
+        reference=None,
+        n=30,
+        tolerance=10,
+        radius=None,
+        debug=False,
+        quads_tolerance=0.1,
+        field=1.2,
+        min_match=0.8,
+        name=None,
     ):
-        """Plate solve an image using twirl
-
-        |read| :code:`Image.sources`
-
-        |write| :code:`Image.wcs`, :code:`Image.plate_solved_success`
-
-        Parameters
-        ----------
-        reference : Image, optional
-            _description_, by default None
-        n : int, optional
-            _description_, by default 30
-        tolerance : int, optional
-            _description_, by default 10
-        radius : float, optional
-            _description_, by default 1.2
-        debug : bool, optional
-            _description_, by default False
-        """
-        super().__init__(**kwargs)
-        self.radius = radius * u.arcmin.to("deg")
+        super().__init__(name=name)
+        self.radius = radius
         self.n = n
         self.reference = reference
         self.tolerance = tolerance
+        self.quads_tolerance = quads_tolerance
         self.debug = debug
+        self.field = field
+        self.min_match = min_match
 
     def run(self, image):
-        stars = image.sources.coords * image.pixel_scale.to("deg").value
-        stars = sparsify(stars, self.radius) / image.pixel_scale.to("deg").value
+        radius = image.fov.max() / 12 if self.radius is None else self.radius
+        stars = image.sources.coords * image.pixel_scale.to("arcmin").value
+        stars = (
+            sparsify(stars, radius.to("arcmin").value)
+            / image.pixel_scale.to("arcmin").value
+        )
 
         if self.reference is None:
             table = image_gaia_query(
-                image, wcs=False, circular=True, fov=image.fov.max()
+                image, wcs=False, circular=True, fov=image.fov.max() * self.field
             ).to_pandas()
             gaias = np.array([table.ra, table.dec]).T
             gaias = gaias[~np.any(np.isnan(gaias), 1)]
         else:
             gaias = self.reference.catalogs["gaia"][["ra", "dec"]].values
 
-        gaias = sparsify(gaias, self.radius)
+        gaias = sparsify(gaias, radius.to("deg").value)
 
-        new_wcs = twirl._compute_wcs(
-            stars[0 : self.n], gaias[0 : self.n], n=self.n, tolerance=self.tolerance
+        new_wcs = twirl.compute_wcs(
+            stars,
+            gaias[0 : self.n],
+            tolerance=self.tolerance,
+            quads_tolerance=self.quads_tolerance,
+            min_match=self.min_match,
         )
         image.wcs = new_wcs
         coords = np.array(image.wcs.world_to_pixel(SkyCoord(gaias, unit="deg"))).T

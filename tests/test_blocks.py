@@ -85,14 +85,16 @@ def test_MedianPSF():
 
 
 def test_AlignReferenceSources():
-    blocks.AlignReferenceSources(image.copy())(image.copy())
+    im = image.copy()
+    blocks.ComputeTransformTwirl(image.copy()).run(im)
+    blocks.AlignReferenceSources(image.copy())(im)
 
 
 def test_Get():
     image = example_image()
     image.a = 3
     image.b = 6
-    image.fits_header = {"C": 42}
+    image.header = {"C": 42}
 
     g = blocks.Get("a", "b", "keyword:C", arrays=False)
     g(image)
