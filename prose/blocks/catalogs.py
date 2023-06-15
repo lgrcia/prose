@@ -116,6 +116,45 @@ class _CatalogBlock(Block):
 
 
 class PlateSolve(Block):
+    """
+    A block that performs plate solving on an astronomical image using a Gaia catalog.
+
+    Parameters
+    ----------
+    reference : `None` or `~prose.Image`
+        A reference image containing a Gaia catalog to use for plate solving.
+        If `None`, a new catalog will be queried using `image_gaia_query`.
+        Default is `None`.
+    n : int
+        The number of stars from catalog to use for plate solving.
+        Default is 30.
+    tolerance : float, optional
+        The minimum distance between two coordinates to be considered cross-matched
+        (in `pixels` units). This serves to compute the number of coordinates being
+        matched between `radecs` and `pixels` for a given transform.
+        By default 12.
+    radius : `None` or `~astropy.units.Quantity`
+        The search radius (in degrees) for the Gaia catalog.
+        If `None`, the radius will be set to 1/12th of the maximum field of view of the image.
+        Default is `None`.
+    debug : bool
+        If `True`, the image and the matched stars will be plotted for debugging purposes.
+        Default is `False`.
+    quads_tolerance : float, optional
+        The minimum euclidean distance between two quads to be matched and tested.
+        By default 0.1.
+    field : float
+        The field of view to use for the Gaia catalog query, in fraction of the image field of view.
+        Default is 1.2.
+    min_match : float, optional
+        The fraction of `pixels` coordinates that must be matched to stop the search.
+        I.e., if the number of matched points is `>= min_match * len(pixels)`, the
+        search stops and return the found transform. By default 0.7.
+    name : str
+        The name of the block.
+        Default is `None`.
+    """
+
     def __init__(
         self,
         reference=None,
@@ -124,29 +163,10 @@ class PlateSolve(Block):
         radius=None,
         debug=False,
         quads_tolerance=0.1,
-        name=None,
         field=1.2,
-        min_matches=0.8,
+        min_match=0.8,
+        name=None,
     ):
-        """Plate solve an image using twirl
-
-        |read| :code:`Image.sources`
-
-        |write| :code:`Image.wcs`, :code:`Image.plate_solved_success`
-
-        Parameters
-        ----------
-        reference : Image, optional
-            _description_, by default None
-        n : int, optional
-            _description_, by default 30
-        tolerance : int, optional
-            _description_, by default 10
-        radius : float, optional
-            _description_, by default 1.2
-        debug : bool, optional
-            _description_, by default False
-        """
         super().__init__(name=name)
         self.radius = radius
         self.n = n
@@ -155,7 +175,7 @@ class PlateSolve(Block):
         self.quads_tolerance = quads_tolerance
         self.debug = debug
         self.field = field
-        self.min_match = min_matches
+        self.min_match = min_match
 
     def run(self, image):
         radius = image.fov.max() / 12 if self.radius is None else self.radius
