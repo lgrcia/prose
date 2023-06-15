@@ -43,7 +43,7 @@ class SortSources(Block):
         _type_
             _description_
         """
-        super().__init__(name, verbose)
+        super().__init__(name, verbose, read=["sources"])
         if isinstance(key, str):
             if key == "cutout_sum":
 
@@ -169,6 +169,8 @@ class Calibration(Block):
         **kwargs,
     ):
         """Flat, Bias and Dark calibration.
+
+        |modify|
 
         The provided calibration images can be either:
 

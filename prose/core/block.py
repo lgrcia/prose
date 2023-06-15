@@ -24,7 +24,7 @@ class Block(object):
     All prose blocks must be child of this parent class
     """
 
-    def __init__(self, name=None, verbose=False, size=1):
+    def __init__(self, name=None, verbose=False, size=1, read=None):
         assert size % 2 == 1, "block size must be odd"
         _name = self.__class__.__name__
         _issue = f"https://github.com/lgrcia/prose/issues/new?title=Missing+doc+for+{_name}&body=Documentation+is+missing+for+block+{_name}"
@@ -40,10 +40,26 @@ class Block(object):
 
         self._data_block = False
         self.size = size
+        if read is not None:
+            assert isinstance(read, list), "require must be a list"
+            self.read = read
+        else:
+            self.read = []
 
     @property
     def args(self):
         return self._args
+
+    def _check_require(self, image):
+        for _require in self.read:
+            if _require == "sources":
+                if len(image.sources) == 0:
+                    raise AttributeError(f"Image must have sources (0 found)")
+            elif _require == "wcs":
+                if not image.plate_solved:
+                    raise AttributeError(f"Image must have valid WCS")
+            if not hasattr(image, _require) and not hasattr(image.computed, _require):
+                raise AttributeError(f"Image must have attribute '{_require}'")
 
     def _run(self, buffer):
         t0 = time()
@@ -53,6 +69,7 @@ class Block(object):
             image = buffer
         else:
             raise ValueError("block must be run on a Buffer or an Image")
+        self._check_require(image)
         self.run(image)
         self.processing_time += time() - t0
         self.runs += 1
@@ -89,7 +106,7 @@ class Block(object):
 
     def __call__(self, image):
         image_copy = image.copy()
-        self.run(image_copy)
+        self._run(image_copy)
         if image_copy.discard:
             warning(f"{self.__class__.__name__} discarded Image")
         return image_copy

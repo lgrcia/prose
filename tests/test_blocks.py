@@ -4,7 +4,7 @@ import sys
 import numpy as np
 import pytest
 
-from prose import Sequence, blocks, example_image
+from prose import Block, Sequence, blocks, example_image
 from prose.blocks.centroids import _PhotutilsCentroid
 from prose.blocks.detection import _SourceDetection
 from prose.blocks.psf import _PSFModelBase
@@ -208,3 +208,35 @@ def test_SortSources():
     blocks.SortSources().run(im)
     peaks = [s.peak for s in im.sources]
     assert np.all(peaks[:-1] >= peaks[1:])
+
+
+def test_require():
+    im = image.copy()
+    im.a = 0
+
+    class Testa(Block):
+        def __init__(self, name=None):
+            super().__init__(name=name, read=["a"])
+
+        def run(self, image):
+            pass
+
+    class Testab(Block):
+        def __init__(self, name=None):
+            super().__init__(name=name, read=["a", "b"])
+
+        def run(self, image):
+            pass
+
+    Sequence([Testa()]).run(im)
+
+    with pytest.raises(AttributeError, match="attribute 'b'"):
+        Sequence([Testab()]).run(im)
+
+
+def test_require_sources():
+    im = image.copy()
+    im.sources = None
+
+    with pytest.raises(AttributeError, match="sources"):
+        Sequence([blocks.Cutouts()]).run(im)

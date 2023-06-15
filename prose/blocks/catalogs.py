@@ -50,11 +50,14 @@ def image_gaia_query(
 
 
 class _CatalogBlock(Block):
-    def __init__(self, name, mode=None, limit=10000, **kwargs):
+    def __init__(self, name, mode: str = None, limit=10000, **kwargs):
         super().__init__(**kwargs)
         self.mode = mode
         self.catalog_name = name
         self.limit = limit
+
+        if self.mode == "replace":
+            self.require = ["sources"]
 
     def get_catalog(self, image):
         raise NotImplementedError()
@@ -119,6 +122,10 @@ class PlateSolve(Block):
     """
     A block that performs plate solving on an astronomical image using a Gaia catalog.
 
+    |read| :code:`Image.sources`, :code:`Image.pixel_scale`
+
+    |write| :code:`Image.wcs`
+
     Parameters
     ----------
     reference : `None` or `~prose.Image`
@@ -167,7 +174,7 @@ class PlateSolve(Block):
         min_match=0.8,
         name=None,
     ):
-        super().__init__(name=name)
+        super().__init__(name=name, requires=["sources"])
         self.radius = radius
         self.n = n
         self.reference = reference
@@ -178,7 +185,7 @@ class PlateSolve(Block):
         self.min_match = min_match
 
     def run(self, image):
-        radius = image.fov.max() / 12 if self.radius is None else self.radius
+        radius = image.fov.min() / 12 if self.radius is None else self.radius
         stars = image.sources.coords * image.pixel_scale.to("arcmin").value
         stars = (
             sparsify(stars, radius.to("arcmin").value)
@@ -194,27 +201,31 @@ class PlateSolve(Block):
         else:
             gaias = self.reference.catalogs["gaia"][["ra", "dec"]].values
 
-        gaias = sparsify(gaias, radius.to("deg").value)
+        sparse_gaias = sparsify(gaias, radius.to("deg").value)
 
         new_wcs = twirl.compute_wcs(
             stars,
-            gaias[0 : self.n],
+            sparse_gaias[0 : self.n],
             tolerance=self.tolerance,
             quads_tolerance=self.quads_tolerance,
             min_match=self.min_match,
         )
         image.wcs = new_wcs
-        coords = np.array(image.wcs.world_to_pixel(SkyCoord(gaias, unit="deg"))).T
+        coords = np.array(
+            image.wcs.world_to_pixel(SkyCoord(sparse_gaias, unit="deg"))
+        ).T
         idxs = cross_match(image.sources.coords, coords, return_idxs=True)
         image.computed["plat_solve_success"] = np.count_nonzero(
             ~np.isnan(idxs[:, 1])
-        ) / len(gaias)
+        ) / len(sparse_gaias)
 
         if self.debug:
             image.show()
-            coords = np.array(image.wcs.world_to_pixel(SkyCoord(gaias, unit="deg"))).T
-            _gaias = Sources([PointSource(coords=c) for c in coords])
-            _gaias.plot(c="y")
+            coords = np.array(
+                image.wcs.world_to_pixel(SkyCoord(sparse_gaias, unit="deg"))
+            ).T
+            Sources(coords[: self.n]).plot(c="y", label=False)
+            Sources(coords[self.n :]).plot(c="y", alpha=0.5, label=False)
 
     @property
     def citations(self):
@@ -222,7 +233,12 @@ class PlateSolve(Block):
 
 
 class GaiaCatalog(_CatalogBlock):
-    def __init__(self, correct_pm=True, limit=10000, mode=None):
+    def __init__(
+        self,
+        correct_pm=True,
+        limit=10000,
+        mode: str = None,
+    ):
         """Query gaia catalog
 
         Catalog is written in Image.catalogs as a pandas DataFrame. If mode is ""crossmatch" the index of catalog sources in the DataFrame matches with the index of sources in Image.sources
@@ -240,8 +256,9 @@ class GaiaCatalog(_CatalogBlock):
             whether to correct proper motion, by default True
         limit : int, optional
             limit number of stars queried, by default 10000
-        mode: str, optional
-            "crossmatch" to match existing Image.sources or "replace" to use queried stars as Image.sources
+        mode: ["replace", "crossmatch", None], optional
+            "crossmatch" to match existing Image.sources or "replace" to use queried
+            stars as Image.sources. Default is None and only write to Image.catalogs
         """
         _CatalogBlock.__init__(self, "gaia", limit=limit, mode=mode)
         self.correct_pm = correct_pm

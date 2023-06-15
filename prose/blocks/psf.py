@@ -62,7 +62,7 @@ class MedianEPSF(Block):
         normalize : bool, optional
             whether to normalize cutouts to form a normalized EPSF, by default True
         """
-        super().__init__(name=name)
+        super().__init__(name=name, read=["cutouts"])
         self.max_sources = max_sources
         self.normalize = normalize
         self._parallel_friendly = True
@@ -98,7 +98,7 @@ class _PSFModelBase(Block):
         verbose : bool, optional
             _description_, by default False
         """
-        super().__init__(name, verbose)
+        super().__init__(name, verbose, read=["epsf"])
         self._init = reference_image.epsf.params if reference_image else None
         self.shape = (0, 0)  # reference_image.epsf.shape if reference_image else None
         self.x, self.y = None, None

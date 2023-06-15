@@ -24,7 +24,7 @@ class AperturePhotometry(Block):
         name : str, optional
             name of the block, by default None
         """
-        super().__init__(name=name)
+        super().__init__(name=name, read=["sources", "data"])
         if radii is None:
             # log-uniform
             self._radii = np.exp(np.linspace(np.log(0.1), np.log(12), 30))
@@ -52,7 +52,7 @@ class AperturePhotometry(Block):
 
 class _AnnulusPhotometry(Block):
     def __init__(self, name=None, rin=5, rout=8, scale=True):
-        super().__init__(name=name)
+        super().__init__(name=name, read=["sources", "data"])
         self.rin = rin
         self.rout = rout
         self.scale = scale
