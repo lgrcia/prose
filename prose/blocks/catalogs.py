@@ -75,13 +75,7 @@ class _CatalogBlock(Block):
                 stars_coords > 0, 1
             )
             mask = mask & ~np.any(np.isnan(stars_coords), 1)
-            image.sources = Sources(
-                [
-                    PointSource(coords=s, i=i)
-                    for i, s in enumerate(stars_coords[mask][0 : self.limit])
-                ],
-                source_type="PointSource",
-            )
+            image.sources = Sources(stars_coords[mask][0 : self.limit])
             catalog = catalog.iloc[np.flatnonzero(mask)].reset_index()
 
         elif self.mode == "crossmatch":
