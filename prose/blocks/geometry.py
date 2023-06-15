@@ -1,9 +1,11 @@
 from typing import Optional, Union
 
 import numpy as np
-from scipy.spatial import KDTree
+from scipy.spatial import cKDTree
 from skimage.transform import AffineTransform
-from twirl import utils as twirl_utils
+from twirl import find_transform, quads
+from twirl.geometry import get_transform_matrix, pad
+from twirl.match import count_cross_match
 
 from prose.core import Block, Image
 
@@ -167,55 +169,54 @@ class ComputeTransformTwirl(Block):
         number of stars to consider to compute transformation, by default 10
     """
 
-    def __init__(self, reference_image: Image, n=10, **kwargs):
+    def __init__(self, reference_image: Image, n=10, rtol=0.02, **kwargs):
         super().__init__(**kwargs)
         ref_coords = reference_image.sources.coords
         self.ref = ref_coords[0:n].copy()
         self.n = n
-        self.quads_ref, self.stars_ref = twirl_utils.quads_stars(ref_coords, n=n)
-        self.KDTree = KDTree(self.quads_ref)
         self._parallel_friendly = True
+
+        # twirl
+        self.quads_ref, self.asterisms_ref = quads.hashes(ref_coords[0:n])
+        self.tree_ref = cKDTree(self.quads_ref)
+        self.rtol = rtol
 
     def run(self, image):
         if len(image.sources.coords) >= 5:
             result = self.solve(image.sources.coords)
             if result is not None:
-                image.transform = AffineTransform(result)
+                image.transform = AffineTransform(result).inverse
             else:
                 image.discard = True
         else:
             image.discard = True
 
     def solve(self, coords, tolerance=2):
-        s = coords.copy()
-        quads, stars = twirl_utils.quads_stars(s, n=self.n)
-        _, indices = self.KDTree.query(quads)
+        quads_image, asterisms_image = quads.hashes(coords)
+        tree_image = cKDTree(quads_image)
+        min_match = 0.7
 
-        # We pick the two asterismrefs leading to the highest stars matching
-        closeness = []
-        for i, m in enumerate(indices):
-            M = twirl_utils._find_transform(self.stars_ref[m], stars[i])
-            new_ref = twirl_utils.affine_transform(M)(self.ref)
-            closeness.append(
-                twirl_utils._count_cross_match(s, new_ref, tolerance=tolerance)
-            )
+        ball_query = tree_image.query_ball_tree(self.tree_ref, r=self.rtol)
+        pairs = []
+        for i, j in enumerate(ball_query):
+            if len(j) > 0:
+                pairs += [[i, k] for k in j]
 
-        i = np.argmax(closeness)
-        m = indices[i]
-        S1 = self.stars_ref[m]
-        S2 = stars[i]
-        M = twirl_utils._find_transform(S1, S2)
-        new_ref = twirl_utils.affine_transform(M)(self.ref)
+        matches = []
 
-        matches = twirl_utils.cross_match(
-            new_ref, s, tolerance=tolerance, return_ixds=True
-        ).T
-        if len(matches) == 0:
-            return None
-        else:
-            i, j = matches
+        for i, j in pairs:
+            M = get_transform_matrix(self.asterisms_ref[j], asterisms_image[i])
+            test = (M @ pad(self.ref).T)[0:2].T
+            match = count_cross_match(coords, test, tolerance)
+            matches.append(match)
 
-        return twirl_utils._find_transform(s[j], self.ref[i])
+            if min_match is not None:
+                if isinstance(min_match, float):
+                    if match >= min_match * len(coords):
+                        break
+
+        i, j = pairs[np.argmax(matches)]
+        return get_transform_matrix(self.asterisms_ref[j], asterisms_image[i])
 
 
 # backward compatibility

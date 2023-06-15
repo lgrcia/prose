@@ -7,11 +7,12 @@ import twirl
 from astropy.coordinates import SkyCoord
 from astropy.time import Time
 from astroquery.mast import Catalogs
+from twirl.geometry import sparsify
 
 from prose import Block
 from prose import visualization as viz
 from prose.core.source import PointSource, Sources
-from prose.utils import cross_match, gaia_query, sparsify
+from prose.utils import cross_match, gaia_query
 
 __all__ = ["GaiaCatalog", "TESSCatalog"]
 
@@ -116,7 +117,16 @@ class _CatalogBlock(Block):
 
 class PlateSolve(Block):
     def __init__(
-        self, reference=None, n=30, tolerance=10, radius=1.2, debug=False, **kwargs
+        self,
+        reference=None,
+        n=30,
+        tolerance=10,
+        radius=None,
+        debug=False,
+        quads_tolerance=0.1,
+        name=None,
+        field=1.2,
+        min_matches=0.8,
     ):
         """Plate solve an image using twirl
 
@@ -137,30 +147,41 @@ class PlateSolve(Block):
         debug : bool, optional
             _description_, by default False
         """
-        super().__init__(**kwargs)
-        self.radius = radius * u.arcmin.to("deg")
+        super().__init__(name=name)
+        self.radius = radius
         self.n = n
         self.reference = reference
         self.tolerance = tolerance
+        self.quads_tolerance = quads_tolerance
         self.debug = debug
+        self.field = field
+        self.min_match = min_matches
 
     def run(self, image):
-        stars = image.sources.coords * image.pixel_scale.to("deg").value
-        stars = sparsify(stars, self.radius) / image.pixel_scale.to("deg").value
+        radius = image.fov.max() / 12 if self.radius is None else self.radius
+        stars = image.sources.coords * image.pixel_scale.to("arcmin").value
+        stars = (
+            sparsify(stars, radius.to("arcmin").value)
+            / image.pixel_scale.to("arcmin").value
+        )
 
         if self.reference is None:
             table = image_gaia_query(
-                image, wcs=False, circular=True, fov=image.fov.max()
+                image, wcs=False, circular=True, fov=image.fov.max() * self.field
             ).to_pandas()
             gaias = np.array([table.ra, table.dec]).T
             gaias = gaias[~np.any(np.isnan(gaias), 1)]
         else:
             gaias = self.reference.catalogs["gaia"][["ra", "dec"]].values
 
-        gaias = sparsify(gaias, self.radius)
+        gaias = sparsify(gaias, radius.to("deg").value)
 
-        new_wcs = twirl._compute_wcs(
-            stars[0 : self.n], gaias[0 : self.n], n=self.n, tolerance=self.tolerance
+        new_wcs = twirl.compute_wcs(
+            stars,
+            gaias[0 : self.n],
+            tolerance=self.tolerance,
+            quads_tolerance=self.quads_tolerance,
+            min_match=self.min_match,
         )
         image.wcs = new_wcs
         coords = np.array(image.wcs.world_to_pixel(SkyCoord(gaias, unit="deg"))).T

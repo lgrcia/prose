@@ -1,11 +1,9 @@
 import numpy as np
 from astropy.wcs.utils import fit_wcs_from_points
 from skimage.transform import warp
-from twirl.utils import count_cross_match
+from twirl.match import count_cross_match
 
 from prose.core import Block, Image
-
-from .geometry import ComputeTransformTwirl, ComputeTransformXYShift
 
 __all__ = ["TransformData", "AlignReferenceSources", "AlignReferenceWCS"]
 
