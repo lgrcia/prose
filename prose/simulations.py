@@ -36,7 +36,7 @@ def simple_images(fluxes, coords, bkg=0.0, shape=(100, 100), std=0.0):
     return images
 
 
-def fits_image(data, header, destination):
+def fits_image(data, header, destination, **kwargs):
     header = dict(
         TELESCOP=header.get("TELESCOP", "fake"),
         EXPTIME=header.get("EXPTIME", 1),
@@ -47,6 +47,7 @@ def fits_image(data, header, destination):
         JD=header.get("JD", 0),
         RA=header.get("RA", 12.84412),
         DEC=header.get("DEC", -22.85886),
+        **kwargs,
     )
     header["DATE-OBS"] = header.get("DATE-OBS", Time(datetime.now()).to_value("fits"))
     hdu = fits.PrimaryHDU(data, header=fits.Header(header))
@@ -239,7 +240,7 @@ class ObservationSimulation:
         )
         self.remove_stars(close_by)
 
-    def save_fits(self, destination, calibration=False, verbose=True):
+    def save_fits(self, destination, calibration=False, verbose=True, **kwargs):
         progress = lambda x: tqdm(x) if verbose else x
 
         with warnings.catch_warnings():
@@ -248,57 +249,61 @@ class ObservationSimulation:
         if not path.exists(destination):
             os.makedirs(destination)
 
-            for i, time in enumerate(progress(self.time)):
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    date = Time(time, format="jd", scale="utc").to_value("fits")
-                    im = self.image(i, 300)
-                    fits_image(
-                        im,
-                        {
-                            "TELESCOP": self.telescope.name,
-                            "JD": time,
-                            "DATE-OBS": date,
-                            "FILTER": "a",
-                        },
-                        path.join(destination, f"fake-im-{i}.fits"),
-                    )
-
-            if calibration:
+        for i, time in enumerate(progress(self.time)):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                date = Time(time, format="jd", scale="utc").to_value("fits")
+                im = self.image(i, 300)
                 fits_image(
-                    np.zeros_like(im),
+                    im,
                     {
                         "TELESCOP": self.telescope.name,
                         "JD": time,
                         "DATE-OBS": date,
-                        "IMAGETYP": "dark",
+                        "FILTER": "a",
                     },
-                    path.join(destination, f"fake-dark.fits"),
+                    path.join(destination, f"fake-im-{i}.fits"),
+                    **kwargs,
                 )
 
+        if calibration:
+            fits_image(
+                np.zeros_like(im),
+                {
+                    "TELESCOP": self.telescope.name,
+                    "JD": time,
+                    "DATE-OBS": date,
+                    "IMAGETYP": "dark",
+                },
+                path.join(destination, f"fake-dark.fits"),
+                **kwargs,
+            )
+
+            fits_image(
+                np.zeros_like(im),
+                {
+                    "TELESCOP": self.telescope.name,
+                    "JD": time,
+                    "DATE-OBS": date,
+                    "IMAGETYP": "bias",
+                },
+                path.join(destination, f"fake-C001-bias.fits"),
+                **kwargs,
+            )
+
+            for i in range(0, 4):
                 fits_image(
-                    np.zeros_like(im),
+                    np.ones_like(im),
                     {
                         "TELESCOP": self.telescope.name,
                         "JD": time,
                         "DATE-OBS": date,
-                        "IMAGETYP": "bias",
+                        "IMAGETYP": "flat",
+                        "FILTER": "a",
                     },
-                    path.join(destination, f"fake-C001-bias.fits"),
+                    path.join(destination, f"fake-flat-{i}.fits"),
+                    **kwargs,
                 )
-
-                for i in range(0, 4):
-                    fits_image(
-                        np.ones_like(im),
-                        {
-                            "TELESCOP": self.telescope.name,
-                            "JD": time,
-                            "DATE-OBS": date,
-                            "IMAGETYP": "flat",
-                            "FILTER": "a",
-                        },
-                        path.join(destination, f"fake-flat-{i}.fits"),
-                    )
 
 
 def xo_lightcurve(time, period=3, r=0.1, t0=0, plot=False):
