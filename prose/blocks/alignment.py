@@ -32,7 +32,7 @@ class TransformData(Block):
         try:
             image.data = warp(
                 image.data,
-                image.transform if self.inverse else image.transform,
+                image.transform.inverse if self.inverse else image.transform,
                 cval=np.nanmedian(image.data),
                 output_shape=image.shape,
             )
