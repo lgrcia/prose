@@ -63,6 +63,8 @@ class _CatalogBlock(Block):
         raise NotImplementedError()
 
     def run(self, image):
+        if not image.plate_solved:
+            raise ValueError("Image is not plate solved.")
         catalog = self.get_catalog(image)
         radecs = np.array(
             [catalog["ra"].quantity.to(u.deg), catalog["dec"].quantity.to(u.deg)]
@@ -174,7 +176,7 @@ class PlateSolve(Block):
         min_match=0.8,
         name=None,
     ):
-        super().__init__(name=name, requires=["sources"])
+        super().__init__(name=name)
         self.radius = radius
         self.n = n
         self.reference = reference
@@ -243,7 +245,7 @@ class GaiaCatalog(_CatalogBlock):
 
         Catalog is written in Image.catalogs as a pandas DataFrame. If mode is ""crossmatch" the index of catalog sources in the DataFrame matches with the index of sources in Image.sources
 
-        |read| :code:`Image.sources` if mode is "crossmatch"
+        |read| :code:`Image.sources` if mode is "crossmatch" and valid :code:`Image.wcs`
 
         |write| :code:`Image.catalogs`
 
