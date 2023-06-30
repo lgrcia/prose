@@ -37,7 +37,7 @@ class _PhotutilsCentroid(Block):
         cutout : int, optional
             size of the cutout to be used for centroiding, by default 21
         """
-        super().__init__(name=name)
+        super().__init__(name=name, read=["sources", "data"])
         self.cutout = cutout
         self.centroid_func = centroid_func
         if limit is None:

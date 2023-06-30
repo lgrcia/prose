@@ -25,14 +25,14 @@ class TransformData(Block):
         name : str, optional
             name of the block, by default None
         """
-        super().__init__(name)
+        super().__init__(name, read=["transform"])
         self.inverse = inverse
 
     def run(self, image: Image):
         try:
             image.data = warp(
                 image.data,
-                image.transform if self.inverse else image.transform,
+                image.transform.inverse if self.inverse else image.transform,
                 cval=np.nanmedian(image.data),
                 output_shape=image.shape,
             )
@@ -73,7 +73,7 @@ class AlignReferenceSources(Block):
         match_tolerance: float, optional
             maximum distance between matched sources in pixels, default 5
         """
-        super().__init__(name, verbose)
+        super().__init__(name, verbose, read=["transform", "sources"])
         self.reference_sources = reference.sources
         self._parallel_friendly = True
         self.discard_tolerance = discard_tolerance
@@ -131,7 +131,7 @@ class AlignReferenceWCS(Block):
         n : int, optional
             number of stars used to match WCS, by default 6
         """
-        super().__init__(name, verbose)
+        super().__init__(name, verbose, read=["sources"])
         self.reference = reference
         assert reference.plate_solved, "reference must have valid WCS"
         self.n = n

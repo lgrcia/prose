@@ -25,7 +25,7 @@ class PhotutilsBackground2D(Block):
         filter_size : tuple of int, optional
             The size of the filter used to smooth the background. Default is (3, 3).
         """
-        super().__init__(name=name)
+        super().__init__(name=name, read=["data"])
         self.sigma_clip = SigmaClip(sigma=3.0)
         self.bkg_estimator = MedianBackground()
         self.subtract = subtract

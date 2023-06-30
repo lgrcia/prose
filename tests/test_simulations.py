@@ -1,6 +1,6 @@
 import shutil
 
-from prose import Telescope, FitsManager, FITSImage
+from prose import FITSImage, FitsManager, Telescope
 from prose.simulations import ObservationSimulation
 
 

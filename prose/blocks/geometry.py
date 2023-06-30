@@ -88,7 +88,7 @@ class Cutouts(Block):
         sources: bool, optional
             whether to keep sources in cutouts, by default False
         """
-        super().__init__(name=name)
+        super().__init__(name=name, read=["sources"])
         if isinstance(shape, int):
             shape = (shape, shape)
         self.shape = shape

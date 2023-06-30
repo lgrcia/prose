@@ -24,6 +24,8 @@ class _SourceDetection(Block):
     ):
         """Base class for sources detection.
 
+        |read| :code:`Image.data`
+
         Parameters
         ----------
         threshold : float, optional
@@ -41,7 +43,7 @@ class _SourceDetection(Block):
         name : str, optional
             name of the block, by default None
         """
-        super().__init__(name=name)
+        super().__init__(name=name, read=["data"])
         self.n = n
         self.sort = sort
         self.min_separation = min_separation
