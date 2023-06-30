@@ -8,6 +8,7 @@ from twirl.geometry import get_transform_matrix, pad
 from twirl.match import count_cross_match
 
 from prose.core import Block, Image
+from prose.utils import cross_match
 
 __all__ = [
     "Trim",
@@ -216,7 +217,16 @@ class ComputeTransformTwirl(Block):
                         break
 
         i, j = pairs[np.argmax(matches)]
-        return get_transform_matrix(self.asterisms_ref[j], asterisms_image[i])
+
+        if True:
+            M = get_transform_matrix(self.asterisms_ref[j], asterisms_image[i])
+            test = (M @ pad(self.ref).T)[0:2].T
+            s1, s2 = cross_match(coords, test, tolerance=tolerance, return_idxs=True).T
+            M = get_transform_matrix(self.ref[s2], coords[s1])
+        else:
+            M = get_transform_matrix(self.asterisms_ref[j], asterisms_image[i])
+
+        return M
 
 
 # backward compatibility

@@ -377,6 +377,12 @@ def gaia_query(center, fov, *args, limit=10000, circular=True):
     if isinstance(center, SkyCoord):
         ra = center.ra.to(u.deg).value
         dec = center.dec.to(u.deg).value
+    elif isinstance(center, (tuple, list)):
+        ra, dec = center
+        if isinstance(ra, u.Quantity):
+            ra = ra.to(u.deg).value
+        if isinstance(dec, u.Quantity):
+            dec = dec.to(u.deg).value
 
     if not isinstance(fov, u.Quantity):
         fov = fov * u.deg
@@ -456,6 +462,8 @@ def cross_match(S1, S2, tolerance=10, return_idxs=False, none=True):
                 matches.append([i, np.nan])
 
     matches = np.array(matches)
+    matches = matches[np.all(~np.isnan(matches), 1)]
+    matches = matches.astype(int)
 
     if return_idxs:
         return matches
