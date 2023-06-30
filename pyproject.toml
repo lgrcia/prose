@@ -38,14 +38,7 @@ jax = "*"
 jaxopt = "*"
 
 [tool.poetry.group.docs.dependencies]
-sphinx = "*"
-docutils = "*"
-jupyterlab = "*"
-myst-parser = "*"
-sphinx-book-theme = "^1.0.0"
-myst-nb = "*"
-sphinx-copybutton = "*"
-sphinx-design = "*"
+bronzivka = "*"
 toml = "*"
 ipywidgets = "*"
 
