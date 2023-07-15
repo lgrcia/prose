@@ -64,6 +64,7 @@ def weights(
     while evolution > tolerance and i < max_iteration:
         if i == 0:
             weights = 1 / binned_white(dfluxes)
+            mask = np.where(~np.isfinite(weights))
         else:
             # This metric is preferred from std to optimize over white noise and not red noise
             std = binned_white(lcs)
@@ -71,16 +72,16 @@ def weights(
 
         weights[~np.isfinite(weights)] = 0
 
-        # Keep track of weights
-        evolution = np.nanstd(
-            np.abs(np.nanmean(weights, axis=-1) - np.nanmean(last_weights, axis=-1))
-        )
+        evolution = np.abs(np.nanmean(weights, axis=-1) - np.nanmean(last_weights, axis=-1))
 
         last_weights = weights
         lcs = diff(dfluxes, weights=weights)
+
         i += 1
 
-    return weights
+    weights[0,mask] = 0
+
+    return weights[0]
 
 
 def diff(fluxes: np.ndarray, weights: np.ndarray = None):
