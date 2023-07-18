@@ -520,3 +520,18 @@ def get_all_blocks():
     ]
 
     return blocks
+
+
+def binned_nanstd(x, bins: int = 12):
+    # set binning idxs for white noise evaluation
+    bins = np.min([x.shape[-1], bins])
+    n = x.shape[-1] // bins
+    idxs = np.arange(n * bins)
+
+    def compute(f):
+        return np.nanmean(
+            np.nanstd(np.array(np.split(f.take(idxs, axis=-1), n, axis=-1)), axis=-1),
+            axis=0,
+        )
+
+    return compute
