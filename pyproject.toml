@@ -55,3 +55,4 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 fitsmanager = 'prose.scripts.fitsmanager:main'
+calibration = 'prose.scripts.calibration:main'
