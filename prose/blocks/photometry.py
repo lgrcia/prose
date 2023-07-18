@@ -40,7 +40,7 @@ class AperturePhotometry(Block):
 
         apertures = [image.sources.apertures(r) for r in radii]
         aperture_fluxes = np.array(
-            [aperture_photometry(image.data, a)["aperture_sum"].data for a in apertures]
+            [aperture_photometry(image.data, a, mask=image.mask)["aperture_sum"].data for a in apertures]
         ).T
 
         image.aperture = {"fluxes": aperture_fluxes, "radii": radii}

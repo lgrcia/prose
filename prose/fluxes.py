@@ -79,7 +79,7 @@ def weights(
         last_weights = weights
         lcs = diff(dfluxes, weights=weights)
         i += 1
-
+        
     return weights
 
 
@@ -123,7 +123,7 @@ def auto_diff_1d(fluxes, i=None):
 
         def best_weights(j):
             _w = w.copy()
-            _w[idxs[j::]] = 0.0
+            _w[idxs[j:]] = 0.0
             _w[i] = 0.0
             return _w
 
@@ -294,7 +294,7 @@ class Fluxes:
         differential :code:`Fluxes`
         """
         if comps is not None:
-            weights = np.zeros(self.fluxes[0:2])
+            weights = np.zeros((self.fluxes.shape[0], self.fluxes.shape[1]))
             weights[:, comps] = 1
         else:
             weights = None

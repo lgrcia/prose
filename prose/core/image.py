@@ -57,6 +57,9 @@ class Image:
 
     header: Optional[Header] = None
     """FITS header associated with the image (optional)"""
+    
+    mask: Optional[np.ndarray] = None
+    """Mask (commonly used for bad pixels) that is written in the CleanBadPixels block"""
 
     _wcs = None
 

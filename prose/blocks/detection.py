@@ -49,7 +49,7 @@ class _SourceDetection(Block):
         self.min_separation = min_separation
         self.threshold = threshold
         self.min_area = min_area
-        self.minor_length = minor_length
+        self.eccentricity = minor_length
 
     def clean(self, sources):
         peaks = np.array([s.peak for s in sources])
@@ -68,7 +68,7 @@ class _SourceDetection(Block):
                 for i, s in enumerate(final_sources):
                     if final_sources[i].keep:
                         distances = np.linalg.norm(
-                            s.coords - final_sources.coords, axis=1
+                            s.coords - [final_source.coords for final_source in final_sources], axis=1
                         )
                         distances[i] == np.nan
                         idxs = np.flatnonzero(distances < self.min_separation)
@@ -114,7 +114,7 @@ class _SourceDetection(Block):
         regions = [
             r
             for r in regions
-            if r.area >= self.min_area and r.axis_major_length >= self.minor_length
+            if r.area >= self.min_area and r.eccentricity <= self.eccentricity
         ]
 
         return regions
@@ -336,7 +336,7 @@ class DAOFindStars(_SimplePointSourceDetection):
     def detect(self, image):
         _, median, std = sigma_clipped_stats(image.data, sigma=self.sigma_clip)
         finder = DAOStarFinder(fwhm=self.fwhm, threshold=self.lower_snr * std)
-        sources = finder(image.data - median)
+        sources = finder(image.data - median, mask=image.mask)
 
         coordinates = np.transpose(
             np.array([sources["xcentroid"].data, sources["ycentroid"].data])
