@@ -2,6 +2,7 @@ import pickle
 import warnings
 from copy import deepcopy
 from dataclasses import asdict, dataclass
+from functools import partial
 from pathlib import Path
 from typing import Union
 
@@ -10,21 +11,6 @@ import numpy as np
 import pandas as pd
 
 from prose import utils
-
-
-def binned_white_function(x, bins: int = 12):
-    # set binning idxs for white noise evaluation
-    bins = np.min([x.shape[-1], bins])
-    n = x.shape[-1] // bins
-    idxs = np.arange(n * bins)
-
-    def compute(f):
-        return np.nanmean(
-            np.nanstd(np.array(np.split(f.take(idxs, axis=-1), n, axis=-1)), axis=-1),
-            axis=0,
-        )
-
-    return compute
 
 
 def weights(
@@ -51,7 +37,9 @@ def weights(
 
     # normalize
     dfluxes = fluxes / np.expand_dims(np.nanmean(fluxes, -1), -1)
-    binned_white = binned_white_function(fluxes, bins=bins)
+
+    def weight_function(fluxes):
+        return 1 / np.std(fluxes, axis=-1)
 
     i = 0
     evolution = 1e25
@@ -63,24 +51,26 @@ def weights(
     # --------------------------------------------------
     while evolution > tolerance and i < max_iteration:
         if i == 0:
-            weights = 1 / binned_white(dfluxes)
+            weights = weight_function(dfluxes)
+            mask = np.where(~np.isfinite(weights))
         else:
             # This metric is preferred from std to optimize over white noise and not red noise
-            std = binned_white(lcs)
-            weights = 1 / std
+            weights = weight_function(lcs)
 
         weights[~np.isfinite(weights)] = 0
 
-        # Keep track of weights
-        evolution = np.nanstd(
-            np.abs(np.nanmean(weights, axis=-1) - np.nanmean(last_weights, axis=-1))
+        evolution = np.abs(
+            np.nanmean(weights, axis=-1) - np.nanmean(last_weights, axis=-1)
         )
 
         last_weights = weights
         lcs = diff(dfluxes, weights=weights)
+
         i += 1
-        
-    return weights
+
+    weights[0, mask] = 0
+
+    return weights[0]
 
 
 def diff(fluxes: np.ndarray, weights: np.ndarray = None):
@@ -118,7 +108,7 @@ def auto_diff_1d(fluxes, i=None):
     w = weights(dfluxes)
     if i is not None:
         idxs = np.argsort(w)[::-1]
-        white_noise = binned_white_function(dfluxes)
+        white_noise = utils.binned_nanstd(dfluxes)
         last_white_noise = 1e10
 
         def best_weights(j):
@@ -166,7 +156,7 @@ def optimal_flux(diff_fluxes, method="stddiff", sigma=4):
         ),
     ]
     if method == "binned":
-        white_noise = binned_white_function(fluxes)
+        white_noise = utils.binned_nanstd(fluxes)
         criterion = white_noise(fluxes)
     elif method == "stddiff":
         criterion = utils.std_diff_metric(fluxes)
@@ -277,6 +267,18 @@ class Fluxes:
     def ndim(self):
         """Number of dimensions of fluxes"""
         return self.fluxes.ndim
+
+    @property
+    def comparisons(self):
+        """Comparison stars indices ordered from most to less weighted"""
+        if self.weights is None:
+            return None
+        else:
+            if self.aperture is None:
+                raise ValueError("aperture must be set")
+
+            idxs = np.argsort(self.weights[self.aperture])[::-1]
+            return idxs[np.flatnonzero(self.weights[self.aperture][idxs] > 0.0)]
 
     def vander(consant=True, **kwargs):
         pass
