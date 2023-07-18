@@ -644,6 +644,11 @@ class Image:
             ]
         )
 
+    @property
+    def fits_header(self):
+        """Same as :code:`header` (backward compatibility)"""
+        return self.header
+
 
 def str_to_astropy_unit(unit_string):
     return u.__dict__[unit_string]
