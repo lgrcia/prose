@@ -10,6 +10,17 @@ The task of the alignment and geometry blocks is to compute and apply geometric 
 
 ## Transform computation blocks
 
+```{eval-rst}
+
+.. autosummary::
+   :template: blocksum.rst
+   :nosignatures:
+
+   ~prose.blocks.geometry.ComputeTransformTwirl
+   ~prose.blocks.geometry.ComputeTransformXYShift
+
+```
+
 ```{admonition} FAQ: Why computing the transform without applying it?
 :class: note
 
