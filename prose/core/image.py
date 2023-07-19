@@ -201,7 +201,10 @@ class Image:
         value = self.metadata[name]
         unit = str_to_astropy_unit(self.metadata[unit_name])
         if name in ["ra", "dec"]:
-            return Angle(value, unit).to(u.deg)
+            if value is not None:
+                return Angle(value, unit).to(u.deg)
+            else:
+                return None
         if value is not None:
             return value * unit
         else:
@@ -640,6 +643,11 @@ class Image:
                 self.filter,
             ]
         )
+
+    @property
+    def fits_header(self):
+        """Same as :code:`header` (backward compatibility)"""
+        return self.header
 
 
 def str_to_astropy_unit(unit_string):
