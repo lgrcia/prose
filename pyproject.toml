@@ -48,11 +48,11 @@ sphinx-copybutton = "*"
 sphinx-design = "*"
 toml = "*"
 ipywidgets = "*"
+'sphinxcontrib.datatemplates' = "*"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-fitsmanager = 'prose.scripts.fitsmanager:main'
-calibration = 'prose.scripts.calibration:main'
+prose = 'prose.cli.__init__:main'
