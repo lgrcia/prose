@@ -21,6 +21,7 @@ __all__ = [
     "GetFluxes",
     "WriteTo",
     "SelectiveStack",
+    "MeanStack",
 ]
 
 
@@ -633,3 +634,37 @@ class SelectiveStack(Block):
 
     def terminate(self):
         self.stack = Image(easy_median([im.data for im in self._images]))
+
+
+class MeanStack(Block):
+    def __init__(self, reference=None, name=None):
+        """Build a mean stack image from all images
+
+        |read| :code:`Image.data`
+
+        Parameters
+        ----------
+        name : str, optional
+            name of the blocks, by default None
+        reference : Image, optional
+            reference image from which header is copied, by default None
+        """
+        super().__init__(name=name)
+        self._stack_data = None
+        self._n = 0
+        self.reference = reference.copy() if reference is not None else None
+
+    def run(self, image: Image):
+        if self._stack_data is None:
+            self._stack_data = image.data
+            self._n = 1
+        else:
+            self._stack_data += image.data
+            self._n = self._n + 1
+
+    def terminate(self):
+        if self.reference is None:
+            self.reference = Image(self._stack_data / self._n)
+        else:
+            self.reference.data = self._stack_data / self._n
+            self.stack = self.reference.copy()
