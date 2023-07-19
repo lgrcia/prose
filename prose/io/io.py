@@ -91,6 +91,7 @@ def fits_to_df(
     hdu=0,
     raise_oserror=False,
     verbose_os=False,
+    leave=True,
 ):
     assert len(files) > 0, "Files not provided"
 
@@ -99,7 +100,7 @@ def fits_to_df(
     _telescope = None
     df_list = []
 
-    for i in progress(verbose, desc="Parsing FITS")(files):
+    for i in progress(verbose, desc="Parsing FITS", leave=leave)(files):
         try:
             header = fits.getheader(i, hdu)
         except OSError as err:

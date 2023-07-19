@@ -1,4 +1,5 @@
 import sqlite3
+import sys
 from functools import partial
 from pathlib import Path
 
@@ -242,6 +243,7 @@ class FitsManager:
         telescope=None,
         verbose_new=False,
         verbose_os=False,
+        leave=False,
     ):
         """Scan files and add data to database
 
@@ -285,8 +287,14 @@ class FitsManager:
                         )
 
                 _verbose = verbose and batch_size is not False
-                _progress = progress(_verbose, desc="Reading fits", unit="files")
+                _progress = progress(
+                    _verbose,
+                    desc="Reading fits",
+                    unit="files",
+                    leave=leave,
+                )
 
+                # to improve: use same progress for batch and non-batch
                 if batch_size is not False:
                     for batch in _progress(batches):
                         try:

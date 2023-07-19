@@ -240,3 +240,23 @@ def test_require_sources():
 
     with pytest.raises(AttributeError, match="sources"):
         Sequence([blocks.Cutouts()]).run(im)
+
+
+def test_video_block(tmp_path):
+    from prose.blocks import Video
+
+    im = image.copy()
+    im.sources = None
+
+    Sequence([Video(tmp_path / "video.mp4", fps=3)]).run([im, im, im])
+
+
+def test_video_plot_block(tmp_path):
+    from prose.blocks import VideoPlot
+
+    def plot(image):
+        image.show()
+
+    im = image.copy()
+
+    Sequence([VideoPlot(plot, tmp_path / "video.mp4", fps=3)]).run([im, im, im])
