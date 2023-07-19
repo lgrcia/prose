@@ -114,7 +114,7 @@ class _SourceDetection(Block):
         regions = [
             r
             for r in regions
-            if r.area >= self.min_area and r.eccentricity <= self.eccentricity
+            if r.area >= self.min_area and r.eccentricity <= self.eccentricity_bound
         ]
 
         return regions
