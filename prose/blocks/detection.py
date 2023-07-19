@@ -19,7 +19,7 @@ class _SourceDetection(Block):
         sort: bool = True,
         min_separation: float = None,
         min_area: float = 0,
-        minor_length: float = 0,
+        eccentricity_bound: float = 0,
         name: str = None,
     ):
         """Base class for sources detection.
@@ -38,8 +38,8 @@ class _SourceDetection(Block):
             minimum separation in pixels from one source to the other. Between two sources, greater ADU is kept, by default None
         min_area : float, optional
             minimum area in pixels of the sources to detect, by default 0
-        minor_length : float, optional
-            minimum length of semi-major axis of sources to detect, by default 0
+        eccentricity_bound : int, optional
+            maximum eccentricity of sources to detect, by default 1
         name : str, optional
             name of the block, by default None
         """
@@ -49,7 +49,7 @@ class _SourceDetection(Block):
         self.min_separation = min_separation
         self.threshold = threshold
         self.min_area = min_area
-        self.eccentricity = minor_length
+        self.eccentricity_bound = eccentricity_bound
 
     def clean(self, sources):
         peaks = np.array([s.peak for s in sources])
@@ -133,7 +133,7 @@ class AutoSourceDetection(_SourceDetection):
         min_separation=None,
         name=None,
         min_area=0,
-        minor_length=0,
+        eccentricity_bound=1,
     ):
         """Detect all sources.
 
@@ -153,8 +153,8 @@ class AutoSourceDetection(_SourceDetection):
             minimum separation in pixels from one source to the other. Between two sources, greater ADU is kept, by default None
         min_area : str, optional
             minimum area in pixels of the sources to detect, by default 0
-        minor_length : str, optional
-            minimum length of semi-major axis of sources to detect, by default 0
+        eccentricity_bound : int, optional
+            maximum eccentricity of sources to detect, by default 1
         name : str, optional
             name of the block, by default None
         """
@@ -165,7 +165,7 @@ class AutoSourceDetection(_SourceDetection):
             min_separation=min_separation,
             name=name,
             min_area=min_area,
-            minor_length=minor_length,
+            eccentricity_bound=eccentricity_bound,
         )
 
     def run(self, image):
@@ -175,7 +175,7 @@ class AutoSourceDetection(_SourceDetection):
 
 
 class PointSourceDetection(_SourceDetection):
-    def __init__(self, unit_euler=False, min_area=3, minor_length=2, **kwargs):
+    def __init__(self, unit_euler=False, min_area=3, eccentricity_bound=2, **kwargs):
         """Detect point sources (as :py:class:`~prose.core.source.PointSource`).
 
         |read| :code:`Image.data`
@@ -188,8 +188,8 @@ class PointSourceDetection(_SourceDetection):
             whether to consider sources with euler number == 1, by default False
         min_area : str, optional
             minimum area in pixels of the sources to detect, by default 0
-        minor_length : str, optional
-            minimum length of semi-major axis of sources to detect, by default 0
+        eccentricity_bound : int, optional
+            maximum eccentricity of sources to detect, by default 1
         threshold : float, optional
             detection threshold for sources, by default 4
         n : int, optional
@@ -202,10 +202,10 @@ class PointSourceDetection(_SourceDetection):
             name of the block, by default None
         """
 
-        super().__init__(min_area=min_area, minor_length=minor_length, **kwargs)
+        super().__init__(min_area=min_area, eccentricity_bound=eccentricity_bound, **kwargs)
         self.unit_euler = unit_euler
         self.min_area = min_area
-        self.minor_length = minor_length
+        self.eccentricity_bound = eccentricity_bound
 
     def run(self, image):
         regions = self.regions(image)
@@ -220,13 +220,13 @@ class PointSourceDetection(_SourceDetection):
 
 
 class TraceDetection(_SourceDetection):
-    def __init__(self, minor_length=5, **kwargs):
+    def __init__(self, eccentricity_bound=5, **kwargs):
         """Detect trace sources  (as :py:class:`~prose.core.source.TraceSource`)
 
         Parameters
         ----------
-        minor_length : str, optional
-            minimum length of semi-major axis of sources to detect, by default 0
+        eccentricity_bound : int, optional
+            maximum eccentricity of sources to detect, by default 1
         min_area : str, optional
             minimum area in pixels of the sources to detect, by default 0
         threshold : float, optional
@@ -240,7 +240,7 @@ class TraceDetection(_SourceDetection):
         name : str, optional
             name of the block, by default None
         """
-        super().__init__(minor_length=minor_length, **kwargs)
+        super().__init__(eccentricity_bound=eccentricity_bound, **kwargs)
 
     def run(self, image):
         regions = self.regions(image)
@@ -251,7 +251,7 @@ class TraceDetection(_SourceDetection):
 # backward compatibility
 class SegmentedPeaks(PointSourceDetection):
     def __init__(
-        self, unit_euler=False, min_area=3, minor_length=2, n_stars=None, **kwargs
+        self, unit_euler=False, min_area=3, eccentricity_bound=2, n_stars=None, **kwargs
     ):
         """Detect point sources (backward compatibility)
 
@@ -259,11 +259,11 @@ class SegmentedPeaks(PointSourceDetection):
         """
 
         super().__init__(
-            n=n_stars, min_area=min_area, minor_length=minor_length, **kwargs
+            n=n_stars, min_area=min_area, eccentricity_bound=eccentricity_bound, **kwargs
         )
         self.unit_euler = unit_euler
         self.min_area = min_area
-        self.minor_length = minor_length
+        self.eccentricity_bound = eccentricity_bound
 
 
 # TODO: document
