@@ -1,6 +1,6 @@
 .. -*- mode: rst -*-
   
-*prose* features some command line tools featuring a variety of fast and robust tasks:
+*prose* features some command line tools to perform a variety of tasks:
 
 .. list-table::
 
