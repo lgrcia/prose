@@ -42,12 +42,25 @@ def calibrate(args):
             blocks.Calibration(darks=darks, flats=flats, bias=bias),
             blocks.Trim(),
             blocks.WriteTo(calibrated_folder, label="calibrated"),
-        ]
+        ],
+        name="Calibration",
     )
 
     calibration.run(lights)
     print("Calibrated images saved in", calibrated_folder)
 
 
-if __name__ == "__main__":
-    main()
+def add_calibrate_parser(subparsers):
+    calibrate_parser = subparsers.add_parser(
+        name="calibrate", description="calibrate FITS files"
+    )
+    calibrate_parser.add_argument(
+        "folder",
+        type=str,
+        help="folder to parse containing science and calibration files",
+        default=None,
+    )
+    calibrate_parser.add_argument(
+        "-d", "--depth", type=int, help="subfolder parsing depth", default=10
+    )
+    calibrate_parser.set_defaults(func=calibrate)
