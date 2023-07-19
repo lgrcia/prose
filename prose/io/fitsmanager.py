@@ -71,6 +71,8 @@ class FitsManager:
         A function to use for converting FITS files to pandas DataFrames. Default is `None`.
     telescope : str, optional
         The name of the telescope used to take the FITS files. Default is `None`.
+    leave : bool, optional
+        Whether to leave the progress bar after completion. Default is `True`.
 
     Attributes
     ----------
@@ -95,6 +97,7 @@ class FitsManager:
         verbose=True,
         to_df=None,
         telescope=None,
+        leave=True,
     ):
         if file is None:
             file = ":memory:"
@@ -130,6 +133,7 @@ class FitsManager:
                     hdu=hdu,
                     verbose=verbose,
                     telescope=telescope,
+                    leave=leave,
                 )
 
     def _insert(
@@ -310,7 +314,11 @@ class FitsManager:
                             "ERROR, batch ignored"
                 else:
                     df = self.fits_to_df(
-                        files_to_scan, verbose=verbose, hdu=hdu, verbose_os=verbose_os
+                        files_to_scan,
+                        verbose=verbose,
+                        hdu=hdu,
+                        verbose_os=verbose_os,
+                        leave=leave,
                     )
                     for row in df.values:
                         if telescope is not None:
