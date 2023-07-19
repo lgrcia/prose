@@ -14,7 +14,7 @@ from prose import visualization as viz
 from prose.core.source import PointSource, Sources
 from prose.utils import cross_match, gaia_query
 
-__all__ = ["GaiaCatalog", "TESSCatalog"]
+__all__ = ["GaiaCatalog", "TESSCatalog", "PlateSolve"]
 
 
 def image_gaia_query(
