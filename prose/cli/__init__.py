@@ -2,68 +2,25 @@ import argparse
 
 import yaml
 
-from prose.cli.calibration import calibrate
-from prose.cli.stack import stack
-from prose.cli.visualisation import show
+from prose.cli.astrometry import add_solve_parser
+from prose.cli.calibration import add_calibrate_parser
+from prose.cli.fits import add_db_parser, add_fits_parser, add_info_parser
+from prose.cli.stack import add_stack_parser
+from prose.cli.visualisation import add_show_parser, add_video_parser
 
 
 def make_parser():
     main_parser = argparse.ArgumentParser(prog="prose", description="prose")
     subparsers = main_parser.add_subparsers(required=True)
 
-    # calibrate
-    # ---------
-    calibrate_parser = subparsers.add_parser(
-        name="calibrate", description="calibrate FITS files"
-    )
-    calibrate_parser.add_argument(
-        "folder",
-        type=str,
-        help="folder to parse containing science and calibration files",
-        default=None,
-    )
-    calibrate_parser.add_argument(
-        "-d", "--depth", type=int, help="subfolder parsing depth", default=10
-    )
-    calibrate_parser.set_defaults(func=calibrate)
-
-    # show
-    # ----
-    show_parser = subparsers.add_parser(name="show", description="show FITS image")
-    show_parser.add_argument("file", type=str, help="file to show", default=None)
-    show_parser.add_argument(
-        "-c",
-        "--contrast",
-        type=float,
-        help="contrast of the image (zscale is applied)",
-        default=0.1,
-    )
-    show_parser.set_defaults(func=show)
-
-    # stack
-    # -----
-    stack_parser = subparsers.add_parser(name="stack", description="stack FITS files")
-    stack_parser.add_argument("folder", type=str, help="folder to parse", default=None)
-    stack_parser.add_argument(
-        "-d", "--depth", type=int, help="subfolder parsing depth", default=10
-    )
-    stack_parser.add_argument(
-        "-n", "--n", type=int, help="number of stars used for alignment", default=30
-    )
-    stack_parser.add_argument(
-        "--method",
-        choices=["mean", "selective"],
-        help="alignment method. 'mean' applies a mean to all images, 'selective' \
-            applies a median to the -n smallest-FWHM images",
-        default="mean",
-    )
-    stack_parser.set_defaults(func=stack)
-
-    # fitsmanager
-    # -----------
-
-    # epsf
-    # ----
+    add_calibrate_parser(subparsers)
+    add_show_parser(subparsers)
+    add_stack_parser(subparsers)
+    add_fits_parser(subparsers)
+    add_db_parser(subparsers)
+    add_info_parser(subparsers)
+    add_video_parser(subparsers)
+    add_solve_parser(subparsers)
 
     return main_parser
 
