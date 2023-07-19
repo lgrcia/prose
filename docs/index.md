@@ -20,6 +20,8 @@ A Python package to build image processing pipelines for Astronomy. Beyond featu
 📦 Explore the library of pre-implemented [blocks](md/blocks.rst)
 
 ✨ Obtain a light curve from raw images by following the [Basic Photometry tutorial](ipynb/photometry.ipynb)
+
+⌨️  Explore the command line interface by reading the [CLI documentation](cli/cli.md)
 ```
 
 ```{toctree}
@@ -61,4 +63,5 @@ ipynb/sources
 md/blocks
 md/api
 tested_blocks.md
+cli/cli
 ```

@@ -34,6 +34,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
     "sphinx_design",
+    "sphinxcontrib.datatemplates",
 ]
 
 
@@ -176,3 +177,8 @@ open("md/all_blocks.rst", "w").write(all_blocks)
 # os.chdir("docs")
 
 # open("./tested_blocks.md", "w").write("\n".join(tested))
+
+from prose.cli import make_parser, to_yaml
+
+parser = make_parser()
+to_yaml(parser, "cli/main_parser.yaml")
