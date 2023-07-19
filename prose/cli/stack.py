@@ -56,3 +56,25 @@ def stack(args):
     stack.writeto(folder / "stack.fits")
 
     print("Stack saved in", folder / "stack.fits")
+
+
+def add_stack_parser(subparsers):
+    stack_parser = subparsers.add_parser(name="stack", description="stack FITS files")
+    stack_parser.add_argument("folder", type=str, help="folder to parse", default=None)
+    stack_parser.add_argument(
+        "-d", "--depth", type=int, help="subfolder parsing depth", default=10
+    )
+    stack_parser.add_argument(
+        "-n", "--n", type=int, help="number of stars used for alignment", default=30
+    )
+    stack_parser.add_argument(
+        "--method",
+        choices=["mean", "selective"],
+        help="alignment method. 'mean' applies a mean to all images, 'selective' \
+            applies a median to the -n smallest-FWHM images",
+        default="selective",
+    )
+    stack_parser.add_argument(
+        "-o", "--output", type=str, help="output file name", default="stack.fits"
+    )
+    stack_parser.set_defaults(func=stack)
