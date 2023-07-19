@@ -425,8 +425,11 @@ class Image:
         destination : Union[str, Path]
             destination path
         """
+        header = deepcopy(self.header)
+        header.update(self.wcs.to_header())
         hdu = fits.PrimaryHDU(
-            data=self.data, header=fits.Header(utils.clean_header(self.header))
+            data=self.data,
+            header=fits.Header(utils.clean_header(header)),
         )
         hdu.writeto(destination, overwrite=True)
 
