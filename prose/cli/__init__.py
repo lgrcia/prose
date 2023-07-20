@@ -4,7 +4,12 @@ import yaml
 
 from prose.cli.astrometry import add_solve_parser
 from prose.cli.calibration import add_calibrate_parser
-from prose.cli.fits import add_db_parser, add_fits_parser, add_info_parser
+from prose.cli.fits import (
+    add_db_parser,
+    add_fits_parser,
+    add_info_parser,
+    add_organize_parser,
+)
 from prose.cli.stack import add_stack_parser
 from prose.cli.visualisation import add_show_parser, add_video_parser
 
@@ -21,6 +26,7 @@ def make_parser():
     add_info_parser(subparsers)
     add_video_parser(subparsers)
     add_solve_parser(subparsers)
+    add_organize_parser(subparsers)
 
     return main_parser
 
