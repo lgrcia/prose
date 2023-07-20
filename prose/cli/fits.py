@@ -1,4 +1,5 @@
 import argparse
+import shutil
 from pathlib import Path
 
 import pandas as pd
@@ -107,3 +108,74 @@ def add_info_parser(subparsers):
     )
     info_parser.add_argument("filename", type=str, help="FITS image filename")
     info_parser.set_defaults(func=info)
+
+
+# experimental
+# ------------
+def organize(args):
+    fm = FitsManager(
+        folders=args.folder,
+        depth=args.depth,
+        leave=False,
+    )
+    new_folders = {}
+
+    main_folder = Path(args.folder) if args.output is None else Path(args.output)
+    obs = fm.observations(type="light")
+
+    if args.separate:
+        for observation_id, observation in obs.iterrows():
+            date_str = observation.date.replace("-", "_")
+            new_folders[date_str] = fm.observation_files(observation_id, show=False)
+
+    print(f"\nprose will create the following folders (in {main_folder}):")
+
+    for dates in new_folders.keys():
+        # sum all len file files in folder dict
+        n_files = sum([len(files) for files in new_folders.values()])
+        print("-", dates, f"({n_files} files)")
+
+    proceed = input("\ncontinue? [y]/n: ")
+    if proceed == "n":
+        return
+    else:
+        for date, files in new_folders.items():
+            date_folder = main_folder / date
+            date_folder.mkdir(parents=True, exist_ok=True)
+            for filetype, files in files.items():
+                im_type = date_folder / filetype
+                im_type.mkdir(parents=True, exist_ok=True)
+                for file in files:
+                    if im_type == "images":
+                        shutil.move(file, im_type / Path(file).name)
+                    else:
+                        try:
+                            shutil.copy2(file, im_type / Path(file).name)
+                        except shutil.SameFileError:
+                            pass
+
+
+def add_organize_parser(subparsers):
+    organize_parser = subparsers.add_parser(
+        name="organize", description="organize FITS files by date"
+    )
+    organize_parser.add_argument(
+        "folder", type=str, help="folder to explore", default="."
+    )
+    organize_parser.add_argument(
+        "-d", "--depth", type=int, help="depth of the search", default=10
+    )
+    organize_parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        help="folder to store organized files",
+        default=None,
+    )
+    organize_parser.add_argument(
+        "-s",
+        "--separate",
+        action="store_true",
+        help="separate each calibration file into its respective observation folder",
+    )
+    organize_parser.set_defaults(func=organize)
