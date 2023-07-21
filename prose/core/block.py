@@ -59,7 +59,9 @@ class Block(object):
                 if not image.plate_solved:
                     raise AttributeError(f"Image must have valid WCS")
             if not hasattr(image, _require) and not hasattr(image.computed, _require):
-                raise AttributeError(f"Image must have attribute '{_require}'")
+                raise AttributeError(
+                    f"[{self.__class__.__name__}] Image must have attribute '{_require}'"
+                )
 
     def _run(self, buffer):
         t0 = time()

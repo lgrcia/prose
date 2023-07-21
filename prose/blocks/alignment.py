@@ -50,7 +50,7 @@ class AlignReferenceSources(Block):
         reference: Image,
         name=None,
         verbose=False,
-        discard_tolerance=0.8,
+        discard_tolerance=0.5,
         match_tolerance=5,
     ):
         """Set Image sources to reference sources (from a reference Image)
