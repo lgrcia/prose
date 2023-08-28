@@ -1,46 +1,14 @@
 import argparse
 from pathlib import Path
 
-import click
-
 from prose import FITSImage, FitsManager, Sequence, blocks
 from prose.core.sequence import SequenceParallel
 
 
-@click.command(name="stack", help="stack FITS images")
-@click.argument("folder")
-@click.option(
-    "-d",
-    "--depth",
-    type=int,
-    help="subfolder parsing depth",
-    default=10,
-)
-@click.option(
-    "-n",
-    "--n",
-    type=int,
-    help="number of stars used for alignment",
-    default=30,
-)
-@click.option(
-    "--method",
-    type=click.Choice(["mean", "selective"]),
-    help="alignment method. 'mean' applies a mean to all images, 'selective' \
-        applies a median to the -n smallest-FWHM images",
-    default="selective",
-)
-@click.option(
-    "-o",
-    "--output",
-    type=str,
-    help="output file name",
-    default="stack.fits",
-)
-def stack(folder, depth, n, method, output):
-    folder = Path(folder)
+def stack(args):
+    folder = Path(args.folder)
 
-    fm = FitsManager(folder, depth=depth)
+    fm = FitsManager(folder, depth=args.depth)
     calibrated_nights = fm.observations(type="calibrated")
     files = fm.files(int(calibrated_nights.index[0]), path=True).path.values
 
@@ -50,7 +18,7 @@ def stack(folder, depth, n, method, output):
     # calibration
     psf_sequence = Sequence(
         [
-            blocks.PointSourceDetection(n=n),  # stars detection
+            blocks.PointSourceDetection(n=args.n),  # stars detection
             blocks.Cutouts(21),  # stars cutouts
             blocks.MedianEPSF(),  # building EPSF
             blocks.psf.Moffat2D(),  # modeling EPSF
@@ -61,13 +29,13 @@ def stack(folder, depth, n, method, output):
 
     stack_block = (
         blocks.SelectiveStack(n=50)
-        if method == "selective"
+        if args.method == "selective"
         else blocks.MeanStack(reference=ref)
     )
 
     stacking_sequence = SequenceParallel(
         [
-            blocks.PointSourceDetection(n=n),  # stars detection
+            blocks.PointSourceDetection(n=args.n),  # stars detection
             blocks.Cutouts(21),  # stars cutouts
             blocks.MedianEPSF(),  # building EPSF
             blocks.psf.Moffat2D(ref),  # modeling EPSF
@@ -88,3 +56,25 @@ def stack(folder, depth, n, method, output):
     stack.writeto(folder / "stack.fits")
 
     print("Stack saved in", folder / "stack.fits")
+
+
+def add_stack_parser(subparsers):
+    stack_parser = subparsers.add_parser(name="stack", description="stack FITS files")
+    stack_parser.add_argument("folder", type=str, help="folder to parse", default=None)
+    stack_parser.add_argument(
+        "-d", "--depth", type=int, help="subfolder parsing depth", default=10
+    )
+    stack_parser.add_argument(
+        "-n", "--n", type=int, help="number of stars used for alignment", default=30
+    )
+    stack_parser.add_argument(
+        "--method",
+        choices=["mean", "selective"],
+        help="alignment method. 'mean' applies a mean to all images, 'selective' \
+            applies a median to the -n smallest-FWHM images",
+        default="selective",
+    )
+    stack_parser.add_argument(
+        "-o", "--output", type=str, help="output file name", default="stack.fits"
+    )
+    stack_parser.set_defaults(func=stack)

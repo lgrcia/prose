@@ -168,3 +168,9 @@ code span.pre {
     color: var(--pst-color-primary);
     font-size: 15px;
 }
+
+/* prose logo font  */
+.line-block {
+    font-family: system-ui;
+    line-height: 1.2;
+}

@@ -34,7 +34,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
     "sphinx_design",
-    "sphinxcontrib.datatemplates",
+    "sphinx_click",
 ]
 
 
@@ -90,7 +90,7 @@ myst_enable_extensions = [
 ]
 
 templates_path = ["_templates"]
-nb_execution_mode = "auto"
+nb_execution_mode = "off"
 nb_execution_raise_on_error = True
 
 rst_prolog = """
@@ -178,7 +178,7 @@ open("md/all_blocks.rst", "w").write(all_blocks)
 
 # open("./tested_blocks.md", "w").write("\n".join(tested))
 
-from prose.cli import make_parser, to_yaml
+# from prose.cli import make_parser, to_yaml
 
-parser = make_parser()
-to_yaml(parser, "cli/main_parser.yaml")
+# parser = make_parser()
+# to_yaml(parser, "cli/main_parser.yaml")

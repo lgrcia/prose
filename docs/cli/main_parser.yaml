@@ -1,0 +1,191 @@
+commands:
+  calibrate:
+    arguments:
+    - help: folder to parse containing science and calibration files
+      name: folder
+      required: true
+      type: str
+    - default: 10
+      help: subfolder parsing depth
+      long: --depth
+      name: depth
+      required: false
+      short: -d
+      type: int
+    help: calibrate FITS files
+  db:
+    arguments:
+    - help: SQLite database file to explore
+      name: file
+      required: true
+      type: str
+    - default: 50
+      help: max number of rows to display
+      long: --max-rows
+      name: max_rows
+      required: false
+      short: -m
+      type: int
+    - help: telescope name to filter for
+      long: --telescope
+      name: telescope
+      required: false
+      short: -t
+      type: str
+    - help: filter name to filter for
+      long: --filter
+      name: filter
+      required: false
+      short: -f
+      type: str
+    - help: observation date to filter for
+      long: --date
+      name: date
+      required: false
+      short: -d
+      type: str
+    - help: target name to filter for
+      long: --target
+      name: target
+      required: false
+      short: -o
+      type: str
+    help: explore a FITS database
+  fits:
+    arguments:
+    - default: .
+      help: folder to explore
+      name: folder
+      required: true
+      type: str
+    - default: 10
+      help: depth of the search
+      long: --depth
+      name: depth
+      required: false
+      short: -d
+      type: int
+    - help: SQLite database file to save parsing results
+      long: --file
+      name: file
+      required: false
+      short: -f
+      type: str
+    help: parse and store data from FITS in folder(s)
+  info:
+    arguments:
+    - help: FITS image filename
+      name: filename
+      required: true
+      type: str
+    help: print FITS image information
+  show:
+    arguments:
+    - help: file to show
+      name: file
+      required: true
+      type: str
+    - default: 0.1
+      help: contrast of the image (zscale is applied)
+      long: --contrast
+      name: contrast
+      required: false
+      short: -c
+      type: float
+    - default: false
+      help: whether to show sky coordinates frame
+      name: f
+      nargs: 0
+      required: false
+      short: -f
+    help: show FITS image
+  solve:
+    arguments:
+    - help: file to solve
+      name: file
+      required: true
+      type: str
+    help: solve FITS image
+  stack:
+    arguments:
+    - help: folder to parse
+      name: folder
+      required: true
+      type: str
+    - default: 10
+      help: subfolder parsing depth
+      long: --depth
+      name: depth
+      required: false
+      short: -d
+      type: int
+    - default: 30
+      help: number of stars used for alignment
+      long: --n
+      name: n
+      required: false
+      short: -n
+      type: int
+    - choices:
+      - mean
+      - selective
+      default: selective
+      help: alignment method. 'mean' applies a mean to all images, 'selective'             applies
+        a median to the -n smallest-FWHM images
+      name: method
+      required: false
+      short: --method
+    - default: stack.fits
+      help: output file name
+      long: --output
+      name: output
+      required: false
+      short: -o
+      type: str
+    help: stack FITS files
+  video:
+    arguments:
+    - help: folder containing the FITS
+      name: folder
+      required: true
+      type: str
+    - default: 10
+      help: subfolder parsing depth
+      long: --depth
+      name: depth
+      required: false
+      short: -d
+      type: int
+    - default: video.mp4
+      help: output video file
+      long: --output
+      name: output
+      required: false
+      short: -o
+      type: str
+    - help: type of FITS files to use
+      long: --type
+      name: type
+      required: false
+      short: -t
+      type: str
+    - default: 10
+      help: frames per second
+      long: --fps
+      name: fps
+      required: false
+      short: -f
+      type: int
+    - help: compression parameter for the video block
+      long: --compression
+      name: compression
+      required: false
+      short: -c
+      type: int
+    - help: width of the video in pixel (if resizing required), aspect ratio is kept
+      long: --width
+      name: width
+      required: false
+      short: -w
+      type: int
+    help: make a video of FITS images

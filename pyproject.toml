@@ -28,6 +28,8 @@ twirl = "0.4.0"
 multiprocess = "*"
 pytest = "*"
 imageio = { version = "*", extras = ["ffmpeg"] }
+click = "^8.1.6"
+sphinx-click = "^4.4.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
