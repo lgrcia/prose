@@ -11,7 +11,7 @@
     <a href="https://github.com/lgrcia/prose">
       <img src="https://img.shields.io/badge/github-lgrcia/prose-03A487.svg?style=flat" alt="github"/>
     </a>
-    <a href="LICENCE">
+    <a href="https://github.com/lgrcia/prose/blob/main/LICENSE">
       <img src="https://img.shields.io/badge/license-MIT-lightgray.svg?style=flat" alt="license"/>
     </a>
     <a href="https://arxiv.org/abs/2111.02814">
