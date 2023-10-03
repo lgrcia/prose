@@ -372,6 +372,8 @@ class Image:
             mode="partial",
         )
 
+        (y0, _), (x0, _) = new_image.bbox_original
+
         # get sources
         new_sources = []
         if sources:
@@ -383,7 +385,7 @@ class Image:
 
                 for s in _sources:
                     _s = s.copy()
-                    _s.coords = _s.coords - coords + np.array(shape)[::-1] / 2
+                    _s.coords = _s.coords - [x0, y0]
                     new_sources.append(_s)
 
         image = Image(new_image.data, deepcopy(self.metadata), deepcopy(self.computed))
