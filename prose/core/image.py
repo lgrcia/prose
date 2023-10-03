@@ -256,6 +256,11 @@ class Image:
         return np.array(self.shape)[::-1] * self.pixel_scale.to(u.deg)
 
     @property
+    def fits_header(self):
+        """Same as :code:`header` (backward compatibility)"""
+        return self.header
+
+    @property
     def date(self):
         """datetime of the observation
 
