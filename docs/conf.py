@@ -91,6 +91,7 @@ myst_enable_extensions = [
 templates_path = ["_templates"]
 nb_execution_mode = "auto"
 nb_execution_raise_on_error = True
+remove_code_source = True
 
 rst_prolog = """
 .. |prose| replace:: *prose*
