@@ -165,9 +165,14 @@ class ComputeTransformTwirl(Block):
     Parameters
     ----------
     ref : Image
-        image containing detected sources
+        Image containing detected sources
     n : int, optional
-        number of stars to consider to compute transformation, by default 10
+        Number of stars to consider to compute transformation, by default 10
+
+    Raises
+    ------
+    SingularMatrix
+        Transformation matrix could not be computed. Check the sources in both the reference and input image.
     """
 
     def __init__(self, reference_image: Image, n=10, rtol=0.02, **kwargs):
