@@ -576,3 +576,94 @@ class Fluxes:
             if copy.weights is not None:
                 copy.errors[:, ~mask] = 0
         return copy
+
+    def to_xarray(self, image=None):
+        """Convert to xarray dataset (requires xarray)
+
+        Parameters
+        ----------
+        image : Image, optional
+            An prose.Image object to add along the xarray, by default None
+
+        Returns
+        -------
+        xarray.Dataset
+            xarray dataset
+        """
+        import xarray
+
+        x = xarray.Dataset()
+
+        if self.fluxes.ndim == 1:
+            dims = "time"
+        elif self.fluxes.ndim == 2:
+            dims = ("stars", "time")
+        elif self.fluxes.ndim == 3:
+            dims = ("apertures", "stars", "time")
+
+        x["time"] = ("time", self.time)
+        x["apertures"] = (("time", "apertures"), self.apertures)
+
+        x["fluxes"] = (dims, self.fluxes)
+        if self.weights is not None:
+            x["weights"] = (dims[0:-1], self.weights)
+        if self.errors is not None:
+            x["errors"] = (dims, self.errors)
+
+        for name, value in self.data.items():
+            x[name] = ("time", value)
+
+        if self.target is not None:
+            x.attrs["target"] = self.target
+        if self.aperture is not None:
+            x.attrs["aperture"] = self.aperture
+
+        for name, value in self.metadata.items():
+            try:
+                x.attrs[name] = value
+            except:
+                print(f"{name} could not be saved as xarray attribute")
+
+        if image is not None:
+            image_x = image.to_xarray()
+            x = xarray.merge([x, image_x], combine_attrs="drop_conflicts")
+
+        return x
+
+    @classmethod
+    def load_netcdf(cls, file):
+        """Load from netcdf file (requires xarray)
+
+        Parameters
+        ----------
+        file : str, Path
+            path of the netcdf file
+
+        Returns
+        -------
+        Fluxes
+            A Fluxes instance
+        """
+        import xarray
+
+        x = xarray.open_dataset(file)
+        data = {}
+
+        for name, value in x.variables.items():
+            if value.dims == ("time",) and name != "time":
+                data[name] = value.values
+
+        fluxes = cls(
+            fluxes=x["fluxes"].values if "fluxes" in x else None,
+            time=x["time"].values if "time" in x else None,
+            apertures=x["apertures"].values if "apertures" in x else None,
+            errors=x["errors"].values if "errors" in x else None,
+            weights=x["weights"].values if "weights" in x else None,
+            data=data,
+        )
+        if "target" in x.attrs:
+            fluxes.target = x.attrs["target"]
+        if "aperture" in x.attrs:
+            fluxes.aperture = x.attrs["aperture"]
+
+        return fluxes

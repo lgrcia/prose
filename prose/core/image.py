@@ -651,6 +651,61 @@ class Image:
             ]
         )
 
+    def to_xarray(self):
+        """Convert to xarray Dataset (requires xarray)
+
+        Returns
+        -------
+        xarray.Dataset
+            Image as a xarray
+        """
+        import xarray
+
+        x = xarray.Dataset()
+        x["image"] = (("h", "w"), self.data)
+
+        if len(self.sources) > 0:
+            x["sources"] = (("stars", "n"), self.sources.coords)
+
+        for name, value in self.metadata.items():
+            try:
+                if value is not None:
+                    x.attrs[name] = value
+            except:
+                print(f"could not save {name} (datatype is {type(value)})")
+
+        # I didn't figure out why there is a bug in saving this as a netcdf4 attrs
+        # This has nothing to do here but added as to not surprise future users
+        # TODO: fix
+        del x.attrs["dimensions"]
+
+        return x
+
+    @classmethod
+    def load_netcdf(cls, file):
+        """Load from netcdf file (requires xarray)
+
+        Parameters
+        ----------
+        file : str, Path
+            path of the netcdf file
+
+        Returns
+        -------
+        Image
+            An Image instance
+        """
+        import xarray
+
+        x = xarray.open_dataset(file)
+        image = cls(data=x["image"].values)
+        if "sources" in x:
+            image.sources = x["sources"].values
+
+        image.metadata.update(x.attrs)
+
+        return image
+
 
 def str_to_astropy_unit(unit_string):
     return u.__dict__[unit_string]
