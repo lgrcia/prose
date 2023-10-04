@@ -180,3 +180,11 @@ code span.pre {
 .navbar-brand:hover {
     text-decoration: none !important;
 }
+
+nav.bd-links li>a:hover {
+    text-decoration: none;
+}
+
+/* nav.bd-links .current > a {
+box-shadow: none;
+} */
