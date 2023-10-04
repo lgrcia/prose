@@ -4,7 +4,7 @@ Finding why a specific error is thrown when running a [Sequence](prose.Sequence)
 
 ## 1. Find from which block the error come from
 
-The error might be on the [Sequence](prose.Sequence) `_run` function, but scrolling up will reveal in which block the error actually occurs.
+The error might be on the [Sequence](prose.Sequence) `_run` function, but scrolling up will reveal in which block the error actually occurs (if not specified).
 
 ## 2. Show the last image
 

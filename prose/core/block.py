@@ -5,6 +5,21 @@ from typing import Union
 from prose.console_utils import warning
 from prose.core.image import Buffer, Image
 
+import contextlib
+
+
+@contextlib.contextmanager
+def _exception_context(msg):
+    try:
+        yield
+    except Exception as ex:
+        if ex.args:
+            msg = f"[{msg}] {ex.args[0]}"
+        else:
+            str(msg)
+        ex.args = (msg,) + ex.args[1:]
+        raise
+
 
 class Block(object):
     """Single unit of processing acting on the :py:class:`~prose.Image` object
@@ -71,8 +86,9 @@ class Block(object):
             image = buffer
         else:
             raise ValueError("block must be run on a Buffer or an Image")
-        self._check_require(image)
-        self.run(image)
+        with _exception_context(self.__class__.__name__):
+            self._check_require(image)
+            self.run(image)
         self.processing_time += time() - t0
         self.runs += 1
 
