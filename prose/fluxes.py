@@ -496,6 +496,8 @@ class Fluxes:
             _new.errors = self.errors[..., array]
         if self.time is not None:
             _new.time = self.time[array]
+        if self.apertures is not None:
+            _new.apertures = self.apertures[array, ...]
 
         return _new
 
