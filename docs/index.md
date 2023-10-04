@@ -61,4 +61,5 @@ ipynb/sources
 md/blocks
 md/api
 tested_blocks.md
+md/debug
 ```
