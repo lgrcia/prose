@@ -106,6 +106,10 @@ class Block(object):
         """Method called after block's :py:class:`~prose.Sequence` is finished (if any)"""
         pass
 
+    def _terminate(self):
+        with _exception_context(self.__class__.__name__):
+            self.terminate()
+
     @property
     def citations(self) -> list:
         """

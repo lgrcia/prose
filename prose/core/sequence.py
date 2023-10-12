@@ -110,13 +110,13 @@ class Sequence:
         self.discards = {}
         self._run(loader=loader)
 
-        if terminate:
-            self.terminate()
-
         for block_name, discarded in self.discards.items():
             warning(
                 f"{block_name} discarded image{'s' if len(discarded)>1 else ''} {', '.join(discarded)}"
             )
+
+        if terminate:
+            self.terminate()
 
     def _load(self, image, loader=FITSImage):
         _image = loader(image) if isinstance(image, (str, Path)) else image
@@ -143,7 +143,7 @@ class Sequence:
     def terminate(self):
         """Run the :py:class:`Block.terminate` method of all blocks"""
         for block in self.blocks:
-            block.terminate()
+            block._terminate()
         self._set_blocks_in_sequence(False)
 
     def __str__(self):
