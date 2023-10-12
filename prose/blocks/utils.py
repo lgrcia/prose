@@ -542,6 +542,10 @@ class GetFluxes(Get):
     def terminate(self):
         super().terminate()
         area = np.pi * (self._apertures**2)
+        if len(self._fluxes) == 0:
+            raise ValueError(
+                "block has empty fluxes (check if stars are present in image or if image has been discarded)"
+            )
         raw_fluxes = (self._fluxes - self._bkg[:, :, None] * area[:, None, :]).T
         time = self._time
         data = {"bkg": np.mean(self._bkg, -1)}
