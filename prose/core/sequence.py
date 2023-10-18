@@ -242,7 +242,12 @@ class SequenceParallel(Sequence):
     """
     A multi-process :py:class:`Sequence` of blocks to be executed in parallel.
 
-    The data_blocks allow blocks carying large amount of data to be run sequentially
+    .. caution::
+
+        :py:class:`SequenceParallel` is an experimental feature and not all blocks are compatible with it.
+        If you encounter issues (or for debugging) you should switch back to a normal :py:class:`Sequence`.
+
+    The :code:`data_blocks` allow blocks carying large amount of data to be run sequentially
     so that they are not copied from one process to another.
 
     Parameters
