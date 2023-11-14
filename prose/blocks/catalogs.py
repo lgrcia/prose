@@ -57,7 +57,7 @@ class _CatalogBlock(Block):
         self.limit = limit
 
         if self.mode == "replace":
-            self.require = ["sources"]
+            self.read = ["sources"]
 
     def get_catalog(self, image):
         raise NotImplementedError()

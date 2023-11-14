@@ -11,7 +11,7 @@ sd_hide_title: true
 
 +++
 
-A Python package to build image processing pipelines for Astronomy. Beyond featuring the blocks to build pipelines from scratch, it provides pre-implemented ones to perform common tasks such as automated calibration, reduction and photometry.
+A Python package to build modular image processing pipelines for Astronomy.
 
 ```{admonition} Where to start?
 :class: tip 
@@ -61,4 +61,5 @@ ipynb/sources
 md/blocks
 md/api
 tested_blocks.md
+md/debug
 ```

@@ -1,6 +1,14 @@
 :root {
     /* --pst-color-inline-code: 33, 125, 224; */
     --mystnb-source-margin-color: darkgrey;
+    --pst-color-secondary: var(--pst-color-primary) !important;
+    --pst-color-link-hover: var(--pst-color-primary) !important;
+}
+
+html {
+    --pst-color-secondary: var(--pst-color-primary) !important;
+    --pst-color-inline-code: #e5448b !important;
+    --pst-color-inline-code-links: var(--pst-color-primary) !important;
 }
 
 
@@ -168,3 +176,15 @@ code span.pre {
     color: var(--pst-color-primary);
     font-size: 15px;
 }
+
+.navbar-brand:hover {
+    text-decoration: none !important;
+}
+
+nav.bd-links li>a:hover {
+    text-decoration: none;
+}
+
+/* nav.bd-links .current > a {
+box-shadow: none;
+} */

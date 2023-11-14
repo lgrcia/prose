@@ -11,19 +11,19 @@
     <a href="https://github.com/lgrcia/prose">
       <img src="https://img.shields.io/badge/github-lgrcia/prose-03A487.svg?style=flat" alt="github"/>
     </a>
-    <a href="LICENCE">
+    <a href="https://github.com/lgrcia/prose/blob/main/LICENSE">
       <img src="https://img.shields.io/badge/license-MIT-lightgray.svg?style=flat" alt="license"/>
     </a>
     <a href="https://arxiv.org/abs/2111.02814">
       <img src="https://img.shields.io/badge/paper-B166A9.svg?style=flat" alt="paper"/>
     </a>
-    <a href="https://prose.readthedocs.io/en/3.0.0">
+    <a href="https://prose.readthedocs.io/en/latest">
       <img src="https://img.shields.io/badge/documentation-black.svg?style=flat" alt="documentation"/>
     </a>
   </p>
 </p>
 
- *prose* is a Python package to build image processing pipelines for Astronomy. Beyond featuring the blocks to build pipelines from scratch, it provides pre-implemented ones to perform common tasks such as automated calibration, reduction and photometry.
+ *prose* is a Python package to build modular image processing pipelines for Astronomy.
 
 *powered by [astropy](https://www.astropy.org/) and [photutils](https://photutils.readthedocs.io)*!
 

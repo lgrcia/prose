@@ -165,9 +165,14 @@ class ComputeTransformTwirl(Block):
     Parameters
     ----------
     ref : Image
-        image containing detected sources
+        Image containing detected sources
     n : int, optional
-        number of stars to consider to compute transformation, by default 10
+        Number of stars to consider to compute transformation, by default 10
+
+    Raises
+    ------
+    SingularMatrix
+        Transformation matrix could not be computed. Check the sources in both the reference and input image.
     """
 
     def __init__(self, reference_image: Image, n=10, rtol=0.02, **kwargs):
@@ -192,7 +197,7 @@ class ComputeTransformTwirl(Block):
         else:
             image.discard = True
 
-    def solve(self, coords, tolerance=2):
+    def solve(self, coords, tolerance=2, refine=True):
         quads_image, asterisms_image = quads.hashes(coords)
         tree_image = cKDTree(quads_image)
         min_match = 0.7
@@ -216,17 +221,21 @@ class ComputeTransformTwirl(Block):
                     if match >= min_match * len(coords):
                         break
 
-        i, j = pairs[np.argmax(matches)]
-
-        if True:
-            M = get_transform_matrix(self.asterisms_ref[j], asterisms_image[i])
-            test = (M @ pad(self.ref).T)[0:2].T
-            s1, s2 = cross_match(coords, test, tolerance=tolerance, return_idxs=True).T
-            M = get_transform_matrix(self.ref[s2], coords[s1])
+        if len(matches) == 0:
+            return None
         else:
-            M = get_transform_matrix(self.asterisms_ref[j], asterisms_image[i])
+            i, j = pairs[np.argmax(matches)]
+            if refine:
+                M = get_transform_matrix(self.asterisms_ref[j], asterisms_image[i])
+                test = (M @ pad(self.ref).T)[0:2].T
+                s1, s2 = cross_match(
+                    coords, test, tolerance=tolerance, return_idxs=True
+                ).T
+                M = get_transform_matrix(self.ref[s2], coords[s1])
+            else:
+                M = get_transform_matrix(self.asterisms_ref[j], asterisms_image[i])
 
-        return M
+            return M
 
 
 # backward compatibility

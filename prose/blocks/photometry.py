@@ -32,6 +32,9 @@ class AperturePhotometry(Block):
             self._radii = radii
         self.scale = scale
 
+        if self.scale:
+            self.read.append("fwhm")
+
     def run(self, image: Image):
         if self.scale:
             radii = np.array(image.fwhm * self._radii)

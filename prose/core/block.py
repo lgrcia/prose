@@ -5,6 +5,21 @@ from typing import Union
 from prose.console_utils import warning
 from prose.core.image import Buffer, Image
 
+import contextlib
+
+
+@contextlib.contextmanager
+def _exception_context(msg):
+    try:
+        yield
+    except Exception as ex:
+        if ex.args:
+            msg = f"[{msg}] {ex.args[0]}"
+        else:
+            str(msg)
+        ex.args = (msg,) + ex.args[1:]
+        raise
+
 
 class Block(object):
     """Single unit of processing acting on the :py:class:`~prose.Image` object
@@ -59,7 +74,9 @@ class Block(object):
                 if not image.plate_solved:
                     raise AttributeError(f"Image must have valid WCS")
             if not hasattr(image, _require) and not hasattr(image.computed, _require):
-                raise AttributeError(f"Image must have attribute '{_require}'")
+                raise AttributeError(
+                    f"[{self.__class__.__name__}] Image must have attribute '{_require}'"
+                )
 
     def _run(self, buffer):
         t0 = time()
@@ -69,8 +86,9 @@ class Block(object):
             image = buffer
         else:
             raise ValueError("block must be run on a Buffer or an Image")
-        self._check_require(image)
-        self.run(image)
+        with _exception_context(self.__class__.__name__):
+            self._check_require(image)
+            self.run(image)
         self.processing_time += time() - t0
         self.runs += 1
 
@@ -87,6 +105,10 @@ class Block(object):
     def terminate(self):
         """Method called after block's :py:class:`~prose.Sequence` is finished (if any)"""
         pass
+
+    def _terminate(self):
+        with _exception_context(self.__class__.__name__):
+            self.terminate()
 
     @property
     def citations(self) -> list:

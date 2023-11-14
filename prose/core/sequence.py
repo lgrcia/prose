@@ -110,13 +110,13 @@ class Sequence:
         self.discards = {}
         self._run(loader=loader)
 
-        if terminate:
-            self.terminate()
-
         for block_name, discarded in self.discards.items():
             warning(
                 f"{block_name} discarded image{'s' if len(discarded)>1 else ''} {', '.join(discarded)}"
             )
+
+        if terminate:
+            self.terminate()
 
     def _load(self, image, loader=FITSImage):
         _image = loader(image) if isinstance(image, (str, Path)) else image
@@ -143,7 +143,7 @@ class Sequence:
     def terminate(self):
         """Run the :py:class:`Block.terminate` method of all blocks"""
         for block in self.blocks:
-            block.terminate()
+            block._terminate()
         self._set_blocks_in_sequence(False)
 
     def __str__(self):
@@ -242,7 +242,12 @@ class SequenceParallel(Sequence):
     """
     A multi-process :py:class:`Sequence` of blocks to be executed in parallel.
 
-    The data_blocks allow blocks carying large amount of data to be run sequentially
+    .. caution::
+
+        :py:class:`SequenceParallel` is an experimental feature and not all blocks are compatible with it.
+        If you encounter issues (or for debugging) you should switch back to a normal :py:class:`Sequence`.
+
+    The :code:`data_blocks` allow blocks carying large amount of data to be run sequentially
     so that they are not copied from one process to another.
 
     Parameters
