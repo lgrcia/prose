@@ -242,16 +242,16 @@ def test_require_sources():
         Sequence([blocks.Cutouts()]).run(im)
 
 
-def test_video_block(tmp_path):
+def test_Video(tmp_path):
     from prose.blocks import Video
 
     im = image.copy()
     im.sources = None
 
-    Sequence([Video(tmp_path / "video.mp4", fps=3)]).run([im, im, im])
+    Sequence([Video(tmp_path / "video.gif", fps=3)]).run([im, im, im])
 
 
-def test_video_plot_block(tmp_path):
+def test_VideoPlot(tmp_path):
     from prose.blocks import VideoPlot
 
     def plot(image):
@@ -259,4 +259,4 @@ def test_video_plot_block(tmp_path):
 
     im = image.copy()
 
-    Sequence([VideoPlot(plot, tmp_path / "video.mp4", fps=3)]).run([im, im, im])
+    Sequence([VideoPlot(plot, tmp_path / "video.gif", fps=3)]).run([im, im, im])
