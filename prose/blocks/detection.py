@@ -8,7 +8,13 @@ from prose import Block, Image
 from prose.console_utils import info
 from prose.core.source import *
 
-__all__ = ["DAOFindStars", "SEDetection", "AutoSourceDetection", "PointSourceDetection"]
+__all__ = [
+    "DAOFindStars",
+    "SEDetection",
+    "AutoSourceDetection",
+    "PointSourceDetection",
+    "Peaks",
+]
 
 
 class _SourceDetection(Block):
@@ -268,17 +274,17 @@ class SegmentedPeaks(PointSourceDetection):
 
 # TODO: document
 class Peaks(Block):
-    def __init__(self, cutout=11, **kwargs):
+    def __init__(self, shape=11, **kwargs):
         super().__init__(**kwargs)
-        self.cutout = cutout
+        self.shape = shape
 
     def run(self, image, **kwargs):
-        idxs, cuts = cutouts(image.data, image.sources.coords, size=self.cutout)
-        peaks = np.ones(len(image.stars_coords)) * -1
-        for j, i in enumerate(idxs):
-            cut = cuts[j]
+        idxs = np.arange(len(image.sources))
+        peaks = np.ones(len(idxs)) * -1
+        for j in idxs:
+            cut = image.cutout(image.sources.coords[j], shape=self.shape)
             if cut is not None:
-                peaks[i] = np.max(cut.data)
+                peaks[j] = cut.data.max()
         image.peaks = peaks
 
 
