@@ -249,6 +249,16 @@ class Image:
         return self.metadata["filter"]
 
     @property
+    def gain(self):
+        """Gain of the camera"""
+        return self.metadata["gain"]
+
+    @property
+    def read_noise(self):
+        """Read noise of the camera"""
+        return self.metadata["read_noise"]
+
+    @property
     def fov(self):
         """RA-DEC field of view of the image in degrees
 
@@ -709,6 +719,8 @@ def FITSImage(
         "jd": header.get(telescope.keyword_jd, None),
         "object": header.get(telescope.keyword_object, None),
         "pixel_scale": telescope.pixel_scale,
+        "gain": telescope.gain,
+        "read_noise": telescope.read_noise,
         "overscan": telescope.trimming[::-1],
         "path": path,
         "dimensions": (header.get("NAXIS1", 1), header.get("NAXIS2", 1)),
