@@ -68,3 +68,10 @@ def test_3d():
 
     f = Fluxes(fluxes=x, errors=x, target=0, aperture=0)
     f.error
+
+
+def test_diff():
+    x = np.random.uniform(0, 10000, size=(3, 2, 10))
+    f = Fluxes(x)
+    f.target = 1
+    diff = f.autodiff()
