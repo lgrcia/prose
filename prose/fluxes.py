@@ -84,6 +84,8 @@ def diff(fluxes: np.ndarray, weights: np.ndarray = None, errors: np.ndarray = No
         fluxes matrix with dimensions (star, flux) or (aperture, star, flux)
     weights :np.ndarray, optional
         weights matrix with dimensions (star) or (aperture, star), by default None which simply returns normalized fluxes
+    errors: np.ndarray, optionnal
+        errors matrix with the same dimensions as fluxes, (star, flux) or (aperture, star, flux)
 
     Returns
     -------
@@ -114,13 +116,12 @@ def diff(fluxes: np.ndarray, weights: np.ndarray = None, errors: np.ndarray = No
 
 
 def auto_diff_1d(fluxes, i=None, errors=None):
-    diff_fluxes = fluxes / np.expand_dims(np.nanmean(fluxes, -1), -1)
-    w = weights(diff_fluxes)
+    w = weights(fluxes)
 
     # to retain minimal set of comparison stars
     if i is not None:
         idxs = np.argsort(w)[::-1]
-        white_noise = utils.binned_nanstd(diff_fluxes)
+        white_noise = utils.binned_nanstd(fluxes)
         last_white_noise = 1e10
 
         def best_weights(j):
@@ -131,7 +132,7 @@ def auto_diff_1d(fluxes, i=None, errors=None):
 
         for j in range(w.shape[-1]):
             _w = best_weights(j)
-            _df, _ = diff(diff_fluxes, _w)
+            _df, _ = diff(fluxes, _w)
             _white_noise = np.take(white_noise(_df), i, axis=-1)[0]
             if not np.isfinite(_white_noise):
                 continue
@@ -142,7 +143,7 @@ def auto_diff_1d(fluxes, i=None, errors=None):
 
         w = best_weights(j - 1)
 
-    df, derr = diff(diff_fluxes, w, errors)
+    df, derr = diff(fluxes, w, errors)
     df = df.reshape(fluxes.shape)
 
     if derr is not None:
