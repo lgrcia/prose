@@ -19,7 +19,6 @@ __all__ = [
     "CleanBadPixels",
     "Del",
     "GetFluxes",
-    "Getpeaks",
     "WriteTo",
     "SelectiveStack",
 ]
@@ -570,15 +569,6 @@ class GetFluxes(Get):
             apertures=self._apertures,
             errors=self._errors.T,
         )
-
-
-class Getpeaks(Get):
-    def __init__(self, *attributes, name: str = "get", arrays: bool = True, **getters):
-        get_peaks = lambda im: im.peaks
-        super().__init__(*attributes, _peaks=get_peaks, arrays=arrays, **getters)
-
-    def terminate(self):
-        super().terminate()
 
 
 class WriteTo(Block):

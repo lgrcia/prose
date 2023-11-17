@@ -275,6 +275,13 @@ class SegmentedPeaks(PointSourceDetection):
 # TODO: document
 class Peaks(Block):
     def __init__(self, shape=11, **kwargs):
+        """Computation of peak values for the detected stars (in ADUs).
+
+        Parameters
+        ----------
+        shape : int, optional
+            size of the cutout image within which the peak is calculated, by default 11
+        """
         super().__init__(**kwargs)
         self.shape = shape
 
