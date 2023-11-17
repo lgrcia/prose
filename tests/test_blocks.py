@@ -101,6 +101,11 @@ def test_Get():
     assert g.values == {"a": [3], "b": [6], "c": [42]}
 
 
+def test_peaks():
+    im = image.copy()
+    blocks.Peaks().run(im)
+
+
 def test_LimitSources():
     from prose.core.source import PointSource, Sources
 
