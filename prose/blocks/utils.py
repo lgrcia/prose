@@ -87,16 +87,13 @@ class Get(Block):
         If a list of paths is provided to a :py:class:`~prose.Sequence`, each image is
         created at the beginning of the sequence, and deleted at the end, so that
         computed data stored as :py:class:`prose.Image` properties are deleted at each iteration.
-        Using the Get blocks provides a way to retain any daa stored in images before
+        This :code:`Get` block provides a way to retain any data stored in images before
         they are deleted.
 
         When a sequence is finished, this block has a `values` property, a dictionary
         where all retained properties are accessible by name, and consist of a list with
         a length corresponding to the number of images processed. The parameters of this
         dictionary are the args and kwargs provided to the block (see Example).
-
-        If Image is constructed from a FITS image, header values can be retrieved using the
-        syntax "keyword:KEY" (see example todo)
 
         Parameters
         ----------
@@ -111,8 +108,24 @@ class Get(Block):
 
         Example
         -------
-        TODO
+        .. code-block:: python
 
+            from prose import example_image
+            from prose import blocks
+
+            # example image
+            image = example_image()
+
+            # running the block
+            block = blocks.Get(image_shape = lambda im: im.shape)
+            block.run(image)
+
+            # getting the output
+            block.image_shape
+
+        .. code-block::
+
+            [array([600, 600])]
         """
         super().__init__(name=name)
         new_getters = {}
