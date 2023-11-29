@@ -70,6 +70,10 @@ class Image:
             self.catalogs = {}
         if self.computed is None:
             self.computed = {}
+
+        # backward compatibility
+        self.header = self.computed.get("fits_header", None)
+
         if self.header is None:
             self.header = Header()
         if isinstance(self._sources, dict):
@@ -261,7 +265,7 @@ class Image:
     @property
     def fits_header(self):
         """Same as :code:`header` (backward compatibility)"""
-        return self.header
+        return self.computed.get("fits_header", self.header)
 
     @property
     def date(self):
