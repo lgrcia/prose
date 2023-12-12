@@ -23,7 +23,7 @@ A Python package to build modular image processing pipelines for Astronomy.
 ```
 
 ```{toctree}
-:maxdepth: 0
+:maxdepth: 1
 :caption: Get started
 
 md/installation
@@ -33,7 +33,7 @@ ipynb/acknowledgement
 ```
 
 ```{toctree}
-:maxdepth: 0
+:maxdepth: 1
 :caption: Tutorials
 
 ipynb/fitsmanager
@@ -44,7 +44,7 @@ ipynb/catalogs
 
 
 ```{toctree}
-:maxdepth: 0
+:maxdepth: 1
 :caption: Case studies
 
 ipynb/casestudies/transit.ipynb
@@ -54,7 +54,7 @@ ipynb/casestudies/satellite.ipynb
 ```
 
 ```{toctree}
-:maxdepth: 0
+:maxdepth: 1
 :caption: Reference
 
 ipynb/sources
