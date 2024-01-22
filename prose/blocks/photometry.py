@@ -107,6 +107,7 @@ class AnnulusBackground(_AnnulusPhotometry):
 
         annulus = image.sources.annulus(rin, rout)
         annulus_masks = annulus.to_mask(method="center")
+        annulus_area = np.pi * (rout**2 - rin**2)
 
         bkg_median = []
         for mask in annulus_masks:
@@ -125,4 +126,5 @@ class AnnulusBackground(_AnnulusPhotometry):
             "rout": rin,
             "median": np.array(bkg_median),
             "sigma": self.sigma,
+            "area": annulus_area,
         }
