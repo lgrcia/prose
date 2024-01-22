@@ -501,10 +501,13 @@ class Sources:
     """List of sources"""
     type: Literal["PointSource", None] = None
     """Source type"""
+    source_type: Literal["PointSource", None] = None
+    """Legacy source type"""
 
     def __post_init__(self):
         if self.sources is None:
             self.sources = []
+            self.type = self.source_type
 
         if isinstance(self.sources, np.ndarray):
             if self.sources.dtype != object:

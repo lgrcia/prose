@@ -76,7 +76,8 @@ def weights(
 def diff(fluxes: np.ndarray, weights: np.ndarray = None, errors: np.ndarray = None):
     """Returns differential fluxes.
 
-    If weights are specified, they are used to produce an artificial light curve by which all flux are differentiated (see Broeg 2005)
+    If weights are specified, they are used to produce an artificial light curve by which all fluxes are differentiated (see Broeg 2005).
+    `fluxes` must not contain NaNs.
 
     Parameters
     ----------
@@ -311,7 +312,7 @@ class Fluxes:
         pass
 
     def diff(self, comps: np.ndarray = None):
-        """Differential photometry
+        """Differential photometry. `Fluxes.fluxes` must not contain NaNs.
 
         Parameters
         ----------
@@ -338,7 +339,8 @@ class Fluxes:
         return _new
 
     def autodiff(self):
-        """Automatic differential photometry with Broeg et al. 2005
+        """Automatic differential photometry with Broeg et al. 2005.
+        `Fluxes.fluxes` must not contain NaNs.
 
         Returns
         -------
