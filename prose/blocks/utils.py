@@ -533,9 +533,9 @@ class GetFluxes(Get):
                 im.annulus["median"][:, None] * _area[None, :]
             )
             # TODO : figure out the correct CCD equation for error computation
-            _squarred_error = _signal  # + _area[None, :] * (
-            # im.read_noise**2 + (im.gain / 2) ** 2 + im.annulus["median"][:, None]
-            # )
+            _squarred_error = _signal + _area[None, :] * (
+                im.read_noise**2 + (im.gain / 2) ** 2 + im.annulus["median"][:, None]
+            )
             return np.sqrt(_squarred_error)
 
         super().__init__(
