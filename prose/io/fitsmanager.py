@@ -262,6 +262,12 @@ class FitsManager:
             FITS data unit extension where header will be parsed
         telescope: prose.Telescope
             telescope to be imposed for these files, by default None
+        verbose_new : bool, optional
+            whether to show how many files are new, by default False
+        verbose_os : bool, optional
+            whether to show OS commands, by default False
+        leave : bool, optional
+            whether to leave progress bar after completion, by default False
         """
 
         if len(files) > 0:

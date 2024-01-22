@@ -93,6 +93,41 @@ def fits_to_df(
     verbose_os=False,
     leave=True,
 ):
+    """
+    Convert FITS files to a pandas DataFrame.
+
+    Parameters:
+    ----------
+    files : list
+        List of FITS file paths.
+    telescope_kw : str, optional
+        Keyword for telescope name in FITS header. Default is "TELESCOP".
+    instrument_kw : str, optional
+        Keyword for instrument name in FITS header. Default is "INSTRUME".
+    telescope : Telescope, optional
+        Pre-defined Telescope object. Default is None.
+    verbose : bool, optional
+        Flag to display progress bar. Default is True.
+    hdu : int, optional
+        HDU index to read from FITS file. Default is 0.
+    raise_oserror : bool, optional
+        Flag to raise OSError if encountered. Default is False.
+    verbose_os : bool, optional
+        Flag to display OS error message. Default is False.
+    leave : bool, optional
+        Flag to leave progress bar after completion. Default is True.
+
+    Returns:
+    -------
+    df : pandas.DataFrame
+        DataFrame containing FITS file information.
+
+    Raises:
+    ------
+    AssertionError
+        If files list is empty.
+
+    """
     assert len(files) > 0, "Files not provided"
 
     last_telescope = "_"
@@ -100,7 +135,7 @@ def fits_to_df(
     _telescope = None
     df_list = []
 
-    for i in progress(verbose, desc="Parsing FITS", leave=leave)(files):
+    for i in progress(verbose, desc="Parsing FITS")(files):
         try:
             header = fits.getheader(i, hdu)
         except OSError as err:
