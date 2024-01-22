@@ -251,12 +251,12 @@ class Image:
     @property
     def gain(self):
         """Gain of the camera"""
-        return self.metadata["gain"]
+        return self.metadata.get("gain", 1.0)
 
     @property
     def read_noise(self):
         """Read noise of the camera"""
-        return self.metadata["read_noise"]
+        return self.metadata.get("read_noise", 0.0)
 
     @property
     def fov(self):
