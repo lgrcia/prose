@@ -253,6 +253,16 @@ class Image:
         return self.metadata["filter"]
 
     @property
+    def gain(self):
+        """Gain of the camera"""
+        return self.metadata.get("gain", 1.0)
+
+    @property
+    def read_noise(self):
+        """Read noise of the camera"""
+        return self.metadata.get("read_noise", 0.0)
+
+    @property
     def fov(self):
         """RA-DEC field of view of the image in degrees
 
@@ -655,6 +665,11 @@ class Image:
             ]
         )
 
+    @property
+    def fits_header(self):
+        """Same as :code:`header` (backward compatibility)"""
+        return self.header
+
 
 def str_to_astropy_unit(unit_string):
     return u.__dict__[unit_string]
@@ -713,6 +728,8 @@ def FITSImage(
         "jd": header.get(telescope.keyword_jd, None),
         "object": header.get(telescope.keyword_object, None),
         "pixel_scale": telescope.pixel_scale,
+        "gain": telescope.gain,
+        "read_noise": telescope.read_noise,
         "overscan": telescope.trimming[::-1],
         "path": path,
         "dimensions": (header.get("NAXIS1", 1), header.get("NAXIS2", 1)),

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "prose"
-version = "3.2.10"
+version = "3.3.1"
 description = "Modular image processing pipelines for Astronomy"
 authors = ["Lionel Garcia"]
 license = "MIT"
@@ -52,3 +52,6 @@ ipywidgets = "*"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+fitsmanager = 'prose.scripts.fitsmanager:main'

@@ -1,145 +1,163 @@
 import io
-import shutil
-import tempfile
-import time
 
 import imageio
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.backends.backend_agg import FigureCanvasAgg
-from skimage.transform import resize
 
-from prose import Block, viz
-from prose.visualization import corner_text
+from prose.core.block import Block
+from prose.utils import z_scale
 
-__all__ = ["VideoPlot"]
+__all__ = ["VideoPlot", "Video"]
 
 
-def im_to_255(image, factor=0.25):
-    if factor != 1:
-        return (
-            resize(
-                image.astype(float),
-                (np.array(np.shape(image)) * factor).astype(int),
-                anti_aliasing=False,
-            )
-            * 255
-        ).astype("uint8")
-    else:
-        data = image.copy().astype(float)
-        data = data / np.max(data)
-        data = data * 255
-        return data.astype("uint8")
+def im_to_255(image):
+    data = image.copy().astype(float)
+    data = data / np.max(data)
+    data = data * 255
+    return data.astype("uint8")
 
 
-class _Video(Block):
-    """Base block to build a video"""
+class Video(Block):
+    def __init__(
+        self,
+        destination,
+        fps=10,
+        compression=None,
+        data_function=None,
+        width=None,
+        contrast=0.1,
+        name=None,
+    ):
+        """
+        A block to create a video from images data (using ffmpeg).
 
-    def __init__(self, destination, fps=10, **kwargs):
-        super().__init__(**kwargs)
-        self.destination = destination
-        self.images = []
-        self.fps = fps
-        self.checked_writer = False
+        Parameters
+        ----------
+        destination : str
+            The path to save the resulting video.
+        fps : int, optional
+            The frames per second of the resulting video. Default is 10.
+        compression : int, optional
+            The compression rate of the resulting video (-cr value of fmmpeg).
+            Default is None.
+        data_function : callable, optional
+            A function to apply to each image data before adding it to the video.
+            If none, a z scale is applied to the data with a contrast given by
+            :code:`contrast`.Default is None.
+        width : int, optional
+            The width in pixels of the resulting video.
+            Default is None (i.e. original image size).
+        contrast : float, optional
+            The contrast of the resulting video. Default is 0.1.
+            Either :code:`contrast` or :code:`data_function` must be provided.
+        name : str, optional
+            The name of the block. Default is None.
+
+        Attributes
+        ----------
+        citations : list of str
+            The citations for the block.
+
+        Methods
+        -------
+        run(image)
+            Adds an image to the video.
+        terminate()
+            Closes the video writer.
+
+        """
+        super().__init__(name=name)
+        if data_function is None:
+
+            def data_function(data):
+                new_data = data.copy()
+                new_data = z_scale(new_data, c=contrast)
+                return new_data
+
+        output = []
+        if compression is not None:
+            output += ["-crf", f"{compression}"]
+        if width is not None:
+            output += ["-vf", f"scale={width}:-1"]
+        self.writer = imageio.get_writer(
+            destination,
+            mode="I",
+            fps=fps,
+            output_params=output if len(output) > 0 else None,
+        )
+        self.function = data_function
 
     def run(self, image):
-        if not self.checked_writer:
-            _ = imageio.get_writer(self.destination, mode="I")
-            self.checked_writer = True
+        data = self.function(image.data)
+        self.writer.append_data(im_to_255(data))
 
     def terminate(self):
-        imageio.mimsave(self.destination, self.images, fps=self.fps)
+        self.writer.close()
 
     @property
     def citations(self):
         return super().citations + ["imageio"]
 
 
-class RawVideo(_Video):
+class VideoPlot(Video):
     def __init__(
-        self, destination, attribute="data", fps=10, function=None, scale=1, **kwargs
+        self,
+        plot_function,
+        destination,
+        fps=10,
+        compression=None,
+        width=None,
+        name=None,
     ):
-        super().__init__(destination, fps=fps, **kwargs)
-        if function is None:
-
-            def _donothing(data):
-                return data
-
-            function = _donothing
-
-        self.function = function
-        self.scale = scale
-        self.attribute = attribute
-
-    def run(self, image):
-        super().run(image)
-        data = self.function(image.__dict__[self.attribute])
-        self.images.append(im_to_255(data, factor=self.scale))
-
-
-class VideoPlot(_Video):
-    def __init__(self, plot_function, destination, fps=10, name=None):
-        """Make a video out of a plotting function
+        """
+        A block to create a video from a matploltib plot (using ffmpeg).
 
         Parameters
         ----------
-        plot_function : function
-            a plotting function taking an :py:class:`prose.Image` as input
-        destination : str or Path
-            destination of the video, including extension
+        plot_function : callable
+            A function that takes an image as input and produce a plot.
+        destination : str
+            The path to save the resulting video.
         fps : int, optional
-            frame per seconds, by default 10
-        antialias : bool, optional
-            whether pyplot antialias should be used, by default False
+            The frames per second of the resulting video. Default is 10.
+        compression : int, optional
+            The compression rate of the resulting video (-cr value of fmmpeg).
+            Default is None.
+        width : int, optional
+            The width in pixels of the resulting video.
+            Default is None (i.e. original image size).
+        name : str, optional
+            The name of the block. Default is None.
+
+        Attributes
+        ----------
+        citations : list of str
+            The citations for the block.
+
+        Methods
+        -------
+        run(image)
+            Adds a plot to the video.
+        terminate()
+            Closes the video writer.
+
         """
-        super().__init__(destination, fps=fps, name=name)
+        super().__init__(
+            destination,
+            fps=fps,
+            compression=compression,
+            width=width,
+            name=name,
+        )
         self.plot_function = plot_function
-        self.destination = destination
-        self._temp = tempfile.mkdtemp()
-        self._images = []
 
     def run(self, image):
         self.plot_function(image)
         buf = io.BytesIO()
         plt.savefig(buf)
-        self.images.append(imageio.imread(buf))
+        self.writer.append_data(imageio.imread(buf))
         plt.close()
 
     def terminate(self):
+        plt.close()
         super().terminate()
-        shutil.rmtree(self._temp)
-
-
-class LivePlot(Block):
-    def __init__(self, plot_function=None, sleep=0.0, size=None, **kwargs):
-        super().__init__(**kwargs)
-        if plot_function is None:
-            plot_function = lambda im: viz.show_stars(
-                im.data,
-                im.stars_coords if hasattr(im, "stars_coords") else None,
-                size=size,
-            )
-
-        self.plot_function = plot_function
-        self.sleep = sleep
-        self.display = None
-        self.size = size
-        self.figure_added = False
-
-    def run(self, image):
-        if not self.figure_added:
-            from IPython import display as disp
-
-            self.display = disp
-            if isinstance(self.size, tuple):
-                plt.figure(figsize=self.size)
-            self.figure_added = True
-
-        self.plot_function(image)
-        self.display.clear_output(wait=True)
-        self.display.display(plt.gcf())
-        time.sleep(self.sleep)
-        plt.cla()
-
-    def terminate(self):
-        plt.close()

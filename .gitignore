@@ -65,3 +65,8 @@ _docs
 docs/tested_blocks.md
 docs/md/all_blocks.rst
 docs/md/template.py
+
+## Pycharm
+*.xml
+.idea
+

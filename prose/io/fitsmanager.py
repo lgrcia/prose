@@ -1,4 +1,5 @@
 import sqlite3
+import sys
 from functools import partial
 from pathlib import Path
 
@@ -242,6 +243,7 @@ class FitsManager:
         telescope=None,
         verbose_new=False,
         verbose_os=False,
+        leave=False,
     ):
         """Scan files and add data to database
 
@@ -260,6 +262,12 @@ class FitsManager:
             FITS data unit extension where header will be parsed
         telescope: prose.Telescope
             telescope to be imposed for these files, by default None
+        verbose_new : bool, optional
+            whether to show how many files are new, by default False
+        verbose_os : bool, optional
+            whether to show OS commands, by default False
+        leave : bool, optional
+            whether to leave progress bar after completion, by default False
         """
 
         if len(files) > 0:
@@ -285,8 +293,14 @@ class FitsManager:
                         )
 
                 _verbose = verbose and batch_size is not False
-                _progress = progress(_verbose, desc="Reading fits", unit="files")
+                _progress = progress(
+                    _verbose,
+                    desc="Reading fits",
+                    unit="files",
+                    leave=leave,
+                )
 
+                # to improve: use same progress for batch and non-batch
                 if batch_size is not False:
                     for batch in _progress(batches):
                         try:

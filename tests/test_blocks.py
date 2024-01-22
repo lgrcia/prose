@@ -101,6 +101,11 @@ def test_Get():
     assert g.values == {"a": [3], "b": [6], "c": [42]}
 
 
+def test_peaks():
+    im = image.copy()
+    blocks.Peaks().run(im)
+
+
 def test_LimitSources():
     from prose.core.source import PointSource, Sources
 
@@ -240,3 +245,23 @@ def test_require_sources():
 
     with pytest.raises(AttributeError, match="sources"):
         Sequence([blocks.Cutouts()]).run(im)
+
+
+def test_Video(tmp_path):
+    from prose.blocks import Video
+
+    im = image.copy()
+    im.sources = None
+
+    Sequence([Video(tmp_path / "video.gif", fps=3)]).run([im, im, im])
+
+
+def test_VideoPlot(tmp_path):
+    from prose.blocks import VideoPlot
+
+    def plot(image):
+        image.show()
+
+    im = image.copy()
+
+    Sequence([VideoPlot(plot, tmp_path / "video.gif", fps=3)]).run([im, im, im])

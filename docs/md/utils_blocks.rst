@@ -15,3 +15,12 @@ Utils
    Calibration
    SortSources
    CleanBadPixels
+
+.. currentmodule:: prose.blocks.visualization
+
+.. autosummary::
+   :template: blocksum.rst
+   :nosignatures:
+
+   Video
+   VideoPlot

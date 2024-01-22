@@ -21,7 +21,7 @@ def weights(
     Parameters
     ----------
     fluxes : np.ndarray
-        fluxes matrix with dimensions (star, flux) or (aperture, star, flux)
+        fluxes matrix with dimensions (star, flux)
     tolerance : float, optional
         the minimum standard deviation of weights difference to attain (meaning weights are stable), by default 1e-3
     max_iteration : int, optional
@@ -64,7 +64,7 @@ def weights(
         )
 
         last_weights = weights
-        lcs = diff(dfluxes, weights=weights)
+        lcs, _ = diff(dfluxes, weights=weights)
 
         i += 1
 
@@ -73,7 +73,7 @@ def weights(
     return weights[0]
 
 
-def diff(fluxes: np.ndarray, weights: np.ndarray = None):
+def diff(fluxes: np.ndarray, weights: np.ndarray = None, errors: np.ndarray = None):
     """Returns differential fluxes.
 
     If weights are specified, they are used to produce an artificial light curve by which all fluxes are differentiated (see Broeg 2005).
@@ -85,6 +85,8 @@ def diff(fluxes: np.ndarray, weights: np.ndarray = None):
         fluxes matrix with dimensions (star, flux) or (aperture, star, flux)
     weights :np.ndarray, optional
         weights matrix with dimensions (star) or (aperture, star), by default None which simply returns normalized fluxes
+    errors: np.ndarray, optionnal
+        errors matrix with the same dimensions as fluxes, (star, flux) or (aperture, star, flux)
 
     Returns
     -------
@@ -101,15 +103,26 @@ def diff(fluxes: np.ndarray, weights: np.ndarray = None):
             weights @ sub[0], -1
         )
         diff_fluxes = diff_fluxes / artificial_light_curve
-    return diff_fluxes
+        if errors is not None:
+            diff_errors = errors / np.expand_dims(np.nanmean(fluxes, -1), -1)
+            weighted_errors = diff_errors**2 * np.expand_dims(weights, -1) ** 2
+            squarred_art_error = (sub @ weighted_errors) / np.expand_dims(
+                weights**2 @ sub[0], -1
+            )
+            diff_errors = np.sqrt(diff_errors**2 + squarred_art_error)
+        else:
+            diff_errors = None
+
+    return diff_fluxes, diff_errors
 
 
-def auto_diff_1d(fluxes, i=None):
-    dfluxes = fluxes / np.expand_dims(np.nanmean(fluxes, -1), -1)
-    w = weights(dfluxes)
+def auto_diff_1d(fluxes, i=None, errors=None):
+    w = weights(fluxes)
+
+    # to retain minimal set of comparison stars
     if i is not None:
         idxs = np.argsort(w)[::-1]
-        white_noise = utils.binned_nanstd(dfluxes)
+        white_noise = utils.binned_nanstd(fluxes)
         last_white_noise = 1e10
 
         def best_weights(j):
@@ -120,7 +133,7 @@ def auto_diff_1d(fluxes, i=None):
 
         for j in range(w.shape[-1]):
             _w = best_weights(j)
-            _df = diff(dfluxes, _w)
+            _df, _ = diff(fluxes, _w)
             _white_noise = np.take(white_noise(_df), i, axis=-1)[0]
             if not np.isfinite(_white_noise):
                 continue
@@ -131,19 +144,33 @@ def auto_diff_1d(fluxes, i=None):
 
         w = best_weights(j - 1)
 
-    df = diff(dfluxes, w)
+    df, derr = diff(fluxes, w, errors)
+    df = df.reshape(fluxes.shape)
 
-    return df.reshape(fluxes.shape), w
+    if derr is not None:
+        derr = derr.reshape(errors.shape)
+
+    return df, w, derr
 
 
-def auto_diff(fluxes: np.array, i: int = None):
-    if fluxes.ndim == 3:
-        auto_diffs = [auto_diff_1d(f, i) for f in fluxes]
-        w = [a[1] for a in auto_diffs]
-        fluxes = np.array([a[0] for a in auto_diffs])
-        return fluxes, np.array(w)
+def auto_diff(fluxes: np.array, i: int = None, errors=None):
+    if errors is not None:
+        if fluxes.ndim == 3:
+            auto_diffs = [auto_diff_1d(f, i, e) for f, e in zip(fluxes, errors)]
+            w = [a[1] for a in auto_diffs]
+            fluxes = np.array([a[0] for a in auto_diffs])
+            errors = np.array([a[2] for a in auto_diffs])
+            return fluxes, np.array(w), errors
+        else:
+            return auto_diff_1d(fluxes, i, errors)
     else:
-        return auto_diff_1d(fluxes, i)
+        if fluxes.ndim == 3:
+            auto_diffs = [auto_diff_1d(f, i) for f in fluxes]
+            w = [a[1] for a in auto_diffs]
+            fluxes = np.array([a[0] for a in auto_diffs])
+            return fluxes, np.array(w), None
+        else:
+            return auto_diff_1d(fluxes, i)
 
 
 def optimal_flux(diff_fluxes, method="stddiff", sigma=4):
@@ -302,10 +329,13 @@ class Fluxes:
         else:
             weights = None
 
-        diff_fluxes = diff(self.fluxes, weights)
         _new = deepcopy(self)
-        _new.fluxes = diff_fluxes
         _new.weights = weights
+
+        diff_fluxes, diff_errors = diff(self.fluxes, weights, self.errors)
+        _new.fluxes = diff_fluxes
+        _new.errors = diff_errors
+
         return _new
 
     def autodiff(self):
@@ -318,10 +348,13 @@ class Fluxes:
         """
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
-            diff_fluxes, weights = auto_diff(self.fluxes, self.target)
+            diff_fluxes, weights, diff_errors = auto_diff(
+                self.fluxes, self.target, self.errors
+            )
 
         _new = deepcopy(self)
         _new.fluxes = diff_fluxes
+        _new.errors = diff_errors
         _new.weights = weights
         _new.aperture = _new.best_aperture_index()
 

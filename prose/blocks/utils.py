@@ -540,12 +540,24 @@ class GetFluxes(Get):
         def get_aperture(im):
             return im.aperture["radii"]
 
+        def get_error(im):
+            _area = np.pi * im.aperture["radii"] ** 2
+            _signal = im.aperture["fluxes"] - (
+                im.annulus["median"][:, None] * _area[None, :]
+            )
+            # TODO : figure out the correct CCD equation for error computation
+            _squarred_error = _signal + _area[None, :] * (
+                im.read_noise**2 + (im.gain / 2) ** 2 + im.annulus["median"][:, None]
+            )
+            return np.sqrt(_squarred_error)
+
         super().__init__(
             *args,
             _time=get_time,
             _bkg=get_bkg,
             _fluxes=get_fluxes,
             _apertures=get_aperture,
+            _errors=get_error,
             name=name,
             **kwargs,
         )
@@ -564,7 +576,11 @@ class GetFluxes(Get):
         data = {"bkg": np.mean(self._bkg, -1)}
         data.update({key: value for key, value in self.values.items() if key[0] != "_"})
         self.fluxes = Fluxes(
-            time=time, fluxes=raw_fluxes, data=data, apertures=self._apertures
+            time=time,
+            fluxes=raw_fluxes,
+            data=data,
+            apertures=self._apertures,
+            errors=self._errors.T,
         )
 
 
