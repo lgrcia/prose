@@ -324,7 +324,7 @@ class Fluxes:
         differential :code:`Fluxes`
         """
         if comps is not None:
-            weights = np.zeros(self.fluxes[0:2])
+            weights = np.zeros(self.fluxes.shape[0:-1])
             weights[:, comps] = 1
         else:
             weights = None
@@ -335,6 +335,7 @@ class Fluxes:
         diff_fluxes, diff_errors = diff(self.fluxes, weights, self.errors)
         _new.fluxes = diff_fluxes
         _new.errors = diff_errors
+        _new.aperture = _new.best_aperture_index()
 
         return _new
 
