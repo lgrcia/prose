@@ -54,3 +54,11 @@ def test_fitsimage(tmp_path):
 
     loaded_image = FITSImage(filename)
     assert "IMAGETYP" in dict(loaded_image.header)
+
+
+def test_init_header():
+
+    d = np.ones((512, 512))
+    hdr = dict(FILTER="B")
+
+    assert Image(d, header=hdr).header == hdr
