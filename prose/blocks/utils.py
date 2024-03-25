@@ -655,6 +655,8 @@ class SelectiveStack(Block):
 
     def run(self, image: Image):
         sigma = image.fwhm
+        self.metadata = image.metadata
+        self.header = image.header
         if len(self._images) < self.n:
             self._images.append(image)
             self._sigmas.append(sigma)
@@ -666,3 +668,5 @@ class SelectiveStack(Block):
 
     def terminate(self):
         self.stack = Image(easy_median([im.data for im in self._images]))
+        self.stack.metadata = self.metadata
+        self.stack.header = self.header
