@@ -70,8 +70,16 @@ def test_3d():
     f.error
 
 
-def test_diff():
+def test_auto_diff():
     x = np.random.uniform(0, 10000, size=(3, 2, 10))
+    f = Fluxes(x)
+    f.target = 1
+    diff = f.autodiff()
+
+
+def test_diff():
+    x = np.random.uniform(0, 10000, size=(30, 20, 10))
+    comps = np.repeat(np.array([[1, 12, 16]]), repeats=30, axis=0)
     f = Fluxes(x)
     f.target = 1
     diff = f.autodiff()
