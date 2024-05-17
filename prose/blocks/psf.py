@@ -3,10 +3,9 @@ import numpy as np
 from prose import Block, Image
 
 try:
-    from jax.config import config
-
-    config.update("jax_enable_x64", True)
     import jax
+
+    jax.config.update("jax_enable_x64", True)
     import jax.numpy as jnp
     from jaxopt import ScipyMinimize
 except ModuleNotFoundError:
@@ -291,15 +290,9 @@ class Gaussian2D(_PSFModelBase):
         def model(height, xo, yo, sx, sy, theta, m):
             dx = self.x - xo
             dy = self.y - yo
-            a = (np.cos(theta) ** 2) / (2 * sx**2) + (np.sin(theta) ** 2) / (
-                2 * sy**2
-            )
-            b = -(np.sin(2 * theta)) / (4 * sx**2) + (np.sin(2 * theta)) / (
-                4 * sy**2
-            )
-            c = (np.sin(theta) ** 2) / (2 * sx**2) + (np.cos(theta) ** 2) / (
-                2 * sy**2
-            )
+            a = (np.cos(theta) ** 2) / (2 * sx**2) + (np.sin(theta) ** 2) / (2 * sy**2)
+            b = -(np.sin(2 * theta)) / (4 * sx**2) + (np.sin(2 * theta)) / (4 * sy**2)
+            c = (np.sin(theta) ** 2) / (2 * sx**2) + (np.cos(theta) ** 2) / (2 * sy**2)
             psf = height * np.exp(-(a * dx**2 + 2 * b * dx * dy + c * dy**2))
             return psf + m
 
