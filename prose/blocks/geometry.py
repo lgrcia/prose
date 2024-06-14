@@ -267,7 +267,7 @@ class ComputeTransformXYShift(Block):
         self._parallel_friendly = True
 
     def run(self, image):
-        if len(image.sources.coords) >= 5:
+        if len(image.sources.coords) >= 3: # changed from 5 to 3, as some SPIRIT images have very few sources
             if len(image.sources.coords) <= 2:
                 shift = self.ref_coords[0] - image.sources.coords[0]
             else:
