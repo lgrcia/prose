@@ -2,7 +2,6 @@ import sys
 from collections import OrderedDict
 from functools import partial
 from pathlib import Path
-from time import time
 
 import multiprocess as mp
 import numpy as np

@@ -1,5 +1,4 @@
 import sqlite3
-import sys
 from functools import partial
 from pathlib import Path
 

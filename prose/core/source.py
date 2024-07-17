@@ -1,6 +1,6 @@
 import copy
 from dataclasses import dataclass
-from typing import Literal, Union
+from typing import Literal
 
 import matplotlib.pyplot as plt
 import numpy as np

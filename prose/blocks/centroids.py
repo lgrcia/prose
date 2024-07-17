@@ -12,7 +12,6 @@ from photutils.centroids import (
 
 from prose import CONFIG, Block
 
-from .geometry import Cutouts
 
 __all__ = [
     "CentroidCOM",

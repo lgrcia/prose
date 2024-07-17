@@ -2,7 +2,6 @@ import pickle
 import warnings
 from copy import deepcopy
 from dataclasses import asdict, dataclass
-from functools import partial
 from pathlib import Path
 from typing import Union
 

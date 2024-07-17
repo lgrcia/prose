@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from astropy import units as u
 from astropy.io import fits
-from astropy.io.fits import Header
 from astropy.nddata import NDData
 from astropy.table import Table
 from astropy.time import Time
