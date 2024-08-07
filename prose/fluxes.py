@@ -323,7 +323,7 @@ class Fluxes:
         differential :code:`Fluxes`
         """
         if comps is not None:
-            weights = np.zeros(self.fluxes[0:2])
+            weights = np.zeros(self.fluxes.shape[0:2])
             weights[:, comps] = 1
         else:
             weights = None
