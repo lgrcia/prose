@@ -1,4 +1,3 @@
-import inspect
 from time import time
 from typing import Union
 

@@ -3,7 +3,7 @@ from typing import Optional, Union
 import numpy as np
 from scipy.spatial import cKDTree
 from skimage.transform import AffineTransform
-from twirl import find_transform, quads
+from twirl import quads
 from twirl.geometry import get_transform_matrix, pad
 from twirl.match import count_cross_match
 

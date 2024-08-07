@@ -10,8 +10,7 @@ from astroquery.mast import Catalogs
 from twirl.geometry import sparsify
 
 from prose import Block
-from prose import visualization as viz
-from prose.core.source import PointSource, Sources
+from prose.core.source import Sources
 from prose.utils import cross_match, gaia_query
 
 __all__ = ["GaiaCatalog", "TESSCatalog"]

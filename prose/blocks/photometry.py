@@ -1,5 +1,5 @@
 import numpy as np
-from astropy.stats import gaussian_sigma_to_fwhm, sigma_clipped_stats
+from astropy.stats import sigma_clipped_stats
 from photutils.aperture import aperture_photometry
 
 from prose import Block, Image

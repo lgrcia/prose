@@ -9,7 +9,7 @@
     "python.linting.pylintEnabled": false,
     "[python]": {
         "editor.codeActionsOnSave": {
-            "source.organizeImports": true
+            "source.organizeImports": "explicit"
         },
         "editor.formatOnPaste": false,
         "editor.defaultFormatter": "ms-python.black-formatter"

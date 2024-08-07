@@ -1,8 +1,6 @@
 import argparse
 from pathlib import Path
 
-import pandas as pd
-
 from prose import FITSImage
 from prose.io import FitsManager
 
