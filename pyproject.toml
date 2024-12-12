@@ -1,57 +1,56 @@
-[tool.poetry]
+[project]
 name = "prose"
 version = "3.3.4"
 description = "Modular image processing pipelines for Astronomy"
-authors = ["Lionel Garcia"]
-license = "MIT"
+authors = [{ name = "Lionel Garcia" }]
+license = { text = "MIT" }
+requires-python = "<3.12,>=3.9"
+dependencies = [
+    "numpy<2.0.0,>=1.23.5",
+    "astropy<6.0.0,>=5.1.1",
+    "astroquery<1.0.0,>=0.4.6",
+    "requests<3.0.0,>=2.31.0",
+    "ipython",
+    "scipy",
+    "matplotlib",
+    "scikit-image<1.0.0,>=0.21.0",
+    "pandas>1.1",
+    "tqdm",
+    "photutils<2.0.0,>=1.6.0",
+    "pyyaml",
+    "tabulate",
+    "sep",
+    "celerite2",
+    "twirl==0.4.0",
+    "multiprocess",
+    "pytest",
+    "imageio[ffmpeg]",
+]
 readme = "README.md"
-include = ["prose/io/*.sql"]
 
-[tool.poetry.dependencies]
-python = ">=3.9,<3.12"
-numpy = "^1.23.5"
-astropy = "^5.1.1"
-astroquery = "^0.4.6"
-requests = "^2.31.0"
-ipython = "*"
-scipy = "*"
-matplotlib = "*"
-scikit-image = "^0.21.0"
-pandas = ">1.1"
-tqdm = "*"
-photutils = "^1.6.0"
-pyyaml = "*"
-tabulate = "*"
-sep = "*"
-celerite2 = "*"
-twirl = "0.4.0"
-multiprocess = "*"
-pytest = "*"
-imageio = { version = "*", extras = ["ffmpeg"] }
 
-[tool.poetry.group.dev.dependencies]
-pytest = "*"
-black = "*"
+[project.scripts]
+fitsmanager = "prose.scripts.fitsmanager:main"
 
-[tool.poetry.group.jax.dependencies]
-jax = "^0.4.26"
-jaxopt = "*"
+[tool.uv]
+dev-dependencies = ["pytest", "black"]
+jax = ["jax<1.0.0,>=0.4.26", "jaxopt"]
+docs = [
+    "sphinx",
+    "docutils",
+    "jupyterlab",
+    "myst-parser",
+    "sphinx-book-theme<2.0.0,>=1.0.0",
+    "myst-nb",
+    "sphinx-copybutton",
+    "sphinx-design",
+    "toml",
+    "ipywidgets",
+]
 
-[tool.poetry.group.docs.dependencies]
-sphinx = "*"
-docutils = "*"
-jupyterlab = "*"
-myst-parser = "*"
-sphinx-book-theme = "^1.0.0"
-myst-nb = "*"
-sphinx-copybutton = "*"
-sphinx-design = "*"
-toml = "*"
-ipywidgets = "*"
+[tool.pdm.build]
+includes = ["prose/io/*.sql"]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry.scripts]
-fitsmanager = 'prose.scripts.fitsmanager:main'
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
