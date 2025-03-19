@@ -1,0 +1,65 @@
+{
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "..",
+    "target": "development"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "charliermarsh.ruff",
+        "ms-python.mypy-type-checker",
+        "ms-python.python",
+        "ms-toolsai.jupyter",
+        "tamasfe.even-better-toml"
+      ]
+    },
+    "recommendations": [
+      "charliermarsh.ruff",
+      "ms-python.mypy-type-checker",
+      "ms-python.python",
+      "ms-toolsai.jupyter",
+      "tamasfe.even-better-toml"
+    ],
+    "settings": {
+      "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.formatOnSave": true,
+        "editor.semanticHighlighting.enabled": true
+      },
+      "editor.codeActionsOnSave": {
+        "source.organizeImports": "explicit"
+      },
+      "editor.cursorBlinking": "smooth",
+      "editor.cursorSmoothCaretAnimation": "on",
+      "editor.cursorStyle": "line",
+      "editor.formatOnSave": true,
+      "editor.rulers": [
+        88
+      ],
+      "explorer.compactFolders": true,
+      "explorer.confirmDelete": true,
+      "ruff.codeAction.disableRuleComment": {
+        "enable": true
+      },
+      "ruff.enable": true,
+      "ruff.fixAll": true,
+      "ruff.importStrategy": "fromEnvironment",
+      "ruff.lint.enable": true,
+      "ruff.organizeImports": true
+    },
+    "terminal.integrated.defaultProfile.linux": "zsh",
+    "terminal.integrated.profiles.linux": {
+      "zsh": {
+        "path": "zsh"
+      }
+    }
+  },
+  "forwardPorts": [],
+  "postStartCommand": "/bin/zsh",
+  "runArgs": [
+    "--network=host",
+    "--env-file",
+    "${localWorkspaceFolder}/.devcontainer/.env.config"
+  ]
+}
