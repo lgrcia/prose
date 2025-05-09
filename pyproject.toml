@@ -32,7 +32,7 @@ readme = "README.md"
 [project.scripts]
 fitsmanager = "prose.scripts.fitsmanager:main"
 
-[tool.uv]
+[project.optional-dependencies]
 dev-dependencies = ["pytest", "black"]
 jax = ["jax<1.0.0,>=0.4.26", "jaxopt"]
 docs = [

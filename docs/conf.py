@@ -22,9 +22,8 @@ html_theme = "sphinx_book_theme"
 html_static_path = ["_static"]
 
 pyproject = toml.load("../pyproject.toml")
-version = pyproject["tool"]["poetry"]["version"]
 html_short_title = "prose"
-html_title = f"{html_short_title}"
+html_title = "prose"
 
 # html_logo = "_static/prose3.png"
 
