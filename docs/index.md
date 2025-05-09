@@ -50,7 +50,6 @@ ipynb/catalogs
 ipynb/casestudies/transit.ipynb
 ipynb/casestudies/hiaka.ipynb
 ipynb/casestudies/comet.ipynb
-ipynb/casestudies/satellite.ipynb
 ```
 
 ```{toctree}
