@@ -1,3 +1,6 @@
+> [!CAUTION]
+> *prose* maintenance has stopped. More information [here](https://github.com/lgrcia/prose/issues/197).
+
 # prose
 
 <p align="center" style="margin-bottom:-50px">
