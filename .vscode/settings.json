@@ -1,22 +1,27 @@
 {
-    "editor.formatOnSave": true,
-    "python.formatting.provider": "black",
-    "python.formatting.blackArgs": [
-        "--line-length=88"
-    ],
-    "python.linting.enabled": true,
-    "python.linting.flake8Enabled": false,
-    "python.linting.pylintEnabled": false,
     "[python]": {
-        "editor.codeActionsOnSave": {
-            "source.organizeImports": true
-        },
-        "editor.formatOnPaste": false,
-        "editor.defaultFormatter": "ms-python.black-formatter"
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.formatOnSave": true,
+        "editor.semanticHighlighting.enabled": true
     },
-    "python.testing.pytestArgs": [
-        "tests"
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "explicit"
+    },
+    "editor.cursorBlinking": "smooth",
+    "editor.cursorSmoothCaretAnimation": "on",
+    "editor.cursorStyle": "line",
+    "editor.formatOnSave": true,
+    "editor.rulers": [
+        88
     ],
-    "python.testing.unittestEnabled": false,
-    "python.testing.pytestEnabled": true
+    "explorer.compactFolders": true,
+    "explorer.confirmDelete": true,
+    "ruff.codeAction.disableRuleComment": {
+        "enable": true
+    },
+    "ruff.enable": true,
+    "ruff.fixAll": true,
+    "ruff.importStrategy": "fromEnvironment",
+    "ruff.lint.enable": true,
+    "ruff.organizeImports": true
 }
