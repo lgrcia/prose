@@ -199,9 +199,20 @@ def optimal_flux(diff_fluxes, method="stddiff", sigma=4):
 
 @dataclass
 class Fluxes:
-    """Photometric fluxes, from single to multiple stars and apertures.
+    """Photometric fluxes for one or more stars and apertures.
 
-    Can hold other measurements time-series, errors and apertures properties.
+    ``fluxes`` may be supplied as a one-dimensional ``(time,)`` array, a
+    two-dimensional ``(star, time)`` array, or a three-dimensional
+    ``(aperture, star, time)`` array.  After construction it is stored in the
+    three-dimensional ``(aperture, star, time)`` layout, so ``time`` is always
+    the last axis.  ``errors`` follows the same layout when provided, while
+    entries in ``data`` are time-series with one value per time sample.
+
+    ``target`` and ``aperture`` select the star and aperture used by the
+    convenience properties such as :attr:`flux` and :attr:`error`.  When
+    differential photometry has been computed, ``weights`` has shape
+    ``(aperture, star)`` and records the comparison-star weights for each
+    aperture.
     """
 
     fluxes: np.ndarray
