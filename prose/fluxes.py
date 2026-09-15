@@ -199,16 +199,43 @@ def optimal_flux(diff_fluxes, method="stddiff", sigma=4):
 
 @dataclass
 class Fluxes:
-    """Photometric fluxes, from single to multiple stars and apertures.
+    """Photometric fluxes for one or more stars and apertures.
 
-    Can hold other measurements time-series, errors and apertures properties.
+    ``fluxes`` is stored internally as a 3-D array with shape
+    ``(n_apertures, n_stars, n_times)``. Constructors that receive 1-D
+    ``(time,)`` or 2-D ``(star, time)`` arrays are expanded in
+    ``__post_init__`` (missing axes become size 1).
+
+    Related attributes follow those axes:
+
+    - ``errors``: same shape as ``fluxes``.
+    - ``weights``: ``(n_apertures, n_stars)``. After differential
+      photometry this is the Broeg comparison-star weight per star
+      (zero for unused stars). ``comparisons`` is the star-index order
+      of non-zero weights in the selected aperture.
+    - ``apertures``: radii of each aperture, length ``n_apertures``.
+    - ``target`` / ``aperture``: integer indices into the star and
+      aperture axes. They select the 1-D series returned by ``flux``
+      and ``error``.
+
+    Methods that return a new ``Fluxes`` (``diff``, ``autodiff``,
+    ``bin``, ``copy``) do not modify ``self``. Methods that change
+    ``self`` in place are named that way in their docstring
+    (``estimate_best_aperture`` sets ``self.aperture``).
     """
 
     fluxes: np.ndarray
-    """Fluxes either as 1, 2, or 3 dimensional arrays, with following dimensions
-        - 1: (time)
-        - 2: (star, time)
-        - 3: (aperture, star, time)
+    """Raw or differential flux array.
+
+    Accepted input ranks:
+
+    - 1-D: ``(time,)``
+    - 2-D: ``(star, time)``
+    - 3-D: ``(aperture, star, time)``
+
+    After init the stored array is always 3-D. See the class docstring
+    for how this shape maps onto ``weights``, ``errors``, and
+    ``target`` / ``aperture``.
     """
     time: np.ndarray = None
     """Array of observed time"""
@@ -272,12 +299,11 @@ class Fluxes:
 
     @property
     def flux(self) -> np.array:
-        """Main flux
+        """Target light curve in the selected aperture.
 
-        Returns
-        -------
-        np.array
-            Main flux
+        Requires ``target`` (and ``aperture`` when ``fluxes`` has an
+        aperture axis). Returns ``fluxes[aperture, target]``, a 1-D
+        array of length ``n_times``. Use ``fluxes`` for the full cube.
         """
         return self._target_attr("fluxes")
 
@@ -339,12 +365,27 @@ class Fluxes:
         return _new
 
     def autodiff(self):
-        """Automatic differential photometry with Broeg et al. 2005.
-        `Fluxes.fluxes` must not contain NaNs.
+        """Automatic differential photometry (Broeg et al. 2005).
+
+        Does not modify ``self``. Returns a new ``Fluxes`` whose
+        ``fluxes`` are divided by an artificial comparison light
+        curve. Comparison-star weights are computed per aperture from
+        inverse scatter and stored on the returned object as
+        ``weights``. The target star (``self.target``) is excluded
+        from the comparison set when that index is set.
+
+        After the differential step this method calls
+        :meth:`best_aperture_index` and sets ``aperture`` on the
+        returned copy to that index (same selection as
+        :meth:`estimate_best_aperture`, which instead writes
+        ``self.aperture``).
+
+        ``self.fluxes`` must not contain NaNs.
 
         Returns
         -------
-        differential :code:`Fluxes`
+        Fluxes
+            Differenced copy with ``weights`` and ``aperture`` set.
         """
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
